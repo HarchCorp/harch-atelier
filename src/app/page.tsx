@@ -1,217 +1,441 @@
 "use client";
 
 import * as React from "react";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { RiskMatrix } from "@/components/dataviz/risk-matrix";
-import { ShareOfVoice } from "@/components/dataviz/share-of-voice";
-import { MediaCoverageChart } from "@/components/dataviz/media-coverage-chart";
-import { SentimentTrend } from "@/components/dataviz/sentiment-trend";
-import { RiskPillars } from "@/components/dataviz/risk-pillars";
-import { TopSources } from "@/components/dataviz/top-sources";
-import { GeoDistribution } from "@/components/dataviz/geo-distribution";
-import { RiskTrendTimeline } from "@/components/dataviz/risk-trend-timeline";
-import { EntityKPIs } from "@/components/dataviz/entity-kpis";
-import { RiskEventsTable } from "@/components/dashboard/risk-events-table";
-import { WatchlistSignals } from "@/components/dashboard/watchlist-signals";
-import { ActivityFeed } from "@/components/dashboard/activity-feed";
-import { RealDataPanel } from "@/components/dashboard/real-data-panel";
-import { ReputationConsole } from "@/components/dashboard/reputation-console";
-import { RiskEventDrawer } from "@/components/dashboard/risk-event-drawer";
-import { EntityProfileDialog } from "@/components/dashboard/entity-profile-dialog";
-import { CompareViewsDialog } from "@/components/dashboard/compare-views-dialog";
-import { CommandPalette, useCommandPalette } from "@/components/dashboard/command-palette";
-import {
-  KeyboardShortcuts,
-  useKeyboardShortcuts,
-} from "@/components/dashboard/keyboard-shortcuts";
-import { IntelligenceBriefDialog } from "@/components/dashboard/intelligence-brief-dialog";
-import type { AccountType, RiskEvent, AlertItem } from "@/lib/mock-data";
-import { riskEvents } from "@/lib/mock-data";
+import Link from "next/link";
+import { ShieldCheck, ArrowRight, Newspaper, Bot, Activity, AlertTriangle, MessageCircle, Check } from "lucide-react";
 
-const metaByAccount: Record<AccountType, { title: string; description: string }> = {
-  admin: {
-    title: "Operations Console",
-    description: "Full-spectrum risk intelligence across every monitored entity and pillar.",
-  },
-  trader: {
-    title: "Signal Desk",
-    description: "Live risk signals with coverage context for HarchCorp positions.",
-  },
-  legal: {
-    title: "Legal & Regulatory Monitor",
-    description: "Regulatory exposure, matters, and hold-notice activity across entities.",
-  },
-  market: {
-    title: "Market Intelligence",
-    description: "Sentiment, share of voice, and coverage analytics for the IR desk.",
-  },
-  self: {
-    title: "My Watch",
-    description: "Personalized monitoring for your tracked entities and saved alerts.",
-  },
-  pr: {
-    title: "Communications Console",
-    description: "Reputation, sentiment, and share-of-voice analytics for comms teams.",
-  },
+/**
+ * Harch Atelier — Marketing Landing Page (V26.0)
+ *
+ * Copied from production atelier.harchcorp.com — same color palette, same
+ * hero copy, same 4 pillars, same structure. Adds a Login button in the
+ * header (links to /client) and a "See live dashboard" CTA (links to /dashboard).
+ *
+ * Production palette:
+ *  #0A0A0A near-black · #FFFFFF white · #FAFAFA off-white bg
+ *  #4A7B5F forest green (primary) · #4A5D6E slate blue-grey (secondary)
+ *  #525252 body text · #71717A muted text · #E5E5E5 border
+ */
+const PROD = {
+  black: "#0A0A0A",
+  white: "#FFFFFF",
+  bg: "#FAFAFA",
+  green: "#4A7B5F",
+  slate: "#4A5D6E",
+  body: "#525252",
+  muted: "#71717A",
+  border: "#E5E5E5",
 };
 
-/** Enterprise grid — market / admin / pr / legal / self. */
-function EnterpriseGrid({ onSelect, onSelectEvent, onSelectEntity }: { onSelect: (e: RiskEvent) => void; onSelectEvent: (eventId: string) => void; onSelectEntity: (entity: string) => void }) {
+const pillars = [
+  {
+    icon: Newspaper,
+    title: "Media Monitoring",
+    desc: "We track 30+ Moroccan & African media sources — Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui le Maroc and more — 24/7.",
+  },
+  {
+    icon: Bot,
+    title: "AI Visibility",
+    desc: "See what ChatGPT, Perplexity, Gemini, and Claude say about your brand. Track your rank on the prompts that matter to your customers.",
+  },
+  {
+    icon: Activity,
+    title: "Sentiment Analysis",
+    desc: "Every article is classified by HarchIQ, our trainable AI. You see the tone, the trend, and the impact on your reputation score.",
+  },
+  {
+    icon: AlertTriangle,
+    title: "Crisis Alerts",
+    desc: "When negative sentiment spikes on a topic, you get a WhatsApp alert within 5 minutes — before it becomes a crisis.",
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col gap-5">
-      {/* Reputation Intelligence console — the production centerpiece (4 pillars) */}
-      <ReputationConsole brand="HarchCorp" />
-      {/* Real-time intelligence (live FX + news + market) */}
-      <RealDataPanel />
-      {/* Row 0 — full-width risk trend timeline */}
-      <RiskTrendTimeline onSelectEvent={onSelectEvent} />
-      {/* Row 1 */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <RiskMatrix onSelect={onSelect} />
-        <MediaCoverageChart />
-      </div>
-      {/* Row 2 */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <ShareOfVoice />
-        <SentimentTrend />
-      </div>
-      {/* Row 3 — analytical widgets */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <RiskPillars />
-        <div className="xl:col-span-2">
-          <TopSources />
+    <div style={{ background: PROD.bg, color: PROD.black, minHeight: "100vh" }}>
+      {/* ─── Header ─── */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          background: "rgba(250,250,250,0.88)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${PROD.border}`,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1320,
+            margin: "0 auto",
+            padding: "0 32px",
+            height: 64,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 24,
+          }}
+        >
+          {/* Logo */}
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: `linear-gradient(135deg, ${PROD.green}, ${PROD.slate})`,
+              }}
+            >
+              <ShieldCheck style={{ width: 18, height: 18, color: PROD.white }} />
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: PROD.black, letterSpacing: "-0.01em" }}>
+              Harch<span style={{ color: PROD.muted }}>Atelier</span>
+            </span>
+          </Link>
+
+          {/* Nav */}
+          <nav style={{ display: "flex", alignItems: "center", gap: 28 }} className="hidden md:flex">
+            {["Product", "Pillars", "Industries", "Pricing"].map((item) => (
+              <span key={item} style={{ fontSize: 13, fontWeight: 500, color: PROD.body, cursor: "pointer" }}>
+                {item}
+              </span>
+            ))}
+          </nav>
+
+          {/* Right side: Login + CTA */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Link
+              href="/client"
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: PROD.slate,
+                textDecoration: "none",
+                padding: "8px 16px",
+                borderRadius: 8,
+                transition: "background 0.15s",
+              }}
+              className="hover:bg-slate-100"
+            >
+              Login
+            </Link>
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                color: PROD.white,
+                background: PROD.green,
+                padding: "9px 18px",
+                borderRadius: 8,
+                textDecoration: "none",
+                transition: "opacity 0.15s",
+              }}
+              className="hover:opacity-90"
+            >
+              See live dashboard
+              <ArrowRight style={{ width: 14, height: 14 }} />
+            </Link>
+          </div>
         </div>
-      </div>
-      {/* Row 4 — geo + events */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <GeoDistribution />
-        <div className="xl:col-span-2">
-          <RiskEventsTable onSelect={onSelect} />
+      </header>
+
+      {/* ─── Hero ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "80px 32px 60px", textAlign: "center" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            borderRadius: 999,
+            background: `${PROD.green}15`,
+            border: `1px solid ${PROD.green}30`,
+            marginBottom: 24,
+          }}
+        >
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: PROD.green }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: PROD.green, letterSpacing: "0.02em" }}>
+            AI Reputation Intelligence · Decision Augmentation
+          </span>
         </div>
-      </div>
-      {/* Row 5 — entity KPIs + activity feed */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <EntityKPIs onSelectEntity={onSelectEntity} />
-        <ActivityFeed />
-      </div>
+
+        <h1
+          style={{
+            fontSize: "clamp(36px, 5vw, 56px)",
+            fontWeight: 700,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.05,
+            color: PROD.black,
+            maxWidth: 900,
+            margin: "0 auto 24px",
+          }}
+        >
+          AI Reputation Intelligence
+          <br />
+          <span style={{ color: PROD.green }}>for Africa</span>
+        </h1>
+
+        <p
+          style={{
+            fontSize: 18,
+            lineHeight: 1.6,
+            color: PROD.body,
+            maxWidth: 640,
+            margin: "0 auto 32px",
+          }}
+        >
+          Monitor what media and AI say about your company. Sentiment analysis, crisis alerts on
+          WhatsApp, monthly board-ready PDF reports. 30+ Moroccan and African media sources.
+        </p>
+
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link
+            href="/client"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 15,
+              fontWeight: 600,
+              color: PROD.white,
+              background: `linear-gradient(135deg, ${PROD.green}, ${PROD.slate})`,
+              padding: "14px 28px",
+              borderRadius: 10,
+              textDecoration: "none",
+              boxShadow: "0 4px 14px rgba(74,123,95,0.25)",
+            }}
+          >
+            Start monitoring free
+            <ArrowRight style={{ width: 16, height: 16 }} />
+          </Link>
+          <Link
+            href="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 15,
+              fontWeight: 600,
+              color: PROD.black,
+              background: PROD.white,
+              border: `1px solid ${PROD.border}`,
+              padding: "14px 28px",
+              borderRadius: 10,
+              textDecoration: "none",
+            }}
+          >
+            See live dashboard
+          </Link>
+        </div>
+
+        <p style={{ fontSize: 13, color: PROD.muted, marginTop: 20 }}>
+          No credit card required · 14-day free trial · Cancel anytime
+        </p>
+      </section>
+
+      {/* ─── 4 Pillars ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "40px 32px 80px" }}>
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 12 }}>
+            Four pillars of reputation intelligence.
+          </h2>
+          <p style={{ fontSize: 16, color: PROD.body, maxWidth: 680, margin: "0 auto" }}>
+            Most reputation tools were built for American brands on English media. We built Harch
+            Atelier for the francophone and African reality — Arabic sources, French business press,
+            and AI engines your customers actually use.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 24,
+          }}
+        >
+          {pillars.map((p) => {
+            const Icon = p.icon;
+            return (
+              <div
+                key={p.title}
+                style={{
+                  background: PROD.white,
+                  border: `1px solid ${PROD.border}`,
+                  borderRadius: 16,
+                  padding: 28,
+                  transition: "box-shadow 0.2s, border-color 0.2s",
+                }}
+                className="hover:shadow-lg"
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: `${PROD.green}12`,
+                    marginBottom: 16,
+                  }}
+                >
+                  <Icon style={{ width: 22, height: 22, color: PROD.green }} />
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, color: PROD.black, marginBottom: 8 }}>{p.title}</h3>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: PROD.body }}>{p.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ─── WhatsApp Digest ─── */}
+      <section style={{ background: PROD.black, color: PROD.white, padding: "80px 32px" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 48, alignItems: "center" }}>
+          <div style={{ flex: "1 1 400px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 14px",
+                borderRadius: 999,
+                background: `${PROD.green}25`,
+                marginBottom: 20,
+              }}
+            >
+              <MessageCircle style={{ width: 14, height: 14, color: PROD.green }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: PROD.green }}>Daily WhatsApp Digest</span>
+            </div>
+            <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 16, lineHeight: 1.15 }}>
+              Every morning at 7:00, know what was said.
+            </h2>
+            <p style={{ fontSize: 16, lineHeight: 1.6, color: "#A0A0A0", marginBottom: 24 }}>
+              You receive a structured digest of what was said about your brand in the last 24 hours —
+              media, social, and AI engines. No app to open. No dashboard to check. Just open WhatsApp.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                "Daily WhatsApp digest at 7:00",
+                "Live dashboard with full drill-down",
+                "Monthly PDF report for the board",
+                "Real-time alerts when sentiment shifts",
+              ].map((f) => (
+                <div key={f} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      background: PROD.green,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Check style={{ width: 12, height: 12, color: PROD.white }} />
+                  </span>
+                  <span style={{ fontSize: 14, color: "#D4D4D4" }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: "1 1 320px" }}>
+            <div
+              style={{
+                background: "#1A1A1A",
+                borderRadius: 20,
+                padding: 24,
+                border: "1px solid #2A2A2A",
+                fontFamily: "monospace",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <MessageCircle style={{ width: 18, height: 18, color: PROD.green }} />
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Harch Atelier · 7:00 AM</span>
+              </div>
+              <div style={{ fontSize: 13, lineHeight: 1.7, color: "#A0A0A0" }}>
+                <p style={{ color: PROD.white, fontWeight: 600, marginBottom: 8 }}>📊 Daily Digest — HarchCorp</p>
+                <p>HarchIQ Score: <span style={{ color: PROD.green }}>82/100 (A)</span></p>
+                <p>Media: 7 mentions · 0% negative</p>
+                <p>AI Visibility: 100% (8/8 engines)</p>
+                <p>Crisis: 4 alerts (1 critical)</p>
+                <p style={{ marginTop: 12, color: PROD.green }}>→ Open dashboard for details</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Final CTA ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "80px 32px", textAlign: "center" }}>
+        <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 16 }}>
+          One dashboard. Every signal that matters.
+        </h2>
+        <p style={{ fontSize: 16, color: PROD.body, maxWidth: 560, margin: "0 auto 32px" }}>
+          Start monitoring your reputation today. 14-day free trial, no credit card required.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link
+            href="/client"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 15,
+              fontWeight: 600,
+              color: PROD.white,
+              background: PROD.green,
+              padding: "14px 28px",
+              borderRadius: 10,
+              textDecoration: "none",
+            }}
+          >
+            Create your account
+            <ArrowRight style={{ width: 16, height: 16 }} />
+          </Link>
+          <Link
+            href="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 15,
+              fontWeight: 600,
+              color: PROD.black,
+              border: `1px solid ${PROD.border}`,
+              background: PROD.white,
+              padding: "14px 28px",
+              borderRadius: 10,
+              textDecoration: "none",
+            }}
+          >
+            See live dashboard
+          </Link>
+        </div>
+      </section>
+
+      {/* ─── Footer ─── */}
+      <footer style={{ borderTop: `1px solid ${PROD.border}`, background: PROD.white, padding: "32px" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ShieldCheck style={{ width: 16, height: 16, color: PROD.green }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: PROD.black }}>
+              Harch Atelier · AI Reputation Intelligence for Africa
+            </span>
+          </div>
+          <span style={{ fontSize: 12, color: PROD.muted }}>© 2025 HarchCorp · Casablanca, Morocco</span>
+        </div>
+      </footer>
     </div>
-  );
-}
-
-/** Trader desk — watchlist on top, then matrix + coverage + geo. */
-function TraderView({ onSelect, onSelectEvent, onSelectEntity }: { onSelect: (e: RiskEvent) => void; onSelectEvent: (eventId: string) => void; onSelectEntity: (entity: string) => void }) {
-  return (
-    <div className="flex flex-col gap-5">
-      {/* Reputation Intelligence console — the production centerpiece (4 pillars) */}
-      <ReputationConsole brand="HarchCorp" />
-      {/* Real-time intelligence (live FX + news + market) */}
-      <RealDataPanel />
-      <WatchlistSignals />
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <RiskMatrix onSelect={onSelect} />
-        <MediaCoverageChart />
-      </div>
-      <RiskTrendTimeline onSelectEvent={onSelectEvent} />
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <RiskPillars />
-        <div className="xl:col-span-2">
-          <TopSources />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <GeoDistribution />
-        <div className="xl:col-span-2">
-          <RiskEventsTable onSelect={onSelect} />
-        </div>
-      </div>
-      {/* Row 5 — entity KPIs + activity feed */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <EntityKPIs onSelectEntity={onSelectEntity} />
-        <ActivityFeed />
-      </div>
-    </div>
-  );
-}
-
-export default function Home() {
-  const [accountType, setAccountType] = React.useState<AccountType>("market");
-  const [selectedEvent, setSelectedEvent] = React.useState<RiskEvent | null>(null);
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const [helpOpen, setHelpOpen] = React.useState(false);
-  const [entityOpen, setEntityOpen] = React.useState<string | null>(null);
-  const [compareOpen, setCompareOpen] = React.useState(false);
-  const [briefOpen, setBriefOpen] = React.useState(false);
-
-  const palette = useCommandPalette();
-  useKeyboardShortcuts(() => setHelpOpen((v) => !v), () => setBriefOpen(true));
-
-  const handleSelect = React.useCallback((e: RiskEvent) => {
-    setSelectedEvent(e);
-    setDrawerOpen(true);
-  }, []);
-
-  const handleSelectById = React.useCallback((eventId: string) => {
-    const ev = riskEvents.find((e) => e.id === eventId);
-    if (ev) {
-      setSelectedEvent(ev);
-      setDrawerOpen(true);
-    }
-  }, []);
-
-  const handleOpenAlert = React.useCallback((a: AlertItem) => {
-    if (!a.eventId) return;
-    const ev = riskEvents.find((e) => e.id === a.eventId);
-    if (ev) {
-      setSelectedEvent(ev);
-      setDrawerOpen(true);
-    }
-  }, []);
-
-  const meta = metaByAccount[accountType];
-
-  return (
-    <DashboardShell
-      accountType={accountType}
-      onAccountTypeChange={setAccountType}
-      onOpenPalette={palette.toggle}
-      onOpenAlert={handleOpenAlert}
-      onOpenBrief={() => setBriefOpen(true)}
-      title={meta.title}
-      description={meta.description}
-    >
-      {accountType === "trader" ? (
-        <TraderView onSelect={handleSelect} onSelectEvent={handleSelectById} onSelectEntity={(entity) => setEntityOpen(entity)} />
-      ) : (
-        <EnterpriseGrid onSelect={handleSelect} onSelectEvent={handleSelectById} onSelectEntity={(entity) => setEntityOpen(entity)} />
-      )}
-      <RiskEventDrawer
-        event={selectedEvent}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-      />
-      <CommandPalette
-        open={palette.open}
-        onOpenChange={palette.setOpen}
-        accountType={accountType}
-        onAccountTypeChange={setAccountType}
-        onSelectEvent={handleSelect}
-        onSelectEntity={(entity) => setEntityOpen(entity)}
-        onOpenCompare={() => setCompareOpen(true)}
-        onOpenBrief={() => setBriefOpen(true)}
-      />
-      <KeyboardShortcuts open={helpOpen} onOpenChange={setHelpOpen} />
-      <EntityProfileDialog
-        entity={entityOpen}
-        open={entityOpen !== null}
-        onOpenChange={(v) => { if (!v) setEntityOpen(null); }}
-        onSelectEvent={handleSelect}
-      />
-      <CompareViewsDialog open={compareOpen} onOpenChange={setCompareOpen} onSelectEvent={handleSelect} />
-      <IntelligenceBriefDialog
-        open={briefOpen}
-        onOpenChange={setBriefOpen}
-        accountType={accountType}
-      />
-    </DashboardShell>
   );
 }

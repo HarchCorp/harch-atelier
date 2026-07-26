@@ -28,9 +28,19 @@ async function cached<T>(key: string, ttlMs: number, fetcher: () => Promise<T>):
   if (hit && hit.expires > Date.now()) {
     return hit.data;
   }
-  const data = await fetcher();
-  cache.set(key, { data, expires: Date.now() + ttlMs });
-  return data;
+  try {
+    const data = await fetcher();
+    cache.set(key, { data, expires: Date.now() + ttlMs });
+    return data;
+  } catch (err) {
+    // Stale-while-error: if we have cached data (even expired), return it
+    // instead of erroring. This prevents 429 rate-limit errors from breaking
+    // the UI — the user sees the last known good data.
+    if (hit) {
+      return hit.data;
+    }
+    throw err;
+  }
 }
 
 /* ------------------------------------------------------------------ */
