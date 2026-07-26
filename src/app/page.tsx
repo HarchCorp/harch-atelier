@@ -376,6 +376,92 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── Pricing ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "40px 32px 80px" }}>
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 12 }}>
+            Pricing that scales with your reputation.
+          </h2>
+          <p style={{ fontSize: 16, color: PROD.body, maxWidth: 560, margin: "0 auto" }}>
+            All plans include a 14-day free trial. No credit card required. Prices in MAD (Moroccan Dirham). Cancel anytime.
+          </p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, alignItems: "stretch" }}>
+          {[
+            { name: "Starter", price: "499", desc: "For small teams monitoring one brand.", popular: false, features: ["1 brand monitored", "30+ media sources", "8 AI engines tracked", "Daily WhatsApp digest", "Sentiment analysis", "Web dashboard"] },
+            { name: "Growth", price: "1990", desc: "For comms teams managing multiple brands.", popular: true, features: ["Everything in Starter, plus:", "Up to 5 brands", "Real-time crisis alerts (5-min)", "Monthly PDF board report", "Competitor benchmarking", "API access (beta)"] },
+            { name: "Enterprise", price: "4990", desc: "For large organizations with custom needs.", popular: false, features: ["Everything in Growth, plus:", "Unlimited brands", "Custom AI training (HarchIQ)", "Dedicated WhatsApp number", "Custom data sources", "Priority support + SLA"] },
+          ].map((tier) => (
+            <div
+              key={tier.name}
+              style={{
+                background: PROD.white,
+                border: tier.popular ? `2px solid ${PROD.green}` : `1px solid ${PROD.border}`,
+                borderRadius: 16,
+                padding: 28,
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                boxShadow: tier.popular ? "0 8px 24px rgba(74,123,95,0.12)" : "none",
+              }}
+            >
+              {tier.popular ? (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -12,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: PROD.green,
+                    color: PROD.white,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "4px 14px",
+                    borderRadius: 999,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Most Popular
+                </span>
+              ) : null}
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: PROD.black, marginBottom: 6 }}>{tier.name}</h3>
+              <p style={{ fontSize: 13, color: PROD.muted, marginBottom: 20, minHeight: 36 }}>{tier.desc}</p>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 24 }}>
+                <span style={{ fontSize: 36, fontWeight: 700, color: PROD.black, letterSpacing: "-0.02em" }}>{tier.price}</span>
+                <span style={{ fontSize: 13, color: PROD.muted }}>MAD / mois</span>
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+                {tier.features.map((f, i) => (
+                  <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: i === 0 && tier.features[0].includes("Everything") ? PROD.slate : PROD.body, fontWeight: i === 0 && tier.features[0].includes("Everything") ? 600 : 400 }}>
+                    <Check style={{ width: 14, height: 14, color: PROD.green, marginTop: 2, flexShrink: 0 }} />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/client"
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: tier.popular ? PROD.white : PROD.green,
+                  background: tier.popular ? PROD.green : "transparent",
+                  border: tier.popular ? "none" : `1px solid ${PROD.green}`,
+                  padding: "11px 20px",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  transition: "opacity 0.15s",
+                }}
+                className="hover:opacity-90"
+              >
+                Start free trial
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ─── Final CTA ─── */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "80px 32px", textAlign: "center" }}>
         <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 16 }}>
