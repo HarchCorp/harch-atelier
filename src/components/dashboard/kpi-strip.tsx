@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDownRight, ArrowUpRight, Activity, Newspaper, AlertTriangle, Gauge } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus, Activity, Newspaper, AlertTriangle, Gauge } from "lucide-react";
 import { coverage30d, sentiment12m, headlineKpis } from "@/lib/mock-data";
 import { useSignalPulse } from "@/hooks/use-signal-pulse";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 }
 
 function KpiCard({ label, value, unit, delta, deltaSuffix = "vs prev. period", deltaInvert, icon, accent, spark, sparkColor, hint }: KpiCardProps) {
+  const isStable = Math.abs(delta) < 0.05;
   const good = deltaInvert ? delta < 0 : delta >= 0;
   return (
     <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -53,15 +54,22 @@ function KpiCard({ label, value, unit, delta, deltaSuffix = "vs prev. period", d
           <span className={cn("flex h-7 w-7 items-center justify-center rounded-md", accent)}>{icon}</span>
           <span className="card-title">{label}</span>
         </div>
-        <span
-          className={cn(
-            "tabular inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold",
-            good ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
-          )}
-        >
-          {good ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-          {delta > 0 ? "+" : ""}{delta.toFixed(1)}{deltaSuffix === "%" ? "" : ""}
-        </span>
+        {isStable ? (
+          <span className="tabular inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+            <Minus className="h-3 w-3" />
+            stable
+          </span>
+        ) : (
+          <span
+            className={cn(
+              "tabular inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold",
+              good ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+            )}
+          >
+            {good ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+            {delta > 0 ? "+" : ""}{delta.toFixed(1)}{deltaSuffix === "%" ? "" : ""}
+          </span>
+        )}
       </div>
       <div className="mt-2 flex items-end justify-between gap-2">
         <div className="flex items-baseline gap-1">
@@ -70,7 +78,7 @@ function KpiCard({ label, value, unit, delta, deltaSuffix = "vs prev. period", d
         </div>
         <Sparkline data={spark} color={sparkColor} />
       </div>
-      <p className="mt-2 text-[10px] text-slate-400">{hint}</p>
+      <p className="mt-2 text-[10px] text-slate-400">{hint} · <span className="font-medium">30d rolling</span></p>
     </div>
   );
 }
