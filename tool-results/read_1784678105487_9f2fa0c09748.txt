@@ -1,0 +1,2002 @@
+     1→/**
+     2→ * Harch Atelier — Entities dataset (V18.0 market role)
+     3→ *
+     4→ * Deterministic, strictly-typed mock data for the Entities category — the
+     5→ * Moroccan company directory + HarchCorp peer benchmarking + watchlist.
+     6→ * REUSES `moroccanEquities` from `./market-data` as the seed of BVC-listed
+     7→ * companies and EXTENDS it with private Moroccan corporates (Al Mada, SNI,
+     8→ * Les Domaines Agricoles, Cosumar, Inwi, Taqa Morocco, etc.), HarchCorp
+     9→ * peers/competitors (Northwind, Vela Dynamics, Orbital Systems, Kessler &
+    10→ * Vale, Atlas Holdings) and key counterparties (Wafa Assurance, RMA, Saham,
+    11→ * AXA Maroc, Banque Populaire, Al Barid Bank, Bank Assafa).
+    12→ *
+    13→ * Conventions:
+    14→ *   - All monetary amounts in millions MAD (Moroccan dirham) unless noted.
+    15→ *   - All series deterministic (mulberry32 seeded, seed 20251118 — market role).
+    16→ *   - All companies Morocco-aware (real names, Casablanca/Rabat/Tanger HQs).
+    17→ *   - No `any`.
+    18→ */
+    19→
+    20→import { moroccanEquities, type BvcSector } from "./market-data";
+    21→
+    22→/* ------------------------------------------------------------------ */
+    23→/*  Common types                                                       */
+    24→/* ------------------------------------------------------------------ */
+    25→
+    26→export type EntitySector =
+    27→  | BvcSector
+    28→  | "Holding"
+    29→  | "Insurance"
+    30→  | "Agri"
+    31→  | "Utilities"
+    32→  | "Automotive"
+    33→  | "Logistics";
+    34→
+    35→export type EntityType =
+    36→  | "self"
+    37→  | "listed"
+    38→  | "private"
+    39→  | "peer"
+    40→  | "counterparty";
+    41→
+    42→export type EntityStatus =
+    43→  | "active"
+    44→  | "watch"
+    45→  | "restricted"
+    46→  | "review"
+    47→  | "monitored";
+    48→
+    49→export type MoroccanCity =
+    50→  | "Casablanca"
+    51→  | "Rabat"
+    52→  | "Tanger"
+    53→  | "Marrakech"
+    54→  | "Fès"
+    55→  | "Agadir"
+    56→  | "International";
+    57→
+    58→export type RiskPillarKey =
+    59→  | "regulatory"
+    60→  | "cyber"
+    61→  | "financial"
+    62→  | "esg"
+    63→  | "geopolitical"
+    64→  | "reputational";
+    65→
+    66→export interface EntityPillarScore {
+    67→  regulatory: number;
+    68→  cyber: number;
+    69→  financial: number;
+    70→  esg: number;
+    71→  geopolitical: number;
+    72→  reputational: number;
+    73→}
+    74→
+    75→export interface EntityNewsItem {
+    76→  title: string;
+    77→  date: string; // ISO short
+    78→  outlet: string;
+    79→  sentiment: "positive" | "negative" | "neutral";
+    80→}
+    81→
+    82→export interface EntityLeader {
+    83→  name: string;
+    84→  role: string;
+    85→  since: number;
+    86→}
+    87→
+    88→export interface EntityShareholder {
+    89→  name: string;
+    90→  share: number; // 0-100 percent
+    91→  type: "Strategic" | "Institutional" | "State" | "Founder" | "Public Float";
+    92→}
+    93→
+    94→export interface Entity {
+    95→  id: string;
+    96→  name: string;
+    97→  ticker: string | null;
+    98→  type: EntityType;
+    99→  sector: EntitySector;
+   100→  hq: MoroccanCity;
+   101→  country: string;
+   102→  employees: number;
+   103→  /** Revenue, MAD millions. */
+   104→  revenueM: number;
+   105→  /** Net income, MAD millions. */
+   106→  netIncomeM: number;
+   107→  /** Total assets, MAD millions. */
+   108→  assetsM: number;
+   109→  /** Market cap, MAD millions — null for private. */
+   110→  mktCapM: number | null;
+   111→  peRatio: number | null;
+   112→  dividendYield: number | null;
+   113→  /** 0-100 composite risk score. */
+   114→  riskScore: number;
+   115→  /** Per-pillar sub-scores, 0-100. */
+   116→  riskPillars: EntityPillarScore;
+   117→  /** -100 to +100 net sentiment. */
+   118→  sentiment: number;
+   119→  /** 12-month sentiment trend (12 points). */
+   120→  sentimentTrend12m: number[];
+   121→  lastNews: EntityNewsItem[];
+   122→  leadership: EntityLeader[];
+   123→  ownership: EntityShareholder[];
+   124→  status: EntityStatus;
+   125→  watchlisted: boolean;
+   126→  /** 20-point sparkline (price or sentiment proxy). */
+   127→  sparkline: number[];
+   128→}
+   129→
+   130→/* ------------------------------------------------------------------ */
+   131→/*  Seeded PRNG (deterministic)                                        */
+   132→/* ------------------------------------------------------------------ */
+   133→
+   134→function mulberry32(seed: number): () => number {
+   135→  let a = seed >>> 0;
+   136→  return () => {
+   137→    a = (a + 0x6d2b79f5) >>> 0;
+   138→    let t = a;
+   139→    t = Math.imul(t ^ (t >>> 15), t | 1);
+   140→    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+   141→    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+   142→  };
+   143→}
+   144→
+   145→const rng = mulberry32(20251118);
+   146→
+   147→function ri(min: number, max: number): number {
+   148→  return Math.round(min + rng() * (max - min));
+   149→}
+   150→
+   151→function rf(min: number, max: number, dp = 1): number {
+   152→  const v = min + rng() * (max - min);
+   153→  const f = Math.pow(10, dp);
+   154→  return Math.round(v * f) / f;
+   155→}
+   156→
+   157→function pick<T>(arr: readonly T[]): T {
+   158→  return arr[Math.floor(rng() * arr.length)];
+   159→}
+   160→
+   161→/** Build a 12-month sentiment series ending at a target net score. */
+   162→function buildSentiment12m(endScore: number, vol: number): number[] {
+   163→  const out: number[] = [];
+   164→  let p = endScore - vol * 0.6;
+   165→  for (let i = 0; i < 12; i++) {
+   166→    const shock = (rng() - 0.5) * vol;
+   167→    p = Math.max(-95, Math.min(95, p + shock + (endScore - p) * 0.18));
+   168→    out.push(Math.round(p * 10) / 10);
+   169→  }
+   170→  out[11] = endScore;
+   171→  return out;
+   172→}
+   173→
+   174→/** Build a 20-point sparkline ending at a target. */
+   175→function buildSparkline(end: number, volPct: number): number[] {
+   176→  const out: number[] = [];
+   177→  let p = end * (1 - volPct * 0.4);
+   178→  for (let i = 0; i < 20; i++) {
+   179→    const shock = (rng() - 0.5) * end * volPct;
+   180→    p = Math.max(0.5, p + shock + (end - p) * 0.22);
+   181→    out.push(Math.round(p * 100) / 100);
+   182→  }
+   183→  out[19] = end;
+   184→  return out;
+   185→}
+   186→
+   187→function buildPillars(seed: number, base: number): EntityPillarScore {
+   188→  const r = mulberry32(seed);
+   189→  const jitter = (lo: number, hi: number) => Math.round(lo + r() * (hi - lo));
+   190→  return {
+   191→    regulatory: Math.max(8, Math.min(96, base + jitter(-12, 12))),
+   192→    cyber: Math.max(8, Math.min(96, base + jitter(-10, 14))),
+   193→    financial: Math.max(8, Math.min(96, base + jitter(-14, 10))),
+   194→    esg: Math.max(8, Math.min(96, base + jitter(-16, 14))),
+   195→    geopolitical: Math.max(8, Math.min(96, base + jitter(-18, 16))),
+   196→    reputational: Math.max(8, Math.min(96, base + jitter(-12, 12))),
+   197→  };
+   198→}
+   199→
+   200→/** Composite score from a pillar map (rounded mean). */
+   201→function composite(p: EntityPillarScore): number {
+   202→  const v =
+   203→    (p.regulatory +
+   204→      p.cyber +
+   205→      p.financial +
+   206→      p.esg +
+   207→      p.geopolitical +
+   208→      p.reputational) /
+   209→    6;
+   210→  return Math.round(v * 10) / 10;
+   211→}
+   212→
+   213→/* ------------------------------------------------------------------ */
+   214→/*  Helpers                                                            */
+   215→/* ------------------------------------------------------------------ */
+   216→
+   217→export function formatMAD(n: number, dp = 2): string {
+   218→  return n.toLocaleString("en-US", {
+   219→    minimumFractionDigits: dp,
+   220→    maximumFractionDigits: dp,
+   221→  });
+   222→}
+   223→
+   224→export function formatCompactMAD(n: number): string {
+   225→  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}B`;
+   226→  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}M`;
+   227→  return `${Math.round(n)}`;
+   228→}
+   229→
+   230→export function formatNumber(n: number): string {
+   231→  return n.toLocaleString("en-US");
+   232→}
+   233→
+   234→export function formatCompact(n: number): string {
+   235→  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+   236→  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+   237→  return `${Math.round(n)}`;
+   238→}
+   239→
+   240→/* ------------------------------------------------------------------ */
+   241→/*  Sector color + chip tint (extends market-data sectorColor)         */
+   242→/* ------------------------------------------------------------------ */
+   243→
+   244→export const sectorColor: Record<EntitySector, string> = {
+   245→  Banking: "#0ea5e9",
+   246→  Telecom: "#a855f7",
+   247→  "Real Estate": "#f59e0b",
+   248→  Construction: "#10b981",
+   249→  Materials: "#14b8a6",
+   250→  Consumer: "#ef4444",
+   251→  Energy: "#f97316",
+   252→  Pharma: "#84cc16",
+   253→  Tech: "#0891b2",
+   254→  Holding: "#64748b",
+   255→  Insurance: "#9333ea",
+   256→  Agri: "#65a30d",
+   257→  Utilities: "#0d9488",
+   258→  Automotive: "#e11d48",
+   259→  Logistics: "#7c3aed",
+   260→};
+   261→
+   262→export const sectorChipTint: Record<EntitySector, string> = {
+   263→  Banking: "bg-sky-50 text-sky-700 ring-sky-200",
+   264→  Telecom: "bg-violet-50 text-violet-700 ring-violet-200",
+   265→  "Real Estate": "bg-amber-50 text-amber-700 ring-amber-200",
+   266→  Construction: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+   267→  Materials: "bg-teal-50 text-teal-700 ring-teal-200",
+   268→  Consumer: "bg-rose-50 text-rose-700 ring-rose-200",
+   269→  Energy: "bg-orange-50 text-orange-700 ring-orange-200",
+   270→  Pharma: "bg-lime-50 text-lime-700 ring-lime-200",
+   271→  Tech: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+   272→  Holding: "bg-slate-100 text-slate-700 ring-slate-300",
+   273→  Insurance: "bg-purple-50 text-purple-700 ring-purple-200",
+   274→  Agri: "bg-lime-50 text-lime-700 ring-lime-200",
+   275→  Utilities: "bg-teal-50 text-teal-700 ring-teal-200",
+   276→  Automotive: "bg-rose-50 text-rose-700 ring-rose-200",
+   277→  Logistics: "bg-violet-50 text-violet-700 ring-violet-200",
+   278→};
+   279→
+   280→export const typeTint: Record<EntityType, string> = {
+   281→  self: "bg-amber-100 text-amber-800 ring-amber-300",
+   282→  listed: "bg-sky-50 text-sky-700 ring-sky-200",
+   283→  private: "bg-slate-100 text-slate-700 ring-slate-200",
+   284→  peer: "bg-violet-50 text-violet-700 ring-violet-200",
+   285→  counterparty: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+   286→};
+   287→
+   288→export const typeLabel: Record<EntityType, string> = {
+   289→  self: "HarchCorp",
+   290→  listed: "BVC Listed",
+   291→  private: "Private",
+   292→  peer: "Peer",
+   293→  counterparty: "Counterparty",
+   294→};
+   295→
+   296→export const statusTint: Record<EntityStatus, string> = {
+   297→  active: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+   298→  watch: "bg-amber-50 text-amber-700 ring-amber-200",
+   299→  restricted: "bg-rose-50 text-rose-700 ring-rose-200",
+   300→  review: "bg-sky-50 text-sky-700 ring-sky-200",
+   301→  monitored: "bg-violet-50 text-violet-700 ring-violet-200",
+   302→};
+   303→
+   304→/** 6-pillar radar color palette (matches legal-data pillarColor). */
+   305→export const pillarColor: Record<RiskPillarKey, string> = {
+   306→  regulatory: "#9333ea", // purple
+   307→  cyber: "#0891b2", // cyan
+   308→  financial: "#0ea5e9", // sky
+   309→  esg: "#10b981", // emerald
+   310→  geopolitical: "#f59e0b", // amber
+   311→  reputational: "#e11d48", // rose
+   312→};
+   313→
+   314→export const pillarLabel: Record<RiskPillarKey, string> = {
+   315→  regulatory: "Regulatory",
+   316→  cyber: "Cyber",
+   317→  financial: "Financial",
+   318→  esg: "ESG",
+   319→  geopolitical: "Geo",
+   320→  reputational: "Rep",
+   321→};
+   322→
+   323→/* ------------------------------------------------------------------ */
+   324→/*  HarchCorp — the monitored self                                     */
+   325→/* ------------------------------------------------------------------ */
+   326→
+   327→const harchcorpEntity: Entity = {
+   328→  id: "HRCH",
+   329→  name: "HarchCorp",
+   330→  ticker: "HRCH",
+   331→  type: "self",
+   332→  sector: "Tech",
+   333→  hq: "Casablanca",
+   334→  country: "Morocco",
+   335→  employees: 18420,
+   336→  revenueM: 24800,
+   337→  netIncomeM: 3120,
+   338→  assetsM: 41200,
+   339→  mktCapM: 38400,
+   340→  peRatio: 18.4,
+   341→  dividendYield: 1.2,
+   342→  riskScore: 72.4,
+   343→  riskPillars: buildPillars(101, 70),
+   344→  sentiment: -8,
+   345→  sentimentTrend12m: buildSentiment12m(-8, 22),
+   346→  lastNews: [
+   347→    { title: "SEC opens informal inquiry into Q4 revenue recognition", date: "2025-11-12", outlet: "Reuters", sentiment: "negative" },
+   348→    { title: "Ransomware affiliate claims exfiltration of 2.1 TB logistics data", date: "2025-11-11", outlet: "Bloomberg", sentiment: "negative" },
+   349→    { title: "HarchCorp announces new Casablanca Finance City HQ", date: "2025-11-08", outlet: "L'Économiste", sentiment: "positive" },
+   350→  ],
+   351→  leadership: [
+   352→    { name: "A. Marchetti", role: "Chief Executive Officer", since: 2018 },
+   353→    { name: "M. Dubois", role: "Chief Market Strategist", since: 2020 },
+   354→    { name: "L. Reyes", role: "General Counsel", since: 2019 },
+   355→    { name: "P. Novak", role: "Head of Communications", since: 2021 },
+   356→    { name: "T. Haddad", role: "Chief Financial Officer", since: 2017 },
+   357→    { name: "I. Mansouri", role: "Chief Operating Officer", since: 2022 },
+   358→  ],
+   359→  ownership: [
+   360→    { name: "Al Mada", share: 18.4, type: "Strategic" },
+   361→    { name: "Founder Family", share: 22.1, type: "Founder" },
+   362→    { name: "BlackRock", share: 5.6, type: "Institutional" },
+   363→    { name: "Public Float", share: 53.9, type: "Public Float" },
+   364→  ],
+   365→  status: "watch",
+   366→  watchlisted: true,
+   367→  sparkline: buildSparkline(72.4, 0.06),
+   368→};
+   369→
+   370→/* ------------------------------------------------------------------ */
+   371→/*  Moroccan listed equities — REUSE moroccanEquities from market-data  */
+   372→/*  and EXTEND each with entity-grade fields.                           */
+   373→/* ------------------------------------------------------------------ */
+   374→
+   375→interface ListedExtension {
+   376→  hq: MoroccanCity;
+   377→  employees: number;
+   378→  revenueM: number;
+   379→  netIncomeM: number;
+   380→  assetsM: number;
+   381→  dividendYield: number | null;
+   382→  status: EntityStatus;
+   383→  watchlisted: boolean;
+   384→  riskBase: number;
+   385→  sentiment: number;
+   386→  leadership: EntityLeader[];
+   387→  ownership: EntityShareholder[];
+   388→  lastNews: EntityNewsItem[];
+   389→}
+   390→
+   391→const listedExtensions: Record<string, ListedExtension> = {
+   392→  ATW: {
+   393→    hq: "Casablanca",
+   394→    employees: 21340,
+   395→    revenueM: 34200,
+   396→    netIncomeM: 5240,
+   397→    assetsM: 412000,
+   398→    dividendYield: 4.6,
+   399→    status: "active",
+   400→    watchlisted: true,
+   401→    riskBase: 38,
+   402→    sentiment: 18,
+   403→    leadership: [
+   404→      { name: "Mohamed El Kettani", role: "Chairman & CEO", since: 2008 },
+   405→      { name: "Badr Eddine Zerhari", role: "Deputy GM", since: 2019 },
+   406→      { name: "Karim El Housni", role: "CFO", since: 2020 },
+   407→    ],
+   408→    ownership: [
+   409→      { name: "Al Mada", share: 30.6, type: "Strategic" },
+   410→      { name: "Société Générale", share: 5.7, type: "Institutional" },
+   411→      { name: "Public Float", share: 63.7, type: "Public Float" },
+   412→    ],
+   413→    lastNews: [
+   414→      { title: "Attijariwafa Bank reports 9M net income +6.4% YoY", date: "2025-11-10", outlet: "L'Économiste", sentiment: "positive" },
+   415→      { title: "AMMC fines Attijariwafa 4.2M MAD for disclosure delay", date: "2025-11-04", outlet: "Medias24", sentiment: "negative" },
+   416→      { title: "ATW expands sub-Saharan footprint with new Côte d'Ivoire branch", date: "2025-10-28", outlet: "Reuters", sentiment: "positive" },
+   417→    ],
+   418→  },
+   419→  IAM: {
+   420→    hq: "Rabat",
+   421→    employees: 11650,
+   422→    revenueM: 33800,
+   423→    netIncomeM: 4180,
+   424→    assetsM: 62400,
+   425→    dividendYield: 5.8,
+   426→    status: "active",
+   427→    watchlisted: true,
+   428→    riskBase: 32,
+   429→    sentiment: 14,
+   430→    leadership: [
+   431→      { name: "Jamel Belkhechih", role: "Chairman & CEO", since: 2024 },
+   432→      { name: "Tarik Senhaji", role: "Deputy GM", since: 2021 },
+   433→    ],
+   434→    ownership: [
+   435→      { name: "Étissalat (e&)", share: 53.0, type: "Strategic" },
+   436→      { name: "Al Mada", share: 12.0, type: "Strategic" },
+   437→      { name: "Public Float", share: 35.0, type: "Public Float" },
+   438→    ],
+   439→    lastNews: [
+   440→      { title: "Maroc Telecom Q3 revenue down 1.2% on fixed-line decline", date: "2025-11-09", outlet: "L'Économiste", sentiment: "negative" },
+   441→      { title: "IAM launches 5G standalone in Casablanca and Rabat", date: "2025-11-03", outlet: "Le Matin", sentiment: "positive" },
+   442→      { title: "Inwi-Maroctelecom interconnect dispute referred to ANRT", date: "2025-10-25", outlet: "Medias24", sentiment: "negative" },
+   443→    ],
+   444→  },
+   445→  BOA: {
+   446→    hq: "Casablanca",
+   447→    employees: 14200,
+   448→    revenueM: 19400,
+   449→    netIncomeM: 2120,
+   450→    assetsM: 248000,
+   451→    dividendYield: 5.1,
+   452→    status: "active",
+   453→    watchlisted: true,
+   454→    riskBase: 44,
+   455→    sentiment: 6,
+   456→    leadership: [
+   457→      { name: "Othman Benjelloun", role: "Chairman", since: 2004 },
+   458→      { name: "Mehdi Bengouam", role: "CEO", since: 2023 },
+   459→    ],
+   460→    ownership: [
+   461→      { name: "BMCE Bank (RMA)", share: 47.5, type: "Strategic" },
+   462→      { name: "Public Float", share: 52.5, type: "Public Float" },
+   463→    ],
+   464→    lastNews: [
+   465→      { title: "Bank of Africa opens new regional HQ in Abidjan", date: "2025-11-07", outlet: "Aujourd'hui le Maroc", sentiment: "positive" },
+   466→      { title: "BOA provisioning costs rise 11% on Sahel exposure", date: "2025-11-02", outlet: "La Vie Éco", sentiment: "negative" },
+   467→      { title: "Bank Al-Maghrib revises BOA Pillar 2 capital add-on", date: "2025-10-22", outlet: "Medias24", sentiment: "neutral" },
+   468→    ],
+   469→  },
+   470→  CIH: {
+   471→    hq: "Casablanca",
+   472→    employees: 3120,
+   473→    revenueM: 4480,
+   474→    netIncomeM: 720,
+   475→    assetsM: 58400,
+   476→    dividendYield: 3.4,
+   477→    status: "active",
+   478→    watchlisted: true,
+   479→    riskBase: 42,
+   480→    sentiment: 22,
+   481→    leadership: [
+   482→      { name: "Kamal Mokdad", role: "Chairman & CEO", since: 2021 },
+   483→    ],
+   484→    ownership: [
+   485→      { name: "Holmarcom Group", share: 51.0, type: "Strategic" },
+   486→      { name: "Public Float", share: 49.0, type: "Public Float" },
+   487→    ],
+   488→    lastNews: [
+   489→      { title: "CIH Bank launches digital-only sub-brand 'CIH Smart'", date: "2025-11-06", outlet: "Le Matin", sentiment: "positive" },
+   490→      { title: "CIH leads syndicate for 1.8B MAD Tanger-Med expansion", date: "2025-10-29", outlet: "L'Économiste", sentiment: "positive" },
+   491→    ],
+   492→  },
+   493→  LBV: {
+   494→    hq: "Casablanca",
+   495→    employees: 7800,
+   496→    revenueM: 13800,
+   497→    netIncomeM: 720,
+   498→    assetsM: 9400,
+   499→    dividendYield: 2.1,
+   500→    status: "active",
+   501→    watchlisted: false,
+   502→    riskBase: 40,
+   503→    sentiment: 16,
+   504→    leadership: [
+   505→      { name: "Mohamed El Bouhlal", role: "CEO", since: 2014 },
+   506→    ],
+   507→    ownership: [
+   508→      { name: "Carrefour Group", share: 39.0, type: "Strategic" },
+   509→      { name: "Public Float", share: 61.0, type: "Public Float" },
+   510→    ],
+   511→    lastNews: [
+   512→      { title: "Label'Vie opens 12th hypermarket in Marrakech", date: "2025-11-08", outlet: "Aujourd'hui le Maroc", sentiment: "positive" },
+   513→      { title: "LBV partners with Glovo for 30-min grocery delivery", date: "2025-10-30", outlet: "TelQuel", sentiment: "positive" },
+   514→    ],
+   515→  },
+   516→  OLC: {
+   517→    hq: "Casablanca",
+   518→    employees: 1640,
+   519→    revenueM: 4280,
+   520→    netIncomeM: 380,
+   521→    assetsM: 5200,
+   522→    dividendYield: 6.2,
+   523→    status: "active",
+   524→    watchlisted: false,
+   525→    riskBase: 36,
+   526→    sentiment: 8,
+   527→    leadership: [
+   528→      { name: "Mohamed Sbia", role: "Chairman & CEO", since: 2010 },
+   529→    ],
+   530→    ownership: [
+   531→      { name: "SNI", share: 35.4, type: "Strategic" },
+   532→      { name: "Public Float", share: 64.6, type: "Public Float" },
+   533→    ],
+   534→    lastNews: [
+   535→      { title: "LesieurCristal flags input-cost pressure on Q3 margins", date: "2025-11-05", outlet: "L'Économiste", sentiment: "negative" },
+   536→      { title: "OLC wins 2025 AFMA edible-oils quality award", date: "2025-10-24", outlet: "Le Matin", sentiment: "positive" },
+   537→    ],
+   538→  },
+   539→  MNG: {
+   540→    hq: "Casablanca",
+   541→    employees: 4100,
+   542→    revenueM: 5840,
+   543→    netIncomeM: 540,
+   544→    assetsM: 14200,
+   545→    dividendYield: 4.4,
+   546→    status: "watch",
+   547→    watchlisted: true,
+   548→    riskBase: 52,
+   549→    sentiment: -4,
+   550→    leadership: [
+   551→      { name: "Mohammed Said Ouhou", role: "Chairman", since: 2022 },
+   552→    ],
+   553→    ownership: [
+   554→      { name: "Al Mada", share: 69.0, type: "Strategic" },
+   555→      { name: "Public Float", share: 31.0, type: "Public Float" },
+   556→    ],
+   557→    lastNews: [
+   558→      { title: "Managem halts Guemassa cobalt operations after safety incident", date: "2025-11-09", outlet: "Medias24", sentiment: "negative" },
+   559→      { title: "Gold prices lift Managem 9M EBITDA +14%", date: "2025-11-03", outlet: "L'Économiste", sentiment: "positive" },
+   560→    ],
+   561→  },
+   562→  LHM: {
+   563→    hq: "Casablanca",
+   564→    employees: 1820,
+   565→    revenueM: 7240,
+   566→    netIncomeM: 1180,
+   567→    assetsM: 12400,
+   568→    dividendYield: 3.6,
+   569→    status: "active",
+   570→    watchlisted: false,
+   571→    riskBase: 38,
+   572→    sentiment: 12,
+   573→    leadership: [
+   574→      { name: "Juan Esteban Gil", role: "Chairman & CEO", since: 2020 },
+   575→    ],
+   576→    ownership: [
+   577→      { name: "LafargeHolcim Group", share: 64.6, type: "Strategic" },
+   578→      { name: "Public Float", share: 35.4, type: "Public Float" },
+   579→    ],
+   580→    lastNews: [
+   581→      { title: "LafargeHolcim Maroc commissions new low-carbon kiln at Bouskoura", date: "2025-11-07", outlet: "L'Économiste", sentiment: "positive" },
+   582→      { title: "Construction slowdown trims LHM volumes 4% QoQ", date: "2025-10-28", outlet: "La Vie Éco", sentiment: "negative" },
+   583→    ],
+   584→  },
+   585→  CFG: {
+   586→    hq: "Casablanca",
+   587→    employees: 640,
+   588→    revenueM: 1180,
+   589→    netIncomeM: 240,
+   590→    assetsM: 22400,
+   591→    dividendYield: 3.2,
+   592→    status: "watch",
+   593→    watchlisted: true,
+   594→    riskBase: 50,
+   595→    sentiment: -2,
+   596→    leadership: [
+   597→      { name: "Said El Himmass", role: "Chairman", since: 2019 },
+   598→    ],
+   599→    ownership: [
+   600→      { name: "SNI", share: 41.5, type: "Strategic" },
+   601→      { name: "Public Float", share: 58.5, type: "Public Float" },
+   602→    ],
+   603→    lastNews: [
+   604→      { title: "CFG Bank AML control gap cited by ANRT-linked review", date: "2025-11-08", outlet: "Medias24", sentiment: "negative" },
+   605→      { title: "CFG mandates arranger for first MAD green bond", date: "2025-10-30", outlet: "L'Économiste", sentiment: "positive" },
+   606→    ],
+   607→  },
+   608→  ADH: {
+   609→    hq: "Casablanca",
+   610→    employees: 1980,
+   611→    revenueM: 4120,
+   612→    netIncomeM: 580,
+   613→    assetsM: 18400,
+   614→    dividendYield: 6.8,
+   615→    status: "watch",
+   616→    watchlisted: true,
+   617→    riskBase: 54,
+   618→    sentiment: -6,
+   619→    leadership: [
+   620→      { name: "Anas Sefrioui", role: "Chairman & CEO", since: 2006 },
+   621→    ],
+   622→    ownership: [
+   623→      { name: "SNI", share: 71.7, type: "Strategic" },
+   624→      { name: "Public Float", share: 28.3, type: "Public Float" },
+   625→    ],
+   626→    lastNews: [
+   627→      { title: "Addoha 9M presales collapse 28% on housing demand slide", date: "2025-11-09", outlet: "L'Économiste", sentiment: "negative" },
+   628→      { title: "Addoha refocuses on affordable housing in secondary cities", date: "2025-10-26", outlet: "Aujourd'hui le Maroc", sentiment: "neutral" },
+   629→    ],
+   630→  },
+   631→  RIS: {
+   632→    hq: "Casablanca",
+   633→    employees: 540,
+   634→    revenueM: 980,
+   635→    netIncomeM: 110,
+   636→    assetsM: 6800,
+   637→    dividendYield: 5.0,
+   638→    status: "watch",
+   639→    watchlisted: false,
+   640→    riskBase: 56,
+   641→    sentiment: -8,
+   642→    leadership: [
+   643→      { name: "Hicham El Amrani", role: "Chairman", since: 2020 },
+   644→    ],
+   645→    ownership: [
+   646→      { name: "Addoha", share: 64.5, type: "Strategic" },
+   647→      { name: "Public Float", share: 35.5, type: "Public Float" },
+   648→    ],
+   649→    lastNews: [
+   650→      { title: "Risma hospitality revenue down 18% on softer tourism mix", date: "2025-11-04", outlet: "La Vie Éco", sentiment: "negative" },
+   651→    ],
+   652→  },
+   653→  TQM: {
+   654→    hq: "Casablanca",
+   655→    employees: 720,
+   656→    revenueM: 1840,
+   657→    netIncomeM: 140,
+   658→    assetsM: 3200,
+   659→    dividendYield: 4.6,
+   660→    status: "active",
+   661→    watchlisted: false,
+   662→    riskBase: 44,
+   663→    sentiment: 4,
+   664→    leadership: [
+   665→      { name: "Ali Berrada", role: "Chairman & CEO", since: 2016 },
+   666→    ],
+   667→    ownership: [
+   668→      { name: "Public Float", share: 100.0, type: "Public Float" },
+   669→    ],
+   670→    lastNews: [
+   671→      { title: "Tourest rebound continues as summer bookings normalize", date: "2025-11-06", outlet: "Le Matin", sentiment: "positive" },
+   672→    ],
+   673→  },
+   674→  TIM: {
+   675→    hq: "Tanger",
+   676→    employees: 880,
+   677→    revenueM: 1620,
+   678→    netIncomeM: 130,
+   679→    assetsM: 4200,
+   680→    dividendYield: 5.4,
+   681→    status: "active",
+   682→    watchlisted: false,
+   683→    riskBase: 42,
+   684→    sentiment: 8,
+   685→    leadership: [
+   686→      { name: "Karim Tazi", role: "Chairman", since: 2018 },
+   687→    ],
+   688→    ownership: [
+   689→      { name: "Public Float", share: 100.0, type: "Public Float" },
+   690→    ],
+   691→    lastNews: [
+   692→      { title: "Timar port throughput at Tanger Med up 9% in Q3", date: "2025-11-05", outlet: "L'Économiste", sentiment: "positive" },
+   693→    ],
+   694→  },
+   695→  CDM: {
+   696→    hq: "Casablanca",
+   697→    employees: 1840,
+   698→    revenueM: 2480,
+   699→    netIncomeM: 320,
+   700→    assetsM: 36400,
+   701→    dividendYield: 4.2,
+   702→    status: "active",
+   703→    watchlisted: false,
+   704→    riskBase: 40,
+   705→    sentiment: 10,
+   706→    leadership: [
+   707→      { name: "Christian Edmond Ntap", role: "CEO", since: 2022 },
+   708→    ],
+   709→    ownership: [
+   710→      { name: "Crédit Agricole S.A.", share: 78.7, type: "Strategic" },
+   711→      { name: "Public Float", share: 21.3, type: "Public Float" },
+   712→    ],
+   713→    lastNews: [
+   714→      { title: "Crédit du Maroc accelerates SME digital lending rollout", date: "2025-11-07", outlet: "Aujourd'hui le Maroc", sentiment: "positive" },
+   715→    ],
+   716→  },
+   717→  SGT: {
+   718→    hq: "Casablanca",
+   719→    employees: 460,
+   720→    revenueM: 920,
+   721→    netIncomeM: 60,
+   722→    assetsM: 1800,
+   723→    dividendYield: 2.8,
+   724→    status: "active",
+   725→    watchlisted: false,
+   726→    riskBase: 48,
+   727→    sentiment: 2,
+   728→    leadership: [
+   729→      { name: "Yassine Sabri", role: "Chairman", since: 2019 },
+   730→    ],
+   731→    ownership: [
+   732→      { name: "Public Float", share: 100.0, type: "Public Float" },
+   733→    ],
+   734→    lastNews: [
+   735→      { title: "Saga Africa announces Mozambique agri-trading JV", date: "2025-11-03", outlet: "La Vie Éco", sentiment: "positive" },
+   736→    ],
+   737→  },
+   738→  "M2M": {
+   739→    hq: "Casablanca",
+   740→    employees: 1240,
+   741→    revenueM: 1980,
+   742→    netIncomeM: 180,
+   743→    assetsM: 3400,
+   744→    dividendYield: 3.0,
+   745→    status: "active",
+   746→    watchlisted: false,
+   747→    riskBase: 46,
+   748→    sentiment: 6,
+   749→    leadership: [
+   750→      { name: "Jaouad Kettani", role: "Chairman & CEO", since: 2008 },
+   751→    ],
+   752→    ownership: [
+   753→      { name: "Public Float", share: 100.0, type: "Public Float" },
+   754→    ],
+   755→    lastNews: [
+   756→      { title: "M2M Group wins Senegal customs modernization contract", date: "2025-11-08", outlet: "L'Économiste", sentiment: "positive" },
+   757→    ],
+   758→  },
+   759→  DIS: {
+   760→    hq: "Casablanca",
+   761→    employees: 920,
+   762→    revenueM: 1280,
+   763→    netIncomeM: 90,
+   764→    assetsM: 2400,
+   765→    dividendYield: 3.4,
+   766→    status: "active",
+   767→    watchlisted: false,
+   768→    riskBase: 44,
+   769→    sentiment: 0,
+   770→    leadership: [
+   771→      { name: "Hassan Chami", role: "Chairman & CEO", since: 2012 },
+   772→    ],
+   773→    ownership: [
+   774→      { name: "Public Float", share: 100.0, type: "Public Float" },
+   775→    ],
+   776→    lastNews: [
+   777→      { title: "Discom IT distribution margins pressured by FX move", date: "2025-11-02", outlet: "Medias24", sentiment: "negative" },
+   778→    ],
+   779→  },
+   780→  OCP: {
+   781→    hq: "Casablanca",
+   782→    employees: 21300,
+   783→    revenueM: 88400,
+   784→    netIncomeM: 14200,
+   785→    assetsM: 96400,
+   786→    dividendYield: 4.0,
+   787→    status: "watch",
+   788→    watchlisted: true,
+   789→    riskBase: 40,
+   790→    sentiment: 18,
+   791→    leadership: [
+   792→      { name: "Mostafa Terrab", role: "Chairman & CEO", since: 2008 },
+   793→      { name: "Arndt Frielitz", role: "CFO", since: 2021 },
+   794→    ],
+   795→    ownership: [
+   796→      { name: "Kingdom of Morocco", share: 75.0, type: "State" },
+   797→      { name: "Public Float", share: 25.0, type: "Public Float" },
+   798→    ],
+   799→    lastNews: [
+   800→      { title: "OCP Group launches 1.6B MAD green hydrogen pilot at Jorf Lasfar", date: "2025-11-10", outlet: "Reuters", sentiment: "positive" },
+   801→      { title: "Phosphate rock prices ease 4% on softer Brazilian demand", date: "2025-11-04", outlet: "Bloomberg", sentiment: "negative" },
+   802→      { title: "OCP signs 5-year offtake with Indian Potash Ltd", date: "2025-10-29", outlet: "L'Économiste", sentiment: "positive" },
+   803→    ],
+   804→  },
+   805→};
+   806→
+   807→/** Convert a listed Equity from market-data into a full Entity. */
+   808→function listedToEntity(ticker: string): Entity {
+   809→  const eq = moroccanEquities.find((e) => e.ticker === ticker);
+   810→  if (!eq) throw new Error(`Equity ${ticker} not found in moroccanEquities`);
+   811→  const ext = listedExtensions[ticker];
+   812→  const pillars = buildPillars(200 + ticker.charCodeAt(0) + ticker.charCodeAt(1) % 256, ext.riskBase);
+   813→  return {
+   814→    id: ticker,
+   815→    name: eq.name,
+   816→    ticker,
+   817→    type: "listed",
+   818→    sector: eq.sector,
+   819→    hq: ext.hq,
+   820→    country: "Morocco",
+   821→    employees: ext.employees,
+   822→    revenueM: ext.revenueM,
+   823→    netIncomeM: ext.netIncomeM,
+   824→    assetsM: ext.assetsM,
+   825→    mktCapM: eq.mktCapM,
+   826→    peRatio: eq.peRatio,
+   827→    dividendYield: ext.dividendYield,
+   828→    riskScore: composite(pillars),
+   829→    riskPillars: pillars,
+   830→    sentiment: ext.sentiment,
+   831→    sentimentTrend12m: buildSentiment12m(ext.sentiment, 18),
+   832→    lastNews: ext.lastNews,
+   833→    leadership: ext.leadership,
+   834→    ownership: ext.ownership,
+   835→    status: ext.status,
+   836→    watchlisted: ext.watchlisted,
+   837→    sparkline: buildSparkline(eq.last, 0.04),
+   838→  };
+   839→}
+   840→
+   841→const listedEntities: Entity[] = moroccanEquities.map((eq) => listedToEntity(eq.ticker));
+   842→
+   843→/* ------------------------------------------------------------------ */
+   844→/*  Private Moroccan corporates (not BVC-listed)                       */
+   845→/* ------------------------------------------------------------------ */
+   846→
+   847→interface PrivateSeed {
+   848→  id: string;
+   849→  name: string;
+   850→  sector: EntitySector;
+   851→  hq: MoroccanCity;
+   852→  employees: number;
+   853→  revenueM: number;
+   854→  netIncomeM: number;
+   855→  assetsM: number;
+   856→  status: EntityStatus;
+   857→  watchlisted: boolean;
+   858→  riskBase: number;
+   859→  sentiment: number;
+   860→  leadership: EntityLeader[];
+   861→  ownership: EntityShareholder[];
+   862→  lastNews: EntityNewsItem[];
+   863→}
+   864→
+   865→const privateSeeds: PrivateSeed[] = [
+   866→  {
+   867→    id: "ALMADA",
+   868→    name: "Al Mada",
+   869→    sector: "Holding",
+   870→    hq: "Casablanca",
+   871→    employees: 480,
+   872→    revenueM: 0, // holding — investment income, not consolidated rev
+   873→    netIncomeM: 3200,
+   874→    assetsM: 32000,
+   875→    status: "monitored",
+   876→    watchlisted: true,
+   877→    riskBase: 36,
+   878→    sentiment: 16,
+   879→    leadership: [
+   880→      { name: "Hassan Ouriaghli", role: "CEO", since: 2022 },
+   881→      { name: "Abdelmounim Rachidi", role: "Chairman", since: 2018 },
+   882→    ],
+   883→    ownership: [
+   884→      { name: "Kingdom of Morocco", share: 100.0, type: "State" },
+   885→    ],
+   886→    lastNews: [
+   887→      { title: "Al Mada exits 4.2% stake in TotalEnergies for €1.4B", date: "2025-11-09", outlet: "Reuters", sentiment: "positive" },
+   888→      { title: "Al Mada increases position in Bank of Africa to 47.5%", date: "2025-10-27", outlet: "L'Économiste", sentiment: "positive" },
+   889→      { title: "Sovereign fund governance review surfaces 3 board conflicts", date: "2025-10-18", outlet: "Medias24", sentiment: "negative" },
+   890→    ],
+   891→  },
+   892→  {
+   893→    id: "SNI",
+   894→    name: "SNI (Société Nationale d'Investissement)",
+   895→    sector: "Holding",
+   896→    hq: "Casablanca",
+   897→    employees: 320,
+   898→    revenueM: 0,
+   899→    netIncomeM: 2400,
+   900→    assetsM: 24800,
+   901→    status: "monitored",
+   902→    watchlisted: true,
+   903→    riskBase: 42,
+   904→    sentiment: 8,
+   905→    leadership: [
+   906→      { name: "Fouad Douiri", role: "Chairman & CEO", since: 2016 },
+   907→    ],
+   908→    ownership: [
+   909→      { name: "Al Mada", share: 100.0, type: "Strategic" },
+   910→    ],
+   911→    lastNews: [
+   912→      { title: "SNI restructures into 4 verticals: mining, telecom, retail, finance", date: "2025-11-05", outlet: "L'Économiste", sentiment: "neutral" },
+   913→      { title: "SNI-backed Nareva wins 1.2GW Egypt wind PPA", date: "2025-10-22", outlet: "Reuters", sentiment: "positive" },
+   914→    ],
+   915→  },
+   916→  {
+   917→    id: "LDA",
+   918→    name: "Les Domaines Agricoles",
+   919→    sector: "Agri",
+   920→    hq: "Marrakech",
+   921→    employees: 9800,
+   922→    revenueM: 6840,
+   923→    netIncomeM: 720,
+   924→    assetsM: 14200,
+   925→    status: "monitored",
+   926→    watchlisted: false,
+   927→    riskBase: 38,
+   928→    sentiment: 14,
+   929→    leadership: [
+   930→      { name: "Brahim El Mansouri", role: "CEO", since: 2019 },
+   931→    ],
+   932→    ownership: [
+   933→      { name: "Al Mada", share: 60.0, type: "Strategic" },
+   934→      { name: "Founder Family", share: 40.0, type: "Founder" },
+   935→    ],
+   936→    lastNews: [
+   937→      { title: "Les Domaines Agricoles launches 12MW solar-drip irrigation pilot", date: "2025-11-06", outlet: "Aujourd'hui le Maroc", sentiment: "positive" },
+   938→      { title: "Drought cuts Domaines Agricoles citrus yield 14%", date: "2025-10-25", outlet: "L'Économiste", sentiment: "negative" },
+   939→    ],
+   940→  },
+   941→  {
+   942→    id: "COSUMAR",
+   943→    name: "Cosumar",
+   944→    sector: "Agri",
+   945→    hq: "Casablanca",
+   946→    employees: 5200,
+   947→    revenueM: 12400,
+   948→    netIncomeM: 980,
+   949→    assetsM: 18200,
+   950→    status: "active",
+   951→    watchlisted: false,
+   952→    riskBase: 36,
+   953→    sentiment: 18,
+   954→    leadership: [
+   955→      { name: "Mohamed Fikrat", role: "Chairman & CEO", since: 2014 },
+   956→    ],
+   957→    ownership: [
+   958→      { name: "SNI", share: 73.5, type: "Strategic" },
+   959→      { name: "Public Float", share: 26.5, type: "Public Float" },
+   960→    ],
+   961→    lastNews: [
+   962→      { title: "Cosumar completes 540M MAD sugar refinery upgrade at Souss", date: "2025-11-07", outlet: "L'Économiste", sentiment: "positive" },
+   963→      { title: "Sugar import quotas tightened; Cosumar domestic share +3pp", date: "2025-10-29", outlet: "Le Matin", sentiment: "positive" },
+   964→    ],
+   965→  },
+   966→  {
+   967→    id: "INWI",
+   968→    name: "Inwi (Wana Corporate)",
+   969→    sector: "Telecom",
+   970→    hq: "Rabat",
+   971→    employees: 3800,
+   972→    revenueM: 11800,
+   973→    netIncomeM: 880,
+   974→    assetsM: 21400,
+   975→    status: "watch",
+   976→    watchlisted: true,
+   977→    riskBase: 48,
+   978→    sentiment: 4,
+   979→    leadership: [
+   980→      { name: "Khalid Ben Sbihi", role: "Chairman", since: 2020 },
+   981→      { name: "Nicolas Rineau", role: "CEO", since: 2022 },
+   982→    ],
+   983→    ownership: [
+   984→      { name: "SNI", share: 70.0, type: "Strategic" },
+   985→      { name: "Zain Group", share: 30.0, type: "Strategic" },
+   986→    ],
+   987→    lastNews: [
+   988→      { title: "Inwi-Maroctelecom interconnect dispute referred to ANRT", date: "2025-11-04", outlet: "Medias24", sentiment: "negative" },
+   989→      { title: "Inwi Mobile Money crosses 6M active wallets", date: "2025-10-22", outlet: "L'Économiste", sentiment: "positive" },
+   990→    ],
+   991→  },
+   992→  {
+   993→    id: "TAQA",
+   994→    name: "Taqa Morocco",
+   995→    sector: "Energy",
+   996→    hq: "Casablanca",
+   997→    employees: 1840,
+   998→    revenueM: 9420,
+   999→    netIncomeM: 1240,
+  1000→    assetsM: 28400,
+  1001→    status: "active",
+  1002→    watchlisted: true,
+  1003→    riskBase: 44,
+  1004→    sentiment: 6,
+  1005→    leadership: [
+  1006→      { name: "Abdelkader El Amrani", role: "Chairman", since: 2021 },
+  1007→    ],
+  1008→    ownership: [
+  1009→      { name: "TAQA Group (UAE)", share: 64.0, type: "Strategic" },
+  1010→      { name: "Public Float", share: 36.0, type: "Public Float" },
+  1011→    ],
+  1012→    lastNews: [
+  1013→      { title: "Taqa Morocco Jorf Lasfar units 4-6 refurbishment on schedule", date: "2025-11-08", outlet: "L'Économiste", sentiment: "positive" },
+  1014→      { title: "Coal supply chain disruption trims Q3 generation 3%", date: "2025-10-28", outlet: "Medias24", sentiment: "negative" },
+  1015→    ],
+  1016→  },
+  1017→  {
+  1018→    id: "NAREVA",
+  1019→    name: "Nareva Holding",
+  1020→    sector: "Energy",
+  1021→    hq: "Casablanca",
+  1022→    employees: 2200,
+  1023→    revenueM: 6800,
+  1024→    netIncomeM: 820,
+  1025→    assetsM: 24800,
+  1026→    status: "monitored",
+  1027→    watchlisted: false,
+  1028→    riskBase: 40,
+  1029→    sentiment: 16,
+  1030→    leadership: [
+  1031→      { name: "Mounir El Bari", role: "Chairman & CEO", since: 2019 },
+  1032→    ],
+  1033→    ownership: [
+  1034→      { name: "SNI", share: 100.0, type: "Strategic" },
+  1035→    ],
+  1036→    lastNews: [
+  1037→      { title: "Nareva wins 1.2GW Egypt wind PPA", date: "2025-11-06", outlet: "Reuters", sentiment: "positive" },
+  1038→      { title: "Nareva 320MW Morocco solar farm energized at Noor Midelt II", date: "2025-10-24", outlet: "L'Économiste", sentiment: "positive" },
+  1039→    ],
+  1040→  },
+  1041→  {
+  1042→    id: "MARSAMAROC",
+  1043→    name: "Marsa Maroc",
+  1044→    sector: "Logistics",
+  1045→    hq: "Casablanca",
+  1046→    employees: 4600,
+  1047→    revenueM: 3480,
+  1048→    netIncomeM: 540,
+  1049→    assetsM: 12400,
+  1050→    status: "active",
+  1051→    watchlisted: false,
+  1052→    riskBase: 42,
+  1053→    sentiment: 12,
+  1054→    leadership: [
+  1055→      { name: "Benjamin Adda", role: "CEO", since: 2021 },
+  1056→    ],
+  1057→    ownership: [
+  1058→      { name: "Kingdom of Morocco", share: 60.0, type: "State" },
+  1059→      { name: "CMA CGM", share: 32.0, type: "Strategic" },
+  1060→      { name: "Public Float", share: 8.0, type: "Public Float" },
+  1061→    ],
+  1062→    lastNews: [
+  1063→      { title: "Marsa Maroc Tanger Med throughput up 12% on Africa transshipment", date: "2025-11-07", outlet: "L'Économiste", sentiment: "positive" },
+  1064→      { title: "Marsa Maroc Casablanca port labor strike averted after wage deal", date: "2025-10-26", outlet: "Medias24", sentiment: "positive" },
+  1065→    ],
+  1066→  },
+  1067→  {
+  1068→    id: "AUTOHALL",
+  1069→    name: "Auto Hall",
+  1070→    sector: "Automotive",
+  1071→    hq: "Casablanca",
+  1072→    employees: 3200,
+  1073→    revenueM: 18400,
+  1074→    netIncomeM: 680,
+  1075→    assetsM: 9400,
+  1076→    status: "active",
+  1077→    watchlisted: false,
+  1078→    riskBase: 40,
+  1079→    sentiment: 8,
+  1080→    leadership: [
+  1081→      { name: "Ali Kettani", role: "Chairman & CEO", since: 2010 },
+  1082→    ],
+  1083→    ownership: [
+  1084→      { name: "Holmarcom Group", share: 68.4, type: "Strategic" },
+  1085→      { name: "Public Float", share: 31.6, type: "Public Float" },
+  1086→    ],
+  1087→    lastNews: [
+  1088→      { title: "Auto Hall signs Morocco assembly deal with Ford for Ranger EV", date: "2025-11-09", outlet: "L'Économiste", sentiment: "positive" },
+  1089→      { title: "Truck sales soften as freight demand slows", date: "2025-10-29", outlet: "Le Matin", sentiment: "negative" },
+  1090→    ],
+  1091→  },
+  1092→  {
+  1093→    id: "LYDEC",
+  1094→    name: "Lydec (Suez)",
+  1095→    sector: "Utilities",
+  1096→    hq: "Casablanca",
+  1097→    employees: 5800,
+  1098→    revenueM: 8400,
+  1099→    netIncomeM: 420,
+  1100→    assetsM: 22400,
+  1101→    status: "review",
+  1102→    watchlisted: false,
+  1103→    riskBase: 52,
+  1104→    sentiment: -8,
+  1105→    leadership: [
+  1106→      { name: "Mohamed Hijri", role: "CEO", since: 2020 },
+  1107→    ],
+  1108→    ownership: [
+  1109→      { name: "Veolia (post-2022 transfer)", share: 100.0, type: "Strategic" },
+  1110→    ],
+  1111→    lastNews: [
+  1112→      { title: "Lydec under review for Casablanca flooding response", date: "2025-11-08", outlet: "TelQuel", sentiment: "negative" },
+  1113→      { title: "Lydec investment plan: 4.2B MAD over 2025-2027 for water grid", date: "2025-10-22", outlet: "L'Économiste", sentiment: "positive" },
+  1114→    ],
+  1115→  },
+  1116→];
+  1117→
+  1118→function privateToEntity(seed: PrivateSeed): Entity {
+  1119→  const pillars = buildPillars(400 + seed.id.charCodeAt(0) * 31, seed.riskBase);
+  1120→  return {
+  1121→    id: seed.id,
+  1122→    name: seed.name,
+  1123→    ticker: null,
+  1124→    type: "private",
+  1125→    sector: seed.sector,
+  1126→    hq: seed.hq,
+  1127→    country: "Morocco",
+  1128→    employees: seed.employees,
+  1129→    revenueM: seed.revenueM,
+  1130→    netIncomeM: seed.netIncomeM,
+  1131→    assetsM: seed.assetsM,
+  1132→    mktCapM: null,
+  1133→    peRatio: null,
+  1134→    dividendYield: null,
+  1135→    riskScore: composite(pillars),
+  1136→    riskPillars: pillars,
+  1137→    sentiment: seed.sentiment,
+  1138→    sentimentTrend12m: buildSentiment12m(seed.sentiment, 18),
+  1139→    lastNews: seed.lastNews,
+  1140→    leadership: seed.leadership,
+  1141→    ownership: seed.ownership,
+  1142→    status: seed.status,
+  1143→    watchlisted: seed.watchlisted,
+  1144→    sparkline: buildSparkline(composite(pillars), 0.05),
+  1145→  };
+  1146→}
+  1147→
+  1148→const privateEntities: Entity[] = privateSeeds.map(privateToEntity);
+  1149→
+  1150→/* ------------------------------------------------------------------ */
+  1151→/*  HarchCorp peers / competitors                                      */
+  1152→/* ------------------------------------------------------------------ */
+  1153→
+  1154→interface PeerSeed {
+  1155→  id: string;
+  1156→  name: string;
+  1157→  ticker: string;
+  1158→  sector: EntitySector;
+  1159→  hq: MoroccanCity;
+  1160→  employees: number;
+  1161→  revenueM: number; // USD-equivalent in MAD millions (1 USD ~ 10 MAD)
+  1162→  netIncomeM: number;
+  1163→  assetsM: number;
+  1164→  mktCapM: number;
+  1165→  peRatio: number;
+  1166→  status: EntityStatus;
+  1167→  riskBase: number;
+  1168→  sentiment: number;
+  1169→  leadership: EntityLeader[];
+  1170→  ownership: EntityShareholder[];
+  1171→  lastNews: EntityNewsItem[];
+  1172→}
+  1173→
+  1174→const peerSeeds: PeerSeed[] = [
+  1175→  {
+  1176→    id: "PEER-NW",
+  1177→    name: "Northwind Analytics",
+  1178→    ticker: "NW",
+  1179→    sector: "Tech",
+  1180→    hq: "International",
+  1181→    employees: 12400,
+  1182→    revenueM: 18600,
+  1183→    netIncomeM: 1980,
+  1184→    assetsM: 28400,
+  1185→    mktCapM: 31200,
+  1186→    peRatio: 17.2,
+  1187→    status: "monitored",
+  1188→    riskBase: 56,
+  1189→    sentiment: -4,
+  1190→    leadership: [
+  1191→      { name: "Sarah Mendelsohn", role: "CEO", since: 2017 },
+  1192→      { name: "Pedro Vargas", role: "CFO", since: 2020 },
+  1193→    ],
+  1194→    ownership: [
+  1195→      { name: "Sequoia Capital", share: 14.0, type: "Institutional" },
+  1196→      { name: "Founder Family", share: 18.6, type: "Founder" },
+  1197→      { name: "Public Float", share: 67.4, type: "Public Float" },
+  1198→    ],
+  1199→    lastNews: [
+  1200→      { title: "Northwind Q3 ARR +14% but churn ticks to 6.8%", date: "2025-11-09", outlet: "Bloomberg", sentiment: "neutral" },
+  1201→      { title: "Northwind poaches HarchCorp EMEA GM for CEO role", date: "2025-10-22", outlet: "Reuters", sentiment: "negative" },
+  1202→    ],
+  1203→  },
+  1204→  {
+  1205→    id: "PEER-VL",
+  1206→    name: "Vela Dynamics",
+  1207→    ticker: "VELA",
+  1208→    sector: "Tech",
+  1209→    hq: "International",
+  1210→    employees: 6800,
+  1211→    revenueM: 9800,
+  1212→    netIncomeM: 740,
+  1213→    assetsM: 14200,
+  1214→    mktCapM: 16800,
+  1215→    peRatio: 22.8,
+  1216→    status: "monitored",
+  1217→    riskBase: 60,
+  1218→    sentiment: -8,
+  1219→    leadership: [
+  1220→      { name: "Aiko Nakamura", role: "CEO", since: 2019 },
+  1221→    ],
+  1222→    ownership: [
+  1223→      { name: "Tiger Global", share: 12.0, type: "Institutional" },
+  1224→      { name: "Founder Family", share: 24.0, type: "Founder" },
+  1225→      { name: "Public Float", share: 64.0, type: "Public Float" },
+  1226→    ],
+  1227→    lastNews: [
+  1228→      { title: "Vela Dynamics under EU GDPR review for ad-tech data flows", date: "2025-11-08", outlet: "FT", sentiment: "negative" },
+  1229→      { title: "Vela expands real-time risk feed to 47 exchanges", date: "2025-10-30", outlet: "Bloomberg", sentiment: "positive" },
+  1230→    ],
+  1231→  },
+  1232→  {
+  1233→    id: "PEER-ORB",
+  1234→    name: "Orbital Systems",
+  1235→    ticker: "ORB",
+  1236→    sector: "Tech",
+  1237→    hq: "International",
+  1238→    employees: 9200,
+  1239→    revenueM: 14200,
+  1240→    netIncomeM: 1480,
+  1241→    assetsM: 21800,
+  1242→    mktCapM: 24800,
+  1243→    peRatio: 19.4,
+  1244→    status: "monitored",
+  1245→    riskBase: 50,
+  1246→    sentiment: 6,
+  1247→    leadership: [
+  1248→      { name: "Henrik Lindqvist", role: "CEO", since: 2016 },
+  1249→    ],
+  1250→    ownership: [
+  1251→      { name: "Public Float", share: 86.0, type: "Public Float" },
+  1252→      { name: "Founder Family", share: 14.0, type: "Founder" },
+  1253→    ],
+  1254→    lastNews: [
+  1255→      { title: "Orbital Systems completes acquisition of Mexican risk-data startup", date: "2025-11-07", outlet: "Reuters", sentiment: "positive" },
+  1256→      { title: "Orbital posts record backlog on LATAM sovereign contracts", date: "2025-10-28", outlet: "Bloomberg", sentiment: "positive" },
+  1257→    ],
+  1258→  },
+  1259→  {
+  1260→    id: "PEER-KV",
+  1261→    name: "Kessler & Vale",
+  1262→    ticker: "KV",
+  1263→    sector: "Tech",
+  1264→    hq: "International",
+  1265→    employees: 4600,
+  1266→    revenueM: 6400,
+  1267→    netIncomeM: 540,
+  1268→    assetsM: 8400,
+  1269→    mktCapM: 9200,
+  1270→    peRatio: 16.4,
+  1271→    status: "monitored",
+  1272→    riskBase: 58,
+  1273→    sentiment: -2,
+  1274→    leadership: [
+  1275→      { name: "Rolf Kessler", role: "Chairman", since: 2009 },
+  1276→    ],
+  1277→    ownership: [
+  1278→      { name: "Founder Family", share: 32.0, type: "Founder" },
+  1279→      { name: "Public Float", share: 68.0, type: "Public Float" },
+  1280→    ],
+  1281→    lastNews: [
+  1282→      { title: "Kessler & Vale loses German Bundesbank reference contract", date: "2025-11-06", outlet: "FT", sentiment: "negative" },
+  1283→      { title: "K&V expands into Morocco with Casablanca Finance City office", date: "2025-10-24", outlet: "L'Économiste", sentiment: "neutral" },
+  1284→    ],
+  1285→  },
+  1286→  {
+  1287→    id: "PEER-ATL",
+  1288→    name: "Atlas Holdings",
+  1289→    ticker: "ATLH",
+  1290→    sector: "Holding",
+  1291→    hq: "International",
+  1292→    employees: 2200,
+  1293→    revenueM: 4800,
+  1294→    netIncomeM: 380,
+  1295→    assetsM: 9400,
+  1296→    mktCapM: 6800,
+  1297→    peRatio: 14.2,
+  1298→    status: "monitored",
+  1299→    riskBase: 62,
+  1300→    sentiment: -10,
+  1301→    leadership: [
+  1302→      { name: "Marcus Atlas", role: "Chairman & CEO", since: 2008 },
+  1303→    ],
+  1304→    ownership: [
+  1305→      { name: "Founder Family", share: 41.0, type: "Founder" },
+  1306→      { name: "Public Float", share: 59.0, type: "Public Float" },
+  1307→    ],
+  1308→    lastNews: [
+  1309→      { title: "Atlas Holdings activist letter demands board refresh", date: "2025-11-09", outlet: "WSJ", sentiment: "negative" },
+  1310→      { title: "Atlas divests sub-Saharan logging unit for ESG realignment", date: "2025-10-27", outlet: "Reuters", sentiment: "positive" },
+  1311→    ],
+  1312→  },
+  1313→];
+  1314→
+  1315→function peerToEntity(seed: PeerSeed): Entity {
+  1316→  const pillars = buildPillars(700 + seed.id.charCodeAt(7) * 37, seed.riskBase);
+  1317→  return {
+  1318→    id: seed.id,
+  1319→    name: seed.name,
+  1320→    ticker: seed.ticker,
+  1321→    type: "peer",
+  1322→    sector: seed.sector,
+  1323→    hq: seed.hq,
+  1324→    country: "International",
+  1325→    employees: seed.employees,
+  1326→    revenueM: seed.revenueM,
+  1327→    netIncomeM: seed.netIncomeM,
+  1328→    assetsM: seed.assetsM,
+  1329→    mktCapM: seed.mktCapM,
+  1330→    peRatio: seed.peRatio,
+  1331→    dividendYield: null,
+  1332→    riskScore: composite(pillars),
+  1333→    riskPillars: pillars,
+  1334→    sentiment: seed.sentiment,
+  1335→    sentimentTrend12m: buildSentiment12m(seed.sentiment, 22),
+  1336→    lastNews: seed.lastNews,
+  1337→    leadership: seed.leadership,
+  1338→    ownership: seed.ownership,
+  1339→    status: seed.status,
+  1340→    watchlisted: false,
+  1341→    sparkline: buildSparkline(seed.mktCapM, 0.07),
+  1342→  };
+  1343→}
+  1344→
+  1345→const peerEntities: Entity[] = peerSeeds.map(peerToEntity);
+  1346→
+  1347→/* ------------------------------------------------------------------ */
+  1348→/*  Key counterparties (insurance + banks)                             */
+  1349→/* ------------------------------------------------------------------ */
+  1350→
+  1351→interface CtpSeed {
+  1352→  id: string;
+  1353→  name: string;
+  1354→  ticker: string | null;
+  1355→  sector: EntitySector;
+  1356→  hq: MoroccanCity;
+  1357→  employees: number;
+  1358→  revenueM: number;
+  1359→  netIncomeM: number;
+  1360→  assetsM: number;
+  1361→  mktCapM: number | null;
+  1362→  peRatio: number | null;
+  1363→  status: EntityStatus;
+  1364→  riskBase: number;
+  1365→  sentiment: number;
+  1366→  leadership: EntityLeader[];
+  1367→  ownership: EntityShareholder[];
+  1368→  lastNews: EntityNewsItem[];
+  1369→}
+  1370→
+  1371→const counterpartySeeds: CtpSeed[] = [
+  1372→  {
+  1373→    id: "BCP",
+  1374→    name: "Banque Centrale Populaire",
+  1375→    ticker: "BCP",
+  1376→    sector: "Banking",
+  1377→    hq: "Casablanca",
+  1378→    employees: 13400,
+  1379→    revenueM: 18800,
+  1380→    netIncomeM: 2480,
+  1381→    assetsM: 284000,
+  1382→    mktCapM: 32400,
+  1383→    peRatio: 9.4,
+  1384→    status: "active",
+  1385→    riskBase: 40,
+  1386→    sentiment: 12,
+  1387→    leadership: [
+  1388→      { name: "Mohamed Karim Mounir", role: "Chairman & CEO", since: 2018 },
+  1389→    ],
+  1390→    ownership: [
+  1391→      { name: "Banque Populaire Cooperative", share: 40.8, type: "Strategic" },
+  1392→      { name: "Public Float", share: 59.2, type: "Public Float" },
+  1393→    ],
+  1394→    lastNews: [
+  1395→      { title: "BCP 9M consolidated NII +8.2% YoY", date: "2025-11-08", outlet: "L'Économiste", sentiment: "positive" },
+  1396→      { title: "BCP refinances 1.4B MAD sustainability-linked loan for OCP", date: "2025-10-28", outlet: "Medias24", sentiment: "positive" },
+  1397→    ],
+  1398→  },
+  1399→  {
+  1400→    id: "WAA",
+  1401→    name: "Wafa Assurance",
+  1402→    ticker: "WAA",
+  1403→    sector: "Insurance",
+  1404→    hq: "Casablanca",
+  1405→    employees: 2400,
+  1406→    revenueM: 9400,
+  1407→    netIncomeM: 780,
+  1408→    assetsM: 32400,
+  1409→    mktCapM: 8200,
+  1410→    peRatio: 10.4,
+  1411→    status: "active",
+  1412→    riskBase: 42,
+  1413→    sentiment: 14,
+  1414→    leadership: [
+  1415→      { name: "Mohamed Nabil Berrada Sounni", role: "Chairman & CEO", since: 2017 },
+  1416→    ],
+  1417→    ownership: [
+  1418→      { name: "Attijariwafa Bank", share: 64.8, type: "Strategic" },
+  1419→      { name: "Public Float", share: 35.2, type: "Public Float" },
+  1420→    ],
+  1421→    lastNews: [
+  1422→      { title: "Wafa Assurance life premiums +12% on unit-linked uptake", date: "2025-11-07", outlet: "L'Économiste", sentiment: "positive" },
+  1423→      { title: "Wafa Assurance adopts IFRS 17 a year ahead of regulatory deadline", date: "2025-10-26", outlet: "La Vie Éco", sentiment: "positive" },
+  1424→    ],
+  1425→  },
+  1426→  {
+  1427→    id: "RMA",
+  1428→    name: "RMA Watanya",
+  1429→    ticker: "RMA",
+  1430→    sector: "Insurance",
+  1431→    hq: "Casablanca",
+  1432→    employees: 1800,
+  1433→    revenueM: 6400,
+  1434→    netIncomeM: 480,
+  1435→    assetsM: 21800,
+  1436→    mktCapM: 5200,
+  1437→    peRatio: 11.2,
+  1438→    status: "active",
+  1439→    riskBase: 44,
+  1440→    sentiment: 8,
+  1441→    leadership: [
+  1442→      { name: "Hicham El Mamoun", role: "Chairman & CEO", since: 2019 },
+  1443→    ],
+  1444→    ownership: [
+  1445→      { name: "Bank of Africa (BMCE)", share: 47.5, type: "Strategic" },
+  1446→      { name: "Public Float", share: 52.5, type: "Public Float" },
+  1447→    ],
+  1448→    lastNews: [
+  1449→      { title: "RMA Watanya motor combined ratio slips to 102.4%", date: "2025-11-05", outlet: "L'Économiste", sentiment: "negative" },
+  1450→      { title: "RMA launches parametric crop insurance pilot with World Bank", date: "2025-10-24", outlet: "Aujourd'hui le Maroc", sentiment: "positive" },
+  1451→    ],
+  1452→  },
+  1453→  {
+  1454→    id: "SAHAM",
+  1455→    name: "Saham Assurance Maroc",
+  1456→    ticker: "SAH",
+  1457→    sector: "Insurance",
+  1458→    hq: "Casablanca",
+  1459→    employees: 1400,
+  1460→    revenueM: 4800,
+  1461→    netIncomeM: 320,
+  1462→    assetsM: 14200,
+  1463→    mktCapM: 3400,
+  1464→    peRatio: 9.8,
+  1465→    status: "active",
+  1466→    riskBase: 46,
+  1467→    sentiment: 4,
+  1468→    leadership: [
+  1469→      { name: "Khalid Berrada", role: "Chairman", since: 2020 },
+  1470→    ],
+  1471→    ownership: [
+  1472→      { name: "Saham Finances (Sanlam)", share: 84.9, type: "Strategic" },
+  1473→      { name: "Public Float", share: 15.1, type: "Public Float" },
+  1474→    ],
+  1475→    lastNews: [
+  1476→      { title: "Saham Assurance Morocco rebrands under Sanlam banner", date: "2025-11-06", outlet: "Le Matin", sentiment: "neutral" },
+  1477→      { title: "Saham commercial auto book shrinks 9% on premium hike", date: "2025-10-25", outlet: "La Vie Éco", sentiment: "negative" },
+  1478→    ],
+  1479→  },
+  1480→  {
+  1481→    id: "AXA",
+  1482→    name: "AXA Maroc",
+  1483→    ticker: "AXA",
+  1484→    sector: "Insurance",
+  1485→    hq: "Casablanca",
+  1486→    employees: 1600,
+  1487→    revenueM: 7200,
+  1488→    netIncomeM: 620,
+  1489→    assetsM: 19800,
+  1490→    mktCapM: 6400,
+  1491→    peRatio: 12.6,
+  1492→    status: "active",
+  1493→    riskBase: 38,
+  1494→    sentiment: 16,
+  1495→    leadership: [
+  1496→      { name: "Christophe Page", role: "Chairman & CEO", since: 2018 },
+  1497→    ],
+  1498→    ownership: [
+  1499→      { name: "AXA Group", share: 75.0, type: "Strategic" },
+  1500→      { name: "Public Float", share: 25.0, type: "Public Float" },
+  1501→    ],
+  1502→    lastNews: [
+  1503→      { title: "AXA Maroc launches digital-first health product 'AXA Santé Direct'", date: "2025-11-08", outlet: "L'Économiste", sentiment: "positive" },
+  1504→      { title: "AXA Maroc solvency II ratio at 218% (above 150% floor)", date: "2025-10-26", outlet: "Medias24", sentiment: "positive" },
+  1505→    ],
+  1506→  },
+  1507→  {
+  1508→    id: "ALBARID",
+  1509→    name: "Al Barid Bank",
+  1510→    ticker: null,
+  1511→    sector: "Banking",
+  1512→    hq: "Rabat",
+  1513→    employees: 3400,
+  1514→    revenueM: 2480,
+  1515→    netIncomeM: 180,
+  1516→    assetsM: 38400,
+  1517→    mktCapM: null,
+  1518→    peRatio: null,
+  1519→    status: "review",
+  1520→    riskBase: 52,
+  1521→    sentiment: -2,
+  1522→    leadership: [
+  1523→      { name: "Ouafaa Tahri-Jeonk", role: "Chairwoman & CEO", since: 2021 },
+  1524→    ],
+  1525→    ownership: [
+  1526→      { name: "Barid Al-Maghrib (State)", share: 100.0, type: "State" },
+  1527→    ],
+  1528→    lastNews: [
+  1529→      { title: "Al Barid Bank microfinance portfolio NPL ratio rises to 8.4%", date: "2025-11-07", outlet: "Medias24", sentiment: "negative" },
+  1530→      { title: "Al Barid Bank piloting postal-banking app for rural unbanked", date: "2025-10-24", outlet: "Aujourd'hui le Maroc", sentiment: "positive" },
+  1531→    ],
+  1532→  },
+  1533→  {
+  1534→    id: "ASSAFA",
+  1535→    name: "Bank Assafa",
+  1536→    ticker: null,
+  1537→    sector: "Banking",
+  1538→    hq: "Casablanca",
+  1539→    employees: 480,
+  1540→    revenueM: 620,
+  1541→    netIncomeM: 64,
+  1542→    assetsM: 6400,
+  1543→    mktCapM: null,
+  1544→    peRatio: null,
+  1545→    status: "active",
+  1546→    riskBase: 44,
+  1547→    sentiment: 6,
+  1548→    leadership: [
+  1549→      { name: "Abdelmajid Idrissi Kaitouni", role: "Chairman", since: 2019 },
+  1550→    ],
+  1551→    ownership: [
+  1552→      { name: "CIH Bank", share: 70.0, type: "Strategic" },
+  1553→      { name: "Public Float", share: 30.0, type: "Public Float" },
+  1554→    ],
+  1555→    lastNews: [
+  1556→      { title: "Bank Assafa opens 4th Casablanca branch — fully Sharia-compliant", date: "2025-11-06", outlet: "L'Économiste", sentiment: "positive" },
+  1557→      { title: "Bank Assafa sukuk book reaches 1.2B MAD milestone", date: "2025-10-23", outlet: "La Vie Éco", sentiment: "positive" },
+  1558→    ],
+  1559→  },
+  1560→];
+  1561→
+  1562→function counterpartyToEntity(seed: CtpSeed): Entity {
+  1563→  const pillars = buildPillars(900 + seed.id.charCodeAt(0) * 41, seed.riskBase);
+  1564→  return {
+  1565→    id: seed.id,
+  1566→    name: seed.name,
+  1567→    ticker: seed.ticker,
+  1568→    type: "counterparty",
+  1569→    sector: seed.sector,
+  1570→    hq: seed.hq,
+  1571→    country: "Morocco",
+  1572→    employees: seed.employees,
+  1573→    revenueM: seed.revenueM,
+  1574→    netIncomeM: seed.netIncomeM,
+  1575→    assetsM: seed.assetsM,
+  1576→    mktCapM: seed.mktCapM,
+  1577→    peRatio: seed.peRatio,
+  1578→    dividendYield: null,
+  1579→    riskScore: composite(pillars),
+  1580→    riskPillars: pillars,
+  1581→    sentiment: seed.sentiment,
+  1582→    sentimentTrend12m: buildSentiment12m(seed.sentiment, 16),
+  1583→    lastNews: seed.lastNews,
+  1584→    leadership: seed.leadership,
+  1585→    ownership: seed.ownership,
+  1586→    status: seed.status,
+  1587→    watchlisted: false,
+  1588→    sparkline: buildSparkline(seed.assetsM / 100, 0.04),
+  1589→  };
+  1590→}
+  1591→
+  1592→const counterpartyEntities: Entity[] = counterpartySeeds.map(counterpartyToEntity);
+  1593→
+  1594→/* ------------------------------------------------------------------ */
+  1595→/*  Master directory                                                   */
+  1596→/* ------------------------------------------------------------------ */
+  1597→
+  1598→/** Master directory of all monitored entities — HarchCorp + listed + private + peer + counterparty. */
+  1599→export const entityDirectory: Entity[] = [
+  1600→  harchcorpEntity,
+  1601→  ...listedEntities,
+  1602→  ...privateEntities,
+  1603→  ...peerEntities,
+  1604→  ...counterpartyEntities,
+  1605→];
+  1606→
+  1607→/** Quick lookup by id. */
+  1608→export function findEntity(id: string): Entity | undefined {
+  1609→  return entityDirectory.find((e) => e.id === id);
+  1610→}
+  1611→
+  1612→/** Quick lookup by name (case-insensitive substring). */
+  1613→export function findEntityByName(query: string): Entity | undefined {
+  1614→  const q = query.toLowerCase();
+  1615→  return entityDirectory.find((e) => e.name.toLowerCase().includes(q));
+  1616→}
+  1617→
+  1618→/* ------------------------------------------------------------------ */
+  1619→/*  Summary aggregations                                               */
+  1620→/* ------------------------------------------------------------------ */
+  1621→
+  1622→export const entitySummary = (() => {
+  1623→  const total = entityDirectory.length;
+  1624→  const byType: Record<EntityType, number> = {
+  1625→    self: 0,
+  1626→    listed: 0,
+  1627→    private: 0,
+  1628→    peer: 0,
+  1629→    counterparty: 0,
+  1630→  };
+  1631→  const byStatus: Record<EntityStatus, number> = {
+  1632→    active: 0,
+  1633→    watch: 0,
+  1634→    restricted: 0,
+  1635→    review: 0,
+  1636→    monitored: 0,
+  1637→  };
+  1638→  const bySector: Partial<Record<EntitySector, number>> = {};
+  1639→  let watchlisted = 0;
+  1640→  let totalEmployees = 0;
+  1641→  let totalRevenue = 0;
+  1642→  let totalAssets = 0;
+  1643→  let totalMktCap = 0;
+  1644→  let highRisk = 0; // risk >= 60
+  1645→  let criticalRisk = 0; // risk >= 70
+  1646→  for (const e of entityDirectory) {
+  1647→    byType[e.type] += 1;
+  1648→    byStatus[e.status] += 1;
+  1649→    bySector[e.sector] = (bySector[e.sector] ?? 0) + 1;
+  1650→    if (e.watchlisted) watchlisted += 1;
+  1651→    totalEmployees += e.employees;
+  1652→    totalRevenue += e.revenueM;
+  1653→    totalAssets += e.assetsM;
+  1654→    if (e.mktCapM) totalMktCap += e.mktCapM;
+  1655→    if (e.riskScore >= 60) highRisk += 1;
+  1656→    if (e.riskScore >= 70) criticalRisk += 1;
+  1657→  }
+  1658→  const avgRisk =
+  1659→    Math.round(
+  1660→      (entityDirectory.reduce((s, e) => s + e.riskScore, 0) / total) * 10,
+  1661→    ) / 10;
+  1662→  const avgSentiment =
+  1663→    Math.round(
+  1664→      (entityDirectory.reduce((s, e) => s + e.sentiment, 0) / total) * 10,
+  1665→    ) / 10;
+  1666→  return {
+  1667→    total,
+  1668→    byType,
+  1669→    byStatus,
+  1670→    bySector: bySector as Record<EntitySector, number>,
+  1671→    watchlisted,
+  1672→    totalEmployees,
+  1673→    totalRevenue,
+  1674→    totalAssets,
+  1675→    totalMktCap,
+  1676→    highRisk,
+  1677→    criticalRisk,
+  1678→    avgRisk,
+  1679→    avgSentiment,
+  1680→  };
+  1681→})();
+  1682→
+  1683→/** Risk distribution buckets for the directory donut. */
+  1684→export const riskDistribution: { band: string; count: number; color: string }[] = [
+  1685→  { band: "Low (<40)", count: entityDirectory.filter((e) => e.riskScore < 40).length, color: "#10b981" },
+  1686→  { band: "Medium (40-55)", count: entityDirectory.filter((e) => e.riskScore >= 40 && e.riskScore < 55).length, color: "#f59e0b" },
+  1687→  { band: "High (55-70)", count: entityDirectory.filter((e) => e.riskScore >= 55 && e.riskScore < 70).length, color: "#ea580c" },
+  1688→  { band: "Critical (≥70)", count: entityDirectory.filter((e) => e.riskScore >= 70).length, color: "#e11d48" },
+  1689→];
+  1690→
+  1691→/* ------------------------------------------------------------------ */
+  1692→/*  Moroccan-only subset                                               */
+  1693→/* ------------------------------------------------------------------ */
+  1694→
+  1695→/** All entities headquartered in Morocco — listed + private + counterparty (excludes HarchCorp self + international peers). */
+  1696→export const moroccanEntities: Entity[] = entityDirectory.filter(
+  1697→  (e) => e.country === "Morocco",
+  1698→);
+  1699→
+  1700→/** Moroccan city distribution — count by HQ city. */
+  1701→export const moroccanCityDistribution: { city: string; count: number; share: number }[] = (() => {
+  1702→  const counts = new Map<string, number>();
+  1703→  for (const e of moroccanEntities) {
+  1704→    counts.set(e.hq, (counts.get(e.hq) ?? 0) + 1);
+  1705→  }
+  1706→  const total = moroccanEntities.length;
+  1707→  return Array.from(counts.entries())
+  1708→    .map(([city, count]) => ({ city, count, share: Math.round((count / total) * 1000) / 10 }))
+  1709→    .sort((a, b) => b.count - a.count);
+  1710→})();
+  1711→
+  1712→/** Sector × market-cap distribution (MAD millions) for Moroccan listed entities. */
+  1713→export const moroccanSectorMktCap: { sector: string; mktCapM: number; color: string }[] = (() => {
+  1714→  const m = new Map<string, number>();
+  1715→  for (const e of moroccanEntities) {
+  1716→    if (e.mktCapM) {
+  1717→      m.set(e.sector, (m.get(e.sector) ?? 0) + e.mktCapM);
+  1718→    }
+  1719→  }
+  1720→  return Array.from(m.entries())
+  1721→    .map(([sector, mktCapM]) => ({ sector, mktCapM, color: sectorColor[sector as EntitySector] ?? "#64748b" }))
+  1722→    .sort((a, b) => b.mktCapM - a.mktCapM);
+  1723→})();
+  1724→
+  1725→/* ------------------------------------------------------------------ */
+  1726→/*  Top profiles — deep dossiers                                       */
+  1727→/* ------------------------------------------------------------------ */
+  1728→
+  1729→/** Top 8 profile entities (HarchCorp + the most strategically important Moroccan cos). */
+  1730→export const topProfileIds: string[] = [
+  1731→  "HRCH",
+  1732→  "ATW",
+  1733→  "OCP",
+  1734→  "IAM",
+  1735→  "BOA",
+  1736→  "ALMADA",
+  1737→  "SNI",
+  1738→  "BCP",
+  1739→];
+  1740→
+  1741→export const topProfiles: Entity[] = topProfileIds
+  1742→  .map((id) => findEntity(id))
+  1743→  .filter((e): e is Entity => Boolean(e));
+  1744→
+  1745→/* ------------------------------------------------------------------ */
+  1746→/*  Peer groups — by sector                                            */
+  1747→/* ------------------------------------------------------------------ */
+  1748→
+  1749→export type PeerGroupKey =
+  1750→  | "Banking"
+  1751→  | "Telecom"
+  1752→  | "Materials"
+  1753→  | "Real Estate"
+  1754→  | "Insurance";
+  1755→
+  1756→export interface PeerGroup {
+  1757→  key: PeerGroupKey;
+  1758→  label: string;
+  1759→  entities: Entity[];
+  1760→}
+  1761→
+  1762→const peerGroupKeys: PeerGroupKey[] = [
+  1763→  "Banking",
+  1764→  "Telecom",
+  1765→  "Materials",
+  1766→  "Real Estate",
+  1767→  "Insurance",
+  1768→];
+  1769→
+  1770→export const peerGroups: PeerGroup[] = peerGroupKeys.map((k) => ({
+  1771→  key: k,
+  1772→  label: k === "Materials" ? "Materials & Mining" : k,
+  1773→  entities: entityDirectory.filter((e) => e.sector === k),
+  1774→}));
+  1775→
+  1776→/** Peer benchmarking rows for a sector — revenue, margin, ROE, mkt cap, risk, sentiment. */
+  1777→export interface PeerBenchmarkRow {
+  1778→  id: string;
+  1779→  name: string;
+  1780→  ticker: string | null;
+  1781→  revenueM: number;
+  1782→  netIncomeM: number;
+  1783→  /** Net margin, %. */
+  1784→  marginPct: number;
+  1785→  /** ROE, %. */
+  1786→  roePct: number;
+  1787→  mktCapM: number | null;
+  1788→  riskScore: number;
+  1789→  sentiment: number;
+  1790→  employees: number;
+  1791→}
+  1792→
+  1793→export function peerBenchmarkRows(group: PeerGroup): PeerBenchmarkRow[] {
+  1794→  return group.entities.map((e) => {
+  1795→    const marginPct = e.revenueM > 0 ? Math.round((e.netIncomeM / e.revenueM) * 1000) / 10 : 0;
+  1796→    const roePct =
+  1797→      e.assetsM > 0
+  1798→        ? Math.round((e.netIncomeM / (e.assetsM - (e.mktCapM ?? 0))) * 1000) / 10
+  1799→        : 0;
+  1800→    return {
+  1801→      id: e.id,
+  1802→      name: e.name,
+  1803→      ticker: e.ticker,
+  1804→      revenueM: e.revenueM,
+  1805→      netIncomeM: e.netIncomeM,
+  1806→      marginPct,
+  1807→      roePct,
+  1808→      mktCapM: e.mktCapM,
+  1809→      riskScore: e.riskScore,
+  1810→      sentiment: e.sentiment,
+  1811→      employees: e.employees,
+  1812→    };
+  1813→  });
+  1814→}
+  1815→
+  1816→/** Scatter point for peer risk-vs-revenue bubble chart. */
+  1817→export interface PeerScatterPoint {
+  1818→  name: string;
+  1819→  revenueM: number;
+  1820→  riskScore: number;
+  1821→  mktCapM: number;
+  1822→  sector: string;
+  1823→  color: string;
+  1824→}
+  1825→
+  1826→export function peerScatterData(group: PeerGroup): PeerScatterPoint[] {
+  1827→  return group.entities
+  1828→    .filter((e) => e.mktCapM !== null)
+  1829→    .map((e) => ({
+  1830→      name: e.name,
+  1831→      revenueM: e.revenueM,
+  1832→      riskScore: e.riskScore,
+  1833→      mktCapM: e.mktCapM ?? 0,
+  1834→      sector: e.sector,
+  1835→      color: sectorColor[e.sector] ?? "#64748b",
+  1836→    }));
+  1837→}
+  1838→
+  1839→/** 6-pillar radar series for up to 4 peers in a group. */
+  1840→export function peerRadarData(group: PeerGroup): { pillar: string; [k: string]: number | string }[] {
+  1841→  const pillars: RiskPillarKey[] = [
+  1842→    "regulatory",
+  1843→    "cyber",
+  1844→    "financial",
+  1845→    "esg",
+  1846→    "geopolitical",
+  1847→    "reputational",
+  1848→  ];
+  1849→  return pillars.map((p) => {
+  1850→    const row: { pillar: string; [k: string]: number | string } = {
+  1851→      pillar: pillarLabel[p],
+  1852→    };
+  1853→    group.entities.slice(0, 4).forEach((e) => {
+  1854→      row[e.name] = e.riskPillars[p];
+  1855→    });
+  1856→    return row;
+  1857→  });
+  1858→}
+  1859→
+  1860→/** Ranking bars — peers ranked by revenue, with risk overlay. */
+  1861→export function peerRanking(group: PeerGroup, sortBy: "revenueM" | "riskScore" | "mktCapM" = "revenueM") {
+  1862→  return [...group.entities].sort((a, b) => {
+  1863→    const av = sortBy === "mktCapM" ? a.mktCapM ?? 0 : a[sortBy];
+  1864→    const bv = sortBy === "mktCapM" ? b.mktCapM ?? 0 : b[sortBy];
+  1865→    return bv - av;
+  1866→  });
+  1867→}
+  1868→
+  1869→/* ------------------------------------------------------------------ */
+  1870→/*  Watchlist — tracked entities with live signals                     */
+  1871→/* ------------------------------------------------------------------ */
+  1872→
+  1873→export type WatchlistSignalType =
+  1874→  | "Risk score spike"
+  1875→  | "Sentiment drop"
+  1876→  | "News volume surge"
+  1877→  | "Price gap"
+  1878→  | "Insider activity"
+  1879→  | "Regulatory filing"
+  1880→  | "ESG downgrade"
+  1881→  | "Cyber mention";
+  1882→
+  1883→export interface WatchlistSignal {
+  1884→  id: string;
+  1885→  entityId: string;
+  1886→  entityName: string;
+  1887→  ticker: string | null;
+  1888→  sector: EntitySector;
+  1889→  type: WatchlistSignalType;
+  1890→  pillar: RiskPillarKey;
+  1891→  severity: "critical" | "high" | "medium" | "low";
+  1892→  /** Sentiment delta vs prior session. */
+  1893→  sentimentDelta: number;
+  1894→  articles: number;
+  1895→  updatedAt: string;
+  1896→  /** 12-point sparkline of recent signal strength. */
+  1897→  sparkline: number[];
+  1898→}
+  1899→
+  1900→const signalTypePillar: Record<WatchlistSignalType, RiskPillarKey> = {
+  1901→  "Risk score spike": "regulatory",
+  1902→  "Sentiment drop": "reputational",
+  1903→  "News volume surge": "reputational",
+  1904→  "Price gap": "financial",
+  1905→  "Insider activity": "financial",
+  1906→  "Regulatory filing": "regulatory",
+  1907→  "ESG downgrade": "esg",
+  1908→  "Cyber mention": "cyber",
+  1909→};
+  1910→
+  1911→const watchlistIds: string[] = [
+  1912→  "HRCH",
+  1913→  "ATW",
+  1914→  "BOA",
+  1915→  "CIH",
+  1916→  "CFG",
+  1917→  "ADH",
+  1918→  "RIS",
+  1919→  "OCP",
+  1920→  "MNG",
+  1921→  "IAM",
+  1922→  "INWI",
+  1923→  "TAQA",
+  1924→  "ALMADA",
+  1925→  "SNI",
+  1926→  "BCP",
+  1927→  "WAA",
+  1928→];
+  1929→
+  1930→const signalTypes: WatchlistSignalType[] = [
+  1931→  "Risk score spike",
+  1932→  "Sentiment drop",
+  1933→  "News volume surge",
+  1934→  "Regulatory filing",
+  1935→  "Cyber mention",
+  1936→  "ESG downgrade",
+  1937→  "Price gap",
+  1938→  "Insider activity",
+  1939→];
+  1940→
+  1941→const severities: Array<"critical" | "high" | "medium" | "low"> = [
+  1942→  "critical",
+  1943→  "high",
+  1944→  "medium",
+  1945→  "low",
+  1946→];
+  1947→
+  1948→const updatedAtOptions = [
+  1949→  "2m ago", "8m ago", "14m ago", "27m ago", "42m ago", "1h ago",
+  1950→  "1h ago", "2h ago", "2h ago", "3h ago", "3h ago", "4h ago",
+  1951→  "4h ago", "5h ago", "6h ago", "7h ago",
+  1952→];
+  1953→
+  1954→export const entityWatchlist: WatchlistSignal[] = watchlistIds.map((id, i) => {
+  1955→  const e = findEntity(id);
+  1956→  if (!e) throw new Error(`Watchlist entity ${id} not found`);
+  1957→  const type = signalTypes[i % signalTypes.length];
+  1958→  const sev = severities[(Math.floor(i / 2) + (e.riskScore > 60 ? 0 : 1)) % severities.length];
+  1959→  const delta = e.sentiment > 0 ? -rf(0.4, 3.2, 1) : -rf(1.2, 4.4, 1);
+  1960→  const articles = ri(8, 86);
+  1961→  return {
+  1962→    id: `WLS-${String(i + 1).padStart(3, "0")}`,
+  1963→    entityId: id,
+  1964→    entityName: e.name,
+  1965→    ticker: e.ticker,
+  1966→    sector: e.sector,
+  1967→    type,
+  1968→    pillar: signalTypePillar[type],
+  1969→    severity: sev,
+  1970→    sentimentDelta: delta,
+  1971→    articles,
+  1972→    updatedAt: updatedAtOptions[i % updatedAtOptions.length],
+  1973→    sparkline: buildSparkline(e.riskScore, 0.08),
+  1974→  };
+  1975→});
+  1976→
+  1977→export const watchlistSummary = (() => {
+  1978→  const bySeverity: Record<"critical" | "high" | "medium" | "low", number> = {
+  1979→    critical: 0,
+  1980→    high: 0,
+  1981→    medium: 0,
+  1982→    low: 0,
+  1983→  };
+  1984→  for (const s of entityWatchlist) bySeverity[s.severity] += 1;
+  1985→  const totalArticles = entityWatchlist.reduce((s, w) => s + w.articles, 0);
+  1986→  const avgDelta =
+  1987→    Math.round(
+  1988→      (entityWatchlist.reduce((s, w) => s + w.sentimentDelta, 0) /
+  1989→        entityWatchlist.length) *
+  1990→        10,
+  1991→    ) / 10;
+  1992→  return {
+  1993→    total: entityWatchlist.length,
+  1994→    bySeverity,
+  1995→    totalArticles,
+  1996→    avgDelta,
+  1997→    critical: bySeverity.critical,
+  1998→    high: bySeverity.high,
+  1999→  };
+  2000→})();
+
+[showing lines 1-2000 of 2020; use offset=2001 with limit to continue reading]

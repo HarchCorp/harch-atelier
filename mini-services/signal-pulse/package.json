@@ -1,0 +1,19 @@
+{
+  "name": "signal-pulse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Harch Atelier V12.0 — live watchlist signal pulse (socket.io on port 3003)",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0"
+  }
+}

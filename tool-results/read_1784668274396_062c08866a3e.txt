@@ -1,0 +1,1139 @@
+     1→/**
+     2→ * Harch Atelier — Admin operations dataset (V15.0 admin role)
+     3→ *
+     4→ * Deterministic, strictly-typed mock data for the Administration category +
+     5→ * oversight sections (intel-overview, intel-alerts, risk-overview, risk-audit).
+     6→ *
+     7→ * Conventions:
+     8→ *   - Deterministic seeded PRNG (mulberry32) so first paint is stable.
+     9→ *   - HarchCorp-flavoured: real-feeling user names, source names, integrations.
+    10→ *   - No `any`. All entities exported with strict interfaces.
+    11→ *   - Pillar scoring mirrors the RiskPillar union from mock-data.ts.
+    12→ */
+    13→
+    14→import type { RiskPillar, Severity } from "@/lib/mock-data";
+    15→
+    16→/* ------------------------------------------------------------------ */
+    17→/*  Deterministic PRNG                                                 */
+    18→/* ------------------------------------------------------------------ */
+    19→
+    20→function mulberry32(seed: number) {
+    21→  let a = seed >>> 0;
+    22→  return function () {
+    23→    a = (a + 0x6d2b79f5) >>> 0;
+    24→    let t = a;
+    25→    t = Math.imul(t ^ (t >>> 15), t | 1);
+    26→    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    27→    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    28→  };
+    29→}
+    30→const rnd = mulberry32(20251115);
+    31→
+    32→function pick<T>(arr: readonly T[]): T {
+    33→  return arr[Math.floor(rnd() * arr.length)];
+    34→}
+    35→
+    36→/* ------------------------------------------------------------------ */
+    37→/*  Users & Roles                                                      */
+    38→/* ------------------------------------------------------------------ */
+    39→
+    40→export type UserRole =
+    41→  | "admin"
+    42→  | "trader"
+    43→  | "legal"
+    44→  | "market"
+    45→  | "pr"
+    46→  | "analyst"
+    47→  | "viewer";
+    48→
+    49→export type UserStatus = "active" | "suspended" | "invited" | "locked";
+    50→
+    51→export interface AdminUser {
+    52→  id: string;
+    53→  name: string;
+    54→  email: string;
+    55→  role: UserRole;
+    56→  status: UserStatus;
+    57→  /** ISO timestamp. */
+    58→  lastLogin: string | null;
+    59→  mfa: boolean;
+    60→  /** ISO timestamp when the account was created. */
+    61→  createdAt: string;
+    62→  /** Number of sessions in the last 30d. */
+    63→  sessions30d: number;
+    64→  location: string;
+    65→}
+    66→
+    67→const userFirstNames = [
+    68→  "Alessandro", "Tomás", "Lina", "Mehdi", "Priya", "Sofia", "Youssef",
+    69→  "Camille", "Dario", "Noor", "Elias", "Inès", "Rafael", "Sara",
+    70→  "Kenzo", "Aya", "Marc", "Jana",
+    71→];
+    72→const userLastNames = [
+    73→  "Marchetti", "Okafor", "Reyes", "Benali", "Dubois", "Novak", "Haddad",
+    74→  "Larsson", "Bauer", "Petit", "Khoury", "Schmidt", "Rossi", "Mansouri",
+    75→  "Tanaka", "El Fassi", "Volkov", "Hassan",
+    76→];
+    77→const userLocations = [
+    78→  "Casablanca, MA", "Tangier, MA", "Paris, FR", "London, UK", "Frankfurt, DE",
+    79→  "Madrid, ES", "New York, US", "Singapore, SG", "Dubai, AE",
+    80→];
+    81→const roleWeights: UserRole[] = [
+    82→  "admin", "admin",
+    83→  "trader", "trader", "trader",
+    84→  "analyst", "analyst", "analyst", "analyst",
+    85→  "legal", "legal",
+    86→  "market", "market",
+    87→  "pr", "pr",
+    88→  "viewer", "viewer",
+    89→];
+    90→
+    91→function isoDaysAgo(days: number, hourOffset = 0): string {
+    92→  const d = new Date("2025-11-15T10:30:00Z");
+    93→  d.setDate(d.getDate() - days);
+    94→  d.setHours(d.getHours() - hourOffset);
+    95→  return d.toISOString();
+    96→}
+    97→
+    98→export const adminUsers: AdminUser[] = (() => {
+    99→  // Fixed first user = A. Marchetti (matches the topbar account switcher)
+   100→  const fixed: AdminUser[] = [
+   101→    {
+   102→      id: "USR-0001",
+   103→      name: "Alessandro Marchetti",
+   104→      email: "a.marchetti@harchcorp.io",
+   105→      role: "admin",
+   106→      status: "active",
+   107→      lastLogin: isoDaysAgo(0, -2),
+   108→      mfa: true,
+   109→      createdAt: "2023-04-12T09:15:00Z",
+   110→      sessions30d: 28,
+   111→      location: "Casablanca, MA",
+   112→    },
+   113→  ];
+   114→  const rest: AdminUser[] = [];
+   115→  for (let i = 0; i < 11; i++) {
+   116→    const first = userFirstNames[(i + 1) % userFirstNames.length];
+   117→    const last = userLastNames[(i + 3) % userLastNames.length];
+   118→    const role = roleWeights[(i + 1) % roleWeights.length];
+   119→    const statusRoll = rnd();
+   120→    const status: UserStatus =
+   121→      statusRoll > 0.92 ? "invited" : statusRoll > 0.85 ? "locked" : statusRoll > 0.78 ? "suspended" : "active";
+   122→    const lastLoginDays = status === "invited" ? null : Math.floor(rnd() * 28) + 0;
+   123→    rest.push({
+   124→      id: `USR-${String(i + 2).padStart(4, "0")}`,
+   125→      name: `${first} ${last}`,
+   126→      email: `${first.toLowerCase().replace(/[éè]/g, "e")[0]}.${last.toLowerCase().replace(/[^a-z]/g, "")}@harchcorp.io`,
+   127→      role,
+   128→      status,
+   129→      lastLogin: lastLoginDays === null ? null : isoDaysAgo(lastLoginDays),
+   130→      mfa: rnd() > 0.32,
+   131→      createdAt: isoDaysAgo(Math.floor(rnd() * 600) + 90),
+   132→      sessions30d: status === "invited" ? 0 : Math.floor(rnd() * 30) + 1,
+   133→      location: pick(userLocations),
+   134→    });
+   135→  }
+   136→  return [...fixed, ...rest];
+   137→})();
+   138→
+   139→/* ------------------------------------------------------------------ */
+   140→/*  RBAC matrix                                                        */
+   141→/* ------------------------------------------------------------------ */
+   142→
+   143→export type Permission =
+   144→  | "view intel"
+   145→  | "view markets"
+   146→  | "view risk"
+   147→  | "view comms"
+   148→  | "view entities"
+   149→  | "ack events"
+   150→  | "escalate events"
+   151→  | "manage users"
+   152→  | "manage sources"
+   153→  | "manage integrations"
+   154→  | "view billing"
+   155→  | "configure alerts"
+   156→  | "export data"
+   157→  | "audit read";
+   158→
+   159→export type PermissionGrant = "allow" | "deny" | "conditional";
+   160→
+   161→export const allPermissions: Permission[] = [
+   162→  "view intel",
+   163→  "view markets",
+   164→  "view risk",
+   165→  "view comms",
+   166→  "view entities",
+   167→  "ack events",
+   168→  "escalate events",
+   169→  "manage users",
+   170→  "manage sources",
+   171→  "manage integrations",
+   172→  "view billing",
+   173→  "configure alerts",
+   174→  "export data",
+   175→  "audit read",
+   176→];
+   177→
+   178→export const allRoles: UserRole[] = [
+   179→  "admin",
+   180→  "analyst",
+   181→  "trader",
+   182→  "legal",
+   183→  "market",
+   184→  "pr",
+   185→  "viewer",
+   186→];
+   187→
+   188→/**
+   189→ * RBAC matrix: role × permission → grant.
+   190→ * Admin = full allow, viewer = read-only intel/markets/risk/comms/entities,
+   191→ * analyst = read + ack/export, etc.
+   192→ */
+   193→export const rbacMatrix: Record<UserRole, Record<Permission, PermissionGrant>> = {
+   194→  admin: {
+   195→    "view intel": "allow", "view markets": "allow", "view risk": "allow",
+   196→    "view comms": "allow", "view entities": "allow", "ack events": "allow",
+   197→    "escalate events": "allow", "manage users": "allow", "manage sources": "allow",
+   198→    "manage integrations": "allow", "view billing": "allow",
+   199→    "configure alerts": "allow", "export data": "allow", "audit read": "allow",
+   200→  },
+   201→  analyst: {
+   202→    "view intel": "allow", "view markets": "allow", "view risk": "allow",
+   203→    "view comms": "allow", "view entities": "allow", "ack events": "allow",
+   204→    "escalate events": "conditional", "manage users": "deny", "manage sources": "deny",
+   205→    "manage integrations": "deny", "view billing": "deny",
+   206→    "configure alerts": "conditional", "export data": "allow", "audit read": "conditional",
+   207→  },
+   208→  trader: {
+   209→    "view intel": "allow", "view markets": "allow", "view risk": "allow",
+   210→    "view comms": "conditional", "view entities": "allow", "ack events": "allow",
+   211→    "escalate events": "deny", "manage users": "deny", "manage sources": "deny",
+   212→    "manage integrations": "deny", "view billing": "deny",
+   213→    "configure alerts": "deny", "export data": "conditional", "audit read": "deny",
+   214→  },
+   215→  legal: {
+   216→    "view intel": "allow", "view markets": "conditional", "view risk": "allow",
+   217→    "view comms": "conditional", "view entities": "allow", "ack events": "allow",
+   218→    "escalate events": "allow", "manage users": "deny", "manage sources": "deny",
+   219→    "manage integrations": "deny", "view billing": "deny",
+   220→    "configure alerts": "conditional", "export data": "allow", "audit read": "allow",
+   221→  },
+   222→  market: {
+   223→    "view intel": "allow", "view markets": "allow", "view risk": "conditional",
+   224→    "view comms": "allow", "view entities": "allow", "ack events": "conditional",
+   225→    "escalate events": "deny", "manage users": "deny", "manage sources": "deny",
+   226→    "manage integrations": "deny", "view billing": "deny",
+   227→    "configure alerts": "conditional", "export data": "allow", "audit read": "deny",
+   228→  },
+   229→  pr: {
+   230→    "view intel": "allow", "view markets": "deny", "view risk": "conditional",
+   231→    "view comms": "allow", "view entities": "allow", "ack events": "conditional",
+   232→    "escalate events": "deny", "manage users": "deny", "manage sources": "deny",
+   233→    "manage integrations": "deny", "view billing": "deny",
+   234→    "configure alerts": "conditional", "export data": "allow", "audit read": "deny",
+   235→  },
+   236→  viewer: {
+   237→    "view intel": "allow", "view markets": "allow", "view risk": "allow",
+   238→    "view comms": "allow", "view entities": "allow", "ack events": "deny",
+   239→    "escalate events": "deny", "manage users": "deny", "manage sources": "deny",
+   240→    "manage integrations": "deny", "view billing": "deny",
+   241→    "configure alerts": "deny", "export data": "deny", "audit read": "deny",
+   242→  },
+   243→};
+   244→
+   245→export const seatSummary = {
+   246→  used: adminUsers.length,
+   247→  total: 25,
+   248→  plan: "Enterprise",
+   249→  renewal: "2026-02-14",
+   250→  mfaEnabled: adminUsers.filter((u) => u.mfa).length,
+   251→  mfaDisabled: adminUsers.filter((u) => !u.mfa).length,
+   252→  activeNow: adminUsers.filter(
+   253→    (u) => u.lastLogin !== null && Date.parse(u.lastLogin) > Date.parse(isoDaysAgo(1)),
+   254→  ).length,
+   255→};
+   256→
+   257→/* ------------------------------------------------------------------ */
+   258→/*  Data sources                                                       */
+   259→/* ------------------------------------------------------------------ */
+   260→
+   261→export type SourceStatus = "up" | "degraded" | "down";
+   262→
+   263→export interface DataSource {
+   264→  id: string;
+   265→  name: string;
+   266→  category: "OSINT" | "Market Data" | "AI/ML" | "Filings" | "Social" | "Regulatory";
+   267→  status: SourceStatus;
+   268→  /** p95 latency in ms. */
+   269→  latencyMs: number;
+   270→  /** Articles / records ingested per day. */
+   271→  recordsPerDay: number;
+   272→  /** Last successful sync (relative label). */
+   273→  lastSync: string;
+   274→  /** 0..1 error rate. */
+   275→  errorRate: number;
+   276→  /** 24 latency samples (ms) for the sparkline. */
+   277→  latencySeries: number[];
+   278→  /** Description shown in the card subtitle. */
+   279→  description: string;
+   280→}
+   281→
+   282→function buildLatencySeries(base: number, jitter: number, count = 24): number[] {
+   283→  const out: number[] = [];
+   284→  for (let i = 0; i < count; i++) {
+   285→    out.push(Math.max(20, Math.round(base + (rnd() - 0.5) * 2 * jitter)));
+   286→  }
+   287→  return out;
+   288→}
+   289→
+   290→export const dataSources: DataSource[] = [
+   291→  {
+   292→    id: "SRC-01",
+   293→    name: "News OSINT",
+   294→    category: "OSINT",
+   295→    status: "up",
+   296→    latencyMs: 412,
+   297→    recordsPerDay: 48230,
+   298→    lastSync: "32s ago",
+   299→    errorRate: 0.0021,
+   300→    latencySeries: buildLatencySeries(420, 60),
+   301→    description: "1,840 outlets · crawling + RSS · 14 languages",
+   302→  },
+   303→  {
+   304→    id: "SRC-02",
+   305→    name: "BVC Feed",
+   306→    category: "Market Data",
+   307→    status: "up",
+   308→    latencyMs: 88,
+   309→    recordsPerDay: 1842,
+   310→    lastSync: "Live",
+   311→    errorRate: 0.0004,
+   312→    latencySeries: buildLatencySeries(90, 22),
+   313→    description: "Bourse de Casablanca tick + index feed",
+   314→  },
+   315→  {
+   316→    id: "SRC-03",
+   317→    name: "GLM-4 Sentiment",
+   318→    category: "AI/ML",
+   319→    status: "degraded",
+   320→    latencyMs: 1840,
+   321→    recordsPerDay: 28410,
+   322→    lastSync: "4m ago",
+   323→    errorRate: 0.0312,
+   324→    latencySeries: buildLatencySeries(1900, 280),
+   325→    description: "z-ai GLM-4 · article classification + summary",
+   326→  },
+   327→  {
+   328→    id: "SRC-04",
+   329→    name: "Bloomberg Terminal",
+   330→    category: "Market Data",
+   331→    status: "up",
+   332→    latencyMs: 64,
+   333→    recordsPerDay: 9120,
+   334→    lastSync: "12s ago",
+   335→    errorRate: 0.0001,
+   336→    latencySeries: buildLatencySeries(66, 12),
+   337→    description: "Real-time pricing + corporate actions",
+   338→  },
+   339→  {
+   340→    id: "SRC-05",
+   341→    name: "Twitter Firehose",
+   342→    category: "Social",
+   343→    status: "degraded",
+   344→    latencyMs: 920,
+   345→    recordsPerDay: 124800,
+   346→    lastSync: "1m ago",
+   347→    errorRate: 0.0185,
+   348→    latencySeries: buildLatencySeries(940, 220),
+   349→    description: "PowerTrack stream · brand + executive mentions",
+   350→  },
+   351→  {
+   352→    id: "SRC-06",
+   353→    name: "SEC Filings",
+   354→    category: "Filings",
+   355→    status: "up",
+   356→    latencyMs: 240,
+   357→    recordsPerDay: 318,
+   358→    lastSync: "8m ago",
+   359→    errorRate: 0.0008,
+   360→    latencySeries: buildLatencySeries(250, 40),
+   361→    description: "EDGAR full-text · 10-K, 10-Q, 8-K, DEF 14A",
+   362→  },
+   363→  {
+   364→    id: "SRC-07",
+   365→    name: "AMMC Bulletin",
+   366→    category: "Regulatory",
+   367→    status: "up",
+   368→    latencyMs: 318,
+   369→    recordsPerDay: 42,
+   370→    lastSync: "26m ago",
+   371→    errorRate: 0.0000,
+   372→    latencySeries: buildLatencySeries(320, 18),
+   373→    description: "Autorité Marocaine du Marché des Capitaux · daily bulletin",
+   374→  },
+   375→  {
+   376→    id: "SRC-08",
+   377→    name: "RSS Aggregator",
+   378→    category: "OSINT",
+   379→    status: "down",
+   380→    latencyMs: 0,
+   381→    recordsPerDay: 0,
+   382→    lastSync: "47m ago",
+   383→    errorRate: 1.0,
+   384→    latencySeries: buildLatencySeries(180, 80).map((_, i) => (i < 8 ? 180 : 0)),
+   385→    description: "Curated feed list · 1,200 sources · parser offline",
+   386→  },
+   387→];
+   388→
+   389→/** 30-day source-health timeline: per-source status array. */
+   390→export interface SourceHealthDay {
+   391→  day: string; // short label
+   392→  up: number;
+   393→  degraded: number;
+   394→  down: number;
+   395→}
+   396→
+   397→export const sourceHealth30d: SourceHealthDay[] = (() => {
+   398→  const out: SourceHealthDay[] = [];
+   399→  for (let i = 29; i >= 0; i--) {
+   400→    const d = new Date("2025-11-15");
+   401→    d.setDate(d.getDate() - i);
+   402→    const roll = rnd();
+   403→    // Mostly healthy, occasional degradation
+   404→    let up = 8, degraded = 0, down = 0;
+   405→    if (roll > 0.85) { up = 6; degraded = 2; }
+   406→    else if (roll > 0.7) { up = 7; degraded = 1; }
+   407→    if (roll > 0.96) { up = 7; down = 1; }
+   408→    out.push({
+   409→      day: d.toISOString().slice(5, 10),
+   410→      up, degraded, down,
+   411→    });
+   412→  }
+   413→  // Force the last day to match current state
+   414→  out[out.length - 1] = {
+   415→    day: out[out.length - 1].day,
+   416→    up: dataSources.filter((s) => s.status === "up").length,
+   417→    degraded: dataSources.filter((s) => s.status === "degraded").length,
+   418→    down: dataSources.filter((s) => s.status === "down").length,
+   419→  };
+   420→  return out;
+   421→})();
+   422→
+   423→/* ------------------------------------------------------------------ */
+   424→/*  Integrations                                                       */
+   425→/* ------------------------------------------------------------------ */
+   426→
+   427→export type IntegrationStatus = "connected" | "warning" | "error" | "disabled";
+   428→
+   429→export interface Integration {
+   430→  id: string;
+   431→  name: string;
+   432→  category: "Market" | "AI" | "Identity" | "Notifications" | "Storage" | "Webhook";
+   433→  status: IntegrationStatus;
+   434→  /** Short config summary. */
+   435→  configSummary: string;
+   436→  /** ISO timestamp of last event. */
+   437→  lastEvent: string;
+   438→  events24h: number;
+   439→  syncEnabled: boolean;
+   440→  vendor: string;
+   441→}
+   442→
+   443→export const integrations: Integration[] = [
+   444→  {
+   445→    id: "INT-01",
+   446→    name: "Bourse de Casablanca API",
+   447→    category: "Market",
+   448→    status: "connected",
+   449→    configSummary: "OAuth2 · endpoint: api.bvc.ma · rate 600 req/min",
+   450→    lastEvent: isoDaysAgo(0, -0.05),
+   451→    events24h: 18420,
+   452→    syncEnabled: true,
+   453→    vendor: "BVC",
+   454→  },
+   455→  {
+   456→    id: "INT-02",
+   457→    name: "GLM-4 (z-ai)",
+   458→    category: "AI",
+   459→    status: "warning",
+   460→    configSummary: "API key · model glm-4-plus · 1k req/min quota",
+   461→    lastEvent: isoDaysAgo(0, -0.4),
+   462→    events24h: 28410,
+   463→    syncEnabled: true,
+   464→    vendor: "Z.ai",
+   465→  },
+   466→  {
+   467→    id: "INT-03",
+   468→    name: "NextAuth / IdP",
+   469→    category: "Identity",
+   470→    status: "connected",
+   471→    configSummary: "OIDC · Azure AD tenant · 12 mapped users",
+   472→    lastEvent: isoDaysAgo(0, -1.2),
+   473→    events24h: 96,
+   474→    syncEnabled: true,
+   475→    vendor: "Microsoft Entra",
+   476→  },
+   477→  {
+   478→    id: "INT-04",
+   479→    name: "SMTP Relay",
+   480→    category: "Notifications",
+   481→    status: "connected",
+   482→    configSummary: "mail.harchcorp.io · TLS · sender no-reply@harchcorp.io",
+   483→    lastEvent: isoDaysAgo(0, -0.8),
+   484→    events24h: 312,
+   485→    syncEnabled: true,
+   486→    vendor: "Postfix",
+   487→  },
+   488→  {
+   489→    id: "INT-05",
+   490→    name: "Slack",
+   491→    category: "Notifications",
+   492→    status: "connected",
+   493→    configSummary: "Bot token · 3 channels (#intel-alerts, #risk-triage, #ops)",
+   494→    lastEvent: isoDaysAgo(0, -0.1),
+   495→    events24h: 1284,
+   496→    syncEnabled: true,
+   497→    vendor: "Slack",
+   498→  },
+   499→  {
+   500→    id: "INT-06",
+   501→    name: "OpsGenie Webhook",
+   502→    category: "Webhook",
+   503→    status: "warning",
+   504→    configSummary: "HTTPS POST · HMAC SHA-256 · routing to EU ops schedule",
+   505→    lastEvent: isoDaysAgo(0, -2.6),
+   506→    events24h: 48,
+   507→    syncEnabled: true,
+   508→    vendor: "Atlassian",
+   509→  },
+   510→  {
+   511→    id: "INT-07",
+   512→    name: "S3 Archive",
+   513→    category: "Storage",
+   514→    status: "connected",
+   515→    configSummary: "Bucket harchcorp-archive · 847 GB · versioning on",
+   516→    lastEvent: isoDaysAgo(0, -3.2),
+   517→    events24h: 6,
+   518→    syncEnabled: true,
+   519→    vendor: "AWS",
+   520→  },
+   521→  {
+   522→    id: "INT-08",
+   523→    name: "Bloomberg Terminal",
+   524→    category: "Market",
+   525→    status: "disabled",
+   526→    configSummary: "SAPI · seat expired · awaiting procurement renewal",
+   527→    lastEvent: isoDaysAgo(7),
+   528→    events24h: 0,
+   529→    syncEnabled: false,
+   530→    vendor: "Bloomberg",
+   531→  },
+   532→];
+   533→
+   534→export type IntegrationLogLevel = "info" | "warn" | "error";
+   535→
+   536→export interface IntegrationEvent {
+   537→  id: string;
+   538→  /** ISO timestamp. */
+   539→  ts: string;
+   540→  integrationId: string;
+   541→  integrationName: string;
+   542→  level: IntegrationLogLevel;
+   543→  message: string;
+   544→}
+   545→
+   546→const eventTemplates: Array<[string, IntegrationLogLevel, string]> = [
+   547→  ["Heartbeat ok", "info", "p95 latency within budget"],
+   548→  ["Rate limit warning", "warn", "approaching 80% of 600 req/min quota"],
+   549→  ["Auth refreshed", "info", "OAuth2 token rotated, expires in 1h"],
+   550→  ["Sync completed", "info", "12,481 records ingested"],
+   551→  ["Latency spike", "warn", "p95 latency exceeded SLO for 90s"],
+   552→  ["Retry exhausted", "error", "failed after 5 attempts, escalation triggered"],
+   553→  ["Quota reset", "info", "daily quota window rolled over"],
+   554→  ["Health probe ok", "info", "all endpoints 200 OK"],
+   555→  ["Webhook delivery failed", "error", "5xx response, backing off"],
+   556→  ["Schema drift detected", "warn", "field `sentiment_score` widened to float64"],
+   557→];
+   558→
+   559→export const integrationEvents: IntegrationEvent[] = (() => {
+   560→  const out: IntegrationEvent[] = [];
+   561→  for (let i = 0; i < 24; i++) {
+   562→    const int = pick(integrations.filter((x) => x.status !== "disabled"));
+   563→    const [msg, level, detail] = pick(eventTemplates);
+   564→    out.push({
+   565→      id: `IEV-${String(20000 + i).padStart(5, "0")}`,
+   566→      ts: isoDaysAgo(0, -(i * 0.18 + 0.05)),
+   567→      integrationId: int.id,
+   568→      integrationName: int.name,
+   569→      level,
+   570→      message: `${msg} — ${detail}`,
+   571→    });
+   572→  }
+   573→  return out.sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts));
+   574→})();
+   575→
+   576→/* ------------------------------------------------------------------ */
+   577→/*  Billing                                                            */
+   578→/* ------------------------------------------------------------------ */
+   579→
+   580→export interface UsageMeter {
+   581→  id: string;
+   582→  label: string;
+   583→  used: number;
+   584→  quota: number;
+   585→  unit: string;
+   586→  /** Override the bar colour tone. */
+   587→  tone: "emerald" | "amber" | "rose" | "sky" | "violet";
+   588→}
+   589→
+   590→export const usageMeters: UsageMeter[] = [
+   591→  { id: "articles", label: "Articles ingested", used: 1_847_392, quota: 5_000_000, unit: "articles", tone: "emerald" },
+   592→  { id: "glm", label: "GLM-4 calls", used: 412_840, quota: 1_000_000, unit: "calls", tone: "violet" },
+   593→  { id: "seats", label: "Seats", used: 12, quota: 25, unit: "seats", tone: "sky" },
+   594→  { id: "storage", label: "Storage", used: 847, quota: 2048, unit: "GB", tone: "amber" },
+   595→  { id: "exports", label: "Exports (CSV / JSON)", used: 318, quota: 1000, unit: "exports", tone: "emerald" },
+   596→  { id: "webhooks", label: "Webhook deliveries", used: 88420, quota: 250_000, unit: "deliveries", tone: "sky" },
+   597→];
+   598→
+   599→export interface MonthlyCost {
+   600→  month: string; // short label
+   601→  /** Cost in USD. */
+   602→  cost: number;
+   603→  /** Usage-derived surcharge. */
+   604→  overage: number;
+   605→}
+   606→
+   607→export const monthlyCost12m: MonthlyCost[] = (() => {
+   608→  const labels = ["Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
+   609→  return labels.map((m, i) => {
+   610→    const base = 18500;
+   611→    const growth = i * 220;
+   612→    const noise = Math.round((rnd() - 0.5) * 600);
+   613→    const cost = base + growth + noise;
+   614→    const overage = i > 6 ? Math.round((rnd() * 1200)) : 0;
+   615→    return { month: m, cost, overage };
+   616→  });
+   617→})();
+   618→
+   619→export type InvoiceStatus = "paid" | "pending" | "overdue" | "draft";
+   620→
+   621→export interface Invoice {
+   622→  id: string;
+   623→  date: string; // ISO short
+   624→  amount: number; // USD
+   625→  status: InvoiceStatus;
+   626→  period: string;
+   627→}
+   628→
+   629→export const invoices: Invoice[] = [
+   630→  { id: "INV-2025-11", date: "2025-11-01", amount: 21840, status: "paid", period: "Nov 2025" },
+   631→  { id: "INV-2025-10", date: "2025-10-01", amount: 20612, status: "paid", period: "Oct 2025" },
+   632→  { id: "INV-2025-09", date: "2025-09-01", amount: 20118, status: "paid", period: "Sep 2025" },
+   633→  { id: "INV-2025-08", date: "2025-08-01", amount: 19724, status: "paid", period: "Aug 2025" },
+   634→  { id: "INV-2025-07", date: "2025-07-01", amount: 19280, status: "paid", period: "Jul 2025" },
+   635→  { id: "INV-2025-06", date: "2025-06-01", amount: 18980, status: "paid", period: "Jun 2025" },
+   636→  { id: "INV-2025-05", date: "2025-05-01", amount: 18860, status: "paid", period: "May 2025" },
+   637→  { id: "INV-2025-04", date: "2025-04-01", amount: 18720, status: "paid", period: "Apr 2025" },
+   638→];
+   639→
+   640→export const billingSummary = {
+   641→  plan: "Enterprise",
+   642→  mrr: monthlyCost12m[monthlyCost12m.length - 1].cost,
+   643→  mrrDelta: monthlyCost12m[monthlyCost12m.length - 1].cost - monthlyCost12m[monthlyCost12m.length - 2].cost,
+   644→  renewalDate: "2026-02-14",
+   645→  paymentMethod: "Wire transfer · IBAN ****8421",
+   646→  billingContact: "finance@harchcorp.io",
+   647→};
+   648→
+   649→/* ------------------------------------------------------------------ */
+   650→/*  Workspace settings                                                 */
+   651→/* ------------------------------------------------------------------ */
+   652→
+   653→export interface WorkspaceSettings {
+   654→  riskThresholdCritical: number; // 0..100
+   655→  riskThresholdHigh: number;
+   656→  riskThresholdMedium: number;
+   657→  retentionDays: number;
+   658→  notifyOnCritical: boolean;
+   659→  notifyOnHigh: boolean;
+   660→  digestDaily: boolean;
+   661→  digestWeekly: boolean;
+   662→  dataResidency: "EU" | "US" | "MA" | "APAC";
+   663→  autoEscalate: boolean;
+   664→  slaHours: number;
+   665→  defaultTheme: "light" | "dark" | "system";
+   666→}
+   667→
+   668→export const defaultSettings: WorkspaceSettings = {
+   669→  riskThresholdCritical: 85,
+   670→  riskThresholdHigh: 65,
+   671→  riskThresholdMedium: 40,
+   672→  retentionDays: 365,
+   673→  notifyOnCritical: true,
+   674→  notifyOnHigh: true,
+   675→  digestDaily: true,
+   676→  digestWeekly: false,
+   677→  dataResidency: "EU",
+   678→  autoEscalate: true,
+   679→  slaHours: 4,
+   680→  defaultTheme: "light",
+   681→};
+   682→
+   683→/* ------------------------------------------------------------------ */
+   684→/*  Composite risk index (intel-overview)                              */
+   685→/* ------------------------------------------------------------------ */
+   686→
+   687→export interface CompositeRiskDay {
+   688→  date: string; // ISO short
+   689→  index: number;
+   690→  /** Volume of new materialised events that day. */
+   691→  events: number;
+   692→}
+   693→
+   694→export const compositeRisk30d: CompositeRiskDay[] = (() => {
+   695→  const out: CompositeRiskDay[] = [];
+   696→  for (let i = 29; i >= 0; i--) {
+   697→    const d = new Date("2025-11-15");
+   698→    d.setDate(d.getDate() - i);
+   699→    const t = 29 - i;
+   700→    const base = 68 + 6 * Math.sin(t / 5.5) + 4 * Math.cos(t / 9.2);
+   701→    const noise = (rnd() - 0.5) * 5;
+   702→    const index = Math.max(35, Math.min(92, Math.round(base + noise)));
+   703→    out.push({
+   704→      date: d.toISOString().slice(0, 10),
+   705→      index,
+   706→      events: Math.max(0, Math.round(8 + 5 * Math.sin(t / 3.7) + (rnd() - 0.5) * 6)),
+   707→    });
+   708→  }
+   709→  return out;
+   710→})();
+   711→
+   712→export interface CompositeKpi {
+   713→  label: string;
+   714→  value: string;
+   715→  delta: string;
+   716→  tone: "positive" | "negative" | "neutral" | "warning";
+   717→  hint: string;
+   718→}
+   719→
+   720→export const compositeKpis: CompositeKpi[] = [
+   721→  { label: "Composite Risk Index", value: "72.4", delta: "+4.1", tone: "negative", hint: "30-day rolling · 0–100 scale" },
+   722→  { label: "Monitored Entities", value: "1,284", delta: "+12", tone: "neutral", hint: "Across 5 regions" },
+   723→  { label: "Open Alerts", value: "17", delta: "+5", tone: "negative", hint: "Awaiting triage" },
+   724→  { label: "Coverage 30d", value: "8,420", delta: "+12.3%", tone: "positive", hint: "Articles ingested" },
+   725→  { label: "Negative Share", value: "58%", delta: "+2.8pp", tone: "negative", hint: "Of coverage volume" },
+   726→  { label: "Critical Events", value: "3", delta: "+1", tone: "warning", hint: "Last 7 days" },
+   727→];
+   728→
+   729→export interface PillarBreakdown {
+   730→  pillar: RiskPillar;
+   731→  /** 0..100 exposure score. */
+   732→  score: number;
+   733→  /** 30d delta in points. */
+   734→  delta: number;
+   735→  events: number;
+   736→  articles: number;
+   737→  trend: number[]; // 12-point trend
+   738→}
+   739→
+   740→export const pillarBreakdown: PillarBreakdown[] = [
+   741→  {
+   742→    pillar: "Regulatory", score: 68, delta: +3.2, events: 4, articles: 1240,
+   743→    trend: [58, 60, 62, 61, 63, 64, 65, 64, 66, 67, 66, 68],
+   744→  },
+   745→  {
+   746→    pillar: "Cyber", score: 74, delta: +5.8, events: 3, articles: 980,
+   747→    trend: [62, 63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74],
+   748→  },
+   749→  {
+   750→    pillar: "Financial", score: 52, delta: -1.4, events: 2, articles: 720,
+   751→    trend: [55, 56, 55, 54, 56, 55, 54, 53, 54, 53, 52, 52],
+   752→  },
+   753→  {
+   754→    pillar: "ESG", score: 81, delta: +2.1, events: 3, articles: 1480,
+   755→    trend: [73, 74, 75, 76, 77, 77, 78, 79, 80, 80, 81, 81],
+   756→  },
+   757→  {
+   758→    pillar: "Geopolitical", score: 47, delta: -2.8, events: 1, articles: 460,
+   759→    trend: [54, 53, 52, 51, 52, 50, 49, 48, 48, 47, 47, 47],
+   760→  },
+   761→  {
+   762→    pillar: "Reputational", score: 63, delta: +0.9, events: 1, articles: 612,
+   763→    trend: [58, 59, 60, 61, 60, 61, 62, 61, 62, 62, 63, 63],
+   764→  },
+   765→];
+   766→
+   767→export interface TopMover {
+   768→  entity: string;
+   769→  pillar: RiskPillar;
+   770→  /** Score today. */
+   771→  score: number;
+   772→  /** 7d delta in points. */
+   773→  delta7d: number;
+   774→  /** Reason code. */
+   775→  reason: string;
+   776→}
+   777→
+   778→export const topMovers: TopMover[] = [
+   779→  { entity: "HarchCorp Logistics EU", pillar: "Cyber", score: 88, delta7d: +12.4, reason: "Ransomware affiliate claim" },
+   780→  { entity: "HarchCorp (Parent)", pillar: "Regulatory", score: 79, delta7d: +8.1, reason: "SEC informal inquiry" },
+   781→  { entity: "ATW SA", pillar: "Financial", score: 61, delta7d: -6.8, reason: "Analyst downgrade cycle" },
+   782→  { entity: "Marocaine de Distribution", pillar: "ESG", score: 84, delta7d: +5.2, reason: "NGO Scope-3 dispute" },
+   783→  { entity: "OCP Group", pillar: "Geopolitical", score: 53, delta7d: -4.1, reason: "Export-control request" },
+   784→  { entity: "CFG Bank", pillar: "Reputational", score: 58, delta7d: +3.7, reason: "Board refresh op-ed" },
+   785→];
+   786→
+   787→/* ------------------------------------------------------------------ */
+   788→/*  Alerts queue (intel-alerts)                                        */
+   789→/* ------------------------------------------------------------------ */
+   790→
+   791→export type AlertQueueStatus = "open" | "assigned" | "ack" | "resolved" | "breach";
+   792→
+   793→export interface AlertQueueItem {
+   794→  id: string;
+   795→  entity: string;
+   796→  pillar: RiskPillar;
+   797→  severity: Severity;
+   798→  /** ISO timestamp. */
+   799→  triggeredAt: string;
+   800→  status: AlertQueueStatus;
+   801→  assignedTo: string | null;
+   802→  /** SLA minutes remaining (negative = breach). */
+   803→  slaMinutes: number;
+   804→  /** Short trigger description. */
+   805→  rule: string;
+   806→}
+   807→
+   808→const alertEntities = [
+   809→  "HarchCorp (Parent)", "HarchCorp Logistics EU", "ATW SA", "Marocaine de Distribution",
+   810→  "OCP Group", "CFG Bank", "IAM Maroc", "LBV Real Estate", "HarchCorp Energy APAC",
+   811→];
+   812→const alertRules = [
+   813→  "Sentiment < -0.6 sustained 1h",
+   814→  "Tier-1 outlet · negative coverage",
+   815→  "Risk index > 85",
+   816→  "Keyword hit: 'investigation'",
+   817→  "Volume spike 3σ over baseline",
+   818→  "Watchlist signal breach",
+   819→  "Pillar score Δ > 5pts",
+   820→];
+   821→
+   822→function isoHoursAgo(hours: number): string {
+   823→  const d = new Date("2025-11-15T10:30:00Z");
+   824→  d.setHours(d.getHours() - hours);
+   825→  return d.toISOString();
+   826→}
+   827→
+   828→export const alertQueue: AlertQueueItem[] = (() => {
+   829→  const items: AlertQueueItem[] = [];
+   830→  const severities: Severity[] = ["critical", "high", "medium", "low"];
+   831→  const statuses: AlertQueueStatus[] = ["open", "open", "open", "assigned", "assigned", "ack", "resolved", "breach"];
+   832→  for (let i = 0; i < 18; i++) {
+   833→    const sev = i < 3 ? "critical" : i < 8 ? "high" : i < 14 ? "medium" : "low";
+   834→    const st = i < 8 ? "open" : statuses[Math.floor(rnd() * statuses.length)];
+   835→    const hoursAgo = Math.floor(rnd() * 96) + 0.2;
+   836→    items.push({
+   837→      id: `ALT-${String(5030 + i).padStart(4, "0")}`,
+   838→      entity: pick(alertEntities),
+   839→      pillar: pick(["Regulatory", "Cyber", "Financial", "ESG", "Geopolitical", "Reputational"] as RiskPillar[]),
+   840→      severity: sev as Severity,
+   841→      triggeredAt: isoHoursAgo(hoursAgo),
+   842→      status: st,
+   843→      assignedTo: st === "open" || st === "breach" ? null : pick(adminUsers.filter((u) => u.role !== "viewer")).name,
+   844→      slaMinutes: Math.round((4 - hoursAgo / 24) * 60 + (rnd() - 0.5) * 90),
+   845→      rule: pick(alertRules),
+   846→    });
+   847→  }
+   848→  return items.sort((a, b) => Date.parse(a.triggeredAt) - Date.parse(b.triggeredAt));
+   849→})();
+   850→
+   851→/** 14-day alert volume series for the sparkline. */
+   852→export const alertVolume14d: { day: string; volume: number }[] = (() => {
+   853→  const out: { day: string; volume: number }[] = [];
+   854→  for (let i = 13; i >= 0; i--) {
+   855→    const d = new Date("2025-11-15");
+   856→    d.setDate(d.getDate() - i);
+   857→    out.push({
+   858→      day: d.toISOString().slice(5, 10),
+   859→      volume: Math.max(0, Math.round(12 + 8 * Math.sin(i / 2.1) + (rnd() - 0.5) * 6)),
+   860→    });
+   861→  }
+   862→  return out;
+   863→})();
+   864→
+   865→export const alertSummary = {
+   866→  open: alertQueue.filter((a) => a.status === "open").length,
+   867→  critical: alertQueue.filter((a) => a.severity === "critical" && a.status !== "resolved").length,
+   868→  assigned: alertQueue.filter((a) => a.status === "assigned").length,
+   869→  breach: alertQueue.filter((a) => a.status === "breach" || a.slaMinutes < 0).length,
+   870→  resolved7d: alertQueue.filter((a) => a.status === "resolved").length,
+   871→};
+   872→
+   873→/* ------------------------------------------------------------------ */
+   874→/*  Risk pillar trend (12-month, for risk-overview)                    */
+   875→/* ------------------------------------------------------------------ */
+   876→
+   877→export interface PillarTrendMonth {
+   878→  month: string;
+   879→  Regulatory: number;
+   880→  Cyber: number;
+   881→  Financial: number;
+   882→  ESG: number;
+   883→  Geopolitical: number;
+   884→  Reputational: number;
+   885→}
+   886→
+   887→export const pillarTrend12m: PillarTrendMonth[] = (() => {
+   888→  const labels = ["Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
+   889→  return labels.map((m, i) => {
+   890→    const drift = (s: number, base: number, amp: number) =>
+   891→      Math.max(20, Math.min(95, Math.round(base + amp * Math.sin(i / 2.4) + (rnd() - 0.5) * 4)));
+   892→    return {
+   893→      month: m,
+   894→      Regulatory: drift(i, 60, 6),
+   895→      Cyber: drift(i, 66, 8),
+   896→      Financial: drift(i, 54, 5),
+   897→      ESG: drift(i, 76, 4),
+   898→      Geopolitical: drift(i, 50, 7),
+   899→      Reputational: drift(i, 60, 3),
+   900→    };
+   901→  });
+   902→})();
+   903→
+   904→export interface TopRiskEntity {
+   905→  entity: string;
+   906→  composite: number;
+   907→  Regulatory: number;
+   908→  Cyber: number;
+   909→  Financial: number;
+   910→  ESG: number;
+   911→  Geopolitical: number;
+   912→  Reputational: number;
+   913→  events: number;
+   914→}
+   915→
+   916→export const topRiskEntities: TopRiskEntity[] = [
+   917→  { entity: "HarchCorp Logistics EU", composite: 81, Regulatory: 72, Cyber: 92, Financial: 58, ESG: 70, Geopolitical: 64, Reputational: 78, events: 8 },
+   918→  { entity: "HarchCorp (Parent)", composite: 74, Regulatory: 84, Cyber: 70, Financial: 62, ESG: 75, Geopolitical: 58, Reputational: 80, events: 11 },
+   919→  { entity: "Marocaine de Distribution", composite: 68, Regulatory: 54, Cyber: 50, Financial: 48, ESG: 88, Geopolitical: 42, Reputational: 60, events: 5 },
+   920→  { entity: "ATW SA", composite: 61, Regulatory: 58, Cyber: 62, Financial: 70, ESG: 52, Geopolitical: 48, Reputational: 54, events: 4 },
+   921→  { entity: "OCP Group", composite: 58, Regulatory: 60, Cyber: 46, Financial: 52, ESG: 64, Geopolitical: 70, Reputational: 50, events: 3 },
+   922→  { entity: "CFG Bank", composite: 55, Regulatory: 66, Cyber: 48, Financial: 64, ESG: 40, Geopolitical: 36, Reputational: 58, events: 2 },
+   923→  { entity: "HarchCorp Energy APAC", composite: 52, Regulatory: 44, Cyber: 56, Financial: 50, ESG: 68, Geopolitical: 62, Reputational: 46, events: 3 },
+   924→  { entity: "IAM Maroc", composite: 47, Regulatory: 50, Cyber: 42, Financial: 54, ESG: 46, Geopolitical: 38, Reputational: 52, events: 2 },
+   925→];
+   926→
+   927→/* ------------------------------------------------------------------ */
+   928→/*  Audit log (risk-audit)                                             */
+   929→/* ------------------------------------------------------------------ */
+   930→
+   931→export type AuditAction =
+   932→  | "auth.login"
+   933→  | "auth.logout"
+   934→  | "auth.mfa_challenge"
+   935→  | "user.invite"
+   936→  | "user.suspend"
+   937→  | "user.role_change"
+   938→  | "source.disable"
+   939→  | "source.enable"
+   940→  | "integration.toggle"
+   941→  | "alert.ack"
+   942→  | "alert.escalate"
+   943→  | "alert.assign"
+   944→  | "view.billing"
+   945→  | "settings.update"
+   946→  | "data.export";
+   947→
+   948→export type AuditResult = "success" | "failure";
+   949→
+   950→export interface AuditEntry {
+   951→  id: string;
+   952→  /** ISO timestamp. */
+   953→  ts: string;
+   954→  actor: string;
+   955→  action: AuditAction;
+   956→  target: string;
+   957→  ip: string;
+   958→  result: AuditResult;
+   959→  /** Optional context note. */
+   960→  note?: string;
+   961→}
+   962→
+   963→const auditActors = adminUsers.map((u) => u.name);
+   964→const auditIps = [
+   965→  "41.92.118.42", "41.92.118.51", "82.143.16.18", "82.143.16.24",
+   966→  "196.12.250.31", "196.12.250.42", "203.0.113.7", "203.0.113.18",
+   967→  "198.51.100.42", "198.51.100.84",
+   968→];
+   969→const actionTargets: Record<AuditAction, string[]> = {
+   970→  "auth.login": ["—"],
+   971→  "auth.logout": ["—"],
+   972→  "auth.mfa_challenge": ["TOTP"],
+   973→  "user.invite": ["u.tanaka@harchcorp.io", "j.hassan@harchcorp.io", "m.volkov@harchcorp.io"],
+   974→  "user.suspend": ["USR-0007", "USR-0009"],
+   975→  "user.role_change": ["USR-0004 → analyst", "USR-0008 → legal", "USR-0011 → viewer"],
+   976→  "source.disable": ["SRC-08 RSS Aggregator", "SRC-05 Twitter Firehose"],
+   977→  "source.enable": ["SRC-08 RSS Aggregator", "SRC-02 BVC Feed"],
+   978→  "integration.toggle": ["INT-08 Bloomberg Terminal", "INT-06 OpsGenie Webhook"],
+   979→  "alert.ack": ["ALT-5030", "ALT-5031", "ALT-5034"],
+   980→  "alert.escalate": ["ALT-5030", "ALT-5033"],
+   981→  "alert.assign": ["ALT-5035 → A. Marchetti", "ALT-5038 → L. Reyes"],
+   982→  "view.billing": ["INV-2025-11", "Usage meters"],
+   983→  "settings.update": ["Risk thresholds", "Retention policy", "Notification rules"],
+   984→  "data.export": ["Risk events CSV (14 rows)", "Audit log JSON (288 entries)"],
+   985→};
+   986→
+   987→const auditActionPool: AuditAction[] = [
+   988→  "auth.login", "auth.login", "auth.login", "auth.login",
+   989→  "auth.logout", "auth.logout",
+   990→  "auth.mfa_challenge",
+   991→  "user.invite", "user.role_change", "user.suspend",
+   992→  "source.disable", "source.enable",
+   993→  "integration.toggle",
+   994→  "alert.ack", "alert.ack", "alert.escalate", "alert.assign",
+   995→  "view.billing", "settings.update", "data.export",
+   996→];
+   997→
+   998→export const auditLog: AuditEntry[] = (() => {
+   999→  const out: AuditEntry[] = [];
+  1000→  for (let i = 0; i < 32; i++) {
+  1001→    const action = pick(auditActionPool);
+  1002→    const result: AuditResult = action === "auth.login" && rnd() > 0.9 ? "failure" : "success";
+  1003→    const note =
+  1004→      action === "auth.login" && result === "failure"
+  1005→        ? "Invalid credentials · 3rd attempt"
+  1006→        : action === "auth.mfa_challenge"
+  1007→          ? "TOTP code accepted"
+  1008→          : action === "settings.update"
+  1009→            ? "Threshold raised"
+  1010→            : action === "data.export"
+  1011→              ? "CSV downloaded"
+  1012→              : undefined;
+  1013→    out.push({
+  1014→      id: `AUD-${String(88000 + i).padStart(6, "0")}`,
+  1015→      ts: isoHoursAgo(i * 0.6 + (rnd() - 0.5) * 0.2),
+  1016→      actor: pick(auditActors),
+  1017→      action,
+  1018→      target: pick(actionTargets[action]),
+  1019→      ip: pick(auditIps),
+  1020→      result,
+  1021→      note,
+  1022→    });
+  1023→  }
+  1024→  return out.sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts));
+  1025→})();
+  1026→
+  1027→/** Audit activity volume for the last 14 days (by day, success vs failure). */
+  1028→export const auditActivity14d: { day: string; success: number; failure: number }[] = (() => {
+  1029→  const out: { day: string; success: number; failure: number }[] = [];
+  1030→  for (let i = 13; i >= 0; i--) {
+  1031→    const d = new Date("2025-11-15");
+  1032→    d.setDate(d.getDate() - i);
+  1033→    const total = Math.round(40 + 30 * Math.sin(i / 2.3) + (rnd() - 0.5) * 12);
+  1034→    const failure = Math.round(total * (0.04 + rnd() * 0.08));
+  1035→    out.push({
+  1036→      day: d.toISOString().slice(5, 10),
+  1037→      success: total - failure,
+  1038→      failure,
+  1039→    });
+  1040→  }
+  1041→  return out;
+  1042→})();
+  1043→
+  1044→/* ------------------------------------------------------------------ */
+  1045→/*  Shared helpers                                                     */
+  1046→/* ------------------------------------------------------------------ */
+  1047→
+  1048→export function formatNumber(n: number): string {
+  1049→  return n.toLocaleString("en-US");
+  1050→}
+  1051→
+  1052→export function formatUSD(n: number): string {
+  1053→  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  1054→}
+  1055→
+  1056→export function formatPct(n: number, digits = 1): string {
+  1057→  return `${n.toFixed(digits)}%`;
+  1058→}
+  1059→
+  1060→export function relativeTime(iso: string, now = "2025-11-15T10:30:00Z"): string {
+  1061→  const diffMs = Date.parse(now) - Date.parse(iso);
+  1062→  const mins = Math.round(diffMs / 60000);
+  1063→  if (mins < 1) return "just now";
+  1064→  if (mins < 60) return `${mins}m ago`;
+  1065→  const hrs = Math.round(mins / 60);
+  1066→  if (hrs < 24) return `${hrs}h ago`;
+  1067→  const days = Math.round(hrs / 24);
+  1068→  if (days < 30) return `${days}d ago`;
+  1069→  return new Date(iso).toISOString().slice(0, 10);
+  1070→}
+  1071→
+  1072→export const statusColor: Record<SourceStatus, { text: string; bg: string; ring: string; dot: string }> = {
+  1073→  up: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200", dot: "bg-emerald-500" },
+  1074→  degraded: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", dot: "bg-amber-500" },
+  1075→  down: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200", dot: "bg-rose-500" },
+  1076→};
+  1077→
+  1078→export const integrationStatusColor: Record<IntegrationStatus, { text: string; bg: string; ring: string; dot: string }> = {
+  1079→  connected: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200", dot: "bg-emerald-500" },
+  1080→  warning: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", dot: "bg-amber-500" },
+  1081→  error: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200", dot: "bg-rose-500" },
+  1082→  disabled: { text: "text-slate-600", bg: "bg-slate-100", ring: "ring-slate-200", dot: "bg-slate-400" },
+  1083→};
+  1084→
+  1085→export const userStatusColor: Record<UserStatus, { text: string; bg: string; ring: string; dot: string }> = {
+  1086→  active: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200", dot: "bg-emerald-500" },
+  1087→  suspended: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", dot: "bg-amber-500" },
+  1088→  invited: { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200", dot: "bg-sky-500" },
+  1089→  locked: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200", dot: "bg-rose-500" },
+  1090→};
+  1091→
+  1092→export const roleTint: Record<UserRole, { text: string; bg: string; ring: string }> = {
+  1093→  admin: { text: "text-slate-700", bg: "bg-slate-100", ring: "ring-slate-200" },
+  1094→  analyst: { text: "text-violet-700", bg: "bg-violet-50", ring: "ring-violet-200" },
+  1095→  trader: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200" },
+  1096→  legal: { text: "text-violet-700", bg: "bg-violet-50", ring: "ring-violet-200" },
+  1097→  market: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200" },
+  1098→  pr: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200" },
+  1099→  viewer: { text: "text-slate-600", bg: "bg-slate-100", ring: "ring-slate-200" },
+  1100→};
+  1101→
+  1102→export const severityTint: Record<Severity, { text: string; bg: string; ring: string }> = {
+  1103→  critical: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200" },
+  1104→  high: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200" },
+  1105→  medium: { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200" },
+  1106→  low: { text: "text-slate-600", bg: "bg-slate-100", ring: "ring-slate-200" },
+  1107→};
+  1108→
+  1109→export const alertQueueStatusTint: Record<AlertQueueStatus, { text: string; bg: string; ring: string; dot: string }> = {
+  1110→  open: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200", dot: "bg-rose-500" },
+  1111→  assigned: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", dot: "bg-amber-500" },
+  1112→  ack: { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200", dot: "bg-sky-500" },
+  1113→  resolved: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200", dot: "bg-emerald-500" },
+  1114→  breach: { text: "text-rose-800", bg: "bg-rose-100", ring: "ring-rose-300", dot: "bg-rose-600" },
+  1115→};
+  1116→
+  1117→export const pillarColor: Record<RiskPillar, string> = {
+  1118→  Regulatory: "#0ea5e9",
+  1119→  Cyber: "#a855f7",
+  1120→  Financial: "#10b981",
+  1121→  ESG: "#14b8a6",
+  1122→  Geopolitical: "#f59e0b",
+  1123→  Reputational: "#f43f5e",
+  1124→};
+  1125→
+  1126→export const grantTint: Record<PermissionGrant, { text: string; bg: string; ring: string }> = {
+  1127→  allow: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200" },
+  1128→  conditional: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200" },
+  1129→  deny: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200" },
+  1130→};
+  1131→
+  1132→export const meterTone: Record<UsageMeter["tone"], { bar: string; text: string; ring: string }> = {
+  1133→  emerald: { bar: "bg-emerald-500", text: "text-emerald-700", ring: "ring-emerald-200" },
+  1134→  amber: { bar: "bg-amber-500", text: "text-amber-700", ring: "ring-amber-200" },
+  1135→  rose: { bar: "bg-rose-500", text: "text-rose-700", ring: "ring-rose-200" },
+  1136→  sky: { bar: "bg-sky-500", text: "text-sky-700", ring: "ring-sky-200" },
+  1137→  violet: { bar: "bg-violet-500", text: "text-violet-700", ring: "ring-violet-200" },
+  1138→};
+  1139→

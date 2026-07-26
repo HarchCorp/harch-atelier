@@ -1,0 +1,708 @@
+     1→/**
+     2→ * Harch Atelier — Mock intelligence dataset (V12.0)
+     3→ *
+     4→ * Stand-in data for the Enterprise Risk Intelligence UI. In production these
+     5→ * shapes are populated by the GLMAnalysis / Alert / Watchlist tables via the
+     6→ * API. Here they are deterministic so every chart renders on first paint.
+     7→ *
+     8→ * Strict typing — no `any`.
+     9→ */
+    10→
+    11→export type AccountType =
+    12→  | "admin"
+    13→  | "trader"
+    14→  | "legal"
+    15→  | "market"
+    16→  | "self"
+    17→  | "pr";
+    18→
+    19→export type Sentiment = "positive" | "negative" | "neutral";
+    20→
+    21→export type Severity = "critical" | "high" | "medium" | "low";
+    22→
+    23→/** A single risk signal plotted on the Risk Matrix. */
+    24→export interface RiskPoint {
+    25→  id: string;
+    26→  name: string;
+    27→  /** 0–100, how frequently the signal recurs in coverage. */
+    28→  frequency: number;
+    29→  /** 0–100, estimated media / reputational impact. */
+    30→  mediaImpact: number;
+    31→  /** Volume of articles backing this signal in the last 30d. */
+    32→  articles: number;
+    33→  severity: Severity;
+    34→  pillar: RiskPillar;
+    35→  /** Region code — used by the drawer breadcrumb for scatter-bubble events. */
+    36→  region: string;
+    37→}
+    38→
+    39→export type RiskPillar =
+    40→  | "Regulatory"
+    41→  | "Cyber"
+    42→  | "Financial"
+    43→  | "ESG"
+    44→  | "Geopolitical"
+    45→  | "Reputational";
+    46→
+    47→export interface ShareOfVoiceSlice {
+    48→  name: string;
+    49→  value: number; // article count
+    50→  isTarget: boolean;
+    51→}
+    52→
+    53→export interface CoverageDay {
+    54→  date: string; // ISO short
+    55→  positive: number;
+    56→  negative: number;
+    57→}
+    58→
+    59→export interface SentimentMonth {
+    60→  month: string; // short label
+    61→  positive: number;
+    62→  negative: number;
+    63→}
+    64→
+    65→export interface RiskEvent {
+    66→  id: string;
+    67→  date: string; // ISO short
+    68→  pillar: RiskPillar;
+    69→  title: string;
+    70→  articles: number;
+    71→  sentiment: Sentiment;
+    72→  severity: Severity;
+    73→  /** Region code (NA, EU, APAC, MEA, LATAM) — used for geographic filtering + breadcrumb. */
+    74→  region: string;
+    75→}
+    76→
+    77→export interface WatchlistSignal {
+    78→  id: string;
+    79→  ticker: string;
+    80→  entity: string;
+    81→  signal: string;
+    82→  pillar: RiskPillar;
+    83→  severity: Severity;
+    84→  delta: number; // sentiment delta vs previous session
+    85→  articles: number;
+    86→  updatedAt: string;
+    87→}
+    88→
+    89→/* ------------------------------------------------------------------ */
+    90→/*  Risk Matrix                                                        */
+    91→/* ------------------------------------------------------------------ */
+    92→
+    93→export const riskPoints: RiskPoint[] = [
+    94→  { id: "RSK-0481", name: "SEC 10-K restatement inquiry", frequency: 78, mediaImpact: 91, articles: 412, severity: "critical", pillar: "Regulatory", region: "NA" },
+    95→  { id: "RSK-0472", name: "Ransomware payload on EU logistics", frequency: 64, mediaImpact: 88, articles: 327, severity: "critical", pillar: "Cyber", region: "EU" },
+    96→  { id: "RSK-0455", name: "Insider trading allegations", frequency: 41, mediaImpact: 84, articles: 238, severity: "high", pillar: "Financial", region: "NA" },
+    97→  { id: "RSK-0448", name: "Scope-3 emissions misreporting", frequency: 33, mediaImpact: 76, articles: 191, severity: "high", pillar: "ESG", region: "EU" },
+    98→  { id: "RSK-0431", name: "Export-control probe (APAC)", frequency: 57, mediaImpact: 71, articles: 286, severity: "high", pillar: "Geopolitical", region: "APAC" },
+    99→  { id: "RSK-0419", name: "CEO social-media controversy", frequency: 49, mediaImpact: 69, articles: 174, severity: "high", pillar: "Reputational", region: "NA" },
+   100→  { id: "RSK-0402", name: "Supplier labor-law lawsuit", frequency: 28, mediaImpact: 63, articles: 132, severity: "medium", pillar: "ESG", region: "APAC" },
+   101→  { id: "RSK-0388", name: "Patent infringement (District Ct.)", frequency: 22, mediaImpact: 58, articles: 98, severity: "medium", pillar: "Financial", region: "NA" },
+   102→  { id: "RSK-0375", name: "Cloud region outage — US-East", frequency: 38, mediaImpact: 44, articles: 119, severity: "medium", pillar: "Cyber", region: "NA" },
+   103→  { id: "RSK-0361", name: "FX hedging disclosure gap", frequency: 19, mediaImpact: 51, articles: 77, severity: "medium", pillar: "Financial", region: "EU" },
+   104→  { id: "RSK-0349", name: "Board composition criticism", frequency: 12, mediaImpact: 47, articles: 54, severity: "low", pillar: "Reputational", region: "NA" },
+   105→  { id: "RSK-0333", name: "Trade-secret claim (supplier)", frequency: 9, mediaImpact: 38, articles: 41, severity: "low", pillar: "Financial", region: "NA" },
+   106→  { id: "RSK-0320", name: "Diversity report backlash", frequency: 16, mediaImpact: 29, articles: 63, severity: "low", pillar: "ESG", region: "NA" },
+   107→  { id: "RSK-0308", name: "Sanctions list naming error", frequency: 71, mediaImpact: 24, articles: 221, severity: "medium", pillar: "Geopolitical", region: "APAC" },
+   108→  { id: "RSK-0294", name: "App-store policy complaint", frequency: 53, mediaImpact: 18, articles: 158, severity: "low", pillar: "Reputational", region: "NA" },
+   109→  { id: "RSK-0281", name: "Greenwashing op-ed pickup", frequency: 84, mediaImpact: 33, articles: 264, severity: "medium", pillar: "ESG", region: "EU" },
+   110→];
+   111→
+   112→/* ------------------------------------------------------------------ */
+   113→/*  Share of Voice (target vs competitors)                             */
+   114→/* ------------------------------------------------------------------ */
+   115→
+   116→export const shareOfVoice: ShareOfVoiceSlice[] = [
+   117→  { name: "HarchCorp", value: 1284, isTarget: true },
+   118→  { name: "Northwind", value: 842, isTarget: false },
+   119→  { name: "Vela Dynamics", value: 617, isTarget: false },
+   120→  { name: "Orbital Systems", value: 438, isTarget: false },
+   121→  { name: "Kessler & Vale", value: 293, isTarget: false },
+   122→  { name: "Other", value: 412, isTarget: false },
+   123→];
+   124→
+   125→/* ------------------------------------------------------------------ */
+   126→/*  Media Coverage — last 30 days                                      */
+   127→/* ------------------------------------------------------------------ */
+   128→
+   129→function isoDaysAgo(days: number): string {
+   130→  const d = new Date(2025, 0, 31); // anchored reference date for deterministic output
+   131→  d.setDate(d.getDate() - days);
+   132→  return d.toISOString().slice(0, 10);
+   133→}
+   134→
+   135→export const coverage30d: CoverageDay[] = Array.from({ length: 30 }, (_, i) => {
+   136→  const day = 29 - i;
+   137→  // deterministic pseudo-pattern so the chart looks alive but is stable
+   138→  const positive = Math.round(38 + 22 * Math.sin(i / 2.3) + 14 * Math.cos(i / 1.1) + (i % 5));
+   139→  const negative = Math.round(26 + 19 * Math.sin(i / 1.7 + 1) + 11 * Math.cos(i / 3.1) - (i % 4));
+   140→  return {
+   141→    date: isoDaysAgo(day),
+   142→    positive: Math.max(8, positive),
+   143→    negative: Math.max(4, negative),
+   144→  };
+   145→});
+   146→
+   147→/* ------------------------------------------------------------------ */
+   148→/*  Sentiment Trend — 12 months                                        */
+   149→/* ------------------------------------------------------------------ */
+   150→
+   151→const monthLabels = ["Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan"];
+   152→
+   153→export const sentiment12m: SentimentMonth[] = monthLabels.map((month, i) => {
+   154→  const positive = Math.round(120 + 55 * Math.sin(i / 1.4) + 20 * Math.cos(i / 2.6));
+   155→  const negative = Math.round(95 + 48 * Math.sin(i / 1.9 + 0.8) + 16 * Math.cos(i / 3.3));
+   156→  return { month, positive: Math.max(40, positive), negative: Math.max(30, negative) };
+   157→});
+   158→
+   159→/* ------------------------------------------------------------------ */
+   160→/*  Risk Events Table                                                  */
+   161→/* ------------------------------------------------------------------ */
+   162→
+   163→export const riskEvents: RiskEvent[] = [
+   164→  { id: "EVT-9821", date: "2025-01-29", pillar: "Regulatory", title: "SEC opens informal inquiry into Q4 revenue recognition", articles: 86, sentiment: "negative", severity: "critical", region: "NA" },
+   165→  { id: "EVT-9814", date: "2025-01-29", pillar: "Cyber", title: "Ransomware affiliate claims exfiltration of 2.1 TB logistics data", articles: 74, sentiment: "negative", severity: "critical", region: "EU" },
+   166→  { id: "EVT-9802", date: "2025-01-28", pillar: "Geopolitical", title: "Export-control authority requests documentation on APAC shipments", articles: 63, sentiment: "negative", severity: "high", region: "APAC" },
+   167→  { id: "EVT-9795", date: "2025-01-28", pillar: "ESG", title: "NGO report disputes Scope-3 emissions methodology in annual filing", articles: 58, sentiment: "negative", severity: "high", region: "EU" },
+   168→  { id: "EVT-9783", date: "2025-01-27", pillar: "Reputational", title: "Major outlet runs op-ed critical of board refresh process", articles: 47, sentiment: "negative", severity: "medium", region: "NA" },
+   169→  { id: "EVT-9771", date: "2025-01-27", pillar: "Financial", title: "Analyst downgrade cites margin compression in services segment", articles: 41, sentiment: "negative", severity: "medium", region: "NA" },
+   170→  { id: "EVT-9764", date: "2025-01-26", pillar: "Cyber", title: "Cloud region outage triggers SLA breach notices for enterprise tier", articles: 39, sentiment: "neutral", severity: "medium", region: "NA" },
+   171→  { id: "EVT-9758", date: "2025-01-26", pillar: "Regulatory", title: "EU privacy regulator extends retention-period review by 60 days", articles: 34, sentiment: "neutral", severity: "low", region: "EU" },
+   172→  { id: "EVT-9749", date: "2025-01-25", pillar: "ESG", title: "Supplier labor audit publishes conditional pass with remediation plan", articles: 31, sentiment: "positive", severity: "low", region: "APAC" },
+   173→  { id: "EVT-9736", date: "2025-01-25", pillar: "Financial", title: "Patent infringement ruling partially overturned on appeal", articles: 28, sentiment: "positive", severity: "medium", region: "NA" },
+   174→  { id: "EVT-9722", date: "2025-01-24", pillar: "Geopolitical", title: "Sanctions screening vendor confirms false-positive naming error", articles: 26, sentiment: "positive", severity: "low", region: "APAC" },
+   175→  { id: "EVT-9710", date: "2025-01-24", pillar: "Reputational", title: "Trade publication names CTO to annual innovation list", articles: 22, sentiment: "positive", severity: "low", region: "NA" },
+   176→  { id: "EVT-9704", date: "2025-01-23", pillar: "Financial", title: "Insider trading complaint amended; named individual departs firm", articles: 19, sentiment: "negative", severity: "high", region: "NA" },
+   177→  { id: "EVT-9691", date: "2025-01-23", pillar: "ESG", title: "Regional minister endorses water-stewardship pilot at facility 04", articles: 17, sentiment: "positive", severity: "low", region: "MEA" },
+   178→];
+   179→
+   180→/* ------------------------------------------------------------------ */
+   181→/*  Watchlist Signals (trader view)                                    */
+   182→/* ------------------------------------------------------------------ */
+   183→
+   184→export const watchlistSignals: WatchlistSignal[] = [
+   185→  { id: "WL-001", ticker: "HRCH", entity: "HarchCorp", signal: "SEC inquiry — revenue recognition", pillar: "Regulatory", severity: "critical", delta: -3.4, articles: 86, updatedAt: "12m ago" },
+   186→  { id: "WL-002", ticker: "HRCH", entity: "HarchCorp", signal: "Ransomware claim — logistics data", pillar: "Cyber", severity: "critical", delta: -2.1, articles: 74, updatedAt: "24m ago" },
+   187→  { id: "WL-003", ticker: "HRCH", entity: "HarchCorp", signal: "Analyst downgrade — services margin", pillar: "Financial", severity: "high", delta: -1.7, articles: 41, updatedAt: "1h ago" },
+   188→  { id: "WL-004", ticker: "HRCH", entity: "HarchCorp", signal: "Export-control documentation request", pillar: "Geopolitical", severity: "high", delta: -0.9, articles: 63, updatedAt: "2h ago" },
+   189→  { id: "WL-005", ticker: "HRCH", entity: "HarchCorp", signal: "NGO Scope-3 methodology dispute", pillar: "ESG", severity: "high", delta: -0.6, articles: 58, updatedAt: "3h ago" },
+   190→  { id: "WL-006", ticker: "HRCH", entity: "HarchCorp", signal: "Patent ruling partially overturned", pillar: "Financial", severity: "medium", delta: +1.2, articles: 28, updatedAt: "5h ago" },
+   191→  { id: "WL-007", ticker: "HRCH", entity: "HarchCorp", signal: "Supplier labor audit — conditional pass", pillar: "ESG", severity: "low", delta: +0.4, articles: 31, updatedAt: "6h ago" },
+   192→  { id: "WL-008", ticker: "HRCH", entity: "HarchCorp", signal: "Innovation list — CTO named", pillar: "Reputational", severity: "low", delta: +0.3, articles: 22, updatedAt: "8h ago" },
+   193→];
+   194→
+   195→/* ------------------------------------------------------------------ */
+   196→/*  Severity / sentiment color tokens (single source of truth)         */
+   197→/* ------------------------------------------------------------------ */
+   198→
+   199→export const severityColor: Record<Severity, { text: string; bg: string; dot: string; ring: string }> = {
+   200→  critical: { text: "text-rose-700", bg: "bg-rose-50", dot: "bg-rose-500", ring: "ring-rose-200" },
+   201→  high: { text: "text-orange-700", bg: "bg-orange-50", dot: "bg-orange-500", ring: "ring-orange-200" },
+   202→  medium: { text: "text-amber-700", bg: "bg-amber-50", dot: "bg-amber-400", ring: "ring-amber-200" },
+   203→  low: { text: "text-slate-600", bg: "bg-slate-100", dot: "bg-slate-400", ring: "ring-slate-200" },
+   204→};
+   205→
+   206→export const sentimentColor: Record<Sentiment, { text: string; bg: string; dot: string }> = {
+   207→  positive: { text: "text-emerald-700", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+   208→  negative: { text: "text-rose-700", bg: "bg-rose-50", dot: "bg-rose-500" },
+   209→  neutral: { text: "text-slate-600", bg: "bg-slate-100", dot: "bg-slate-400" },
+   210→};
+   211→
+   212→/* ------------------------------------------------------------------ */
+   213→/*  Aggregate headline KPIs (top strip)                                */
+   214→/* ------------------------------------------------------------------ */
+   215→
+   216→export const headlineKpis = {
+   217→  riskIndex: 72.4,
+   218→  riskIndexDelta: +4.1,
+   219→  coverage30d: coverage30d.reduce((s, d) => s + d.positive + d.negative, 0),
+   220→  coverageDelta: +12.3,
+   221→  negativeShare: Math.round(
+   222→    (coverage30d.reduce((s, d) => s + d.negative, 0) /
+   223→      coverage30d.reduce((s, d) => s + d.positive + d.negative, 0)) *
+   224→      100,
+   225→  ),
+   226→  negativeShareDelta: +2.8,
+   227→  activeAlerts: 17,
+   228→  alertsDelta: +5,
+   229→};
+   230→
+   231→export const navByAccountType: Record<AccountType, { label: string; href: string }[]> = {
+   232→  admin: [
+   233→    { label: "Overview", href: "#overview" },
+   234→    { label: "Risk Matrix", href: "#matrix" },
+   235→    { label: "Coverage", href: "#coverage" },
+   236→    { label: "Alerts", href: "#alerts" },
+   237→    { label: "Entities", href: "#entities" },
+   238→    { label: "Audit Log", href: "#audit" },
+   239→    { label: "Settings", href: "#settings" },
+   240→  ],
+   241→  trader: [
+   242→    { label: "Signals", href: "#signals" },
+   243→    { label: "Risk Matrix", href: "#matrix" },
+   244→    { label: "Coverage", href: "#coverage" },
+   245→    { label: "Watchlist", href: "#watchlist" },
+   246→    { label: "Alerts", href: "#alerts" },
+   247→  ],
+   248→  legal: [
+   249→    { label: "Overview", href: "#overview" },
+   250→    { label: "Regulatory", href: "#regulatory" },
+   251→    { label: "Matters", href: "#matters" },
+   252→    { label: "Hold Notices", href: "#holds" },
+   253→    { label: "Alerts", href: "#alerts" },
+   254→  ],
+   255→  market: [
+   256→    { label: "Overview", href: "#overview" },
+   257→    { label: "Risk Matrix", href: "#matrix" },
+   258→    { label: "Coverage", href: "#coverage" },
+   259→    { label: "Sentiment", href: "#sentiment" },
+   260→    { label: "Share of Voice", href: "#sov" },
+   261→    { label: "Alerts", href: "#alerts" },
+   262→  ],
+   263→  self: [
+   264→    { label: "Overview", href: "#overview" },
+   265→    { label: "Coverage", href: "#coverage" },
+   266→    { label: "Alerts", href: "#alerts" },
+   267→  ],
+   268→  pr: [
+   269→    { label: "Overview", href: "#overview" },
+   270→    { label: "Sentiment", href: "#sentiment" },
+   271→    { label: "Share of Voice", href: "#sov" },
+   272→    { label: "Coverage", href: "#coverage" },
+   273→    { label: "Alerts", href: "#alerts" },
+   274→  ],
+   275→};
+   276→
+   277→/* ------------------------------------------------------------------ */
+   278→/*  Articles — drill-down dataset for the RiskEventDrawer              */
+   279→/* ------------------------------------------------------------------ */
+   280→
+   281→export type ArticleTier = "tier1" | "tier2" | "tier3";
+   282→
+   283→export interface Article {
+   284→  id: string;
+   285→  eventId: string;
+   286→  headline: string;
+   287→  source: string;
+   288→  /** outlet tier — tier1 = top-tier financial/legacy press. */
+   289→  tier: ArticleTier;
+   290→  url: string;
+   291→  publishedAt: string; // ISO
+   292→  sentiment: Sentiment;
+   293→  reach: number; // estimated readers / followers
+   294→  language: "en" | "fr" | "de" | "es" | "zh";
+   295→}
+   296→
+   297→const outlets = [
+   298→  { name: "Financial Times", tier: "tier1" as const, reach: 4_200_000 },
+   299→  { name: "Reuters", tier: "tier1" as const, reach: 8_900_000 },
+   300→  { name: "Bloomberg", tier: "tier1" as const, reach: 6_100_000 },
+   301→  { name: "Wall Street Journal", tier: "tier1" as const, reach: 3_800_000 },
+   302→  { name: "The Economist", tier: "tier1" as const, reach: 1_650_000 },
+   303→  { name: "Le Monde", tier: "tier1" as const, reach: 2_100_000 },
+   304→  { name: "Handelsblatt", tier: "tier2" as const, reach: 980_000 },
+   305→  { name: "TechCrunch", tier: "tier2" as const, reach: 1_400_000 },
+   306→  { name: "The Information", tier: "tier2" as const, reach: 320_000 },
+   307→  { name: "S&P Global", tier: "tier2" as const, reach: 760_000 },
+   308→  { name: "GlobalData", tier: "tier3" as const, reach: 180_000 },
+   309→  { name: "OSINT Wire", tier: "tier3" as const, reach: 95_000 },
+   310→  { name: "Sector Monitor", tier: "tier3" as const, reach: 140_000 },
+   311→];
+   312→
+   313→const headlineBank: Record<RiskPillar, string[]> = {
+   314→  Regulatory: [
+   315→    "Regulator confirms informal inquiry into Q4 revenue recognition practices",
+   316→    "Compliance filing reveals expanded scope of disclosure review",
+   317→    "Securities authority requests additional documentation on segment reporting",
+   318→    "Legal counsel issues statement on cooperative posture with inquiry",
+   319→  ],
+   320→  Cyber: [
+   321→    "Ransomware affiliate posts sample data as proof of exfiltration",
+   322→    "Security researchers link incident to known threat-actor cluster",
+   323→    "Incident response firm engaged; containment timeline under review",
+   324→    "Customer notification drafted; regulator briefed within 72h window",
+   325→  ],
+   326→  Financial: [
+   327→    "Sell-side analyst downgrades on margin compression signals",
+   328→    "Earnings revision cites services-segment softness and FX headwinds",
+   329→    "Bondholders seek clarification on covenant headroom",
+   330→    "Hedge funds build defensive positions ahead of print",
+   331→  ],
+   332→  ESG: [
+   333→    "NGO report challenges methodology behind Scope-3 disclosure",
+   334→    "Investor coalition files shareholder proposal on transition plan",
+   335→    "Audit firm issues conditional pass with remediation milestones",
+   336→    "Regional minister endorses water-stewardship pilot at facility",
+   337→  ],
+   338→  Geopolitical: [
+   339→    "Export-control authority requests documentation on APAC shipments",
+   340→    "Sanctions screening vendor confirms false-positive naming error",
+   341→    "Trade ministry requests briefing on dual-use classification",
+   342→    "Customs hold lifted pending classification review",
+   343→  ],
+   344→  Reputational: [
+   345→    "Op-ed criticizes board refresh cadence and independence",
+   346→    "Trade publication names CTO to annual innovation list",
+   347→    "Social-media controversy drives spike in negative mentions",
+   348→    "Diversity report draws mixed coverage across outlets",
+   349→  ],
+   350→};
+   351→
+   352→const languages: Article["language"][] = ["en", "en", "en", "en", "fr", "de", "es", "zh"];
+   353→
+   354→function buildArticlesForEvent(ev: RiskEvent, count: number): Article[] {
+   355→  const heads = headlineBank[ev.pillar];
+   356→  return Array.from({ length: count }, (_, i) => {
+   357→    const outlet = outlets[(i + ev.title.length) % outlets.length];
+   358→    const head = heads[(i + ev.id.length) % heads.length];
+   359→    const daysAgo = i % 6;
+   360→    const d = new Date(2025, 0, 29 - daysAgo, 8 + (i % 10), (i * 7) % 60);
+   361→    const sentimentRoll = (i + ev.articles) % 10;
+   362→    const sentiment: Sentiment =
+   363→      ev.sentiment === "negative"
+   364→        ? sentimentRoll < 7
+   365→          ? "negative"
+   366→          : sentimentRoll < 9
+   367→            ? "neutral"
+   368→            : "positive"
+   369→        : ev.sentiment === "positive"
+   370→          ? sentimentRoll < 7
+   371→            ? "positive"
+   372→            : "neutral"
+   373→          : "neutral";
+   374→    return {
+   375→      id: `ART-${ev.id.replace("EVT-", "")}-${String(i + 1).padStart(3, "0")}`,
+   376→      eventId: ev.id,
+   377→      headline: head,
+   378→      source: outlet.name,
+   379→      tier: outlet.tier,
+   380→      url: "#",
+   381→      publishedAt: d.toISOString(),
+   382→      sentiment,
+   383→      reach: outlet.reach - (i % 5) * 12000,
+   384→      language: languages[(i + ev.pillar.length) % languages.length],
+   385→    };
+   386→  });
+   387→}
+   388→
+   389→/** Pre-computed article pool keyed by event id — stable across renders. */
+   390→export const articlesByEvent: Record<string, Article[]> = Object.fromEntries(
+   391→  riskEvents.map((ev) => [ev.id, buildArticlesForEvent(ev, Math.min(12, ev.articles))]),
+   392→);
+   393→
+   394→/** Affected entities per event (for the drawer chips). */
+   395→export const entitiesByEvent: Record<string, string[]> = Object.fromEntries(
+   396→  riskEvents.map((ev, i) => [
+   397→    ev.id,
+   398→    ["HarchCorp", "HarchCorp Logistics", "HarchCorp Capital", "HarchCorp Labs", "Facility 04", "APAC Sub"]
+   399→      .slice(0, ((i % 3) + 2)),
+   400→  ]),
+   401→);
+   402→
+   403→/** Reverse index: entity name → list of related risk events. Powers the EntityProfileDialog. */
+   404→export const entityIndex: Map<string, RiskEvent[]> = (() => {
+   405→  const m = new Map<string, RiskEvent[]>();
+   406→  for (const ev of riskEvents) {
+   407→    const ents = entitiesByEvent[ev.id] ?? [];
+   408→    for (const e of ents) {
+   409→      if (!m.has(e)) m.set(e, []);
+   410→      m.get(e)!.push(ev);
+   411→    }
+   412→  }
+   413→  return m;
+   414→})();
+   415→
+   416→/** Sorted list of all entity names (for the command palette search). */
+   417→export const entitiesList: string[] = [...entityIndex.keys()].sort();
+   418→
+   419→/** Get genuinely related events for an entity (no heuristic). */
+   420→export function getEventsForEntity(entity: string): RiskEvent[] {
+   421→  return entityIndex.get(entity) ?? [];
+   422→}
+   423→
+   424→const _articlesCache = new Map<string, Article[]>();
+   425→const _entitiesCache = new Map<string, string[]>();
+   426→
+   427→/** Memoized article fetcher — works for any RiskEvent-shaped object (incl. synthesized from a RiskPoint). */
+   428→export function getArticlesFor(ev: RiskEvent): Article[] {
+   429→  const cached = _articlesCache.get(ev.id) ?? articlesByEvent[ev.id];
+   430→  if (cached) return cached;
+   431→  const fresh = buildArticlesForEvent(ev, Math.min(12, ev.articles));
+   432→  _articlesCache.set(ev.id, fresh);
+   433→  return fresh;
+   434→}
+   435→
+   436→/** Memoized entity fetcher. */
+   437→export function getEntitiesFor(ev: RiskEvent, index = 0): string[] {
+   438→  const cached = _entitiesCache.get(ev.id) ?? entitiesByEvent[ev.id];
+   439→  if (cached) return cached;
+   440→  const fresh = ["HarchCorp", "HarchCorp Logistics", "HarchCorp Capital", "HarchCorp Labs", "Facility 04", "APAC Sub"]
+   441→    .slice(0, ((index % 3) + 2));
+   442→  _entitiesCache.set(ev.id, fresh);
+   443→  return fresh;
+   444→}
+   445→
+   446→/** Convert a RiskPoint (scatter bubble) into a RiskEvent so the drawer can render it. */
+   447→export function riskPointToEvent(p: RiskPoint, index = 0): RiskEvent {
+   448→  const sentiment: Sentiment =
+   449→    p.severity === "critical" || p.severity === "high"
+   450→      ? "negative"
+   451→      : p.severity === "medium"
+   452→        ? "neutral"
+   453→        : "positive";
+   454→  const d = new Date(2025, 0, 30 - (index % 5));
+   455→  return {
+   456→    id: p.id,
+   457→    date: d.toISOString().slice(0, 10),
+   458→    pillar: p.pillar,
+   459→    title: p.name,
+   460→    articles: p.articles,
+   461→    sentiment,
+   462→    severity: p.severity,
+   463→    region: p.region,
+   464→  };
+   465→}
+   466→
+   467→/* ------------------------------------------------------------------ */
+   468→/*  Risk pillar aggregation (for the new RiskPillars widget)           */
+   469→/* ------------------------------------------------------------------ */
+   470→
+   471→export interface PillarAgg {
+   472→  pillar: RiskPillar;
+   473→  events: number;
+   474→  articles: number;
+   475→  /** weighted 0–100 exposure score. */
+   476→  exposure: number;
+   477→  /** -100..+100 net sentiment skew. */
+   478→  sentimentSkew: number;
+   479→}
+   480→
+   481→export const pillarAgg: PillarAgg[] = (() => {
+   482→  const map = new Map<RiskPillar, PillarAgg>();
+   483→  for (const p of [
+   484→    "Regulatory",
+   485→    "Cyber",
+   486→    "Financial",
+   487→    "ESG",
+   488→    "Geopolitical",
+   489→    "Reputational",
+   490→  ] as RiskPillar[]) {
+   491→    map.set(p, { pillar: p, events: 0, articles: 0, exposure: 0, sentimentSkew: 0 });
+   492→  }
+   493→  for (const e of riskEvents) {
+   494→    const row = map.get(e.pillar)!;
+   495→    row.events += 1;
+   496→    row.articles += e.articles;
+   497→    row.sentimentSkew +=
+   498→      e.sentiment === "negative" ? -1 : e.sentiment === "positive" ? 1 : 0;
+   499→  }
+   500→  const maxArticles = Math.max(...[...map.values()].map((r) => r.articles), 1);
+   501→  for (const row of map.values()) {
+   502→    // exposure = weighted blend of volume + severity-weighted event count
+   503→    const criticalHits = riskEvents.filter(
+   504→      (e) => e.pillar === row.pillar && (e.severity === "critical" || e.severity === "high"),
+   505→    ).length;
+   506→    row.exposure = Math.min(
+   507→      100,
+   508→      Math.round((row.articles / maxArticles) * 60 + criticalHits * 12 + row.events * 3),
+   509→    );
+   510→    row.sentimentSkew = Math.max(-100, Math.min(100, Math.round((row.sentimentSkew / Math.max(row.events, 1)) * 100)));
+   511→  }
+   512→  return [...map.values()].sort((a, b) => b.exposure - a.exposure);
+   513→})();
+   514→
+   515→/* ------------------------------------------------------------------ */
+   516→/*  Top sources (for the new TopSources widget)                        */
+   517→/* ------------------------------------------------------------------ */
+   518→
+   519→export interface SourceAgg {
+   520→  source: string;
+   521→  tier: ArticleTier;
+   522→  articles: number;
+   523→  positive: number;
+   524→  negative: number;
+   525→  neutral: number;
+   526→  reach: number;
+   527→}
+   528→
+   529→export const topSources: SourceAgg[] = [
+   530→  { source: "Reuters", tier: "tier1", articles: 312, positive: 98, negative: 154, neutral: 60, reach: 8_900_000 },
+   531→  { source: "Bloomberg", tier: "tier1", articles: 284, positive: 86, negative: 142, neutral: 56, reach: 6_100_000 },
+   532→  { source: "Financial Times", tier: "tier1", articles: 241, positive: 79, negative: 118, neutral: 44, reach: 4_200_000 },
+   533→  { source: "Wall Street Journal", tier: "tier1", articles: 198, positive: 61, negative: 102, neutral: 35, reach: 3_800_000 },
+   534→  { source: "Le Monde", tier: "tier1", articles: 156, positive: 48, negative: 84, neutral: 24, reach: 2_100_000 },
+   535→  { source: "TechCrunch", tier: "tier2", articles: 143, positive: 72, negative: 51, neutral: 20, reach: 1_400_000 },
+   536→  { source: "The Economist", tier: "tier1", articles: 119, positive: 34, negative: 68, neutral: 17, reach: 1_650_000 },
+   537→  { source: "Handelsblatt", tier: "tier2", articles: 96, positive: 28, negative: 52, neutral: 16, reach: 980_000 },
+   538→];
+   539→
+   540→/* ------------------------------------------------------------------ */
+   541→/*  Time-range slicing helpers for Media Coverage                      */
+   542→/* ------------------------------------------------------------------ */
+   543→
+   544→export type CoverageRange = "7d" | "30d" | "90d";
+   545→
+   546→export function sliceCoverage(range: CoverageRange): CoverageDay[] {
+   547→  if (range === "30d") return coverage30d;
+   548→  if (range === "7d") return coverage30d.slice(-7);
+   549→  // 90d — synthesize by repeating the 30d pattern twice more with a slight drift
+   550→  const base = coverage30d;
+   551→  const extended: CoverageDay[] = [];
+   552→  for (let cycle = 2; cycle >= 0; cycle--) {
+   553→    for (let i = 0; i < base.length; i++) {
+   554→      const drift = cycle * 0.85;
+   555→      extended.push({
+   556→        date: base[i].date,
+   557→        positive: Math.round(base[i].positive * drift + (cycle * 4)),
+   558→        negative: Math.round(base[i].negative * drift + (cycle * 3)),
+   559→      });
+   560→    }
+   561→  }
+   562→  // re-anchor dates so the 90d window ends "today"
+   563→  const today = new Date(2025, 0, 31);
+   564→  return extended.map((d, idx) => {
+   565→    const dt = new Date(today);
+   566→    dt.setDate(dt.getDate() - (extended.length - 1 - idx));
+   567→    return { ...d, date: dt.toISOString().slice(0, 10) };
+   568→  });
+   569→}
+   570→
+   571→/* ------------------------------------------------------------------ */
+   572→/*  Geographic distribution (for the GeoDistribution widget)          */
+   573→/* ------------------------------------------------------------------ */
+   574→
+   575→export interface GeoRegion {
+   576→  /** ISO-ish region code used as a key. */
+   577→  code: string;
+   578→  name: string;
+   579→  /** 0–100 intensity for the heatmap tile. */
+   580→  intensity: number;
+   581→  signals: number;
+   582→  articles: number;
+   583→  sentimentSkew: number; // -100..+100
+   584→  topPillar: RiskPillar;
+   585→}
+   586→
+   587→export const geoRegions: GeoRegion[] = [
+   588→  { code: "NA", name: "North America", intensity: 82, signals: 14, articles: 487, sentimentSkew: -28, topPillar: "Regulatory" },
+   589→  { code: "EU", name: "Europe", intensity: 74, signals: 11, articles: 392, sentimentSkew: -14, topPillar: "Regulatory" },
+   590→  { code: "APAC", name: "Asia-Pacific", intensity: 63, signals: 9, articles: 271, sentimentSkew: -41, topPillar: "Geopolitical" },
+   591→  { code: "MEA", name: "Middle East & Africa", intensity: 38, signals: 4, articles: 118, sentimentSkew: -8, topPillar: "Cyber" },
+   592→  { code: "LATAM", name: "Latin America", intensity: 29, signals: 3, articles: 84, sentimentSkew: +12, topPillar: "ESG" },
+   593→];
+   594→
+   595→/**
+   596→ * Precomputed indices for O(1) event filtering by source / region.
+   597→ * Avoids scanning every event's article pool on each filter change.
+   598→ */
+   599→export const sourceIndex: Map<string, Set<string>> = (() => {
+   600→  const m = new Map<string, Set<string>>();
+   601→  for (const ev of riskEvents) {
+   602→    const arts = getArticlesFor(ev);
+   603→    for (const a of arts) {
+   604→      if (!m.has(a.source)) m.set(a.source, new Set());
+   605→      m.get(a.source)!.add(ev.id);
+   606→    }
+   607→  }
+   608→  return m;
+   609→})();
+   610→
+   611→export const regionIndex: Map<string, Set<string>> = (() => {
+   612→  const m = new Map<string, Set<string>>();
+   613→  for (const ev of riskEvents) {
+   614→    if (!m.has(ev.region)) m.set(ev.region, new Set());
+   615→    m.get(ev.region)!.add(ev.id);
+   616→  }
+   617→  return m;
+   618→})();
+   619→
+   620→/** Region code → display name. */
+   621→export const regionNames: Record<string, string> = Object.fromEntries(
+   622→  geoRegions.map((r) => [r.code, r.name]),
+   623→);
+   624→
+   625→/* ------------------------------------------------------------------ */
+   626→/*  Risk trend timeline (90d risk-index with peak markers)            */
+   627→/* ------------------------------------------------------------------ */
+   628→
+   629→export interface RiskTrendPoint {
+   630→  /** day offset from the start of the 90d window (0 = oldest). */
+   631→  day: number;
+   632→  /** ISO date short. */
+   633→  date: string;
+   634→  /** composite risk index 0–100. */
+   635→  index: number;
+   636→  /** short label for any annotated peak (undefined if none). */
+   637→  peak?: string;
+   638→}
+   639→
+   640→function buildRiskTrend90d(): RiskTrendPoint[] {
+   641→  const points: RiskTrendPoint[] = [];
+   642→  const today = new Date();
+   643→  for (let i = 89; i >= 0; i--) {
+   644→    const d = new Date(today);
+   645→    d.setDate(d.getDate() - i);
+   646→    const t = 89 - i; // 0..89
+   647→    // Smooth pseudo-random walk centered around 65 with occasional spikes.
+   648→    const base = 62 + 8 * Math.sin(t / 7.5) + 6 * Math.cos(t / 13.2);
+   649→    const noise = ((t * 9301 + 49297) % 233280) / 233280 * 8 - 4;
+   650→    const index = Math.max(18, Math.min(96, Math.round(base + noise)));
+   651→    const point: RiskTrendPoint = {
+   652→      day: 89 - i,
+   653→      date: d.toISOString().slice(0, 10),
+   654→      index,
+   655→    };
+   656→    // Mark the 3 highest peaks.
+   657→    if (t === 17) point.peak = "SEC inquiry leak";
+   658→    if (t === 44) point.peak = "Ransomware claim";
+   659→    if (t === 71) point.peak = "Analyst downgrade";
+   660→    points.push(point);
+   661→  }
+   662→  return points;
+   663→}
+   664→
+   665→export const riskTrend90d: RiskTrendPoint[] = buildRiskTrend90d();
+   666→
+   667→/** Maps a timeline peak label to the corresponding risk event ID (for click-through). */
+   668→export const peakToEventId: Record<string, string> = {
+   669→  "SEC inquiry leak": "EVT-9821",
+   670→  "Ransomware claim": "EVT-9814",
+   671→  "Analyst downgrade": "EVT-9771",
+   672→};
+   673→
+   674→/* ------------------------------------------------------------------ */
+   675→/*  Alert feed (for the bell popover)                                 */
+   676→/* ------------------------------------------------------------------ */
+   677→
+   678→export type AlertStatus = "new" | "acknowledged" | "escalated";
+   679→
+   680→export interface AlertItem {
+   681→  id: string;
+   682→  eventId?: string;
+   683→  title: string;
+   684→  pillar: RiskPillar;
+   685→  severity: Severity;
+   686→  /** ISO timestamp. */
+   687→  triggeredAt: string;
+   688→  status: AlertStatus;
+   689→  /** short human label like "2m ago" — kept fresh by the popover. */
+   690→}
+   691→
+   692→function isoMinutesAgo(min: number): string {
+   693→  const d = new Date();
+   694→  d.setMinutes(d.getMinutes() - min);
+   695→  return d.toISOString();
+   696→}
+   697→
+   698→export const alertItems: AlertItem[] = [
+   699→  { id: "ALT-5012", eventId: "EVT-9821", title: "SEC inquiry — Q4 revenue recognition", pillar: "Regulatory", severity: "critical", triggeredAt: isoMinutesAgo(2), status: "new" },
+   700→  { id: "ALT-5011", eventId: "EVT-9814", title: "Ransomware affiliate claims exfiltration", pillar: "Cyber", severity: "critical", triggeredAt: isoMinutesAgo(8), status: "new" },
+   701→  { id: "ALT-5010", eventId: "EVT-9802", title: "Export-control documentation request", pillar: "Geopolitical", severity: "high", triggeredAt: isoMinutesAgo(21), status: "new" },
+   702→  { id: "ALT-5009", eventId: "EVT-9795", title: "NGO Scope-3 methodology dispute", pillar: "ESG", severity: "high", triggeredAt: isoMinutesAgo(37), status: "new" },
+   703→  { id: "ALT-5008", eventId: "EVT-9783", title: "Op-ed critical of board refresh", pillar: "Reputational", severity: "medium", triggeredAt: isoMinutesAgo(54), status: "acknowledged" },
+   704→  { id: "ALT-5007", eventId: "EVT-9771", title: "Analyst downgrade — services margin", pillar: "Financial", severity: "medium", triggeredAt: isoMinutesAgo(73), status: "acknowledged" },
+   705→  { id: "ALT-5006", eventId: "EVT-9764", title: "Cloud region outage — SLA breach", pillar: "Cyber", severity: "medium", triggeredAt: isoMinutesAgo(96), status: "escalated" },
+   706→  { id: "ALT-5005", eventId: "EVT-9704", title: "Insider trading complaint amended", pillar: "Financial", severity: "high", triggeredAt: isoMinutesAgo(128), status: "escalated" },
+   707→];
+   708→

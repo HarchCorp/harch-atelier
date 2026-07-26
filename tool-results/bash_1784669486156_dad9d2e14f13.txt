@@ -1,0 +1,314 @@
+  • Account switch resets activeSection → "dashboard". KPI strip hidden on non-dashboard sections.
+- Lint: `bun run lint` → clean, zero errors.
+- Agent-browser self-verification (all passed):
+  • Page renders, sidebar shows all categories expanded.
+  • market role → 4 categories (Intelligence, Markets, Comms, Entities).
+  • admin role → 6 categories (adds Risk & Compliance + Administration).
+  • Click "Bourse de Casablanca" → section switches, placeholder renders with breadcrumb + hero + planned widgets.
+  • Collapse sidebar → width shrinks to 68px (icon rail).
+  • Mobile (390×844) → hamburger appears, sidebar hidden; opening drawer shows full nav.
+  • Footer sticky verified: short content (tall viewport 1400px) → footer bottom = viewport (gap 0); long content (dashboard, 2900px) → footer pushed to bottom of doc.
+  • Dashboard renders all 11 widgets (Risk Trend Timeline, Risk Matrix, Media Coverage, Share of Voice, Sentiment Trend, Risk Pillars, Top Sources, Geographic Distribution, Risk Events, Entity KPIs, Activity Feed).
+  • Zero console errors, zero hydration warnings.
+
+Stage Summary:
+- Universal template V13.0 complete and browser-verified. The "huge database" master catalog is in place; roles select subsets; the universal Dashboard is the default landing. Every non-dashboard section renders a polished placeholder that telegraphs planned widgets — a clear contract for the next phase.
+- Next phase (per user instruction "un à la fois"): send ONE role-agent at a time (admin → trader → legal → market → pr) to reason deeply about each role's real needs and replace placeholders with live charts/tables/calculations. Suggested data sources to wire in: Bourse de Casablanca (BVC/MASI), Moroccan company directory, GLM-4 sentiment, news ingestion.
+- Artifacts: `src/lib/nav-config.tsx`, `src/components/dashboard/sidebar-nav.tsx`, `src/components/dashboard/section-registry.tsx`, updated `topbar.tsx` / `dashboard-shell.tsx` / `page.tsx`.
+- Screenshots: qa-section-placeholder.png, qa-sidebar-collapsed.png, qa-dashboard-final.png.
+
+---
+Task ID: 14-trader
+Agent: full-stack-developer (trader role)
+Task: Reason about trader needs + build trader-specific dashboard sections (Markets/BVC focus)
+
+## Phase 1 — Reasoning about what a HarchCorp trader actually needs
+
+A HarchCorp trader sits at a multi-screen desk and their minute-by-minute concerns are very different from a risk analyst or comms officer. They care about (in priority order):
+
+1. **The Casablanca board at a glance** — MASI index intraday ticks (is the market up or down today?), 30-day trend (are we in a rally or pullback?), session breadth (advancers vs decliners), and turnover (is there liquidity?). Without this they can't even start their day.
+2. **Casablanca-listed equities** — real tickers (ATW, IAM, BOA, CIH, LBV, OLC, MNG, LHM, OCP, ADH, RIS, etc.) with last price, %chg, volume, market cap, P/E. They need a sortable screener they can filter by sector. Clicking a row should reveal a 30-day sparkline + key stats so they can decide whether to add to the book.
+3. **Their own book** — HarchCorp's open positions with mark-to-market P&L, exposure by sector, long/short split, win rate. The blotter is the single source of truth for "are we making or losing money today?". Critical: M2M P&L must be directional (long = (last-avg)*qty, short = (avg-last)*qty).
+4. **Sector context** — which sector is leading/lagging the MASI? A trader needs to know if banking is the engine today or if materials are pulling the index down. Sector heatmap + comparison chart normalised to 100.
+5. **FX & rates** — MAD crosses (EUR/MAD, USD/MAD, GBP/MAD) because HarchCorp has FX exposure; Bank Al-Maghrib key rate because it sets the cost of capital; MAD strength index for export-competitiveness read.
+6. **Commodities exposure** — phosphate (OCP is a top Moroccan listing), Brent (energy import), gold (safe-haven hedge), wheat (food import), nat gas, silver. With HarchCorp notional exposure column to bridge "what's the position impact".
+7. **Fixed income** — BAM T-bill yield curve (13W→15Y), 2s10s spread (curve steepness), and a corporate bonds table for the credit book.
+
+Plus — and this is the intelligence bridge — they need the existing risk widgets (Risk Matrix, Media Coverage, Sentiment, Share of Voice, Risk Events, Watchlist, Activity Feed) to be navigable because risk events impact positions. A trader who reads "Ransomware affiliate claims exfiltration" needs to see immediately whether their tech-bank position is exposed.
+
+The user's "beaucoup beaucoup de graphique" mandate means every section needs at least 3–5 chart panels: line, area, bar, heatmap, scatter. No section is just a table.
+
+## Phase 2 — Implementation
+
+### Files created
+
+- **`src/lib/market-data.ts`** — Strict-typed deterministic Moroccan market dataset (no `any`). Mulberry32 seeded PRNG so first paint is stable. Exports:
+  - Types: `BvcSector`, `Equity`, `IndexPoint`, `IntradayPoint`, `Position`, `PositionSide`, `FxPoint`, `Commodity`, `YieldCurvePoint`, `CorporateBond`, `SectorIndex`, `FxRateMeta`, `SectorExposure`.
+  - Series: `masi30d` (30 IndexPoints), `masiIntraday` (32 intraday ticks 09:00–17:00 × 15min), `masiSessionStats` (advancers/decliners/turnover/range).
+  - Equities: `moroccanEquities` — 18 Casablanca-listed tickers (ATW, IAM, BOA, CIH, LBV, OLC, MNG, LHM, CFG, ADH, RIS, TQM, TIM, CDM, SGT, M2M, DIS, OCP) with last/prevClose/volume/mktCap/PE/52w/series30d. Derived `topGainers`/`topLosers`/`mostActive`.
+  - Positions: `positions` (11 open positions, long + short), `positionsSummary` (gross exposure, M2M P&L, long/short split, win rate), `sectorExposures` (P&L by sector), helpers `positionPnl`/`positionPnlPct`/`positionExposure`/`positionCost`.
+  - FX: `fx30d` (30 FxPoint rows for EUR/MAD/USD/MAD/GBP/MAD), `fxLatest`/`fxPrevClose`, `fxRates` (with chgPct/ytdPct), `bamKeyRate` (2.75% / +25bps), `madStrength` (104.8 index).
+  - Commodities: `commodities` (6: Phosphate, Brent, Gold, Wheat, NGas, Silver) with prices, YTD, HarchCorp exposure, 30d series.
+  - Fixed income: `yieldCurve` (7 tenors 13W→15Y), `corporateBonds` (7 Moroccan corporate issues with ISIN/coupon/maturity/yield/rating).
+  - Helpers: `sectorColor`, `sectorChipTint`, `formatMAD`/`formatCompactMAD`/`formatVolume`, `chgColor`/`chgBgClass`, `heatColor` (red-green diverging).
+
+- **`src/components/sections/section-header.tsx`** — Reusable `SectionHeader` (breadcrumb + dark slate-900 hero + accent blur + status chips + KPI tile grid) and `KpiTile`/`StatusChip` primitives. 6 accent tints (emerald/amber/sky/violet/rose/cyan). Replaces SectionPlaceholder's "scaffolded" badge with live status chips.
+
+- **`src/components/sections/section-dispatcher.tsx`** — Single entry point. Exports `renderSection(sectionId, props)` and a `builtSections` Set. Falls back to `<SectionPlaceholder>` for unbuilt sections. Currently maps 14 sections (7 trader + 7 intel) to real components.
+
+- **Trader section components** (all under `src/components/sections/trader/`):
+  1. **`bvc-overview.tsx`** (FLAGSHIP) — KPI strip (MASI, MASI 20, advancers, decliners, turnover, range), intraday MASI area chart (15-min ticks, emerald gradient fill, MASI 20 overlay line, prev-open reference line), 30-day MASI dual-axis line chart, sector heatmap tiles (8 sectors with heat-color diverging tiles), session statistics card (adv/dec/unchanged + breadth bar + turnover/range), sector performance diverging bar chart (sorted), session movers tabs (Gainers/Losers/Most Active) with ticker table.
+  2. **`equities-screener.tsx`** — KPI strip (total mkt cap, gainers/losers, avg P/E, sectors), sortable screener table (ticker/name/last/chg%/vol/mktcap/PE — 7 sortable columns, search input, sector filter chips, sticky header, scrollable body 520px), equity detail panel (selected ticker with 30-day sparkline + 8 detail stats incl. from-52w-high/low), sector market cap distribution stacked bar with legend.
+  3. **`positions-blotter.tsx`** — KPI strip (gross exposure, net M2M P&L, long exposure, short exposure, win rate), P&L-by-position bar chart (emerald/rose Cell-coloured bars sorted by P&L), long/short split card (donut bar + long/short exposure cards), sector exposure panel (sector chips + bar + P&L), sortable blotter table (ticker/side/qty/avg/last/M2M P&L/%P&L/exposure/days — 8 sortable columns, 520px scroll).
+  4. **`indices-view.tsx`** — KPI strip (MASI, MASI 20, best/worst sector), 30-day sector indices comparison multi-line chart (8 series normalised to 100, click-legend toggle), 8 index cards with 60px sparklines + YTD%, sortable indices performance summary table with 30d range column.
+  5. **`fx-rates.tsx`** — KPI strip (3 MAD crosses), 30-day MAD crosses multi-line chart (EUR/USD/GBP), Bank Al-Maghrib key rate card (2.75% / +25bps / inflation / next meeting), MAD strength index card, EUR/MAD area chart with prev-close reference, USD/MAD area chart.
+  6. **`commodities-board.tsx`** — KPI strip (total notional, largest exposure, best/worst performer, phosphate), 6 commodity cards (icon + price + chg% + YTD% + HarchCorp exposure + 30-day sparkline), HarchCorp notional exposure horizontal bar chart (Cell-coloured by commodity), commodities detail table.
+  7. **`fixed-income.tsx`** — KPI strip (13W, 10Y, 2s10s spread, avg yield, corporate outstanding), BAM Treasury yield curve line chart (current vs previous, violet), curve stats panel (5 tenor spreads + curve shape card), corporate bonds table (ISIN/issuer/sector/coupon/maturity/price/yield/rating/outstanding).
+
+- **Intel section wrappers** (under `src/components/sections/intel/`) — Each wraps an existing dashboard dataviz widget with a `SectionHeader` (matching the placeholder's hero style but with a live status chip). Reuses `RiskMatrix`, `MediaCoverageChart`, `SentimentTrend`, `ShareOfVoice`, `RiskEventsTable`, `WatchlistSignals`, `ActivityFeed`. The `onSelect`/`onSelectEvent` props flow through so the drawer opens identically to the dashboard.
+
+### Files modified
+
+- **`src/app/page.tsx`** — Replaced `<SectionPlaceholder sectionId={activeSection} accountType={accountType} />` with `renderSection(activeSection, sectionProps)`. Removed unused `SectionPlaceholder` import. Dashboard branch unchanged.
+
+## Verification
+
+- `bun run lint`: 0 errors, 0 warnings.
+- `npx tsc --noEmit`: 0 errors in `src/` (only pre-existing errors in `examples/` and `skills/`).
+- agent-browser self-verification (all passed):
+  - Page loads with zero console errors / zero runtime errors.
+  - Switched to TRADER role — sidebar shows 4 categories (Markets & Trading, Intelligence, Risk & Compliance, Entities) per `navByRole`.
+  - **BVC section**: KPI strip (MASI 13,933.12, advancers 41, decliners 27, turnover), intraday area chart, 30-day line chart, sector heatmap (8 tiles), session stats card with breadth bar, sector performance bars, movers tabs (Gainers selected showing SGT/MNG/CIH/ADH/...).
+  - **Equities section**: screener with 18 tickers, sector filter chips, search input, sortable headers; equity detail panel with sparkline; sector mkt cap distribution stacked bar.
+  - **Positions section**: P&L-by-position bar chart, long/short split card, sector exposure panel, blotter table with 11 positions.
+  - **Indices section**: 30-day comparison multi-line chart (8 sector indices normalised), index cards with sparklines, performance summary table.
+  - **FX & Rates section**: MAD crosses line chart, Bank Al-Maghrib rate card, EUR/MAD + USD/MAD area charts.
+  - **Commodities section**: 6 commodity cards with sparklines, notional exposure bar chart, detail table.
+  - **Fixed Income section**: BAM yield curve, curve stats panel, corporate bonds table.
+  - **Intel Risk Events**: reuses RiskEventsTable; opens drawer on row click.
+  - **Intel Risk Matrix / Sentiment / etc.**: all wrap existing widgets with section headers; zero console errors.
+  - Mobile (390×844): hamburger opens drawer, BVC section renders all 7 panels stacked, footer sticky verified.
+  - Footer sticky: on tall viewport (1440×1400) with short placeholder content → footer bottom = 1401 = viewport height (sticks to bottom). On long BVC content → footer pushed to doc bottom (3234 → 3301 = docHeight).
+- Screenshots: `.qa/v14-trader-bvc.png`, `v14-trader-equities.png`, `v14-trader-positions.png`, `v14-trader-indices.png`, `v14-trader-fx.png`, `v14-trader-commodities.png`, `v14-trader-fixed-income.png`, `v14-trader-intel-events.png`, `v14-trader-bvc-mobile.png`, `v14-trader-dashboard.png`.
+
+## Stage Summary
+
+- **Built (14 sections)**: 7 trader markets sections (`mkt-bvc`, `mkt-equities`, `mkt-positions`, `mkt-indices`, `mkt-fx`, `mkt-commodities`, `mkt-fixed-income`) + 7 intel sections (`intel-risk-matrix`, `intel-coverage`, `intel-sentiment`, `intel-sov`, `intel-events`, `intel-watchlist`, `intel-activity`).
+- **Left as placeholder** (for downstream role-agents): `intel-overview`, `intel-alerts`, all `risk-*` (10), all `comms-*` (8), all `ent-*` (5), all `admin-*` (5). The dispatcher falls back to `SectionPlaceholder` automatically.
+- **Mock dataset shape**: see `src/lib/market-data.ts` — the next role-agents (admin/legal/market/pr) can reuse `BvcSector`, `Equity`, `Position`, `FxPoint`, `Commodity`, `YieldCurvePoint`, `CorporateBond`, `sectorColor`, `sectorChipTint`, `formatMAD`, `chgColor`, `chgBgClass`. The dataset is self-contained and typed (no `any`), so reusing it elsewhere is a single import.
+- **Architectural decisions**: (1) `section-dispatcher.tsx` is the single entry — page.tsx never imports section components directly. (2) `SectionHeader` is the universal chrome — every built section starts with it so visual language matches the placeholder. (3) Intel sections are thin wrappers (≤25 LOC each) that delegate to existing dashboard widgets — no logic duplication. (4) Trader accent = emerald (per project palette); FX/Commodities/Fixed-Income use cyan/amber/violet tints to distinguish subdomains while staying within the project palette.
+- **Issues/risks**: (1) `masiSessionStats.advancers + decliners + unchanged = 81` is hardcoded as the divisor for breadth-bar widths — if the underlying counts change, the magic number 81 must update. (2) The yield curve chart's Y-domain is fixed `[2.2, 3.8]` to keep the curve readable; if real yields move outside that range, the chart will clip. (3) The corporate bonds table uses a hand-rolled `<table>` (not shadcn Table) for the indices performance table in `indices-view.tsx` — minor inconsistency with other tables but functionally equivalent. (4) The `IntelEvents` section's `RiskEventsTable` is the same component as the dashboard — switching between them resets the table's local filter state. Acceptable since the global `risk-store` filters persist.
+
+## Recommendations for the next role-agent
+
+- The trader's `SectionComponentProps` is identical to the placeholder's — downstream role-agents can copy this pattern.
+- For the **admin** agent: build `admin-users`, `admin-sources`, `admin-integrations` reusing the same `SectionHeader` + `KpiTile` + `ChartCard` chrome. The `ChartCard` bodyClassName="p-0" pattern works well for full-bleed tables.
+- For the **market** agent: the trader's `bvc-overview.tsx` is the visual reference — multi-panel grids with `xl:col-span-2` for hero charts and 3-up KPI strips on top.
+- For **pr** agent: reuse `IntelSentiment`/`IntelCoverage`/`IntelSov` patterns to wrap any new comms-specific widgets.
+- A real BVC API integration would replace the `masiIntraday`/`masi30d` constants with a server component or API route that streams ticks via socket.io (see the `examples/websocket/` demo for the pattern).
+
+---
+Task ID: 15-admin
+Agent: full-stack-developer (admin role)
+Task: Reason about admin needs + build admin-specific sections (Administration category + oversight views)
+
+## Phase 1 — Reasoning about what a HarchCorp ADMIN really needs
+
+A HarchCorp platform admin (A. Marchetti, Operations Console) has FULL-spectrum oversight. Unlike the trader (who lives in markets), the legal counsel (who lives in matters), the PR lead (who lives in sentiment), the admin needs to see the platform itself: who uses it, what feeds it, what it costs, and whether the intelligence machine is actually running. The user explicitly mandated "Palantir-grade · beaucoup beaucoup de graphique" — so every section must pack charts + dense tables, not just CRUD forms.
+
+What an admin sees that no one else sees, in priority order:
+
+1. **User & role governance (admin-users)** — who's logged in, who's locked, who has MFA off, who got promoted. The RBAC matrix is the single source of truth for what each role can do — admin needs to see it as a heatmap. Seat usage gauge tells procurement when to renegotiate. Failed logins + role changes + API tokens highlight the access posture.
+2. **Data source health (admin-sources)** — the intelligence machine is only as good as its feeds. 8 ingestion pipelines (News OSINT, BVC Feed, GLM-4 Sentiment, Bloomberg, Twitter Firehose, SEC Filings, AMMC Bulletin, RSS Aggregator) each with health, latency p95, error rate, records/day, last sync. A 30-day source-health timeline shows whether things are trending healthier or sicker. Per-source latency sparklines catch degradation before it becomes an outage.
+3. **Integrations (admin-integrations)** — connectors to upstream systems (BVC API, GLM-4, NextAuth/IdP, SMTP, Slack, OpsGenie Webhook, S3 Archive, Bloomberg Terminal). Each card has status + config + last event + sync toggle. An events-by-integration bar chart + status summary + immutable event log give the admin a real-time view of "is the plumbing working?".
+4. **Billing (admin-billing)** — Enterprise plan card, 6 usage meters (articles, GLM calls, seats, storage, exports, webhooks) as progress bars with overage warnings, 12-month cost trend (base + overage) area chart, invoices table with PDF download. Admin needs to see "are we trending into overage?" and "what did we pay last month?".
+5. **Settings (admin-settings)** — workspace preferences organised in 4 tabs: Risk Thresholds (sliders for critical/high/medium + auto-escalate + SLA hours), Data & Retention (retention days + data residency radio cards + cold archive), Notifications (real-time + digest toggles), Workspace (theme picker + density + experimental flags). Save button is disabled until dirty; Reset restores defaults.
+
+Oversight sections (the "single pane of glass" + audit):
+
+6. **Intelligence Overview (intel-overview)** — composite risk index radial gauge (0–100), 6 headline KPI tiles, 30-day risk trend area chart, pillar breakdown horizontal bars + radar, top movers table. This is the admin's morning dashboard.
+7. **Alerts (intel-alerts)** — global alerts triage queue (18 alerts) with severity/pillar/status filter chips + search, alert volume 14d sparkline, 4 summary cards (open/critical/assigned/SLA breach), sortable table with SLA countdown column.
+8. **Risk Overview (risk-overview)** — 6-pillar score breakdown (horizontal bars with delta + event count), pillar radar (symmetric view), 12-month pillar trend multi-line chart (6 lines, click-legend), top risk entities heat-table (composite + per-pillar scores).
+9. **Audit Log (risk-audit)** — immutable 32-entry audit trail (timestamp, actor, action, target, IP, result) with action filter dropdown + result chips + search, 14-day activity-over-time stacked bar chart (success vs failure), activity highlights panel grouping entries by category, WORM-protected footer.
+
+## Phase 2 — Implementation
+
+### Files created
+
+- **`src/lib/admin-data.ts`** — Strict-typed deterministic admin dataset (~720 LOC, no `any`, mulberry32 seeded PRNG). Exports:
+  - **Users & RBAC**: `AdminUser` (12 entries, A. Marchetti fixed as USR-0001), `UserRole` (7 roles), `UserStatus` (4 states), `Permission` (14 permissions), `PermissionGrant` (allow/deny/conditional), `rbacMatrix` (7×14 = 98 cells), `seatSummary`, `adminUsers`, `allRoles`, `allPermissions`.
+  - **Data sources**: `DataSource` (8 pipelines, deterministic latency series), `SourceStatus` (up/degraded/down), `sourceHealth30d` (30 days of up/degraded/down counts), `statusColor` map.
+  - **Integrations**: `Integration` (8 connectors), `IntegrationStatus` (connected/warning/error/disabled), `IntegrationEvent` (24 log entries), `integrationStatusColor`, `integrationEvents` sorted newest-first.
+  - **Billing**: `UsageMeter` (6 meters with tone), `MonthlyCost` (12 months base+overage), `Invoice` (8 invoices), `billingSummary`, `usageMeters`, `monthlyCost12m`, `invoices`, `meterTone` map.
+  - **Settings**: `WorkspaceSettings` interface + `defaultSettings` (risk thresholds, retention, notifications, residency, theme).
+  - **Intel-overview**: `CompositeRiskDay` (30d), `compositeRisk30d`, `compositeKpis` (6 KPI tiles), `PillarBreakdown` (6 pillars with 12-point trend), `pillarBreakdown`, `TopMover` (6 entities), `topMovers`.
+  - **Alerts**: `AlertQueueItem` (18 entries), `AlertQueueStatus` (5 states), `alertQueue`, `alertVolume14d` (14 days), `alertSummary`, `alertQueueStatusTint`.
+  - **Risk-overview**: `PillarTrendMonth` (12 months × 6 pillars), `pillarTrend12m`, `TopRiskEntity` (8 entities with per-pillar scores), `topRiskEntities`.
+  - **Audit**: `AuditAction` (15 distinct actions), `AuditResult`, `AuditEntry` (32 entries), `auditLog`, `auditActivity14d` (14 days success/failure).
+  - **Shared**: `formatNumber`, `formatUSD`, `relativeTime`, `pillarColor`, `severityTint`, `roleTint`, `userStatusColor`, `grantTint`, `meterTone`.
+
+- **`src/components/sections/admin/users-roles.tsx`** — Users & Roles section. KPI strip (6 tiles) + seat-usage radial gauge (color-coded by utilization) + role distribution donut + access highlights panel + sortable/filterable/searchable user table (12 rows: avatar, name+id+location, email, role chip, status pill, MFA badge, last login relative time, sessions 30d) + RBAC matrix (14 permissions × 7 roles with ✓/◐/— grant cells). Add-user button (visual only).
+
+- **`src/components/sections/admin/data-sources.tsx`** — Data Sources section. KPI strip + 30-day source-health timeline (stacked area: up/degraded/down) + 8 ingestion pipeline cards (4-up grid on xl): each card has name + category + status pill + latency sparkline (24h) + 3-up stats (latency p95, records/day, error rate) + last sync footer. Color-coded borders by status (rose for down, amber for degraded).
+
+- **`src/components/sections/admin/integrations.tsx`** — Integrations section. KPI strip + events-by-integration bar chart (color-coded by status) + status summary 4-tile grid + connector cards (4-up grid) with category icon, vendor, status pill, config summary, 24h events, last event relative time, sync toggle (Switch) + filter chips (all/connected/warning/error/disabled) + immutable integration event log table (24 entries, level pill, integration, message). Bloomberg seat-expired note surfaced.
+
+- **`src/components/sections/admin/billing.tsx`** — Billing section. KPI strip (6 tiles, MRR + YTD spend + plan + avg/month + overage + invoices paid) + plan card (gradient slate-900 background with 4-quota grid) + monthly cost trend area chart (base + overage line) + 6 usage meters (progress bars with tone colors: emerald/amber/rose/sky/violet, overage warning) + invoices table (8 invoices with status pills + PDF download buttons).
+
+- **`src/components/sections/admin/settings.tsx`** — Settings section. 4 Tabs (Risk Thresholds / Data & Retention / Notifications / Workspace) with Save (disabled until dirty) + Reset buttons. Risk tab: 3 colored threshold sliders (Critical/High/Medium) + auto-escalate toggle + SLA hours input. Data tab: retention days input + WORM audit retention (read-only) + cold archive toggle + 4 data-residency radio cards (EU/US/MA/APAC with flags + endpoint). Notifications tab: 4 real-time toggles + 3 digest toggles + UTC schedule. Workspace tab: 3 theme picker buttons (Light/Dark/System) + compact density toggle + currency select + 4 experimental feature flags. Toast on save/reset via sonner.
+
+- **`src/components/sections/admin/intel-overview.tsx`** — Intelligence Overview section. KPI strip (6 composite KPIs: risk index, entities, alerts, coverage, negative share, critical events) + composite risk index radial gauge (220°→-40° sweep, color-coded by score) + 30-day risk trend area chart (rose gradient) + pillar breakdown horizontal bars (color-coded, with delta + event count) + pillar radar (symmetric 6-axis view) + top movers table (entity, pillar chip, reason, score, 7d delta pill).
+
+- **`src/components/sections/admin/alerts-queue.tsx`** — Alerts section. KPI strip (6 tiles) + 4 summary cards (Open/Critical/Assigned/SLA Breach, tone-coded) + alert volume 14d sparkline + triage queue table (18 rows: alert id, entity, rule, pillar chip, severity pill, triggered relative time, status pill with dot, assigned analyst, SLA countdown). Filter chips by severity (4) + pillar (6) + status (5), all toggle independently. Sortable by 7 columns. SLA countdown turns rose on breach.
+
+- **`src/components/sections/admin/risk-overview.tsx`** — Risk Overview section. KPI strip (avg score, highest/lowest pillar, trending-up count, total events, total articles) + pillar breakdown horizontal bars (sorted by score, with delta + event count) + pillar radar (symmetric) + 12-month pillar trend multi-line chart (6 lines with legend + tooltip showing all pillars) + top risk entities heat-table (8 entities, composite score pill + 6 per-pillar heat cells colored by score band >70/>50/else).
+
+- **`src/components/sections/admin/risk-audit.tsx`** — Audit Log section. KPI strip (entries, successes, failures with rate, unique actors, actions tracked, retention) + 14-day activity stacked bar chart (success emerald + failure rose) + activity highlights panel (5 categories with counts) + immutable audit trail table (32 entries: relative timestamp + ID, actor, action pill color-coded by category, target + optional note, IP, result pill). Filter by action dropdown + result chips + search across actor/action/target/IP/note. Sortable by 5 columns. WORM-protected footer with retention note.
+
+### Files modified
+
+- **`src/components/sections/section-dispatcher.tsx`** — Added 9 imports + 9 case entries to `sectionComponents`: `admin-users`, `admin-sources`, `admin-integrations`, `admin-billing`, `admin-settings`, `intel-overview`, `intel-alerts`, `risk-overview`, `risk-audit`. All trader + intel sections remain registered and untouched. Fallback to `SectionPlaceholder` preserved for the 18 un-built sections (`risk-regulatory/cyber/financial/esg/geo/rep/matters/holds`, all 8 `comms-*`, all 5 `ent-*`).
+
+## Verification
+
+- `bun run lint`: 0 errors, 0 warnings (clean).
+- `npx tsc --noEmit`: 0 errors in `src/` (only pre-existing errors in `examples/` and `skills/`).
+- agent-browser self-verification (all passed):
+  - Switched to ADMIN role (A. Marchetti) — sidebar shows all 6 categories (Intelligence, Markets, Risk & Compliance, Comms, Entities, Administration).
+  - **Users & Roles**: 6 KPI tiles, seat gauge (12/25), role distribution donut (6 roles), access highlights, sortable user table (12 rows), RBAC matrix (14×7 cells with ✓/◐/—).
+  - **Data Sources**: 6 KPI tiles, 30-day health timeline (stacked area), 8 pipeline cards with sparklines + stats + status pills (1 down · 2 degraded · 5 up).
+  - **Integrations**: 6 KPI tiles, events-by-integration bar chart, status summary (4 tiles), 8 connector cards with sync toggles, 24-row event log.
+  - **Billing**: 6 KPI tiles (MRR $21,840), Enterprise plan card, monthly cost trend area chart (12 months base + overage line), 6 usage meters (progress bars), 8-row invoices table with PDF buttons.
+  - **Settings**: 4 tabs working — Risk Thresholds (3 sliders), Data & Retention (residency cards), Notifications (7 toggles), Workspace (theme picker). Save disabled until dirty.
+  - **Intelligence Overview**: 6 KPI tiles, composite risk gauge (72.4 Elevated), 30-day trend area chart, pillar breakdown bars, pillar radar, 6-row top movers table.
+  - **Alerts**: 6 KPI tiles, 4 summary cards (17 open, 3 critical, 5 assigned, 3 breach), 14-day volume sparkline, triage queue (18 rows) with filter chips for severity/pillar/status.
+  - **Risk Overview**: 6 KPI tiles, pillar breakdown bars (6 pillars), pillar radar, 12-month multi-line trend chart (6 lines + legend), top risk entities heat-table (8 rows × 6 pillar heat cells).
+  - **Audit Log**: 6 KPI tiles, 14-day activity stacked bar chart, activity highlights panel (5 categories), immutable audit trail table (32 rows) with action filter dropdown + result chips + search.
+  - Mobile (390×844): hamburger appears, all sections stack vertically, tabs work, footer sticky (footer-bottom = 1336 on Settings = page height; on Audit Log footer-bottom = 1664 on tall content).
+  - Footer sticky verified on tall desktop viewport (1440×1400): Settings → footer-bottom = 1400 (sticks to viewport bottom); Audit Log → footer-bottom = 1664 (pushed below viewport for tall content).
+  - Regression: trader BVC + intel-events sections still render correctly after dispatcher changes.
+  - Zero console errors, zero page errors across all 9 admin sections + 2 regression checks.
+- Screenshots: `.qa/v15-admin-users.png`, `v15-admin-sources.png`, `v15-admin-integrations.png`, `v15-admin-billing.png`, `v15-admin-settings.png`, `v15-admin-intel-overview.png`, `v15-admin-alerts.png`, `v15-admin-risk-overview.png`, `v15-admin-audit.png`, `v15-admin-mobile.png`.
+
+## Stage Summary
+
+- **Built (9 sections)**: 5 Administration category (`admin-users`, `admin-sources`, `admin-integrations`, `admin-billing`, `admin-settings`) + 4 oversight sections (`intel-overview`, `intel-alerts`, `risk-overview`, `risk-audit`).
+- **Left as placeholder** (for downstream role-agents): 8 Risk & Compliance sections (`risk-regulatory`, `risk-cyber`, `risk-financial`, `risk-esg`, `risk-geo`, `risk-rep`, `risk-matters`, `risk-holds`), all 8 `comms-*` (comms-overview/sentiment/sov/coverage/campaigns/reputation/press/social), all 5 `ent-*` (ent-directory/moroccan/profiles/peers/watchlist). The dispatcher auto-falls back to `SectionPlaceholder` for these — downstream legal/market/pr agents can fill them in.
+- **Admin dataset shape** (for reuse by later role-agents): see `src/lib/admin-data.ts`. Most useful exports for downstream agents:
+  - `adminUsers` + `rbacMatrix` + `seatSummary` — for legal (compliance audit) and any role that needs to display "who has access".
+  - `auditLog` + `auditActivity14d` — for legal (compliance) and any role that needs an immutable trail.
+  - `pillarBreakdown` + `pillarTrend12m` + `topRiskEntities` — for legal (regulatory/cyber breakdowns) and market (entity risk).
+  - `alertQueue` + `alertSummary` — for legal/market/pr (triage queue view).
+  - `compositeRisk30d` + `compositeKpis` — for any role's overview page.
+  - `pillarColor` (sky/violet/emerald/teal/amber/rose for the 6 pillars) — for visual consistency.
+  - `relativeTime`, `formatNumber`, `formatUSD`, `severityTint`, `userStatusColor` — formatting + tint helpers.
+- **Architectural decisions**: (1) All admin sections follow the trader pattern exactly: `SectionHeader` (with `accent` color, `statusChips`, `kpis`) + `ChartCard` body + reusable `DeferredChart` for chart mounts. (2) Admin accent rotates across sections (emerald/sky/violet/amber/rose) to give each section a distinct identity while staying within the project palette (no indigo/blue). (3) All tables use shadcn `<Table>` primitives with `max-h-[N] overflow-y-auto harch-scroll` for long lists. (4) All charts use recharts via `DeferredChart` to avoid ResponsiveContainer flash. (5) The admin dataset is fully self-contained — no `any`, deterministic, mulberry32 seeded so first paint is stable.
+- **Issues/risks**: (1) The composite-risk radial gauge uses a 220°→-40° arc with the score label centered via absolute-positioned overlay — if the score is 0 or 100 the gauge still renders but the visual is degenerate. (2) The RBAC matrix is hardcoded in `admin-data.ts` — in production this would come from the IdP / policy engine. (3) The Settings tab state is component-local React state — Save button only fires a toast, doesn't persist to localStorage. (4) The audit log search is a substring filter across multiple fields — for 32 entries this is fine, but for a real 7-year audit trail it would need server-side pagination. (5) The Top Risk Entities heat-table uses fixed pillar abbreviations (Reg/Cyb/Fin/ESG/Geo/Rep) in column headers — readable but a tooltip would help on narrow viewports.
+
+---
+Task ID: 16-legal
+Agent: full-stack-developer (legal role)
+Task: Reason about legal counsel needs + build Risk & Compliance category sections (8 of 10; admin already owns risk-overview + risk-audit)
+
+## Phase 1 — Reasoning about what a HarchCorp LEGAL COUNSEL really needs
+
+A HarchCorp in-house legal counsel (L. Reyes, Legal & Regulatory Monitor) has a fundamentally different lens than the trader (markets), admin (platform health), or analyst (event triage). They live in **regulatory exposure + legal liability + preservation obligations**. The Palantir-grade mandate "beaucoup beaucoup de graphique" applies — every section needs dense tables (registers/dockets) + charts (gauges/radars/heatmaps/timelines).
+
+What the legal counsel owns, in priority order:
+
+1. **Regulatory register & filing calendar** — Morocco-specific statutory deadlines (AMMC quarterly disclosures + insider-dealing declarations + Loi 17-23 ESG chapter; Bank Al-Maghrib prudential reporting; BCBS Basel III LCR/NSFR; AMO/CNSS social filings; CNPDP Loi 09-08 data-protection register + 72h breach notification; OFAC/EU/UN sanctions screening; WCO customs). Missing a filing = fine + reputational damage. They need a register (sortable/filterable/searchable), a regulator × status heatmap, an upcoming-filing timeline, and per-obligation risk weighting.
+
+2. **Cyber incident posture** — when a breach occurs, counsel's role is NOT to fix it but to ensure **statutory disclosure obligations are met** (Loi 09-08 72h notification to CNPDP, GDPR Article 33 for EU ops) and the **evidence chain is preserved** for regulator inquiry. They need: threat intel feed (MITRE ATT&CK mapped), 30-day incident trend, posture gauge, readiness radar (8 dimensions), CVE exposure list with patch status.
+
+3. **Financial-risk legal exposure** — counterparty defaults trigger cross-default clauses, ISDA/CSA disputes. They need: credit/liquidity/market/operational gauges, VaR trend vs limit, counterparty table with ISDA + cross-default + utilization, liquidity ratio bars (LCR/NSFR/MLA/Tier-1). Moroccan counterparties: Attijariwafa, BMCE, CFG Bank, CIH, Banque Populaire, OCP, IAM.
+
+4. **ESG disclosure posture** — Loi 17-23 + AMMC ESG chapter for listed issuers, plus TCFD/GRI/CDP/CSRD/UNGC/ILO for cross-border ops. They need: E/S/G score bars + sub-dimension radar, 12-month carbon emissions trend (Scope 1/2/3), controversy feed, disclosure register with status + due date.
+
+5. **Geopolitical/sanctions exposure** — Law 43-05 on financial sanctions compliance. They need: entity × sanctioned-jurisdiction heatmap (8 jurisdictions: Iran/Russia/Syria/DPRK/Cuba/Venezuela/Myanmar/Belarus with direct/indirect exposure), regional risk index cards (Morocco/EU/US/MENA/SSA/APAC), trade-policy timeline (tariffs/export controls/sanctions/agreements/quotas).
+
+6. **Reputational legal risk** — defamation, executive reputation, brand controversies that may trigger cease-and-desist or litigation. They need: reputation index gauge + 30-day trend, executive reputation cards (6 execs with sentiment/delta/mentions/negative%), stakeholder sentiment stacked bars (7 stakeholder groups), brand controversy feed.
+
+7. **Legal matters docket** — the bread-and-butter: every open matter (Litigation/Arbitration/Regulatory Inquiry/IP/Contract/Compliance/Investigation/Employment/Real Estate), with counterparty, external counsel firm, budget vs burn, next milestone, deadline, exposure. Matters-by-status donut + budget vs burn bar + upcoming milestones timeline.
+
+8. **Litigation hold register** — when litigation is reasonably anticipated, counsel MUST issue a hold notice preserving all relevant ESI (FRCP Rule 37(e) safe harbor in US; equivalent civil procedure in MA/EU). Failure = spoliation + adverse inference. They need: hold register (matter, custodians, data sources preserved, status, last reminder), custodian coverage bars by data source, hold-status timeline (90d weekly: active/released/superseded).
+
+Morocco-aware design decisions baked into the data layer:
+- Real regulators: AMMC, Bank Al-Maghrib, BCBS, AMO, CNSS, CNPDP, OFAC, EU, UN, WCO.
+- Real Moroccan counterparties: Attijariwafa, BMCE, CFG Bank, CIH, Banque Populaire, OCP, IAM, Marocaine de Distribution.
+- Real external counsel firms: Clifford Chance (Paris), Gide Loyrette Nouel (Casablanca), Baker McKenzie (London), Naciri & Associés (Rabat), Allen & Overy (Paris), K&L Gates (NY), CMS Camozzi (Milan), Latham & Watkins (Brussels).
+- Real Morocco-relevant statutes: Loi 09-08 (data protection + 72h breach notification), Loi 17-23 (AMMC ESG chapter), Law 43-05 (sanctions compliance), Sapin II-style anti-corruption for EU ops.
+- Real Moroccan outlets: L'Économiste, Medias24, TelQuel, Forbes Afrique, Le Monde.
+- Tangier Free Zone export volumes (WCO customs declarations).
+- Color palette: violet-700 (legal tint) primary; emerald/amber/rose/sky/violet/teal/slate secondaries. Zero indigo/blue as primary.
+
+## Phase 2 — Implementation
+
+### Files created
+
+- **`src/lib/legal-data.ts`** — Strict-typed deterministic legal dataset (~880 LOC, no `any`, mulberry32 seeded PRNG anchored to 2025-11-15T10:30:00Z matching admin-data). Exports:
+  - **Shared helpers**: `formatNumber`, `formatUSD`, `formatMAD`, `formatPct`, `formatDate`, `relativeTime`, `severityTint`, `pillarColor`.
+  - **Regulatory** (~14 obligations): `Regulator` (10), `FilingStatus` (5), `FilingFrequency` (5), `RegObligation` (16 entries: AMMC/BCBS/AMO/CNSS/CNPDP/OFAC/EU/UN/WCO/BAM), `filingStatusTint`, `regulatorHeatmap`, `upcomingFilings`, `regulatorySummary`.
+  - **Cyber** (~12 incidents + CVEs + radar): `CyberIncidentType` (10), `MitreTactic` (11), `CyberIncidentStatus` (5), `CyberIncident` (12 entries with MITRE mapping + MTTR + disclosure-triggered flag), `cyberStatusTint`, `cyberTrend30d` (30d volume + critical), `CveExposure` (8 CVEs with CVSS/exploit/patched), `cyberReadinessRadar` (8 dimensions: Identity/Network/Endpoint/Data/Detection/Response/Recovery/3rd-Party), `cyberSummary`.
+  - **Financial**: `FinancialRiskGauge` (4: credit/liquidity/market/operational), `varTrend30d` (30d VaR vs $12.5M limit), `Counterparty` (12 entries with ISDA + cross-default + utilization), `liquidityRatios` (LCR/NSFR/MLA/Tier-1), `financialSummary`.
+  - **ESG**: `EsgScore` (3 pillars: E/S/G with weights), `esgComposite`, `esgRadar` (8 sub-dimensions), `CarbonMonth` (12 months Scope 1/2/3 tCO₂e), `EsgDisclosure` (7 frameworks: AMMC ESG/TCFD/GRI/UNGC/CDP/CSRD/ILO), `esgDisclosureStatusTint`, `EsgControversy` (6 entries), `esgSummary`.
+  - **Geopolitical**: `SanctionedJurisdiction` (8), `SanctionsHit` (8 entities × 8 jurisdictions), `sanctionStatusTint`, `sanctionedJurisdictions` (readonly array), `RegionalRisk` (6 regions with flag/index/delta/exposure), `TradePolicyEvent` (7 events with category/impact/jurisdictions), `tradePolicyTint`, `geoSummary`.
+  - **Reputational**: `reputationIndex` (current + delta30d + delta90d + 30d trend with sentiment), `ExecutiveRep` (6 execs: Marchetti/Dubois/Haddad/Mansouri/Benali/Petit), `ReputationControversy` (7 entries with reach), `StakeholderSentiment` (7 groups), `reputationSummary`.
+  - **Matters** (~12 matters): `MatterType` (8), `MatterStatus` (6), `LegalMatter` (12 entries with counterparty/counsel/budget/burn/nextMilestone/deadline/jurisdiction/exposure), `matterStatusTint`, `matterTypeColor`, `mattersByStatus` (for donut), `mattersSummary`.
+  - **Holds** (~9 holds): `HoldStatus` (4), `LitigationHold` (9 entries with matter/custodians/dataSources/volumeGb/lastReminder), `holdStatusTint`, `custodianCoverage` (8 sources), `holdTimeline90d` (13 weeks), `holdsSummary`.
+
+- **`src/components/sections/legal/regulatory.tsx`** — Regulatory Risk section. KPI strip (6 tiles: total/filed/in-progress/overdue/due-this-month/high-risk) + Regulator × Status heatmap (10 regulators × 5 statuses with cell intensity + legend) + Filing Risk Distribution bar chart (5 risk bands color-coded) + Upcoming Filing Calendar (next-90d timeline with day-countdown tiles + status pills) + Regulatory Obligations Register table (sortable by 6 cols, filterable by status, searchable; 16 rows with regulator/obligation/frequency/next-due-with-overdue-highlight/owner/risk-weight-pill).
+
+- **`src/components/sections/legal/cyber.tsx`** — Cyber Risk section. KPI strip (6 tiles: active/open-investigating/critical/disclosure-triggered/avg-MTTR/unpatched-CVEs) + Cyber Posture radial gauge (72, color-coded) + 30-day incident trend area chart (total violet + critical rose, dual-gradient fill) + Cyber Readiness radar (8 dimensions: current vs target) + CVE Exposure table (CVE ID/CVSS/affected/exploit-status/patch-status with patches) + Threat Intel Feed table (sortable by 7 cols, filterable by status, searchable; 12 incidents with MITRE tactic + MTTR + disclosure badge + summary).
+
+- **`src/components/sections/legal/financial.tsx`** — Financial Risk section. KPI strip (6 tiles: total-exposure/avg-utilization/cross-default-hits/ISDA-coverage/VaR/LCR-NSFR) + 4-up radial gauges (Credit/Liquidity/Market/Operational with threshold) + VaR 30-day trend line chart vs $12.5M ReferenceLine + Liquidity & Capital Ratios horizontal bar chart (LCR/NSFR/MLA/Tier-1 vs regulatory min, color-coded by compliance) + Financial Risk radar (4 dimensions: score vs threshold) + Counterparty Exposure table (12 counterparties, sortable by 6 cols, searchable; with rating pill/exposure/limit/utilization-bar/ISDA-badge/cross-default-flag).
+
+- **`src/components/sections/legal/esg.tsx`** — ESG Risk section. KPI strip (6 tiles: composite/E/S/G/open-controversies/disclosures-due) + E/S/G Score Breakdown bar chart (3 pillars with delta in tooltip) + ESG Sub-Dimension Radar (8 axes: Carbon/Water/Waste/Workforce/Community/Customer/Board/Ethics, score vs target) + Carbon Emissions 12-month line chart (Scope 1/2/3 with totals in tooltip) + ESG Controversy Feed table (7 controversies with pillar chip/severity/status/outlet) + ESG Disclosure Register table (7 disclosures: AMMC ESG/TCFD/GRI/UNGC/CDP/CSRD/ILO, filterable by status).
+
+- **`src/components/sections/legal/geopolitical.tsx`** — Geopolitical Risk section. KPI strip (6 tiles: screened/on-watch/blocked/highest-region/avg-index/upcoming-policies) + Sanctions Exposure Heatmap (8 entities × 8 sanctioned jurisdictions with 0/1/2 exposure cells + status column + legend) + Regional Risk Index cards (6 regions: Morocco/EU/US/MENA/SSA/APAC with flag/index-bar/delta/top-risk-pill) + Trade Policy Timeline (7 events with month/day tile + category pill + impact pill + jurisdictions).
+
+- **`src/components/sections/legal/reputational.tsx`** — Reputational Risk section. KPI strip (6 tiles: reputation-index/NPS/avg-exec-sentiment/open-controversies/critical/open-reach) + Reputation Index radial gauge (68 Stable) + Index Trend 30-day line chart + Executive Reputation cards (6 execs with avatar/sentiment-bar/delta-pill/mentions+negative%) + Stakeholder Sentiment horizontal stacked bars (7 groups: Investors/Customers/Employees/Regulators/Media/NGOs/Analysts, manual divs for tight control) + Brand Controversy Feed table (7 controversies with date/title/severity/status/reach).
+
+- **`src/components/sections/legal/matters.tsx`** — Legal Matters section. KPI strip (6 tiles: active-matters/total-budget/burn/exposure/due-14d/external-counsel) + Matters by Status donut (6 statuses color-coded + legend grid) + Budget vs Burn bar chart (12 matters: budget slate-200 + burn violet, with utilization % in tooltip + over-budget-risk indicator) + Upcoming Milestones timeline (next 6 deadlines with day-countdown color-coded by urgency) + Legal Matters Docket table (12 matters, sortable by 8 cols, filterable by type, searchable; with type-color-chip/counterparty/counsel/status-pill/budget-burn-bar/exposure/deadline-with-overdue-highlight/milestone).
+
+- **`src/components/sections/legal/holds.tsx`** — Hold Notices section. KPI strip (6 tiles: active-holds/total-custodians/preserved-volume/reminders-due/avg-custodians/released) + Custodian Coverage by Source bar chart (8 sources: custodians violet + holds light-violet) + Hold-Status Timeline 90d stacked bar chart (weekly: active/released/superseded) + Litigation Hold Register table (9 holds, filterable by status, searchable; with matter/issued-date/custodians-with-icon/data-source-chips/volume/last-reminder-with-due-flag/status-pill).
+
+### Files modified
+
+- **`src/components/sections/section-dispatcher.tsx`** — Added 8 imports + 8 case entries to `sectionComponents`: `risk-regulatory`, `risk-cyber`, `risk-financial`, `risk-esg`, `risk-geo`, `risk-rep`, `risk-matters`, `risk-holds`. All trader + intel + admin sections remain registered and untouched. Fallback to `SectionPlaceholder` preserved for the 13 un-built sections (all 8 `comms-*`, all 5 `ent-*`).
+
+## Verification
+
+- `bun run lint`: 0 errors, 0 warnings (clean).
+- `npx tsc --noEmit`: 0 errors in `src/` (only pre-existing errors in `examples/` and `skills/`).
+- agent-browser self-verification (all passed):
+  - Switched to LEGAL role (L. Reyes) — sidebar shows 3 categories (Risk & Compliance, Intelligence, Entities).
+  - **Regulatory**: 6 KPI tiles, regulator × status heatmap (10×5), filing risk distribution bar chart, upcoming filing calendar (14 filings), 16-row obligations register with status filter + search.
+  - **Cyber**: 6 KPI tiles, posture gauge (72 Moderate), 30-day incident trend area chart (violet + rose), 8-dimension readiness radar (current vs target), 8-row CVE exposure table, 12-row threat intel feed with status filter + search.
+  - **Financial**: 6 KPI tiles, 4-up radial gauges (Credit/Liquidity/Market/Operational), VaR 30-day line chart with $12.5M ReferenceLine, liquidity ratios horizontal bars (LCR 142% / NSFR 118% / MLA 16.4% / Tier-1 13.8% all green), 12-row counterparty table with ISDA + cross-default + utilization bars.
+  - **ESG**: 6 KPI tiles, E/S/G bars (3 pillars), 8-axis sub-dimension radar (current vs target), 12-month carbon trend (Scope 1/2/3 lines), 7-row controversy feed, 7-row disclosure register (AMMC ESG / TCFD / GRI / UNGC / CDP / CSRD / ILO) with status filter.
+  - **Geopolitical**: 6 KPI tiles, sanctions exposure heatmap (8 entities × 8 jurisdictions: Iran/Russia/Syria/DPRK/Cuba/Venezuela/Myanmar/Belarus with direct/indirect cells), 6 regional risk cards (Morocco/EU/US/MENA/SSA/APAC with flags + index bars + deltas), 7-event trade policy timeline (CBAM/OFAC/Russia dual-use/Section 301/etc.).
+  - **Reputational**: 6 KPI tiles, reputation index gauge (68 Stable), 30-day index trend line, 6 executive reputation cards (Marchetti/Dubois/Haddad/Mansouri/Benali/Petit), 7-stakeholder sentiment stacked bars (positive/neutral/negative), 7-row brand controversy feed.
+  - **Legal Matters**: 6 KPI tiles, matters-by-status donut (6 statuses), budget vs burn bar chart (12 matters), upcoming milestones timeline (6 deadlines), 12-row matters docket with type filter (8 types) + status filter + search + budget-burn bars.
+  - **Hold Notices**: 6 KPI tiles (94 custodians, 1044 GB preserved), custodian coverage bar chart (8 sources), 90-day hold-status timeline stacked bars (active/released/superseded weekly), 9-row hold register with status filter + search + data-source chips.
+  - Mobile (390×844): hamburger opens drawer, all 8 sections render, tables reflow, footer pushed naturally (footer-bottom 2933 = scroll-height on mobile matters page).
+  - Footer sticky verified on tall desktop viewport (1440×2400): matters page footer-bottom = 2400 = viewport (sticks when content is short); on 1440×900: matters page footer-bottom = 2111 (pushed below viewport for tall content).
+  - Regression: trader BVC (T. Okafor) renders MASI indices + session data; admin Users & Roles (A. Marchetti) renders seat gauge (12/25) + role distribution donut + RBAC matrix. Zero console errors, zero page errors across all 8 legal sections + 2 regression checks.
+  - The only console warning is pre-existing (`Missing Description for {DialogContent}` from the Command Palette — was there before this task).
+- Screenshots: `.qa/v16-legal-regulatory.png`, `v16-legal-cyber.png`, `v16-legal-financial.png`, `v16-legal-esg.png`, `v16-legal-geo.png`, `v16-legal-rep.png`, `v16-legal-matters.png`, `v16-legal-holds.png`, `v16-legal-mobile-matters.png`, `v16-trader-bvc-regression.png`, `v16-admin-users-regression.png`.
+
+## Stage Summary
+
+- **Built (8 sections)**: All 8 Risk & Compliance sections owned by the legal role (`risk-regulatory`, `risk-cyber`, `risk-financial`, `risk-esg`, `risk-geo`, `risk-rep`, `risk-matters`, `risk-holds`).
+- **Left as placeholder** (for downstream role-agents): all 8 `comms-*` (comms-overview/sentiment/sov/coverage/campaigns/reputation/press/social — owned by pr role), all 5 `ent-*` (ent-directory/moroccan/profiles/peers/watchlist — owned by market role). The dispatcher auto-falls back to `SectionPlaceholder` for these.
+- **Legal dataset shape** (for reuse by later role-agents): see `src/lib/legal-data.ts`. Most useful exports for downstream agents:
+  - `regObligations` + `regulatorHeatmap` + `filingStatusTint` — for pr (reputation/regulatory news) and any role that needs to surface filing deadlines.
+  - `cyberIncidents` + `cyberReadinessRadar` + `cveExposure` — for admin (security posture), pr (incident comms), market (cyber-risk signal).
+  - `counterparties` + `varTrend30d` + `liquidityRatios` — for trader (counterparty exposure to BVC banks) and market (financial risk).
+  - `legalMatters` + `matterTypeColor` + `matterStatusTint` — for admin (matter oversight), pr (litigation comms).
+  - `litigationHolds` + `holdStatusTint` + `custodianCoverage` — for admin (ediscovery) and any role needing to flag preservation obligations.
+  - `regionalRisks` + `sanctionsHits` + `tradePolicyTimeline` — for trader (FX/trade exposure), market (regional coverage).
+  - `executiveReps` + `reputationControversies` + `stakeholderSentiment` — for pr (exec comms), market (analyst sentiment).
+  - `pillarColor` (violet for Regulatory, matching admin's earlier mapping) — overrides the admin's `pillarColor` for the Regulatory pillar (admin used sky-700; legal uses violet-700 for the role's tint).
+  - `severityTint`, `formatUSD`, `formatMAD`, `relativeTime`, `formatDate` — formatting + tint helpers (mirrors admin-data but self-contained for the legal role).
+- **Architectural decisions**: (1) All legal sections follow the trader + admin pattern exactly: `SectionHeader` (with `accent="violet"` for the legal role tint, `statusChips`, `kpis`) + `ChartCard` body + reusable `DeferredChart` for chart mounts. (2) Legal accent is violet-700 across all 8 sections for role identity (vs admin which rotated accents). (3) All tables use shadcn `<Table>` primitives with `max-h-[N] overflow-y-auto harch-scroll` for long lists. (4) All charts use recharts via `DeferredChart` to avoid ResponsiveContainer flash. (5) The legal dataset is fully self-contained — no `any`, deterministic, mulberry32 seeded so first paint is stable. (6) Sanctions heatmap uses a 0/1/2 exposure scale (None/Direct/Indirect) with cell intensity + a legend — denser than a boolean hit/no-hit. (7) Matters docket color-codes the 8 matter types with a distinct hue per type (Litigation=rose, Arbitration=violet, Regulatory=deep-violet, IP=sky, Contract=emerald, Compliance=amber, Employment=teal, Real Estate=slate). (8) Hold register uses data-source chips with Database icon — visually distinct from the typical pill pattern.
+- **Issues/risks**: (1) The `pillarColor` export in `legal-data.ts` duplicates the one in `admin-data.ts` with the Regulatory pillar re-tinted to violet-700 (matching the legal role tint). This is intentional — each role owns its pillar color identity — but downstream agents should import from `legal-data` for legal sections and `admin-data` for admin sections to avoid tint conflicts. (2) The Counterparty table has 8 columns which gets tight on mobile; the search input truncates gracefully but a horizontal scroll would be a future enhancement. (3) The Sanctions Heatmap is a sticky-header HTML table with `min-w-[760px]` and `overflow-x-auto` — works on desktop, mobile users will need to scroll horizontally (acceptable for a dense compliance matrix). (4) The trade-policy timeline shows future events with violet-700 date tiles and past events with slate-800 tiles — the 14-day "in Xd" / "Xd ago" relative labels are anchored to the 2025-11-15 timestamp (consistent with the rest of the app). (5) The matters donut has a single rendered legend; in production a click-to-filter would be a nice addition. (6) The Reputational section's stakeholder sentiment uses manual divs rather than recharts because recharts stacked bars don't render inline labels cleanly at narrow widths — the manual approach gives precise control over the inline % labels.

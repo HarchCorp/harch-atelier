@@ -1,0 +1,202 @@
+  1365→  - Clicked HarchCorp pinned card → **EntityProfileDialog opens** with "HarchCorp" heading + "RELATED EVENTS" (SEC inquiry / Ransomware / Export-control / NGO Scope-3 / op-ed / analyst downgrade / insider trading) + "View full profile" button. Closed via Escape.
+  1366→  - Clicked quick-acknowledge button on first alert → **sonner toast fired** ("Acknowledged "Watchlist signal breach"") + `logActivity` recorded.
+  1367→  - **Sticky footer verified** (2 viewports): tall viewport 1440×2400 → shell footer (`mt-auto border-t border-slate-200 bg-white`) at viewport bottom (top=2357.5, bottom=2400); normal viewport 1440×1000 with long content (scrollH=2139) → footer at document bottom (top=2096, bottom=2138.5). Confirmed via `document.querySelectorAll('footer')` that the 5 section-level `<footer>` elements ( AlertsDigest / QuickActionsPanel / WatchlistSignals / ActivityFeed / SavedViewsRow footers) are distinct from the shell footer — the shell footer is the LAST footer in the DOM and sits at the document's true bottom.
+  1368→  - **Mobile responsive** (390×844): hamburger "Open navigation" present; hero stacks (avatar + greeting + chips wrap); KPI grid → 1-col; pinned entities → 1-col; alerts + quick actions stack; watchlist + activity stack; saved views → 1-col; `scrollWidth=clientWidth=innerWidth=390` (zero horizontal overflow).
+  1369→  - **Micro-animations**: framer-motion stagger visible on mount (cards fade+rise in sequence), `whileHover` spring lift on KPI/pinned/saved-view cards, priority stripe width animates on pinned card hover, chevron translate-x on Open/Load affordances, pulsing severity dots on unacknowledged alerts, RiskRing stroke-dashoffset transitions.
+  1370→  - **Regression (zero console errors, all 5 prior roles still render)**:
+  1371→    - **Trader (T. Okafor)**: "Signal Desk" h1 + WatchlistSignals on top + Bourse de Casablanca in sidebar.
+  1372→    - **Admin (A. Marchetti)**: "Operations Console" h1 + Administration category + clicked Users & Roles → section renders (seat gauge + RBAC matrix + users table).
+  1373→    - **Legal (L. Reyes)**: "Legal & Regulatory Monitor" h1 + clicked Regulatory → section renders (regulator × status heatmap + filing risk + obligations register).
+  1374→    - **PR (P. Novak)**: "Communications Console" h1 + clicked Reputation Score → section renders (reputation gauge + NPS + stakeholder heatmap + exec cards).
+  1375→    - **Market (M. Dubois)**: "Market Intelligence" h1 + clicked Directory → section renders (6 KPI tiles + 41-entity directory table + sector bars).
+  1376→- Screenshots saved to `.qa/v19-self-{desktop-top,desktop-full,top-fresh,footer,bottom-view,full-final,hero,mobile-top}.png`.
+  1377→
+  1378→Stage Summary:
+  1379→- **Built (1 personalized landing)**: The SELF role (S. Bauer) now renders a personalized `SelfWatchView` command center instead of the generic `EnterpriseGrid`. The view is the most polished, animation-rich surface in the app: glassmorphism hero, framer-motion stagger, spring hover lifts, RiskRing gauges, sparklines, pulsing severity dots, quick-acknowledge toasts, saved-view preset cards, quick-action shortcuts, 380ms skeleton-on-mount, and a personalization microcopy footer bar.
+  1380→- **Files created**:
+  1381→  - `src/lib/self-data.ts` — self-role personalization dataset (strict types, deterministic, reuses entity IDs HRCH/ATW/OCP/IAM via `findEntity()` + alert IDs via `alertQueue` subset).
+  1382→  - `src/components/dashboard/self-watch-view.tsx` — the SelfWatchView component + SelfWatchSkeleton + 7 sub-components (HeroBanner, Sparkline, RiskRing, SelfKpiCard, PinnedEntityCard, AlertsDigest, QuickActionsPanel, SavedViewsRow, EmptyState).
+  1383→- **Files modified**:
+  1384→  - `src/app/page.tsx` — added `SelfWatchView` import + `self` case to the dashboard rendering switch (trader → TraderView, self → SelfWatchView, else → EnterpriseGrid). 12 lines changed, 0 lines removed from existing logic.
+  1385→- **Polish added (scoped to SelfWatchView only — no shared chrome touched)**:
+  1386→  - Framer-motion `containerVariants` (staggerChildren 0.04) + `itemVariants` (opacity+y, 0.32s cubic-bezier ease) on the root motion.div.
+  1387→  - `whileHover={{ y: -2 }}` / `{{ y: -3 }}` spring transitions on KPI cards + pinned entity cards + saved view cards.
+  1388→  - Glassmorphism hero: `bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950` + 3 blurred accent orbs (cyan/emerald/white) + ring-1 ring-white/20 on avatar.
+  1389→  - RiskRing: SVG circular gauge (44px), stroke-dasharray progress, color-coded (rose/amber/emerald), 0.6s ease-out stroke-dashoffset transition.
+  1390→  - Corner accent blurs on KPI cards (cyan-500/5 → /10 on group hover).
+  1391→  - Priority stripes on pinned cards (cyan-500/amber-400/slate-300) that widen (w-1 → w-1.5) on group hover.
+  1392→  - Pulsing severity dots (`animate-pulse`) on unacknowledged alerts.
+  1393→  - ChevronRight translate-x-0.5 animations on all "Open" / "Load" affordances.
+  1394→  - Tooltips (Radix) on KPI delta chips, ack buttons, summary chips.
+  1395→  - tabular-nums everywhere (KPI values, deltas, SLA minutes, sentiment scores, entity counts).
+  1396→  - 380ms SelfWatchSkeleton on mount (shimmer blocks matching layout).
+  1397→  - Empty-state illustration for alerts list.
+  1398→  - Footer microcopy bar (Lock + ExternalLink icons + personalization summary).
+  1399→  - Sonner toasts wired to: quick-acknowledge (`toast.success` + `logActivity`), quick actions (`toast.success`), saved views (`toast.success`), "New" view button (`toast.info`), "Manage pins" button (`toast.info`).
+  1400→- **Polish deliberately SKIPPED for safety**:
+  1401→  - `chart-card.tsx` — used by 30+ sections; touching the shared chrome risked regression. Added hover-lift + corner accents ONLY on SelfWatchView's custom cards (which don't use ChartCard — they use bespoke motion.div/button wrappers).
+  1402→  - `sidebar-nav.tsx`, `topbar.tsx`, `dashboard-shell.tsx`, `section-registry.tsx`, `kpi-strip.tsx` — read-only per constraints.
+  1403→  - `globals.css` — forbidden; all polish via Tailwind utilities + inline styles.
+  1404→  - All `src/components/sections/{trader,admin,legal,comms,entities,intel}/*` — read-only per constraints.
+  1405→  - All `src/lib/{market,admin,legal,comms,entities}-data.ts` — read-only per constraints (imported from, never mutated).
+  1406→- **Self dataset shape (for any future agent extending the self role)**: see `src/lib/self-data.ts`. Most useful exports:
+  1407→  - `selfUser` — analyst profile (name/initials/email/lastLogin/tz/tint/accent).
+  1408→  - `pinnedEntities` (4) + `pinnedEntityIds` — personal shortlist with notes + priority; each `PinnedEntity.entity` is a resolved `Entity` from entities-data.
+  1409→  - `personalAlerts` (6) + `personalAlertSummary` — subset of admin alertQueue with pre-computed relative-time labels + acknowledged flags.
+  1410→  - `savedViews` (4) — personal preset cards (Crisis Watch / Banking Peers / Casablanca Movers / ESG Watch) with icon kind + tint + entityCount + filterPillar + lastOpened.
+  1411→  - `quickActions` (3) — personal shortcut buttons (Add entity / Create alert / Export digest) with icon kind + tint.
+  1412→  - `selfKpis` (4) — personal KPI cards with 12-pt sparklines + deltas + invertDelta + accent + hint.
+  1413→  - `heroSummaryChips` (4) — hero banner summary badges (Pinned / Unack / Watchlisted / LIVE).
+  1414→  - `greeting(now)` — time-of-day greeting helper.
+  1415→  - `formatNumber(n)` — number formatter (self-contained for the self role).
+  1416→- **Architectural decisions**: (1) The SelfWatchView is a `motion.div` (not a `section`) so it can own its framer-motion stagger variants without colliding with the DashboardShell's layout. (2) The 380ms skeleton-on-mount uses `window.setTimeout` (not `requestAnimationFrame`) so the shimmer is visibly premium — the skeleton paints for ~380ms before the animated content fades in. (3) The `SelfWatchView` receives the same `(onSelect, onSelectEvent, onSelectEntity)` props as `EnterpriseGrid` / `TraderView` so the existing `EntityProfileDialog` and `RiskEventDrawer` work without modification. (4) Pinned entity cards are `motion.button` (not `motion.div` with onClick) for keyboard accessibility + focus rings. (5) The quick-acknowledge button calls `useRiskStore.logActivity("acknowledge", …)` so the ack shows up in the reused `ActivityFeed` (which is also rendered on the self dashboard) — closes the loop between the personal digest and the audit trail. (6) The `RiskRing` is a pure SVG (no recharts) — 44px is too small for a recharts RadialBarChart to render cleanly, and the SVG approach gives precise control over the stroke-dashoffset transition. (7) The `Sparkline` is also pure SVG (matches kpi-strip's pattern) — avoids mounting a recharts ResponsiveContainer for 12 data points. (8) All section-level `<footer>` elements (AlertsDigest / QuickActionsPanel / SavedViewsRow) use `border-t border-slate-100` to visually distinguish them from the shell's `<footer className="mt-auto border-t border-slate-200 bg-white">` — the shell footer is always the last footer in the DOM and sits at the document's true bottom (verified via `document.querySelectorAll('footer')`). (9) The self tint cyan-700 is used consistently: hero avatar bg, KPI accent for tracked-entities, pinned-card priority stripe (primary), saved-view "Self" badge, footer microcopy — matching the TopBar's `accountMeta.self.tint = "bg-cyan-700"`. (10) No new dependencies installed — framer-motion, recharts, sonner, lucide-react, shadcn/ui Tooltip + Skeleton were all already available.
+  1417→- **Issues/risks**: (1) The pre-existing `WatchlistSignals` component (reused on the self dashboard) has a `useRelativeLabel(iso)` hook that parses `s.updatedAt` (e.g. "12m ago") as an ISO timestamp via `new Date(iso)` — this produces `Invalid Date` → "NaNh ago" in the Updated column. This is a PRE-EXISTING bug in the trader dashboard's `WatchlistSignals` (not introduced by this task — the component is reused as-is per constraints). Fixing it would require touching `src/components/dashboard/watchlist-signals.tsx` which is shared with the trader view; left as-is to avoid regression. (2) The `personalAlerts` dataset is static (deterministic) — the `acknowledged` flag doesn't toggle in-place when the user clicks quick-acknowledge; instead the ack is recorded via `logActivity` + a sonner toast. A production version would update a personal-alerts store. (3) The `greeting(now)` helper uses `new Date()` at render time — on the server (SSR) this would produce a hydration mismatch if the server's hour differs from the client's; mitigated by the 380ms skeleton (the greeting only renders after `ready=true` on the client). (4) The `SelfWatchSkeleton` renders for a fixed 380ms regardless of actual data load time — in production this would be gated on a real loading state (SWR / React Query `isLoading`). (5) The pinned-entity sparkline uses `e.sparkline.slice(-12)` (last 12 of the 20-point series) to approximate a "7d sparkline" — the entities-data sparkline is 20 points (not time-indexed), so the "7d" label is approximate.
+  1418→
+  1419→
+  1420→---
+  1421→Task ID: 20-orchestrator-final
+  1422→Agent: Rex (orchestrator) — final cross-role verification & wrap-up
+  1423→Task: Verify all 6 role-agents' work end-to-end, confirm full coverage, wrap up V13.0 multi-role platform.
+  1424→
+  1425→Work Log:
+  1426→- Verified lint clean (`bun run lint` → 0 errors) and dev.log error-free after every agent round (14→19).
+  1427→- agent-browser cross-role sweep: cycled through all 6 account types via the topbar account switcher and confirmed each lands on its correct dashboard:
+  1428→  • admin (A. Marchetti) → "Operations Console" (EnterpriseGrid, 18 widgets)
+  1429→  • trader (T. Okafor) → "Signal Desk" (TraderView, 14 widgets)
+  1430→  • legal (L. Reyes) → "Legal & Regulatory Monitor" (EnterpriseGrid)
+  1431→  • market (M. Dubois) → "Market Intelligence" (EnterpriseGrid)
+  1432→  • pr (P. Novak) → "Communications Console" (EnterpriseGrid)
+  1433→  • self (S. Bauer) → "My Watch" (NEW SelfWatchView: glassmorphism hero, 4 KPIs, 4 pinned entities w/ risk rings + sparklines, alerts digest, quick actions, watchlist, activity, saved views — 94 SVGs, 155 cards)
+  1434→- Spot-checked section navigation across roles: trader BVC (2 recharts + table), market Entity Directory (2 charts + table, not placeholder), self Entity Directory (real content). Zero placeholders remaining across any role's reachable nav (confirmed by market agent's coverage check: 44/44 sections built + dashboard special-cased).
+  1435→- Verified zero console errors and zero page errors across the full sweep.
+  1436→- Footer sticky re-confirmed (per-role agents each verified).
+  1437→
+  1438→Stage Summary:
+  1439→- Harch Atelier V13.0 multi-role platform COMPLETE. Universal collapsible sidebar template + 6 role-specific builds:
+  1440→  • 6 nav categories, ~45 nav items, role-based selection (admin=all 6, trader=4, legal=3, market=4, self=2, pr=3).
+  1441→  • 44 section components built across 6 role folders (trader/admin/legal/comms/entities/intel) + dispatcher.
+  1442→  • 6 typed mock datasets (market-data, admin-data, legal-data, comms-data, entities-data, self-data) — Morocco-aware (BVC/MASI, Attijariwafa/BMCE/CIH/OCP/IAM, AMMC/Loi 09-08, Le Matin/Hespress, MAD currency).
+  1443→  • SelfWatchView personalized landing with framer-motion polish.
+  1444→- Cron job 284835 (webDevReview, every 15 min, Africa/Casablanca) is active for autonomous QA + continued development.
+  1445→- Known minor pre-existing issue: WatchlistSignals `useRelativeLabel` parses "12m ago" as ISO → "NaNh ago" label (cosmetic, not introduced this session; low priority).
+  1446→- Next-phase opportunities: wire mock datasets to real Neon/Prisma data (dashboard-data.ts exists); add BVC live API; Arabic (ar) locale for next-intl; server-side pagination for entity directory at scale.
+  1447→
+  1448→---
+  1449→Task ID: 21-harder-round1
+  1450→Agent: Rex (orchestrator) — "work harder" round 1: bugfix + 3 power features
+  1451→Task: Fix WatchlistSignals bug + supercharge Command Palette with section navigation + build GlobalFilterBar + build EntityCompareDialog.
+  1452→
+  1453→Work Log:
+  1454→- Read full worklog (V13.0 complete, 6 roles built, 44 sections, 0 placeholders). Identified 4 high-impact improvements from the "next-phase opportunities" + known issues list.
+  1455→- **Bugfix — WatchlistSignals "NaNh ago"**: Root cause = `useRelativeLabel(iso)` called `new Date("12m ago")` → Invalid Date → "NaNh ago". The mock-data `watchlistSignals[].updatedAt` field stores pre-formatted relative labels ("12m ago", "1h ago"), not ISO timestamps. Fix: added a `RELATIVE_RE` regex (`/^\s*\d+\s*[smhd]\s*ago\s*$/i`) that passes through pre-formatted labels as-is; only ISO strings get parsed. Also added `Xd ago` for >24h. Verified on trader dashboard: Updated column now shows "12m ago", "24m ago", "1h ago", "2h ago", "3h ago", "5h ago", "6h ago", "8h ago" (was "NaNh ago" before).
+  1456→- **Created `src/lib/global-filters-store.ts`** — session-only zustand store (NOT persisted, to match risk-store's `filters` behavior) for cross-section workspace scope: `dateRange` (7d/30d/90d/1y/all), `entity` (entity id or "all"), `pillar` (RiskPillar or "all"), `region` (MA/EU/NA/APAC/MEA/LATAM or "all"). Exports `useGlobalFilters` hook + `activeCount()` selector + label/option constants.
+  1457→- **Created `src/components/dashboard/global-filter-bar.tsx`** — sleek collapsible filter strip rendered below the page header on section views (hidden on dashboard landing). Features:
+  1458→  • 4 `FilterPill` controls (Range/Entity/Pillar/Region) each with icon + label + shadcn Select.
+  1459→  • "Workspace scope" header with icon + active-filter badge (emerald "N active") or "No filters applied" text.
+  1460→  • Reset button appears only when filters are active (with tooltip).
+  1461→  • Responsive: full inline controls on desktop (md+), compact "Filters (N)" popover on mobile via shadcn Popover.
+  1462→  • Entity select populated from `entityDirectory` (first 24 entities with ticker).
+  1463→  • Wired with TooltipProvider for hover affordances.
+  1464→- **Created `src/components/dashboard/entity-compare-dialog.tsx`** — side-by-side entity benchmarking dialog. Features:
+  1465→  • Pick 2-3 entities from `entityDirectory` via add/remove chips (max 3, color-coded left border per entity).
+  1466→  • Financial comparison table (9 metrics: Revenue, Net Income, Total Assets, Market Cap, P/E, Dividend Yield, Employees, Risk Score, Net Sentiment) with 🏆 Trophy icon on the per-metric winner (green text).
+  1467→  • 6-pillar risk radar overlay (recharts RadarChart, 0-100, lower=safer, fillOpacity 0.08 per entity).
+  1468→  • 12-month sentiment trend multi-line chart (recharts LineChart, -100 to +100).
+  1469→  • Per-entity summary cards (color-coded top border, risk + sentiment gauges, sector/HQ/type badges).
+  1470→  • COMPARE_COLORS = [sky, emerald, rose] for consistent entity identification.
+  1471→  • Reuses `formatCompactMAD`, `sectorColor` from entities-data.
+  1472→- **Supercharged `src/components/dashboard/command-palette.tsx`**:
+  1473→  • Added `onNavigate(sectionId)` + `onOpenEntityCompare()` props.
+  1474→  • New "Navigate · {role} workspace" group listing ALL sections for the current role (via `flattenNav(accountType)` from nav-config) — each item shows the section icon + label + category folder + ArrowRight affordance. Fuzzy-searchable by label/category/id.
+  1475→  • Added "Compare entities" action (opens EntityCompareDialog).
+  1476→  • Renamed "Jump to" → "Actions" (since navigation is now its own group).
+  1477→  • Updated description + placeholder to "Search sections, entities, events…".
+  1478→  • Max width 640px (was 600), max height 440px (was 420) for the longer list.
+  1479→- **Updated `src/app/page.tsx`**:
+  1480→  • Added `entityCompareOpen` state.
+  1481→  • Wired `onNavigate={setActiveSection}` + `onOpenEntityCompare` to CommandPalette.
+  1482→  • Rendered `<GlobalFilterBar />` above section content (only on non-dashboard views) + `<EntityCompareDialog />` at the end.
+  1483→  • The dashboard landing (EnterpriseGrid/TraderView/SelfWatchView) does NOT show the filter bar (keeps it clean).
+  1484→- **Verification (agent-browser, all passed)**:
+  1485→  • `bun run lint` → 0 errors, 0 warnings.
+  1486→  • WatchlistSignals fix: trader dashboard Updated column shows valid "12m ago" / "1h ago" labels (was "NaNh ago").
+  1487→  • Command Palette: ⌘K opens → typed "bourse" → "Bourse de Casablanca" appears in Navigate group → click → lands on BVC section (heading "Bourse de Casablanca", 2 recharts, not placeholder).
+  1488→  • GlobalFilterBar: visible on section views with 4 comboboxes (30 days / All entities / All pillars / All regions). Selected "Regulatory" pillar → "1 active" badge appeared + Reset button visible. Clicked Reset → pillar back to "All pillars" + Reset hidden. Mobile (390×844) → collapses to "Filters" button (popover).
+  1489→  • EntityCompareDialog: opened via palette "Compare entities" action → dialog renders with title "Compare Entities", 2 recharts (radar + sentiment line), 9 financial comparison rows, entity chips.
+  1490→  • Cross-role sweep: all 6 roles land correctly (admin→Operations Console, trader→Signal Desk, legal→Legal & Regulatory Monitor, pr→Communications Console, self→My Watch). Zero console errors, zero page errors throughout.
+  1491→  • Screenshots: `.qa/v13.1-entity-compare.png`, `.qa/v13.1-self-dashboard.png`.
+  1492→
+  1493→Stage Summary:
+  1494→- V13.1 "work harder" round 1 complete. 1 bug fixed + 3 power-user features added (Command Palette section navigation, GlobalFilterBar, EntityCompareDialog). 4 new files created (global-filters-store.ts, global-filter-bar.tsx, entity-compare-dialog.tsx + command-palette enhanced). Lint clean, zero errors, all 6 roles verified, no regression.
+  1495→- The platform now has: universal sidebar (44 sections) + role-based landing dashboards + ⌘K fuzzy search across sections/entities/events + persistent workspace-scope filters + entity benchmarking. Palantir-grade navigation and analysis flow.
+  1496→- Next-phase opportunities still open: wire mock datasets to real Neon/Prisma; add BVC live API; Arabic (ar) locale + RTL; dark-mode pass across 44 sections (deferred — large scope, doing it halfway would look worse than not having it); server-side pagination for entity directory at scale.
+  1497→
+  1498→---
+  1499→Task ID: 22-harder-round2
+  1500→Agent: Rex (orchestrator) — "work harder" round 2: recently-viewed + live alerts + vim shortcuts
+  1501→Task: Add recently-viewed sections tracking, live alert toast notifications, and vim-style keyboard shortcuts for section navigation.
+  1502→
+  1503→Work Log:
+  1504→- **Created `src/lib/ui-store.ts`** — session-only zustand store for ephemeral UI state. Exports `useUiStore` with `recentSections` (last 5 visited section ids, most-recent first, deduped) + `pushRecent(sectionId)` + `clearRecent()`. Skips "dashboard" (universal, always pinned in sidebar). NOT persisted (session-only).
+  1505→- **Created `src/hooks/use-alert-watcher.tsx`** — two hooks that make the platform feel ALIVE:
+  1506→  • `useAlertWatcher(signals, connected)` — watches the signal-pulse stream and fires a sonner toast when a signal is "critical" (toast.error, 6s, with "View" action button) or has a sharp sentiment drop (delta ≤ -2.5, toast.warning, 5s). Dedupes via a ref Set so the same signal id doesn't re-fire on every tick. Capped at 200 ids to avoid unbounded growth.
+  1507→  • `useConnectionToast(connected)` — fires a one-off `toast.success("Live signal stream connected")` the first time the signal-pulse socket connects, so the user knows real-time streaming is active.
+  1508→  • SSR-safe (no-op during SSR; toasts only fire client-side after connection).
+  1509→  • Renamed from `.ts` to `.tsx` because it uses JSX in the `icon` prop of toasts.
+  1510→- **Upgraded `src/components/dashboard/keyboard-shortcuts.tsx`**:
+  1511→  • `useKeyboardShortcuts(onToggleHelp, onNavigate?)` — added optional `onNavigate` callback.
+  1512→  • Expanded the `g`+letter map from 6 widget-anchor scrolls to 11 SECTION navigations: g+d=dashboard, g+b=Bourse de Casablanca, g+e=Entity Directory, g+r=Risk Overview, g+o=Intelligence Overview, g+a=Alerts, g+w=Watchlist, g+s=Sentiment, g+v=Share of Voice, g+m=Risk Matrix, g+c=Media Coverage.
+  1513→  • When `onNavigate` is provided, fires `onNavigate(sectionId)` + a 2s toast confirmation ("g b → mkt-bvc"). Falls back to legacy anchor-scroll if no `onNavigate`.
+  1514→  • Updated the help dialog's `shortcuts` array to list all 11 navigation shortcuts (was 6).
+  1515→- **Enhanced `src/components/dashboard/command-palette.tsx`**:
+  1516→  • Imports `useUiStore` + `findNavItem` from nav-config + `Clock` icon.
+  1517→  • Reads `recentSections` from the ui-store and resolves each to its nav item (with category label).
+  1518→  • Added a "Recently visited" group (with Clock icon per item) between "Actions" and "Navigate", shown only when there's recent history. Each item shows the section icon + label + category. Fuzzy-searchable.
+  1519→- **Updated `src/app/page.tsx`**:
+  1520→  • Passes `setActiveSection` as `onNavigate` to `useKeyboardShortcuts`.
+  1521→  • Tracks recently-visited sections: `useEffect` calls `pushRecent(activeSection)` whenever the section changes.
+  1522→  • Mounts the alert watcher: `const pulse = useSignalPulse(); useAlertWatcher(pulse.signals, pulse.connected); useConnectionToast(pulse.connected);` — mounted once at the page level so toasts fire regardless of which section is active.
+  1523→- **Verification (agent-browser, all passed)**:
+  1524→  • `bun run lint` → 0 errors, 0 warnings.
+  1525→  • Recently-visited: navigated to BVC → Equities → opened ⌘K → "Recently visited" group appeared with Equities + Bourse de Casablanca (clock icon, correct order). Verified via `cmdkHeadings: ["Actions","Recently visited","Navigate · market workspace","Switch workspace","Entities","Risk events"]`.
+  1526→  • Keyboard shortcuts: from dashboard, pressed `g` then `b` → navigated to "Bourse de Casablanca". Pressed `g`+`d` → back to dashboard ("Market Intelligence"). Pressed `g`+`e` → "Entity Directory". All worked with toast confirmations.
+  1527→  • Help dialog: `?` opens → shows all 11 navigation shortcuts (Go to Dashboard, Bourse de Casablanca, Entity Directory, Risk Overview, Intelligence Overview, Alerts, Watchlist, Sentiment Trend, Share of Voice, Risk Matrix, Media Coverage).
+  1528→  • Zero console errors, zero page errors throughout the session.
+  1529→  • Screenshot: `.qa/v13.1-command-palette-recent.png`.
+  1530→
+  1531→Stage Summary:
+  1532→- V13.1 "work harder" round 2 complete. 3 new power-user features added: recently-viewed sections (in command palette), live alert toast notifications (critical + sharp-drop detection from the signal-pulse stream), vim-style keyboard shortcuts (11 section navigations via g+prefix). 3 new files (ui-store.ts, use-alert-watcher.tsx + keyboard-shortcuts + command-palette enhanced). Lint clean, zero errors, all features verified.
+  1533→- Combined with round 1, V13.1 now has: ⌘K fuzzy search across sections/entities/events/actions/recent, persistent workspace-scope filters, entity benchmarking dialog, recently-visited tracking, live alert toasts, and vim navigation. The platform is now genuinely Palantir-grade in its navigation + analysis flow.
+  1534→- Next-phase opportunities still open: wire mock datasets to real Neon/Prisma; add BVC live API; Arabic (ar) locale + RTL; dark-mode pass across 44 sections; server-side pagination for entity directory at scale.
+  1535→
+  1536→---
+  1537→Task ID: 24-figma-trader
+  1538→Agent: full-stack-developer (figma rework · trader)
+  1539→Task: Rework trader role UI to Figma-grade quality using the new design-system layer.
+  1540→
+  1541→Work Log:
+  1542→- Read worklog (V13.0–V13.1) to understand full project history. Read `design-system.tsx`, `section-header.tsx`, `chart-card.tsx`, and all 7 existing trader section files. Confirmed trader accent = "emerald" per `roleAccent` map.
+  1543→- Reworked all 7 trader sections in `src/components/sections/trader/` to Figma-grade quality. ONLY modified files in this folder — dispatcher, section-registry, design-system, section-header, chart-card, page.tsx, dashboard-shell, sidebar, topbar, and other roles' files untouched.
+  1544→- **bvc-overview.tsx** (flagship showcase): 6 StatTile KPIs with emerald accent + 320ms mount skeleton; MASI Intraday area chart with gradient fill + live pulse + open reference line + footer legend; MASI 30-day dual-axis line; Sector Heatmap with 8 tiles + custom hover tooltips (prev close + Δ); Session Statistics with 3 MetricRings (adv/dec/flat %) + animated breadth bar + range ProgressBar + breadth tilt indicator; Sector Performance diverging bars; Session Movers tabs with 30-day MiniSparkline per row.
+  1545→- **equities-screener.tsx**: 5 StatTile KPIs; screener table with sticky header + sort icons + emerald active-row highlight + sector filter chips; Equity Detail panel with 30-day Sparkline + 8 DetailStat tiles + 52-week range ProgressBar with threshold; Sector Market Cap Distribution stacked bar + 8 sector legend chips.
+  1546→- **positions-blotter.tsx**: 5 StatTile KPIs; P&L bar chart with gradient fills (emerald/rose) + Tag side badges in tooltip; Long/Short split with animated proportional bar + dual cards; Sector Exposure with ProgressBar (emerald/rose by P&L) + sector color dots; premium blotter table (9 sortable cols, Tag for side + % P&L, directional coloring).
+  1547→- **indices-view.tsx**: 4 StatTile KPIs; 30-day comparison line chart with legend toggles + baseline ReferenceLine at 100; 8 IndexCards (PanelCard + MiniSparkline + sector color dot + Tag); Index Performance Summary table (7 cols, sector dots, Tag for chg%, directional YTD).
+  1548→- **fx-rates.tsx**: 5 StatTile KPIs (changed SectionHeader accent from cyan → emerald per spec); MAD Crosses 30-day multi-line (sky/emerald/amber for EUR/USD/GBP); Bank Al-Maghrib panel with MetricRing (key rate) + inflation ProgressBar with target threshold + next meeting + MAD Strength card; EUR/MAD + USD/MAD area charts with gradient fills + Tag for chg%.
+  1549→- **commodities-board.tsx**: 5 StatTile KPIs (changed accent from amber → emerald); 6 CommodityCards (PanelCard + per-commodity semantic icon + MiniSparkline + Tag); HarchCorp Notional Exposure horizontal bar chart with custom tooltip; Commodities Detail table (color dots, Tag for chg%, directional YTD). Note: NGAS color changed from violet → slate-600 to comply with trader palette (emerald/slate/rose/amber/sky).
+  1550→- **fixed-income.tsx**: 5 StatTile KPIs (changed accent from violet → emerald); BAM Treasury Yield Curve line chart (emerald current + slate dashed previous, 3% reference); Curve Stats panel with MetricRing for slope + 5 term-spread ProgressBars (emerald/rose by direction) + curve shape indicator; Corporate Bonds table (sector chips, Tag for rating by A/BBB/lower).
+  1551→- **Design-system primitives adopted**: PanelCard (+ accent rail), PanelHeader, StatTile, MetricRing, Tag, ProgressBar, StaggerGrid, MiniSparkline, Divider, RoleAccent type. Replaced all ad-hoc bordered divs, KpiTile, badges, gauges, progress bars.
+  1552→- **Premium UX**: 300-320ms mount skeleton per section; hover tooltips on heatmap; animated bars (breadth + diverging sector perf); gradient fills on area charts; live pulse on BVC; animated MetricRings; tabular-nums throughout; directional coloring (emerald/rose/amber/sky/slate); stagger entrance via StaggerGrid + per-card delay; hover lift on every PanelCard; premium tables with sticky headers, slim scrollbars, hover rows, directional P&L coloring.
+  1553→- **Verification**:
+  1554→  - `bun run lint` → 0 errors, 0 warnings.
+  1555→  - `dev.log` → all GET / return 200, no runtime errors.
+  1556→  - agent-browser sweep: switched to TRADER (T. Okafor), clicked through all 7 trader sections (BVC, Indices, Equities, Positions, FX & Rates, Commodities, Fixed Income). All render with correct panels + headings + charts. Zero console errors (only pre-existing DialogContent aria-describedby warning).
+  1557→  - Mobile responsive (390×844) verified on BVC → all 7 panels stack correctly.
+  1558→  - Footer sticky: layout uses `min-h-screen flex flex-col` + `main flex-1` + footer sibling → correct pattern.
+  1559→  - Regression check: admin Users & Roles renders (6 headings: Seat Usage, Role Distribution, Access Highlights, Workspace Security Posture, Users, RBAC Matrix); legal Regulatory Risk renders (5 headings: Regulator × Status Heatmap, Filing Risk Distribution, Upcoming Filing Calendar, Regulatory Obligations Register).
+  1560→  - Screenshots: `.qa/v14-trader-bvc.png`, `v14-trader-bvc-fresh.png`, `v14-trader-bvc-mobile.png`, `v14-trader-indices.png`, `v14-trader-equities.png`, `v14-trader-positions.png`, `v14-trader-fx.png`, `v14-trader-commodities.png`, `v14-trader-fixed-income.png`, `v14-admin-users.png`, `v14-legal-regulatory.png`.
+  1561→
+  1562→Stage Summary:
+  1563→- All 7 trader sections reworked to Figma-grade quality using the shared design-system layer. Trader accent = emerald applied consistently across heroes, KPI icon chips, active states, and primary chart strokes. BVC is the showcase section (most visually stunning): MASI intraday with gradient + live pulse, sector heatmap with hover tooltips, session MetricRings, animated breadth + diverging sector bars, movers with sparklines.
+  1564→- Lint clean, zero runtime errors, all 7 trader sections verified rendering, mobile responsive, footer sticky, no regression in admin/legal. Data imports unchanged. Dispatcher + section-registry untouched.
+
+[showing lines 1365-1564 of 1566; use offset=1565 with limit to continue reading]

@@ -1,0 +1,9 @@
+node_modules
+.qa
+upload
+tool-results
+.zscripts
+*.log
+.env*
+worklog.md
+worklog.md

@@ -1,0 +1,687 @@
+     1→/**
+     2→ * Harch Atelier — Moroccan market dataset (V14.0 trader)
+     3→ *
+     4→ * Deterministic, strictly-typed mock data for the Bourse de Casablanca,
+     5→ * Moroccan listed equities, HarchCorp positions, MAD FX, commodities and
+     6→ * the Bank Al-Maghrib yield curve. Used by the trader-role section
+     7→ * components under `src/components/sections/trader/`.
+     8→ *
+     9→ * Conventions:
+    10→ *   - All prices in MAD (Moroccan dirham) unless otherwise noted.
+    11→ *   - All series deterministic (seeded PRNG) so first paint is stable.
+    12→ *   - No `any`.
+    13→ */
+    14→
+    15→/* ------------------------------------------------------------------ */
+    16→/*  Common types                                                       */
+    17→/* ------------------------------------------------------------------ */
+    18→
+    19→export type BvcSector =
+    20→  | "Banking"
+    21→  | "Telecom"
+    22→  | "Real Estate"
+    23→  | "Construction"
+    24→  | "Materials"
+    25→  | "Consumer"
+    26→  | "Energy"
+    27→  | "Pharma"
+    28→  | "Tech";
+    29→
+    30→export interface SectorIndex {
+    31→  id: string;
+    32→  name: string;
+    33→  value: number;
+    34→  prevClose: number;
+    35→  chgPct: number;
+    36→  ytdPct: number;
+    37→  /** 30-trading-day close series. */
+    38→  series30d: number[];
+    39→}
+    40→
+    41→export interface Equity {
+    42→  ticker: string;
+    43→  name: string;
+    44→  sector: BvcSector;
+    45→  last: number;
+    46→  prevClose: number;
+    47→  /** % change vs prevClose. */
+    48→  chgPct: number;
+    49→  volume: number;
+    50→  /** Market capitalisation in millions MAD. */
+    51→  mktCapM: number;
+    52→  peRatio: number;
+    53→  high52: number;
+    54→  low52: number;
+    55→  /** 30-trading-day close series (oldest → newest). */
+    56→  series30d: number[];
+    57→}
+    58→
+    59→export interface IndexPoint {
+    60→  date: string; // ISO short
+    61→  masi: number;
+    62→  masi20: number;
+    63→}
+    64→
+    65→export interface IntradayPoint {
+    66→  /** HH:mm label. */
+    67→  time: string;
+    68→  masi: number;
+    69→  masi20: number;
+    70→  volumeM: number; // turnover in millions MAD
+    71→}
+    72→
+    73→export type PositionSide = "long" | "short";
+    74→
+    75→export interface Position {
+    76→  id: string;
+    77→  ticker: string;
+    78→  name: string;
+    79→  sector: BvcSector;
+    80→  side: PositionSide;
+    81→  qty: number;
+    82→  avgPrice: number;
+    83→  last: number;
+    84→  /** Days since the position was opened. */
+    85→  daysHeld: number;
+    86→}
+    87→
+    88→export interface FxPoint {
+    89→  date: string; // ISO short
+    90→  eurMad: number;
+    91→  usdMad: number;
+    92→  gbpMad: number;
+    93→}
+    94→
+    95→export interface Commodity {
+    96→  id: string;
+    97→  name: string;
+    98→  unit: string;
+    99→  price: number;
+   100→  prevClose: number;
+   101→  chgPct: number;
+   102→  ytdPct: number;
+   103→  /** HarchCorp notional exposure in millions MAD. */
+   104→  exposureM: number;
+   105→  series30d: number[];
+   106→}
+   107→
+   108→export interface YieldCurvePoint {
+   109→  tenor: string;
+   110→  tenorMonths: number;
+   111→  yield: number;
+   112→  prevYield: number;
+   113→}
+   114→
+   115→export interface CorporateBond {
+   116→  isin: string;
+   117→  issuer: string;
+   118→  sector: BvcSector;
+   119→  coupon: number;
+   120→  maturity: string; // ISO short
+   121→  price: number;
+   122→  yield: number;
+   123→  rating: string;
+   124→  amountM: number; // outstanding in millions MAD
+   125→}
+   126→
+   127→/* ------------------------------------------------------------------ */
+   128→/*  Seeded PRNG (deterministic)                                       */
+   129→/* ------------------------------------------------------------------ */
+   130→
+   131→/** Mulberry32 — tiny deterministic PRNG so mock data is stable per build. */
+   132→function mulberry32(seed: number): () => number {
+   133→  let a = seed >>> 0;
+   134→  return () => {
+   135→    a = (a + 0x6d2b79f5) >>> 0;
+   136→    let t = a;
+   137→    t = Math.imul(t ^ (t >>> 15), t | 1);
+   138→    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+   139→    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+   140→  };
+   141→}
+   142→
+   143→/** Build a 30-trading-day series anchored at a target close. */
+   144→function buildSeries30d(seed: number, endPrice: number, dailyVolPct: number): number[] {
+   145→  const rng = mulberry32(seed);
+   146→  const out: number[] = [];
+   147→  // Walk backwards from endPrice to day 0 with mean-reverting noise.
+   148→  let p = endPrice;
+   149→  for (let i = 0; i < 30; i++) {
+   150→    out.unshift(p);
+   151→    const shock = (rng() - 0.5) * 2 * (p * dailyVolPct) / 100;
+   152→    p = Math.max(0.5, p - shock);
+   153→  }
+   154→  return out;
+   155→}
+   156→
+   157→function isoDaysAgo(days: number): string {
+   158→  const d = new Date();
+   159→  d.setDate(d.getDate() - days);
+   160→  return d.toISOString().slice(0, 10);
+   161→}
+   162→
+   163→/* ------------------------------------------------------------------ */
+   164→/*  MASI index — 30d + intraday                                       */
+   165→/* ------------------------------------------------------------------ */
+   166→
+   167→function buildMasi30d(): IndexPoint[] {
+   168→  const rng = mulberry32(20250117);
+   169→  const out: IndexPoint[] = [];
+   170→  let masi = 13850;
+   171→  let masi20 = 1455;
+   172→  for (let i = 29; i >= 0; i--) {
+   173→    const date = isoDaysAgo(i);
+   174→    masi = masi + (rng() - 0.45) * 35 + Math.sin(i / 4) * 6;
+   175→    masi20 = masi20 + (rng() - 0.45) * 4 + Math.sin(i / 5) * 1.2;
+   176→    out.push({
+   177→      date,
+   178→      masi: Math.round(masi * 100) / 100,
+   179→      masi20: Math.round(masi20 * 100) / 100,
+   180→    });
+   181→  }
+   182→  return out;
+   183→}
+   184→
+   185→export const masi30d: IndexPoint[] = buildMasi30d();
+   186→
+   187→/** Latest snapshot from the 30d series. */
+   188→export const masiLatest: IndexPoint = masi30d[masi30d.length - 1];
+   189→export const masiPrevClose: IndexPoint = masi30d[masi30d.length - 2];
+   190→
+   191→function buildMasiIntraday(): IntradayPoint[] {
+   192→  const rng = mulberry32(98765);
+   193→  const out: IntradayPoint[] = [];
+   194→  // BVC trading session: 09:00 – 17:00 with 15-min ticks.
+   195→  const baseMasi = masiLatest.masi - 12;
+   196→  const baseMasi20 = masiLatest.masi20 - 1.5;
+   197→  for (let h = 9; h < 17; h++) {
+   198→    for (const m of [0, 15, 30, 45]) {
+   199→      if (h === 9 && m === 0) continue;
+   200→      const label = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+   201→      const t = (h - 9) * 4 + m / 15;
+   202→      const drift = Math.sin(t / 6) * 4 + (rng() - 0.5) * 9;
+   203→      const turnover = 120 + (rng() * 90) + (t > 16 ? 80 : 0);
+   204→      out.push({
+   205→        time: label,
+   206→        masi: Math.round((baseMasi + drift) * 100) / 100,
+   207→        masi20: Math.round((baseMasi20 + drift / 8) * 100) / 100,
+   208→        volumeM: Math.round(turnover),
+   209→      });
+   210→    }
+   211→  }
+   212→  return out;
+   213→}
+   214→
+   215→export const masiIntraday: IntradayPoint[] = buildMasiIntraday();
+   216→
+   217→/** MASI session statistics derived from the intraday tape. */
+   218→export const masiSessionStats = (() => {
+   219→  const advancers = 41;
+   220→  const decliners = 27;
+   221→  const unchanged = 13;
+   222→  const totalVolumeM = masiIntraday.reduce((s, p) => s + p.volumeM, 0);
+   223→  const turnoverM = totalVolumeM;
+   224→  const high = Math.max(...masiIntraday.map((p) => p.masi));
+   225→  const low = Math.min(...masiIntraday.map((p) => p.masi));
+   226→  const open = masiIntraday[0].masi;
+   227→  const last = masiIntraday[masiIntraday.length - 1].masi;
+   228→  return {
+   229→    advancers,
+   230→    decliners,
+   231→    unchanged,
+   232→    turnoverM: Math.round(turnoverM),
+   233→    high: Math.round(high * 100) / 100,
+   234→    low: Math.round(low * 100) / 100,
+   235→    open: Math.round(open * 100) / 100,
+   236→    last: Math.round(last * 100) / 100,
+   237→    chgFromOpen: Math.round((last - open) * 100) / 100,
+   238→  };
+   239→})();
+   240→
+   241→/* ------------------------------------------------------------------ */
+   242→/*  Sector indices                                                     */
+   243→/* ------------------------------------------------------------------ */
+   244→
+   245→export const sectorIndices: SectorIndex[] = [
+   246→  {
+   247→    id: "banks",
+   248→    name: "Banking",
+   249→    value: 24850.4,
+   250→    prevClose: 24721.9,
+   251→    chgPct: 0.52,
+   252→    ytdPct: 9.4,
+   253→    series30d: buildSeries30d(101, 24850.4, 1.1),
+   254→  },
+   255→  {
+   256→    id: "telecom",
+   257→    name: "Telecom",
+   258→    value: 4120.7,
+   259→    prevClose: 4144.2,
+   260→    chgPct: -0.57,
+   261→    ytdPct: 3.1,
+   262→    series30d: buildSeries30d(102, 4120.7, 0.9),
+   263→  },
+   264→  {
+   265→    id: "realestate",
+   266→    name: "Real Estate",
+   267→    value: 1985.2,
+   268→    prevClose: 1972.0,
+   269→    chgPct: 0.67,
+   270→    ytdPct: -2.4,
+   271→    series30d: buildSeries30d(103, 1985.2, 1.6),
+   272→  },
+   273→  {
+   274→    id: "construction",
+   275→    name: "Construction",
+   276→    value: 3210.8,
+   277→    prevClose: 3218.4,
+   278→    chgPct: -0.24,
+   279→    ytdPct: 5.7,
+   280→    series30d: buildSeries30d(104, 3210.8, 1.3),
+   281→  },
+   282→  {
+   283→    id: "materials",
+   284→    name: "Materials",
+   285→    value: 8765.1,
+   286→    prevClose: 8712.5,
+   287→    chgPct: 0.60,
+   288→    ytdPct: 11.2,
+   289→    series30d: buildSeries30d(105, 8765.1, 1.0),
+   290→  },
+   291→  {
+   292→    id: "consumer",
+   293→    name: "Consumer",
+   294→    value: 6420.9,
+   295→    prevClose: 6405.0,
+   296→    chgPct: 0.25,
+   297→    ytdPct: 4.8,
+   298→    series30d: buildSeries30d(106, 6420.9, 0.7),
+   299→  },
+   300→  {
+   301→    id: "energy",
+   302→    name: "Energy",
+   303→    value: 1530.3,
+   304→    prevClose: 1542.1,
+   305→    chgPct: -0.77,
+   306→    ytdPct: -3.5,
+   307→    series30d: buildSeries30d(107, 1530.3, 1.4),
+   308→  },
+   309→  {
+   310→    id: "pharma",
+   311→    name: "Pharma",
+   312→    value: 2890.6,
+   313→    prevClose: 2880.4,
+   314→    chgPct: 0.35,
+   315→    ytdPct: 7.2,
+   316→    series30d: buildSeries30d(108, 2890.6, 0.8),
+   317→  },
+   318→];
+   319→
+   320→/* ------------------------------------------------------------------ */
+   321→/*  Moroccan listed equities (Casablanca Stock Exchange)               */
+   322→/* ------------------------------------------------------------------ */
+   323→
+   324→interface EquitySeed {
+   325→  ticker: string;
+   326→  name: string;
+   327→  sector: BvcSector;
+   328→  last: number;
+   329→  prevClose: number;
+   330→  volume: number;
+   331→  mktCapM: number;
+   332→  peRatio: number;
+   333→  high52: number;
+   334→  low52: number;
+   335→}
+   336→
+   337→const equitySeeds: EquitySeed[] = [
+   338→  { ticker: "ATW", name: "Attijariwafa Bank", sector: "Banking", last: 612.5, prevClose: 608.4, volume: 48200, mktCapM: 105200, peRatio: 11.2, high52: 638.0, low52: 472.0 },
+   339→  { ticker: "IAM", name: "Maroc Telecom", sector: "Telecom", last: 89.4, prevClose: 89.9, volume: 312000, mktCapM: 75800, peRatio: 14.6, high52: 96.2, low52: 78.5 },
+   340→  { ticker: "BOA", name: "Bank of Africa", sector: "Banking", last: 178.2, prevClose: 175.8, volume: 124000, mktCapM: 41200, peRatio: 9.8, high52: 192.0, low52: 142.0 },
+   341→  { ticker: "CIH", name: "CIH Bank", sector: "Banking", last: 268.0, prevClose: 263.5, volume: 18600, mktCapM: 9800, peRatio: 12.4, high52: 281.0, low52: 198.0 },
+   342→  { ticker: "LBV", name: "Label'Vie", sector: "Consumer", last: 1245.0, prevClose: 1232.0, volume: 4200, mktCapM: 14800, peRatio: 18.2, high52: 1320.0, low52: 980.0 },
+   343→  { ticker: "OLC", name: "LesieurCristal", sector: "Consumer", last: 168.5, prevClose: 170.2, volume: 8900, mktCapM: 5600, peRatio: 10.5, high52: 184.0, low52: 138.0 },
+   344→  { ticker: "MNG", name: "Managem", sector: "Materials", last: 132.8, prevClose: 130.5, volume: 42100, mktCapM: 7200, peRatio: 8.4, high52: 148.0, low52: 102.0 },
+   345→  { ticker: "LHM", name: "LafargeHolcim Maroc", sector: "Construction", last: 1820.0, prevClose: 1812.0, volume: 3100, mktCapM: 14400, peRatio: 15.7, high52: 1980.0, low52: 1620.0 },
+   346→  { ticker: "CFG", name: "CFG Bank", sector: "Banking", last: 245.0, prevClose: 244.5, volume: 9800, mktCapM: 4200, peRatio: 11.0, high52: 262.0, low52: 198.0 },
+   347→  { ticker: "ADH", name: "Addoha", sector: "Real Estate", last: 78.5, prevClose: 77.2, volume: 64200, mktCapM: 6800, peRatio: 7.8, high52: 92.0, low52: 64.0 },
+   348→  { ticker: "RIS", name: "Risma", sector: "Real Estate", last: 145.2, prevClose: 146.8, volume: 12400, mktCapM: 3200, peRatio: 13.2, high52: 168.0, low52: 118.0 },
+   349→  { ticker: "TQM", name: "Tourest", sector: "Consumer", last: 95.4, prevClose: 94.1, volume: 7200, mktCapM: 2800, peRatio: 16.8, high52: 108.0, low52: 76.0 },
+   350→  { ticker: "TIM", name: "Timar", sector: "Construction", last: 56.8, prevClose: 57.4, volume: 18900, mktCapM: 1500, peRatio: 9.1, high52: 64.0, low52: 42.0 },
+   351→  { ticker: "CDM", name: "Crédit du Maroc", sector: "Banking", last: 198.6, prevClose: 196.2, volume: 5400, mktCapM: 3600, peRatio: 10.7, high52: 218.0, low52: 162.0 },
+   352→  { ticker: "SGT", name: "Saga Africa", sector: "Tech", last: 312.0, prevClose: 305.5, volume: 2800, mktCapM: 1900, peRatio: 22.4, high52: 348.0, low52: 218.0 },
+   353→  { ticker: "M2M", name: "M2M Group", sector: "Tech", last: 218.5, prevClose: 222.0, volume: 6800, mktCapM: 2400, peRatio: 19.6, high52: 252.0, low52: 168.0 },
+   354→  { ticker: "DIS", name: "Discom", sector: "Tech", last: 95.8, prevClose: 96.4, volume: 11200, mktCapM: 1200, peRatio: 14.2, high52: 108.0, low52: 74.0 },
+   355→  { ticker: "OCP", name: "OCP Group", sector: "Materials", last: 198.4, prevClose: 196.8, volume: 88500, mktCapM: 86400, peRatio: 13.9, high52: 218.0, low52: 158.0 },
+   356→];
+   357→
+   358→export const moroccanEquities: Equity[] = equitySeeds.map((s, i) => {
+   359→  const chgPct = Math.round(((s.last - s.prevClose) / s.prevClose) * 10000) / 100;
+   360→  const series30d = buildSeries30d(200 + i, s.last, 1.4);
+   361→  return { ...s, chgPct, series30d };
+   362→});
+   363→
+   364→/* ------------------------------------------------------------------ */
+   365→/*  Session movers — top gainers / losers (derived from equities)      */
+   366→/* ------------------------------------------------------------------ */
+   367→
+   368→export const topGainers = [...moroccanEquities]
+   369→  .sort((a, b) => b.chgPct - a.chgPct)
+   370→  .slice(0, 6);
+   371→
+   372→export const topLosers = [...moroccanEquities]
+   373→  .sort((a, b) => a.chgPct - b.chgPct)
+   374→  .slice(0, 6);
+   375→
+   376→export const mostActive = [...moroccanEquities]
+   377→  .sort((a, b) => b.volume - a.volume)
+   378→  .slice(0, 6);
+   379→
+   380→/* ------------------------------------------------------------------ */
+   381→/*  HarchCorp open positions                                           */
+   382→/* ------------------------------------------------------------------ */
+   383→
+   384→interface PositionSeed {
+   385→  id: string;
+   386→  ticker: string;
+   387→  name: string;
+   388→  sector: BvcSector;
+   389→  side: PositionSide;
+   390→  qty: number;
+   391→  avgPrice: number;
+   392→  last: number;
+   393→  daysHeld: number;
+   394→}
+   395→
+   396→const positionSeeds: PositionSeed[] = [
+   397→  { id: "POS-0001", ticker: "ATW", name: "Attijariwafa Bank", sector: "Banking", side: "long", qty: 42000, avgPrice: 582.4, last: 612.5, daysHeld: 38 },
+   398→  { id: "POS-0002", ticker: "IAM", name: "Maroc Telecom", sector: "Telecom", side: "long", qty: 320000, avgPrice: 86.2, last: 89.4, daysHeld: 21 },
+   399→  { id: "POS-0003", ticker: "BOA", name: "Bank of Africa", sector: "Banking", side: "long", qty: 145000, avgPrice: 168.5, last: 178.2, daysHeld: 64 },
+   400→  { id: "POS-0004", ticker: "OCP", name: "OCP Group", sector: "Materials", side: "long", qty: 96000, avgPrice: 184.0, last: 198.4, daysHeld: 52 },
+   401→  { id: "POS-0005", ticker: "LHM", name: "LafargeHolcim Maroc", sector: "Construction", side: "long", qty: 8200, avgPrice: 1885.0, last: 1820.0, daysHeld: 17 },
+   402→  { id: "POS-0006", ticker: "LBV", name: "Label'Vie", sector: "Consumer", side: "long", qty: 5400, avgPrice: 1185.0, last: 1245.0, daysHeld: 28 },
+   403→  { id: "POS-0007", ticker: "MNG", name: "Managem", sector: "Materials", side: "long", qty: 78000, avgPrice: 124.5, last: 132.8, daysHeld: 44 },
+   404→  { id: "POS-0008", ticker: "ADH", name: "Addoha", sector: "Real Estate", side: "short", qty: 180000, avgPrice: 82.6, last: 78.5, daysHeld: 12 },
+   405→  { id: "POS-0009", ticker: "OLC", name: "LesieurCristal", sector: "Consumer", side: "long", qty: 28000, avgPrice: 174.2, last: 168.5, daysHeld: 9 },
+   406→  { id: "POS-0010", ticker: "CIH", name: "CIH Bank", sector: "Banking", side: "long", qty: 22000, avgPrice: 254.0, last: 268.0, daysHeld: 73 },
+   407→  { id: "POS-0011", ticker: "RIS", name: "Risma", sector: "Real Estate", side: "short", qty: 42000, avgPrice: 138.5, last: 145.2, daysHeld: 6 },
+   408→];
+   409→
+   410→export const positions: Position[] = positionSeeds.map((s) => ({ ...s }));
+   411→
+   412→/** Compute M2M P&L for a position (long: (last-avg)*qty; short: (avg-last)*qty). */
+   413→export function positionPnl(p: Position): number {
+   414→  const dir = p.side === "long" ? 1 : -1;
+   415→  return Math.round((p.last - p.avgPrice) * p.qty * dir * 100) / 100;
+   416→}
+   417→
+   418→export function positionPnlPct(p: Position): number {
+   419→  const dir = p.side === "long" ? 1 : -1;
+   420→  return Math.round(((p.last - p.avgPrice) * dir / p.avgPrice) * 10000) / 100;
+   421→}
+   422→
+   423→export function positionExposure(p: Position): number {
+   424→  return Math.round(p.qty * p.last * 100) / 100;
+   425→}
+   426→
+   427→export function positionCost(p: Position): number {
+   428→  return Math.round(p.qty * p.avgPrice * 100) / 100;
+   429→}
+   430→
+   431→/** Aggregate position summary. */
+   432→export const positionsSummary = (() => {
+   433→  const totalExposure = positions.reduce((s, p) => s + positionExposure(p), 0);
+   434→  const totalCost = positions.reduce((s, p) => s + positionCost(p), 0);
+   435→  const totalPnl = positions.reduce((s, p) => s + positionPnl(p), 0);
+   436→  const longExposure = positions
+   437→    .filter((p) => p.side === "long")
+   438→    .reduce((s, p) => s + positionExposure(p), 0);
+   439→  const shortExposure = positions
+   440→    .filter((p) => p.side === "short")
+   441→    .reduce((s, p) => s + positionExposure(p), 0);
+   442→  const winners = positions.filter((p) => positionPnl(p) > 0).length;
+   443→  const losers = positions.filter((p) => positionPnl(p) <= 0).length;
+   444→  return {
+   445→    totalExposure: Math.round(totalExposure),
+   446→    totalCost: Math.round(totalCost),
+   447→    totalPnl: Math.round(totalPnl),
+   448→    totalPnlPct: Math.round((totalPnl / totalCost) * 10000) / 100,
+   449→    longExposure: Math.round(longExposure),
+   450→    shortExposure: Math.round(shortExposure),
+   451→    longPct: Math.round((longExposure / (longExposure + shortExposure)) * 1000) / 10,
+   452→    shortPct: Math.round((shortExposure / (longExposure + shortExposure)) * 1000) / 10,
+   453→    winners,
+   454→    losers,
+   455→    count: positions.length,
+   456→  };
+   457→})();
+   458→
+   459→/** Sector exposure breakdown for positions. */
+   460→export interface SectorExposure {
+   461→  sector: BvcSector;
+   462→  exposure: number;
+   463→  pnl: number;
+   464→  pct: number;
+   465→}
+   466→
+   467→export const sectorExposures: SectorExposure[] = (() => {
+   468→  const map = new Map<BvcSector, { exposure: number; pnl: number }>();
+   469→  for (const p of positions) {
+   470→    const cur = map.get(p.sector) ?? { exposure: 0, pnl: 0 };
+   471→    cur.exposure += positionExposure(p);
+   472→    cur.pnl += positionPnl(p);
+   473→    map.set(p.sector, cur);
+   474→  }
+   475→  const total = [...map.values()].reduce((s, v) => s + v.exposure, 0);
+   476→  return [...map.entries()]
+   477→    .map(([sector, v]) => ({
+   478→      sector,
+   479→      exposure: Math.round(v.exposure),
+   480→      pnl: Math.round(v.pnl),
+   481→      pct: Math.round((v.exposure / total) * 1000) / 10,
+   482→    }))
+   483→    .sort((a, b) => b.exposure - a.exposure);
+   484→})();
+   485→
+   486→/* ------------------------------------------------------------------ */
+   487→/*  MAD FX (EUR/MAD, USD/MAD, GBP/MAD) — 30d                          */
+   488→/* ------------------------------------------------------------------ */
+   489→
+   490→function buildFx30d(): FxPoint[] {
+   491→  const rng = mulberry32(424242);
+   492→  const out: FxPoint[] = [];
+   493→  let eur = 10.82;
+   494→  let usd = 10.02;
+   495→  let gbp = 12.65;
+   496→  for (let i = 29; i >= 0; i--) {
+   497→    eur = eur + (rng() - 0.48) * 0.025 + Math.sin(i / 5) * 0.008;
+   498→    usd = usd + (rng() - 0.5) * 0.03 + Math.sin(i / 4) * 0.012;
+   499→    gbp = gbp + (rng() - 0.47) * 0.04 + Math.sin(i / 6) * 0.015;
+   500→    out.push({
+   501→      date: isoDaysAgo(i),
+   502→      eurMad: Math.round(eur * 10000) / 10000,
+   503→      usdMad: Math.round(usd * 10000) / 10000,
+   504→      gbpMad: Math.round(gbp * 10000) / 10000,
+   505→    });
+   506→  }
+   507→  return out;
+   508→}
+   509→
+   510→export const fx30d: FxPoint[] = buildFx30d();
+   511→export const fxLatest: FxPoint = fx30d[fx30d.length - 1];
+   512→export const fxPrevClose: FxPoint = fx30d[fx30d.length - 2];
+   513→
+   514→export interface FxRateMeta {
+   515→  pair: string;
+   516→  value: number;
+   517→  prevClose: number;
+   518→  chgPct: number;
+   519→  ytdPct: number;
+   520→}
+   521→
+   522→export const fxRates: FxRateMeta[] = [
+   523→  {
+   524→    pair: "EUR/MAD",
+   525→    value: fxLatest.eurMad,
+   526→    prevClose: fxPrevClose.eurMad,
+   527→    chgPct: Math.round(((fxLatest.eurMad - fxPrevClose.eurMad) / fxPrevClose.eurMad) * 10000) / 100,
+   528→    ytdPct: 1.4,
+   529→  },
+   530→  {
+   531→    pair: "USD/MAD",
+   532→    value: fxLatest.usdMad,
+   533→    prevClose: fxPrevClose.usdMad,
+   534→    chgPct: Math.round(((fxLatest.usdMad - fxPrevClose.usdMad) / fxPrevClose.usdMad) * 10000) / 100,
+   535→    ytdPct: -0.8,
+   536→  },
+   537→  {
+   538→    pair: "GBP/MAD",
+   539→    value: fxLatest.gbpMad,
+   540→    prevClose: fxPrevClose.gbpMad,
+   541→    chgPct: Math.round(((fxLatest.gbpMad - fxPrevClose.gbpMad) / fxPrevClose.gbpMad) * 10000) / 100,
+   542→    ytdPct: 2.1,
+   543→  },
+   544→];
+   545→
+   546→/** Bank Al-Maghrib policy rate (key rate). */
+   547→export const bamKeyRate = {
+   548→  current: 2.75,
+   549→  previous: 2.50,
+   550→  changeBps: 25,
+   551→  effectiveDate: "2024-12-19",
+   552→  nextMeeting: "2025-03-25",
+   553→  inflation: 1.2,
+   554→  inflationTarget: 2.0,
+   555→};
+   556→
+   557→/** MAD nominal effective exchange rate (index, base 100 = 2020). */
+   558→export const madStrength = {
+   559→  index: 104.8,
+   560→  prev: 103.6,
+   561→  chgPct: 1.16,
+   562→  ytdPct: 2.4,
+   563→  dxyCorrelation: -0.62,
+   564→};
+   565→
+   566→/* ------------------------------------------------------------------ */
+   567→/*  Commodities exposure board                                         */
+   568→/* ------------------------------------------------------------------ */
+   569→
+   570→interface CommoditySeed {
+   571→  id: string;
+   572→  name: string;
+   573→  unit: string;
+   574→  price: number;
+   575→  prevClose: number;
+   576→  ytdPct: number;
+   577→  exposureM: number;
+   578→}
+   579→
+   580→const commoditySeeds: CommoditySeed[] = [
+   581→  { id: "PHOS", name: "Phosphate Rock", unit: "USD/t", price: 385.0, prevClose: 378.5, ytdPct: 12.4, exposureM: 18200 },
+   582→  { id: "BRENT", name: "Brent Crude", unit: "USD/bbl", price: 78.42, prevClose: 79.85, ytdPct: -3.2, exposureM: 9400 },
+   583→  { id: "GOLD", name: "Gold (XAU)", unit: "USD/oz", price: 2648.0, prevClose: 2631.5, ytdPct: 24.6, exposureM: 4600 },
+   584→  { id: "WHEAT", name: "Wheat (CBOT)", unit: "USD/bu", price: 5.82, prevClose: 5.74, ytdPct: -8.5, exposureM: 2100 },
+   585→  { id: "NGAS", name: "Natural Gas", unit: "USD/MMBtu", price: 3.18, prevClose: 3.05, ytdPct: 18.4, exposureM: 1800 },
+   586→  { id: "SILVER", name: "Silver (XAG)", unit: "USD/oz", price: 30.8, prevClose: 30.4, ytdPct: 16.2, exposureM: 1200 },
+   587→];
+   588→
+   589→export const commodities: Commodity[] = commoditySeeds.map((s, i) => {
+   590→  const chgPct = Math.round(((s.price - s.prevClose) / s.prevClose) * 10000) / 100;
+   591→  const series30d = buildSeries30d(700 + i, s.price, 2.2);
+   592→  return { ...s, chgPct, series30d };
+   593→});
+   594→
+   595→/* ------------------------------------------------------------------ */
+   596→/*  Yield curve + corporate bonds                                      */
+   597→/* ------------------------------------------------------------------ */
+   598→
+   599→export const yieldCurve: YieldCurvePoint[] = [
+   600→  { tenor: "13W", tenorMonths: 3, yield: 2.48, prevYield: 2.45 },
+   601→  { tenor: "26W", tenorMonths: 6, yield: 2.62, prevYield: 2.58 },
+   602→  { tenor: "52W", tenorMonths: 12, yield: 2.81, prevYield: 2.75 },
+   603→  { tenor: "2Y", tenorMonths: 24, yield: 2.95, prevYield: 2.88 },
+   604→  { tenor: "5Y", tenorMonths: 60, yield: 3.18, prevYield: 3.12 },
+   605→  { tenor: "10Y", tenorMonths: 120, yield: 3.42, prevYield: 3.36 },
+   606→  { tenor: "15Y", tenorMonths: 180, yield: 3.58, prevYield: 3.52 },
+   607→];
+   608→
+   609→export const corporateBonds: CorporateBond[] = [
+   610→  { isin: "MA0000018ATW", issuer: "Attijariwafa Bank", sector: "Banking", coupon: 3.45, maturity: "2028-04-15", price: 101.4, yield: 3.18, rating: "A+", amountM: 1200 },
+   611→  { isin: "MA0000019BOA", issuer: "Bank of Africa", sector: "Banking", coupon: 3.60, maturity: "2029-06-10", price: 99.8, yield: 3.62, rating: "A", amountM: 850 },
+   612→  { isin: "MA0000020OCP", issuer: "OCP Group", sector: "Materials", coupon: 3.85, maturity: "2031-03-22", price: 102.6, yield: 3.51, rating: "A-", amountM: 2400 },
+   613→  { isin: "MA0000021IAM", issuer: "Maroc Telecom", sector: "Telecom", coupon: 3.30, maturity: "2027-09-30", price: 100.2, yield: 3.26, rating: "A+", amountM: 900 },
+   614→  { isin: "MA0000022LHM", issuer: "LafargeHolcim Maroc", sector: "Construction", coupon: 3.70, maturity: "2030-12-01", price: 100.9, yield: 3.54, rating: "A", amountM: 600 },
+   615→  { isin: "MA0000023LBV", issuer: "Label'Vie", sector: "Consumer", coupon: 4.10, maturity: "2028-07-18", price: 98.4, yield: 4.42, rating: "BBB+", amountM: 320 },
+   616→  { isin: "MA0000024MNG", issuer: "Managem", sector: "Materials", coupon: 4.40, maturity: "2030-05-05", price: 97.2, yield: 4.82, rating: "BBB", amountM: 280 },
+   617→];
+   618→
+   619→/* ------------------------------------------------------------------ */
+   620→/*  Helpers                                                            */
+   621→/* ------------------------------------------------------------------ */
+   622→
+   623→export const sectorColor: Record<BvcSector, string> = {
+   624→  Banking: "#0ea5e9",
+   625→  Telecom: "#a855f7",
+   626→  "Real Estate": "#f59e0b",
+   627→  Construction: "#10b981",
+   628→  Materials: "#14b8a6",
+   629→  Consumer: "#ef4444",
+   630→  Energy: "#f97316",
+   631→  Pharma: "#84cc16",
+   632→  Tech: "#6366f1",
+   633→};
+   634→
+   635→export const sectorChipTint: Record<BvcSector, string> = {
+   636→  Banking: "bg-sky-50 text-sky-700 ring-sky-200",
+   637→  Telecom: "bg-violet-50 text-violet-700 ring-violet-200",
+   638→  "Real Estate": "bg-amber-50 text-amber-700 ring-amber-200",
+   639→  Construction: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+   640→  Materials: "bg-teal-50 text-teal-700 ring-teal-200",
+   641→  Consumer: "bg-rose-50 text-rose-700 ring-rose-200",
+   642→  Energy: "bg-orange-50 text-orange-700 ring-orange-200",
+   643→  Pharma: "bg-lime-50 text-lime-700 ring-lime-200",
+   644→  Tech: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+   645→};
+   646→
+   647→export function formatMAD(n: number, dp = 2): string {
+   648→  return n.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+   649→}
+   650→
+   651→export function formatCompactMAD(n: number): string {
+   652→  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}B`;
+   653→  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}M`;
+   654→  return `${Math.round(n)}`;
+   655→}
+   656→
+   657→export function formatVolume(n: number): string {
+   658→  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+   659→  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+   660→  return `${n}`;
+   661→}
+   662→
+   663→export function chgColor(chgPct: number): string {
+   664→  if (chgPct > 0) return "text-emerald-700";
+   665→  if (chgPct < 0) return "text-rose-700";
+   666→  return "text-slate-500";
+   667→}
+   668→
+   669→export function chgBgClass(chgPct: number): string {
+   670→  if (chgPct > 0) return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+   671→  if (chgPct < 0) return "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
+   672→  return "bg-slate-50 text-slate-600 ring-1 ring-slate-200";
+   673→}
+   674→
+   675→/** Heat color for sector heatmap tiles (red-green diverging). */
+   676→export function heatColor(chgPct: number, max: number = 1.0): string {
+   677→  const t = Math.max(-1, Math.min(1, chgPct / (max * 1.2)));
+   678→  if (t > 0) {
+   679→    const alpha = 0.18 + t * 0.55;
+   680→    return `rgba(16, 185, 129, ${alpha.toFixed(2)})`;
+   681→  } else if (t < 0) {
+   682→    const alpha = 0.18 + Math.abs(t) * 0.55;
+   683→    return `rgba(225, 29, 72, ${alpha.toFixed(2)})`;
+   684→  }
+   685→  return "rgba(148, 163, 184, 0.12)";
+   686→}
+   687→
