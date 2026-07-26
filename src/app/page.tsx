@@ -376,6 +376,34 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── How it works (pipeline) ─── */}
+      <section style={{ background: PROD.white, borderTop: `1px solid ${PROD.border}`, borderBottom: `1px solid ${PROD.border}`, padding: "80px 32px" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 56 }}>
+            <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 12 }}>
+              From a media mention to your WhatsApp in under 5 minutes.
+            </h2>
+            <p style={{ fontSize: 16, color: PROD.body, maxWidth: 620, margin: "0 auto" }}>
+              Here's the pipeline that powers Harch Atelier.
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 32 }}>
+            {[
+              { num: "01", title: "We monitor", desc: "30+ Moroccan & African media sources, social platforms, and 8 AI engines — scanned 24/7 in French, Arabic & English." },
+              { num: "02", title: "HarchIQ analyzes", desc: "Every mention is classified by HarchIQ, our trainable AI. Positive / neutral / negative breakdowns per entity, topic, and source." },
+              { num: "03", title: "We detect spikes", desc: "When negative sentiment spikes on a topic, the crisis pipeline triggers — severity scored, source tiered, impact estimated." },
+              { num: "04", title: "We alert you", desc: "You get a WhatsApp alert within 5 minutes — before it becomes a crisis. Plus a daily 7:00 AM digest and monthly PDF report." },
+            ].map((step) => (
+              <div key={step.num} style={{ position: "relative", paddingLeft: 0 }}>
+                <div style={{ fontSize: 40, fontWeight: 800, color: PROD.green, opacity: 0.18, lineHeight: 1, marginBottom: 8 }}>{step.num}</div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: PROD.black, marginBottom: 8 }}>{step.title}</h3>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: PROD.body }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── Pricing ─── */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "40px 32px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
