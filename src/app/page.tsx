@@ -504,6 +504,113 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── HARCH 100 Ranking ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "40px 32px 80px" }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 12 }}>
+            Morocco's most reputable companies.
+          </h2>
+          <p style={{ fontSize: 16, color: PROD.body, maxWidth: 560, margin: "0 auto" }}>
+            The HARCH 100 — live reputation rankings, updated daily from 30+ media sources + 8 AI engines.
+          </p>
+        </div>
+        <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${PROD.border}`, background: PROD.white }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: "#F8F8F8", borderBottom: `1px solid ${PROD.border}` }}>
+                {["Rank", "Company", "Score", "30d Trend", "Sentiment"].map((h) => (
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { rank: 1, company: "OCP Group", score: 89, trend: "+2.1", sent: "positive" },
+                { rank: 2, company: "Attijariwafa Bank", score: 86, trend: "+0.8", sent: "positive" },
+                { rank: 3, company: "Maroc Telecom", score: 84, trend: "-0.3", sent: "neutral" },
+                { rank: 4, company: "BMCE Bank of Africa", score: 82, trend: "+1.4", sent: "positive" },
+                { rank: 5, company: "HarchCorp", score: 82, trend: "+2.1", sent: "positive" },
+                { rank: 6, company: "Label'Vie", score: 78, trend: "stable", sent: "neutral" },
+                { rank: 7, company: "CIH Bank", score: 76, trend: "+0.5", sent: "positive" },
+                { rank: 8, company: "LafargeHolcim Maroc", score: 74, trend: "-1.2", sent: "negative" },
+              ].map((row) => (
+                <tr key={row.rank} style={{ borderBottom: `1px solid ${PROD.border}`, transition: "background 0.15s" }} className="hover:bg-slate-50">
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: PROD.muted, fontFamily: "monospace" }}>#{row.rank}</td>
+                  <td style={{ padding: "12px 16px", fontWeight: 600, color: PROD.black }}>{row.company}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700, color: PROD.black, minWidth: 24 }}>{row.score}</span>
+                      <div style={{ width: 60, height: 4, borderRadius: 2, background: PROD.border, overflow: "hidden" }}>
+                        <div style={{ width: `${row.score}%`, height: "100%", background: row.score >= 85 ? PROD.green : row.score >= 75 ? "#F59E0B" : "#E11D48" }} />
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "monospace", color: row.trend.startsWith("+") ? PROD.green : row.trend.startsWith("-") ? "#E11D48" : PROD.muted, fontWeight: 600 }}>{row.trend}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: row.sent === "positive" ? PROD.green : row.sent === "negative" ? "#E11D48" : PROD.muted }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: row.sent === "positive" ? PROD.green : row.sent === "negative" ? "#E11D48" : PROD.muted }} />
+                      {row.sent}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ─── Board-ready PDF ─── */}
+      <section style={{ background: PROD.white, borderTop: `1px solid ${PROD.border}`, borderBottom: `1px solid ${PROD.border}`, padding: "80px 32px" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 48, alignItems: "center" }}>
+          <div style={{ flex: "1 1 400px" }}>
+            <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 16 }}>
+              A board-ready PDF, every month.
+            </h2>
+            <p style={{ fontSize: 16, lineHeight: 1.6, color: PROD.body, marginBottom: 24 }}>
+              On the 1st of every month, your board pack arrives — automatically generated, branded, and ready to forward. No slides to build. No data to compile.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {["Executive summary (1 page)", "Sentiment trends & share-of-voice (2 pages)", "Crisis watchlist + response log", "AI visibility benchmark vs competitors", "HarchIQ score + month-over-month delta"].map((f) => (
+                <div key={f} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: PROD.green, flexShrink: 0 }}>
+                    <Check style={{ width: 12, height: 12, color: PROD.white }} />
+                  </span>
+                  <span style={{ fontSize: 14, color: PROD.body }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: "1 1 300px" }}>
+            <div style={{ background: PROD.white, borderRadius: 12, padding: 24, border: `1px solid ${PROD.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.06)", fontFamily: "serif" }}>
+              <div style={{ fontSize: 9, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Harch Atelier · Monthly Report</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: PROD.black, marginBottom: 2 }}>HarchCorp</div>
+              <div style={{ fontSize: 11, color: PROD.muted, marginBottom: 16 }}>July 2025 · Confidential</div>
+              <div style={{ height: 1, background: PROD.border, marginBottom: 16 }} />
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: PROD.body }}>HarchIQ Score</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: PROD.green, fontFamily: "monospace" }}>82 (A)</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: PROD.body }}>Media Mentions</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: PROD.black, fontFamily: "monospace" }}>247</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: PROD.body }}>Negative Share</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#D97706", fontFamily: "monospace" }}>14%</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+                <span style={{ fontSize: 11, color: PROD.body }}>Crisis Alerts</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: PROD.green, fontFamily: "monospace" }}>0</span>
+              </div>
+              <div style={{ height: 1, background: PROD.border, marginBottom: 12 }} />
+              <div style={{ fontSize: 10, color: PROD.muted, lineHeight: 1.5 }}>
+                Executive summary: Reputation stable month-over-month. HarchIQ up 2.1 points...
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Pricing ─── */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "40px 32px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
@@ -635,6 +742,32 @@ export default function LandingPage() {
           >
             See live dashboard
           </Link>
+        </div>
+      </section>
+
+      {/* ─── Free Reputation Audit ─── */}
+      <section style={{ background: `linear-gradient(135deg, ${PROD.green}08, ${PROD.slate}08)`, padding: "80px 32px" }}>
+        <div style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: PROD.black, marginBottom: 12 }}>
+            Get your free reputation audit.
+          </h2>
+          <p style={{ fontSize: 16, color: PROD.body, marginBottom: 32 }}>
+            We'll run HarchIQ on your brand and send you a 5-page reputation report — free, no commitment.
+          </p>
+          <form
+            onSubmit={(e) => { e.preventDefault(); window.location.href = "/login"; }}
+            style={{ display: "flex", flexDirection: "column", gap: 12, background: PROD.white, padding: 24, borderRadius: 16, border: `1px solid ${PROD.border}`, boxShadow: "0 4px 24px rgba(0,0,0,0.04)" }}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <input required type="text" placeholder="Full name" style={{ height: 44, padding: "0 14px", borderRadius: 10, border: `1px solid ${PROD.border}`, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+              <input required type="text" placeholder="Company" style={{ height: 44, padding: "0 14px", borderRadius: 10, border: `1px solid ${PROD.border}`, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <input required type="email" placeholder="Work email" style={{ height: 44, padding: "0 14px", borderRadius: 10, border: `1px solid ${PROD.border}`, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            <button type="submit" style={{ height: 44, background: PROD.green, color: PROD.white, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              Get my free audit <ArrowRight style={{ width: 16, height: 16 }} />
+            </button>
+            <p style={{ fontSize: 11, color: PROD.muted, marginTop: 4 }}>No credit card · Report delivered within 24h · Cancel anytime</p>
+          </form>
         </div>
       </section>
 
