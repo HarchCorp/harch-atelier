@@ -28,7 +28,7 @@ export function DashboardShell({
   children,
 }: DashboardShellProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-slate-50">
       <TopBar
         accountType={accountType}
         onAccountTypeChange={onAccountTypeChange}

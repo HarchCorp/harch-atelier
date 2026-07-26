@@ -72,14 +72,14 @@ export function ReputationConsole({ brand = "HarchCorp" }: { brand?: string }) {
   const iq = data?.harchIQ;
 
   return (
-    <section className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700">
             <ShieldCheck className="h-3.5 w-3.5 text-white" />
           </span>
-          <div>
+          <div className="min-w-0">
             <h3 className="card-title">Reputation Intelligence · {brand}</h3>
             <p className="mt-0.5 text-[10px] text-slate-400">4 pillars · AI Reputation Intelligence for Africa</p>
           </div>

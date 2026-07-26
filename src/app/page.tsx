@@ -52,7 +52,7 @@ const pillars = [
 
 export default function LandingPage() {
   return (
-    <div style={{ background: PROD.bg, color: PROD.black, minHeight: "100vh" }}>
+    <div style={{ background: PROD.bg, color: PROD.black, minHeight: "100vh", overflowX: "hidden", maxWidth: "100vw" }}>
       {/* ─── Header ─── */}
       <header
         style={{
@@ -274,7 +274,7 @@ export default function LandingPage() {
           {/* Mock dashboard content */}
           <div style={{ padding: 20 }}>
             {/* Mock KPI row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 16 }}>
               {[
                 { label: "HarchIQ Score", value: "82", unit: "/100", color: PROD.green, trend: "+2.1" },
                 { label: "Media Mentions", value: "247", unit: "30d", color: PROD.slate, trend: "+12.3%" },
@@ -291,8 +291,8 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            {/* Mock chart row */}
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
+            {/* Mock chart row — stacks on mobile */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
               <div style={{ border: `1px solid ${PROD.border}`, borderRadius: 10, padding: 14, height: 160 }}>
                 <div style={{ fontSize: 10, fontWeight: 600, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Sentiment Trend · 30 days</div>
                 <svg viewBox="0 0 300 100" style={{ width: "100%", height: 80 }}>
@@ -325,7 +325,7 @@ export default function LandingPage() {
 
       {/* ─── Trust badges ─── */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "0 32px 60px" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32, alignItems: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px 24px", alignItems: "center" }}>
           {[
             { label: "SOC-2 Type II", sub: "Compliant" },
             { label: "GDPR", sub: "Ready" },
@@ -514,8 +514,9 @@ export default function LandingPage() {
             The HARCH 100 — live reputation rankings, updated daily from 30+ media sources + 8 AI engines.
           </p>
         </div>
-        <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${PROD.border}`, background: PROD.white }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <div style={{ borderRadius: 16, border: `1px solid ${PROD.border}`, background: PROD.white, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
+          <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ background: "#F8F8F8", borderBottom: `1px solid ${PROD.border}` }}>
                 {["Rank", "Company", "Score", "30d Trend", "Sentiment"].map((h) => (
@@ -556,6 +557,7 @@ export default function LandingPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -758,7 +760,7 @@ export default function LandingPage() {
             onSubmit={(e) => { e.preventDefault(); window.location.href = "/login"; }}
             style={{ display: "flex", flexDirection: "column", gap: 12, background: PROD.white, padding: 24, borderRadius: 16, border: `1px solid ${PROD.border}`, boxShadow: "0 4px 24px rgba(0,0,0,0.04)" }}
           >
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
               <input required type="text" placeholder="Full name" style={{ height: 44, padding: "0 14px", borderRadius: 10, border: `1px solid ${PROD.border}`, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
               <input required type="text" placeholder="Company" style={{ height: 44, padding: "0 14px", borderRadius: 10, border: `1px solid ${PROD.border}`, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
             </div>
