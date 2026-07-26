@@ -109,7 +109,7 @@ export default function LandingPage() {
           {/* Right side: Login + CTA */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Link
-              href="/client"
+              href="/login"
               style={{
                 fontSize: 13,
                 fontWeight: 600,
@@ -198,7 +198,7 @@ export default function LandingPage() {
 
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link
-            href="/client"
+            href="/login"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -320,6 +320,24 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ─── Trust badges ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "0 32px 60px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32, alignItems: "center" }}>
+          {[
+            { label: "SOC-2 Type II", sub: "Compliant" },
+            { label: "GDPR", sub: "Ready" },
+            { label: "2FA", sub: "Protected" },
+            { label: "EU data residency", sub: "Frankfurt" },
+            { label: "99.9% uptime", sub: "SLA" },
+          ].map((b) => (
+            <div key={b.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: PROD.slate }}>{b.label}</span>
+              <span style={{ fontSize: 10, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.sub}</span>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -549,7 +567,7 @@ export default function LandingPage() {
                 ))}
               </ul>
               <Link
-                href="/client"
+                href="/login"
                 style={{
                   display: "block",
                   textAlign: "center",
@@ -582,7 +600,7 @@ export default function LandingPage() {
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link
-            href="/client"
+            href="/login"
             style={{
               display: "inline-flex",
               alignItems: "center",
