@@ -206,7 +206,7 @@ export function ClientLogin() {
                 fontSize: 14,
                 fontWeight: 600,
                 color: PROD.white,
-                background: `linear-gradient(135deg, ${PROD.green}, ${PROD.slate})`,
+                background: PROD.green,
                 border: "none",
                 borderRadius: 10,
                 cursor: loading ? "not-allowed" : "pointer",

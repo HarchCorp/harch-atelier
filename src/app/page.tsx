@@ -241,6 +241,88 @@ export default function LandingPage() {
         </p>
       </section>
 
+      {/* ─── Media sources bar (social proof) ─── */}
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "0 32px 60px" }}>
+        <p style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 20 }}>
+          Monitoring 30+ Moroccan &amp; African media sources
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "20px 32px", opacity: 0.55 }}>
+          {["Le Matin", "L'Économiste", "Hespress", "TelQuel", "Médias24", "Aujourd'hui le Maroc", "Jeune Afrique", "The Africa Report"].map((src) => (
+            <span key={src} style={{ fontSize: 15, fontWeight: 700, color: PROD.slate, letterSpacing: "-0.01em" }}>{src}</span>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Dashboard preview mockup ─── */}
+      <section style={{ maxWidth: 1100, margin: "0 auto 80px", padding: "0 32px" }}>
+        <div
+          style={{
+            borderRadius: 16,
+            overflow: "hidden",
+            border: `1px solid ${PROD.border}`,
+            boxShadow: "0 24px 60px rgba(10,10,10,0.12), 0 8px 24px rgba(10,10,10,0.06)",
+            background: PROD.white,
+          }}
+        >
+          {/* Mock browser top bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderBottom: `1px solid ${PROD.border}`, background: "#F8F8F8" }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#FF5F57" }} />
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#FEBC2E" }} />
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#28C840" }} />
+            <span style={{ marginLeft: 12, fontSize: 11, color: PROD.muted, fontFamily: "monospace" }}>atelier.harchcorp.com/dashboard</span>
+          </div>
+          {/* Mock dashboard content */}
+          <div style={{ padding: 20 }}>
+            {/* Mock KPI row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+              {[
+                { label: "HarchIQ Score", value: "82", unit: "/100", color: PROD.green, trend: "+2.1" },
+                { label: "Media Mentions", value: "247", unit: "30d", color: PROD.slate, trend: "+12.3%" },
+                { label: "Negative Share", value: "14%", unit: "", color: "#D97706", trend: "-3.2%" },
+                { label: "AI Visibility", value: "100%", unit: "8/8", color: PROD.green, trend: "stable" },
+              ].map((kpi) => (
+                <div key={kpi.label} style={{ border: `1px solid ${PROD.border}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{kpi.label}</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: PROD.black, fontFamily: "monospace" }}>{kpi.value}</span>
+                    <span style={{ fontSize: 10, color: PROD.muted }}>{kpi.unit}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: kpi.color, fontWeight: 600, marginTop: 2 }}>{kpi.trend}</div>
+                </div>
+              ))}
+            </div>
+            {/* Mock chart row */}
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
+              <div style={{ border: `1px solid ${PROD.border}`, borderRadius: 10, padding: 14, height: 160 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Sentiment Trend · 30 days</div>
+                <svg viewBox="0 0 300 100" style={{ width: "100%", height: 80 }}>
+                  <defs>
+                    <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={PROD.green} stopOpacity="0.25" />
+                      <stop offset="100%" stopColor={PROD.green} stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <polygon points="0,70 30,60 60,65 90,45 120,50 150,35 180,40 210,25 240,30 270,20 300,15 300,100 0,100" fill="url(#grad1)" />
+                  <polyline points="0,70 30,60 60,65 90,45 120,50 150,35 180,40 210,25 240,30 270,20 300,15" fill="none" stroke={PROD.green} strokeWidth="2" />
+                </svg>
+              </div>
+              <div style={{ border: `1px solid ${PROD.border}`, borderRadius: 10, padding: 14, height: 160 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: PROD.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>AI Engines</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {["ChatGPT", "Perplexity", "Gemini", "Claude"].map((e) => (
+                    <div key={e} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: PROD.green }} />
+                      <span style={{ fontSize: 10, color: PROD.body, flex: 1 }}>{e}</span>
+                      <span style={{ fontSize: 9, color: PROD.green, fontWeight: 600 }}>#1</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── 4 Pillars ─── */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "40px 32px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
