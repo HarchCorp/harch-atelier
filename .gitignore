@@ -9,7 +9,7 @@ worklog.md
 worklog.md
 .next
 
-# Agent data + logs (generated, not committed)
-data/
+# Agent data + logs (generated, not committed) — root /data/ only
+/data/
 agents/orchestrator.log
 agents/*.log
