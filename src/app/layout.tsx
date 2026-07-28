@@ -129,9 +129,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Organization JSON-LD is emitted by the [locale] layout (which renders
-  // <html>/<body> and a comprehensive @graph schema). The root layout is a
-  // pass-through that only wraps children, so emitting a second Organization
-  // schema here would create a duplicate JSON-LD block in the rendered HTML.
-  return <>{children}</>;
+  // Root layout renders <html>/<body> as required by Next.js App Router.
+  // The [locale] layout is a fragment (no html/body) to avoid duplication.
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${spaceMono.variable} antialiased`}>
+        {children}
+      </body>
+    </html>
+  );
 }
