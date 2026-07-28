@@ -1069,6 +1069,9 @@ export default function Harch100Page() {
         </div>
       </section>
 
+      {/* ─── Live Agent Ranking (real scraped data) ─── */}
+      <LiveAgentRanking />
+
       <AtelierFooter />
       <BackToTop />
 
@@ -1421,3 +1424,87 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: "14px 12px", fontSize: "13px", color: C.textSec,
 };
+
+/* ─── Live Agent Ranking — real scraped data from /api/harch100-live ─── */
+function LiveAgentRanking() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState("");
+
+  useEffect(() => {
+    fetch("/api/harch100-live")
+      .then((r) => r.json())
+      .then((d) => { setData(d.data || []); setSource(d.source || ""); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const C = { bg: "#FAFAFA", surface: "#FFFFFF", border: "#E5E5E5", text: "#0A0A0A", textSec: "#525252", textMuted: "#71717A", accent: "#4A5D6E", sage: "#4A7B5F", red: "#A0524B" };
+
+  return (
+    <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 32px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #4A7B5F, #4A5D6E)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <div>
+          <div style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            Live Agent Ranking
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: "4px 0 0", letterSpacing: "-0.02em" }}>
+            Real HarchIQ Scores — scraped &amp; calculated by agents
+          </h2>
+        </div>
+        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: source === "agent-live" ? "#4A7B5F15" : "#71717A15", border: `1px solid ${source === "agent-live" ? "#4A7B5F30" : "#71717A30"}`, fontSize: 11, fontWeight: 700, color: source === "agent-live" ? C.sage : C.textMuted }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: source === "agent-live" ? C.sage : C.textMuted, animation: "pulse 2s infinite" }} />
+          {source === "agent-live" ? "LIVE AGENTS" : "FALLBACK"}
+        </span>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 48, color: C.textMuted, fontSize: 13 }}>Loading live agent data…</div>
+      ) : (
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: "#F8F8F8", borderBottom: `1px solid ${C.border}` }}>
+                {["Rank", "Company", "Score", "Grade", "Trend", "Articles", "Sentiment"].map((h) => (
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row: any) => (
+                <tr key={row.rank} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: C.textMuted }}>#{row.rank}</td>
+                  <td style={{ padding: "12px 16px", fontWeight: 600, color: C.text }}>{row.name}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: C.text, minWidth: 28 }}>{row.score}</span>
+                      <div style={{ width: 60, height: 5, borderRadius: 3, background: C.border, overflow: "hidden" }}>
+                        <div style={{ width: `${row.score}%`, height: "100%", background: row.score >= 90 ? C.sage : row.score >= 75 ? "#D97706" : C.red, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: row.score >= 90 ? C.sage : row.score >= 75 ? "#D97706" : C.red }}>{row.grade}</td>
+                  <td style={{ padding: "12px 16px", fontSize: 16, color: row.trend === "up" ? C.sage : row.trend === "down" ? C.red : C.textMuted }}>{row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "→"}</td>
+                  <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono', monospace", color: C.textSec }}>{row.articles}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: row.sentiment === "positive" ? C.sage : row.sentiment === "negative" ? C.red : C.textMuted }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: row.sentiment === "positive" ? C.sage : row.sentiment === "negative" ? C.red : C.textMuted }} />
+                      {row.sentiment}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ padding: "12px 16px", background: "#F8F8F8", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textMuted, textAlign: "center" }}>
+            {source === "agent-live"
+              ? "Live data — scraped by Harch Atelier agents from Moroccan media + classified by GLM-4"
+              : "Fallback data — agents haven't run yet. Visit /api/cron/agents to trigger a cycle."}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
