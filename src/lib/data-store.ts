@@ -107,10 +107,24 @@ export const store = {
     const all = read<CrisisAlert[]>("alerts.json", []);
     return brand ? all.filter((a) => a.brand.toLowerCase().includes(brand.toLowerCase())) : all;
   },
-  setAlerts: (alerts: CrisisAlert[]) => write("alerts.json", alerts),
+  setAlerts: (alerts: CrisisAlert[]) => {
+    // Resilience: never overwrite with empty data — keep the last known good alerts.
+    if (alerts.length === 0) {
+      const existing = read<CrisisAlert[]>("alerts.json", []);
+      if (existing.length > 0) return; // keep existing
+    }
+    write("alerts.json", alerts);
+  },
 
   getScores: () => read<HarchIQEntry[]>("scores.json", []),
-  setScores: (scores: HarchIQEntry[]) => write("scores.json", scores),
+  setScores: (scores: HarchIQEntry[]) => {
+    // Resilience: never overwrite with empty scores.
+    if (scores.length === 0) {
+      const existing = read<HarchIQEntry[]>("scores.json", []);
+      if (existing.length > 0) return;
+    }
+    write("scores.json", scores);
+  },
 
   getStatus: () => read<AgentStatus[]>("agent-status.json", []),
   setStatus: (s: AgentStatus) => {
