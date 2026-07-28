@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -41,77 +41,87 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-txt-primary: var(--text-primary);
+  --color-txt-secondary: var(--text-secondary);
+  --color-txt-dim: var(--text-dim);
+  --color-txt-muted: var(--text-muted);
+  --color-txt-faint: var(--text-faint);
+  --color-slate-accent: var(--color-accent-slate);
+  --color-sage: var(--color-success);
 }
 
 :root {
-  --radius: 0.625rem;
-  /* Premium Light Fintech — slate based */
-  --background: oklch(0.985 0.002 247);      /* slate-50 */
-  --foreground: oklch(0.21 0.03 256);        /* slate-900 */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.03 256);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.03 256);
-  --primary: oklch(0.21 0.03 256);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0.003 247);
-  --secondary-foreground: oklch(0.21 0.03 256);
-  --muted: oklch(0.97 0.003 247);
-  --muted-foreground: oklch(0.55 0.015 256);
-  --accent: oklch(0.97 0.003 247);
-  --accent-foreground: oklch(0.21 0.03 256);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0.004 247);          /* slate-200 */
-  --input: oklch(0.922 0.004 247);
-  --ring: oklch(0.708 0 0);
-  /* Chart palette — fintech semantic */
-  --chart-1: oklch(0.62 0.19 150);           /* emerald (positive) */
-  --chart-2: oklch(0.58 0.22 25);            /* red-orange (negative) */
-  --chart-3: oklch(0.55 0.13 245);           /* slate-blue (neutral) */
-  --chart-4: oklch(0.78 0.16 75);            /* amber (warning) */
-  --chart-5: oklch(0.27 0.05 256);           /* slate-800 (primary) */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.21 0.03 256);
-  --sidebar-primary: oklch(0.21 0.03 256);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0.003 247);
-  --sidebar-accent-foreground: oklch(0.21 0.03 256);
-  --sidebar-border: oklch(0.922 0.004 247);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  /* ── Unified Color Palette ── */
+  --radius: 0.75rem; /* 12px base — consistent card radius */
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
+  --card: #111111;
+  --card-foreground: #FFFFFF;
+  --popover: #111111;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFFFFF;
+  --primary-foreground: #000000;
+  --secondary: #1A1A1A;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1A1A1A;
+  --muted-foreground: #999999;
+  --accent: #8B9DAF;
+  --accent-foreground: #000000;
+  --destructive: #A0524B;
+  --border: rgba(255,255,255,0.06);
+  --input: rgba(255,255,255,0.06);
+  --ring: #8B9DAF;
+  --chart-1: #8B9DAF;
+  --chart-2: #999999;
+  --chart-3: #666666;
+  --chart-4: #4A5D6E;
+  --chart-5: #111111;
+  --sidebar: #0A0A0A;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #FFFFFF;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgba(255,255,255,0.04);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-ring: #8B9DAF;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.696 0.17 162.48);
-  --chart-2: oklch(0.645 0.246 16.439);
-  --chart-3: oklch(0.488 0.243 264.376);
-  --chart-4: oklch(0.769 0.188 70.08);
-  --chart-5: oklch(0.627 0.265 303.9);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* ── Brand Color Tokens ── */
+  --color-accent-slate: #8B9DAF;
+  --color-accent-slate-dark: #4A5D6E;
+  --color-success: #4A7B5F;
+  --color-warning: #4A5D6E;
+  --color-error: #A0524B;
+
+  /* ── Surface Scale (dark backgrounds) ── */
+  --surface-0: #0A0A0A;       /* Deepest — root body */
+  --surface-1: #0D0D0D;       /* Main content sections */
+  --surface-2: #121212;       /* Alternate section bg */
+  --surface-3: #141414;       /* Card / chart bg */
+  --surface-4: #1A1A1A;       /* Secondary surface */
+  --surface-5: #1E1E1E;       /* Elevated card */
+  --surface-6: #252525;       /* Progress bar track */
+
+  /* ── Text Scale ── */
+  --text-primary: #FFFFFF;
+  --text-secondary: #999999;
+  --text-dim: #666666;
+  --text-muted: rgba(255,255,255,0.62);
+  --text-faint: rgba(255,255,255,0.50);
+
+  /* ── Unified Animation Variables ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 0.2s;
+  --duration-normal: 0.4s;
+  --duration-slow: 0.8s;
 }
 
 @layer base {
@@ -120,90 +130,1060 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
-    font-variation-settings: "opsz" 32;
+  }
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+  ::selection {
+    background: #8B9DAF;
+    color: #000000;
+  }
+  :focus-visible {
+    outline: 2px solid rgba(139, 157, 175, 0.5);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #8B9DAF;
+    color: #000000;
+    padding: 8px 16px;
+    z-index: 9999;
+    font-size: 14px;
+    font-weight: 600;
+    transition: top var(--duration-fast) var(--ease-out-quart);
+  }
+  .skip-link:focus {
+    top: 0;
   }
 }
 
-@layer utilities {
-  /* Tabular numbers for all metrics, scores, IDs */
-  .tabular {
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
+/* ═══════════════════════════════════════════
+   RESPONSIVE SAFETY
+   ═══════════════════════════════════════════ */
+@layer base {
+  html, body {
+    max-width: 100vw;
+    overflow-x: clip;
   }
-  .card-title {
-    @apply text-[11px] font-semibold text-slate-500 uppercase tracking-wider;
+  /* Allow tables and grids inside to scroll horizontally */
+  main, [data-scroll-container] {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+  /* Prevent text overflow on mobile */
+  p, h1, h2, h3, h4, h5, h6, span, li, td, th {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+  }
+  /* Tables should not break words — they scroll instead */
+  table td, table th {
+    hyphens: manual;
+    word-break: normal;
+  }
+  /* Code blocks and pre elements — scroll horizontally instead of overflowing */
+  pre, code {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  pre {
+    -webkit-overflow-scrolling: touch; /* Smooth inertial scrolling on iOS */
+  }
+  /* Links with long URLs should break */
+  a {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  /* Scrollable containers should have smooth touch scrolling */
+  [class*="overflow-x-auto"],
+  [class*="overflow-x-scroll"],
+  .overflow-x-auto,
+  .overflow-x-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+  img, video, svg {
+    max-width: 100%;
+    height: auto;
+  }
+  /* Only apply object-fit: cover to content images, not logos/icons */
+  img[data-cover],
+  img[style*="object-fit: cover"] {
+    object-fit: cover;
+  }
+  /* Hide scrollbar utility for horizontal scroll containers */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
-/* Custom slim scrollbar for dense lists/tables */
-.harch-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: oklch(0.82 0.01 247) transparent;
+/* ═══════════════════════════════════════════
+   TOUCH TARGETS — min 44px for interactive
+   ═══════════════════════════════════════════ */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Disable hover-dependent effects on touch devices */
+  .card:hover {
+    border-color: var(--border);
+    background: var(--card);
+  }
+  .vertical-row:hover {
+    background: transparent;
+  }
+  .vertical-row:hover .vertical-arrow {
+    transform: none;
+    opacity: inherit;
+  }
+  .nav-link::after {
+    display: none;
+  }
 }
-.harch-scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+
+/* ═══════════════════════════════════════════
+   CUSTOM SCROLLBAR
+   ═══════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 5px;
 }
-.harch-scroll::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.harch-scroll::-webkit-scrollbar-thumb {
-  background-color: oklch(0.82 0.01 247);
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ═══════════════════════════════════════════
+   UNIFIED TYPOGRAPHY
+   ═══════════════════════════════════════════ */
+
+/* Section labels — always 10px, 700, 0.2em tracking, uppercase, Space Mono */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.50);
+  font-family: var(--font-space-mono), monospace;
+}
+
+/* Section titles — consistent sizing scale */
+.section-title {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+
+.section-subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 400;
+  line-height: 1.6;
+  color: #999999;
+}
+
+/* Body text — always 14px, same line-height */
+.body-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.7);
+}
+
+/* Stat numbers — always stat-mono class */
+.stat-mono {
+  font-family: var(--font-space-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Font mono tag */
+.font-mono-tag {
+  font-family: var(--font-space-mono), monospace;
+}
+
+/* Version tag */
+.version-tag {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.2);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-space-mono), monospace;
+}
+
+/* ═══════════════════════════════════════════
+   UNIFIED CARD STYLE — all cards use the same
+   ═══════════════════════════════════════════ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem; /* p-6 */
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .card {
+    padding: 2rem; /* p-8 on desktop */
+  }
+}
+@media (hover: hover) {
+  .card:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   LINK STYLES
+   ═══════════════════════════════════════════ */
+.nav-link {
+  position: relative;
+  transition: color var(--duration-normal) var(--ease-out-quart);
+}
+.nav-link:hover {
+  color: #FFFFFF;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #FFFFFF;
+  transition: width 0.35s var(--ease-out-quart);
+}
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════
+   DIVIDER
+   ═══════════════════════════════════════════ */
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s var(--ease-out-expo) forwards;
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 2.5s ease-in-out infinite;
+}
+
+@keyframes expandLine {
+  from { width: 0; }
+  to { width: 48px; }
+}
+.accent-line {
+  height: 2px;
+  background: #8B9DAF;
+  animation: expandLine 0.8s var(--ease-out-quart) forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-25%); }
+}
+
+/* ═══════════════════════════════════════════
+   VERTICAL ROW HOVER
+   ═══════════════════════════════════════════ */
+.vertical-row {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.vertical-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.vertical-row:hover .vertical-arrow {
+  transform: translateX(4px);
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════
+   GRADIENT TEXT
+   ═══════════════════════════════════════════ */
+.gradient-text {
+  background: linear-gradient(135deg, #FFFFFF 0%, #8B9DAF 50%, #FFFFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════════════════════════════════════════
+   MENU OVERLAY
+   ═══════════════════════════════════════════ */
+.menu-overlay-enter {
+  animation: menuOverlayIn var(--duration-normal) var(--ease-out-quart) forwards;
+}
+@keyframes menuOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════
+   HERO CAROUSEL
+   ═══════════════════════════════════════════ */
+.hero-carousel {
+  position: relative;
+  height: 100vh;
+  min-height: 600px;
+  overflow: hidden;
+}
+.hero-carousel-slide {
+  position: absolute;
+  inset: 0;
+  transition: opacity 1s var(--ease-out-quart);
+}
+.hero-carousel-slide.active {
+  opacity: 1;
+  z-index: 1;
+}
+.hero-carousel-slide.inactive {
+  opacity: 0;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════
+   MAP PULSE DOT
+   ═══════════════════════════════════════════ */
+@keyframes blink-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(2.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.blink-dot {
+  animation: blink-pulse 2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════
+   DATA TABLE
+   ═══════════════════════════════════════════ */
+.data-table {
+  width: 100%;
+  min-width: 500px; /* Ensures table overflows on mobile, activating overflow-x-auto scroll */
+  border-collapse: collapse;
+}
+.data-table thead th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; /* Prevent header wrapping — table scrolls instead */
+}
+.data-table tbody tr {
+  transition: background var(--duration-fast) var(--ease-out-quart);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.data-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+.data-table tbody td {
+  padding: 16px;
+  font-size: 14px;
+  color: #FFFFFF;
+  /* Allow long content to wrap inside cells on wider screens */
+  overflow-wrap: break-word;
+}
+.data-table tbody td:first-child {
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
+   MAP CONTAINER
+   ═══════════════════════════════════════════ */
+.map-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.map-container svg {
+  width: 100%;
+  height: auto;
+}
+
+/* ═══════════════════════════════════════════
+   ANNOUNCEMENT BAR
+   ═══════════════════════════════════════════ */
+.announcement-bar {
+  background: #FFFFFF;
+  color: #000000;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 8px 16px;
+  text-align: center;
+  transition: transform var(--duration-fast) var(--ease-out-quart);
+}
+.announcement-bar:hover {
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════
+   STATUS BADGE
+   ═══════════════════════════════════════════ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.status-badge-active {
+  background: rgba(255,255,255,0.08);
+  color: #FFFFFF;
+}
+.status-badge-engineering {
+  background: rgba(139,157,175,0.08);
+  color: #8B9DAF;
+}
+.status-badge-permitted {
+  background: rgba(255,255,255,0.04);
+  color: #999999;
+}
+.status-badge-design {
+  background: rgba(255,255,255,0.04);
+  color: #666666;
+}
+
+/* ═══════════════════════════════════════════
+   DOT PATTERN BACKGROUND
+   ═══════════════════════════════════════════ */
+.dot-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+/* ═══════════════════════════════════════════
+   ARTICLE PROSE
+   ═══════════════════════════════════════════ */
+.prose-article p {
+  margin-bottom: 1.5em;
+}
+.prose-article p:last-child {
+  margin-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════
+   GENERIC ACCENT GLOW — accepts CSS variable color
+   Usage: --glow-color: #8B9DAF; then .accent-glow
+   ═══════════════════════════════════════════ */
+.accent-glow {
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--glow-color, #8B9DAF) 30%, transparent),
+    0 0 60px color-mix(in srgb, var(--glow-color, #8B9DAF) 10%, transparent);
+}
+
+/* ═══════════════════════════════════════════
+   WARNING/ACCENT UTILITY — slate accent #8B9DAF
+   ═══════════════════════════════════════════ */
+.text-warning {
+  color: #8B9DAF;
+}
+.bg-warning {
+  background-color: #8B9DAF;
+}
+.border-warning {
+  border-color: #8B9DAF;
+}
+
+/* ═══════════════════════════════════════════
+   SUCCESS UTILITY — sage green #4A7B5F
+   ═══════════════════════════════════════════ */
+.text-success {
+  color: #4A7B5F;
+}
+.bg-success {
+  background-color: #4A7B5F;
+}
+
+/* ═══════════════════════════════════════════
+   ERROR UTILITY — muted red #A0524B
+   ═══════════════════════════════════════════ */
+.text-error {
+  color: #A0524B;
+}
+.bg-error {
+  background-color: #A0524B;
+}
+
+/* ═══════════════════════════════════════════
+   REDUCED MOTION — respect user preferences
+   ═══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .accent-line {
+    animation: none;
+    width: 48px;
+  }
+
+  .blink-dot,
+  .pulse-glow,
+  .animate-fade-in-up,
+  .animate-bounce-slow {
+    animation: none;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   PALANTIR-INSPIRED DESIGN SYSTEM — Sprint 8
+   ═══════════════════════════════════════════════════════════ */
+
+/* Data grid pattern — subtle grid lines like Palantir dashboards */
+.data-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Fine border card — Palantir style thin borders */
+.fine-card {
+  background: #0F0F0F;
+  border: 0.5px solid rgba(255,255,255,0.05);
+  transition: all 0.3s ease;
+}
+.fine-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  background: #121212;
+}
+
+/* Data label — uppercase, tracked, muted */
+.data-label {
+  font-family: var(--font-space-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.3);
+}
+
+/* Data value — large, bold, white */
+.data-value {
+  font-family: var(--font-inter);
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+/* Metric row — Palantir style data row */
+.metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.04);
+}
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+/* Glow accent — subtle color glow */
+.glow-accent {
+  position: relative;
+}
+.glow-accent::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(139,157,175,0.3), transparent 50%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Scan line animation — Palantir data scan effect */
+@keyframes scan-line {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.scan-line {
+  position: relative;
+  overflow: hidden;
+}
+.scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(139,157,175,0.4), transparent);
+  animation: scan-line 3s ease-in-out infinite;
+}
+
+/* Fade up animation for data reveal */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fade-up 0.6s ease-out forwards;
+}
+
+/* Data table — Palantir style */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th {
+  font-family: var(--font-space-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.3);
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+.data-table td {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  border-bottom: 0.5px solid rgba(255,255,255,0.04);
+}
+.data-table tr:hover td {
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.9);
+}
+
+/* Section divider — thin line with label */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+}
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: rgba(255,255,255,0.06);
+}
+
+/* Pulse dot — live indicator */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px currentColor; }
+  50% { opacity: 0.5; box-shadow: 0 0 12px currentColor; }
+}
+.pulse-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Mono number — for data displays */
+.mono-number {
+  font-family: var(--font-space-mono);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════
+   HARCHOS — Terminal cursor blink (real CRT)
+   Steps-based for authentic terminal feel
+   ═══════════════════════════════════════════ */
+@keyframes harchos-blink {
+  0%, 49.999% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.harchos-cursor {
+  animation: harchos-blink 1.05s steps(1, end) infinite;
+}
+
+/* Subtle scanline overlay for terminal/code panels — premium CRT feel */
+@keyframes harchos-scanline {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 0.6; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.harchos-scanline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.45), transparent);
+  pointer-events: none;
+  animation: harchos-scanline 6s ease-in-out infinite;
+  z-index: 2;
+}
+
+/* Premium card lift — used for hover on key product cards */
+.harchos-card-lift {
+  transition: transform 0.35s var(--ease-out-expo), border-color 0.25s var(--ease-out-quart), box-shadow 0.35s var(--ease-out-quart);
+}
+.harchos-card-lift:hover {
+  transform: translateY(-3px);
+}
+
+/* Terminal panel inner glow — premium depth */
+.harchos-terminal-glow {
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.06),
+    0 24px 50px -12px rgba(0, 0, 0, 0.55),
+    0 0 80px -20px rgba(139, 92, 246, 0.18);
+}
+
+/* Dashboard panel depth shadow */
+.harchos-dash-shadow {
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.04),
+    0 30px 60px -20px rgba(0, 0, 0, 0.6),
+    0 0 100px -30px rgba(139, 92, 246, 0.15);
+}
+
+/* Tesla-style tab pill — smooth animated active indicator */
+.harchos-tab-pill {
+  transition: color 0.2s var(--ease-out-quart), background-color 0.25s var(--ease-out-quart), border-color 0.25s var(--ease-out-quart);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ATELIER UI PSYCHOLOGY V2 — conversion polish utilities
+   ═══════════════════════════════════════════════════════════ */
+
+/* Badge pulse — heartbeat ring around the hero "HARCH · ATELIER" dot */
+@keyframes atelier-badge-pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(2.6); opacity: 0; }
+}
+.atelier-badge-pulse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: 9999px;
+  background: currentColor;
+  animation: atelier-badge-pulse 2.4s var(--ease-out-expo) infinite;
 }
-.harch-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.7 0.01 247);
-}
 
-/* ------------------------------------------------------------------ */
-/*  Dark mode — remap the slate literals used across the app          */
-/*  to dark-appropriate values so every component switches cleanly.    */
-/* ------------------------------------------------------------------ */
-.dark {
-  --background: oklch(0.16 0.012 256);
-  --foreground: oklch(0.93 0.01 256);
-  --card: oklch(0.205 0.014 256);
-  --card-foreground: oklch(0.93 0.01 256);
-  --popover: oklch(0.205 0.014 256);
-  --popover-foreground: oklch(0.93 0.01 256);
-  --muted: oklch(0.27 0.012 256);
-  --muted-foreground: oklch(0.7 0.012 256);
-  --border: oklch(0.3 0.012 256);
-  --input: oklch(0.3 0.012 256);
-
-  /* Remap slate-50/100/200 backgrounds → dark slates */
-  .bg-slate-50 { background-color: oklch(0.18 0.012 256); }
-  .bg-slate-100 { background-color: oklch(0.24 0.012 256); }
-  .bg-white { background-color: oklch(0.205 0.014 256); }
-  .bg-white\/95 { background-color: oklch(0.205 0.014 256 / 0.95); }
-  .bg-white\/80 { background-color: oklch(0.205 0.014 256 / 0.8); }
-  .bg-white\/70 { background-color: oklch(0.205 0.014 256 / 0.7); }
-  .bg-slate-50\/60 { background-color: oklch(0.18 0.012 256 / 0.6); }
-  .bg-slate-50\/70 { background-color: oklch(0.18 0.012 256 / 0.7); }
-
-  /* Borders */
-  .border-slate-200 { border-color: oklch(0.3 0.012 256); }
-  .border-slate-100 { border-color: oklch(0.27 0.012 256); }
-  .border-slate-300 { border-color: oklch(0.38 0.012 256); }
-
-  /* Text */
-  .text-slate-900 { color: oklch(0.96 0.01 256); }
-  .text-slate-800 { color: oklch(0.9 0.01 256); }
-  .text-slate-700 { color: oklch(0.82 0.012 256); }
-  .text-slate-600 { color: oklch(0.74 0.012 256); }
-  .text-slate-500 { color: oklch(0.66 0.012 256); }
-  .text-slate-400 { color: oklch(0.58 0.012 256); }
-
-  /* Header band divider */
-  .divide-slate-100 > * + * { border-color: oklch(0.27 0.012 256); }
-
-  /* Scrollbar */
-  .harch-scroll {
-    scrollbar-color: oklch(0.4 0.012 256) transparent;
+/* Emerald CTA glow — subtle ambient light around primary buttons */
+@keyframes atelier-glow-emerald {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(16, 185, 129, 0.0),
+      0 8px 24px -8px rgba(16, 185, 129, 0.35),
+      0 0 32px -8px rgba(16, 185, 129, 0.18);
   }
-  .harch-scroll::-webkit-scrollbar-thumb {
-    background-color: oklch(0.4 0.012 256);
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(16, 185, 129, 0.25),
+      0 10px 30px -6px rgba(16, 185, 129, 0.45),
+      0 0 40px -6px rgba(16, 185, 129, 0.28);
   }
 }
+.atelier-glow-emerald {
+  animation: atelier-glow-emerald 3.4s ease-in-out infinite;
+}
+.atelier-glow-emerald:hover {
+  animation-play-state: paused;
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.4),
+    0 14px 36px -8px rgba(16, 185, 129, 0.55),
+    0 0 48px -6px rgba(16, 185, 129, 0.35);
+}
+
+/* Scroll indicator — bouncing chevron at bottom of hero */
+@keyframes atelier-scroll-hint {
+  0% { transform: translateY(0); opacity: 0.0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+.atelier-scroll-hint-line {
+  animation: atelier-scroll-hint 2.2s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Shimmer bar — loading effect for Vault / Build mockups */
+@keyframes atelier-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.atelier-shimmer-bar {
+  position: relative;
+  overflow: hidden;
+}
+.atelier-shimmer-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(168, 162, 158, 0.10) 50%,
+    transparent 100%
+  );
+  animation: atelier-shimmer 2.8s var(--ease-in-out) infinite;
+}
+
+/* Perspective wrapper — 3D depth for Tesla mockup */
+.atelier-perspective {
+  perspective: 1800px;
+}
+.atelier-perspective-inner {
+  transform: rotateX(0.4deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s var(--ease-out-expo);
+}
+@media (min-width: 1024px) {
+  .atelier-perspective-inner:hover {
+    transform: rotateX(0deg) translateZ(0);
+  }
+}
+
+/* Card lift + stone tinted shadow — premium hover on Atelier cards */
+.atelier-card-lift-stone {
+  transition:
+    transform 0.35s var(--ease-out-expo),
+    border-color 0.3s var(--ease-out-quart),
+    box-shadow 0.35s var(--ease-out-quart);
+}
+.atelier-card-lift-stone:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 28px -10px rgba(120, 113, 108, 0.18),
+    0 4px 12px -4px rgba(0, 0, 0, 0.08);
+}
+
+/* Counter blink — terminal cursor inside Build mockup */
+@keyframes atelier-cursor-blink {
+  0%, 49.999% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.atelier-cursor {
+  animation: atelier-cursor-blink 1.05s steps(1, end) infinite;
+}
+
+/* Bar grow — for Discovery opportunity score bars (animated on view) */
+@keyframes atelier-bar-grow {
+  from { width: 0%; }
+}
+.atelier-bar-grow {
+  animation: atelier-bar-grow 1.1s var(--ease-out-expo) both;
+}
+
+/* Subtle data-load pulse for the Vault dropzone area */
+@keyframes atelier-data-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.atelier-data-pulse {
+  animation: atelier-data-pulse 2.6s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════
+   GEO/AEO BLOG PROSE — markdown article styling
+   ═══════════════════════════════════════════ */
+.prose-geo-aeo h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 2.4em;
+  margin-bottom: 0.7em;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.prose-geo-aeo h2:first-child {
+  margin-top: 0;
+}
+.prose-geo-aeo h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f5f5f5;
+  margin-top: 1.8em;
+  margin-bottom: 0.6em;
+  letter-spacing: -0.005em;
+  line-height: 1.35;
+}
+.prose-geo-aeo p {
+  margin-bottom: 1.3em;
+}
+.prose-geo-aeo p:last-child {
+  margin-bottom: 0;
+}
+.prose-geo-aeo ul,
+.prose-geo-aeo ol {
+  margin: 0 0 1.3em 0;
+  padding-left: 1.4em;
+}
+.prose-geo-aeo li {
+  margin-bottom: 0.45em;
+}
+.prose-geo-aeo ul li::marker {
+  color: rgba(16, 185, 129, 0.7);
+}
+.prose-geo-aeo ol li::marker {
+  color: rgba(16, 185, 129, 0.7);
+  font-family: var(--font-space-mono);
+  font-size: 0.85em;
+}
+.prose-geo-aeo a {
+  color: #34d399;
+  text-decoration: underline;
+  text-decoration-color: rgba(52, 211, 153, 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+.prose-geo-aeo a:hover {
+  text-decoration-color: #34d399;
+}
+.prose-geo-aeo strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+.prose-geo-aeo em {
+  color: #e5e5e5;
+  font-style: italic;
+}
+.prose-geo-aeo blockquote {
+  margin: 1.6em 0;
+  padding: 0.9em 1.2em;
+  border-left: 2px solid rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.04);
+  border-radius: 0 6px 6px 0;
+  color: #d4d4d4;
+}
+.prose-geo-aeo blockquote p {
+  margin-bottom: 0;
+}
+.prose-geo-aeo code {
+  font-family: var(--font-space-mono);
+  font-size: 0.86em;
+  background: rgba(139, 157, 175, 0.1);
+  border: 1px solid rgba(139, 157, 175, 0.12);
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+  color: #a8d5b5;
+}
+.prose-geo-aeo pre {
+  margin: 1.4em 0;
+  padding: 1em 1.2em;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+.prose-geo-aeo pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #d4d4d4;
+  font-size: inherit;
+}
+.prose-geo-aeo table {
+  width: 100%;
+  margin: 1.6em 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  display: block;
+  overflow-x: auto;
+}
+.prose-geo-aeo thead {
+  background: rgba(16, 185, 129, 0.05);
+}
+.prose-geo-aeo th {
+  text-align: left;
+  padding: 0.65em 0.85em;
+  font-weight: 700;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 0.92em;
+}
+.prose-geo-aeo td {
+  padding: 0.6em 0.85em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #cccccc;
+  vertical-align: top;
+}
+.prose-geo-aeo tbody tr:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+.prose-geo-aeo hr {
+  margin: 2.4em 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+

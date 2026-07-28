@@ -1,0 +1,44 @@
+[
+  {
+    "slug": "solaire-epc-b2b",
+    "number": "01",
+    "title": "Solaire EPC B2B au Maroc",
+    "pdf": "/dossiers/solaire-epc-b2b.pdf"
+  },
+  {
+    "slug": "mre-services",
+    "number": "02",
+    "title": "Plateforme MRE Services",
+    "pdf": "/dossiers/mre-services.pdf"
+  },
+  {
+    "slug": "retreat-yoga-essaouira",
+    "number": "03",
+    "title": "Retreat Yoga Essaouira",
+    "pdf": "/dossiers/retreat-yoga-essaouira.pdf"
+  },
+  {
+    "slug": "conchyliculture-dakhla",
+    "number": "04",
+    "title": "Conchyliculture Dakhla",
+    "pdf": "/dossiers/conchyliculture-dakhla.pdf"
+  },
+  {
+    "slug": "cosmetique-argan-cbd",
+    "number": "05",
+    "title": "Cosmetique Argan + CBD",
+    "pdf": "/dossiers/cosmetique-argan-cbd.pdf"
+  },
+  {
+    "slug": "mro-industriel",
+    "number": "06",
+    "title": "MRO Industriel",
+    "pdf": "/dossiers/mro-industriel.pdf"
+  },
+  {
+    "slug": "export-artisanat-terroir",
+    "number": "07",
+    "title": "Export Artisanat Multi-Terroir",
+    "pdf": "/dossiers/export-artisanat-terroir.pdf"
+  }
+]

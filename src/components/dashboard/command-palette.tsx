@@ -27,7 +27,6 @@ import {
   Download,
   Building2,
   GitCompare,
-  FileText,
 } from "lucide-react";
 import {
   riskEvents,
@@ -66,7 +65,6 @@ interface CommandPaletteProps {
   onSelectEvent: (e: RiskEvent) => void;
   onSelectEntity?: (entity: string) => void;
   onOpenCompare?: () => void;
-  onOpenBrief?: () => void;
 }
 
 export function CommandPalette({
@@ -77,7 +75,6 @@ export function CommandPalette({
   onSelectEvent,
   onSelectEntity,
   onOpenCompare,
-  onOpenBrief,
 }: CommandPaletteProps) {
   const close = React.useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -188,22 +185,8 @@ export function CommandPalette({
           close();
         },
       },
-      {
-        id: "open-brief",
-        label: "Open Daily Intelligence Brief",
-        hint: "Morning synthesis",
-        icon: <FileText className="h-4 w-4 text-emerald-600" />,
-        onSelect: () => {
-          if (onOpenBrief) {
-            onOpenBrief();
-          } else {
-            toast.error("Brief unavailable");
-          }
-          close();
-        },
-      },
     ],
-    [close, onOpenCompare, onOpenBrief],
+    [close, onOpenCompare],
   );
 
   const recentEvents = React.useMemo(() => riskEvents.slice(0, 6), []);

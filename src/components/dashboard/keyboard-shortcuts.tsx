@@ -21,7 +21,6 @@ interface Shortcut {
 const shortcuts: Shortcut[] = [
   { keys: ["⌘", "K"], label: "Open command palette", group: "Actions" },
   { keys: ["?"], label: "Toggle this shortcuts dialog", group: "Actions" },
-  { keys: ["b"], label: "Open Daily Intelligence Brief", group: "Actions" },
   { keys: ["g", "m"], label: "Go to Risk Matrix", group: "Navigation" },
   { keys: ["g", "c"], label: "Go to Media Coverage", group: "Navigation" },
   { keys: ["g", "s"], label: "Go to Sentiment Trend", group: "Navigation" },
@@ -98,7 +97,7 @@ export function KeyboardShortcuts({ open, onOpenChange }: KeyboardShortcutsProps
  * Ignores key presses when the user is typing in an input/textarea/contenteditable
  * or when a dialog/popover is open.
  */
-export function useKeyboardShortcuts(onToggleHelp: () => void, onOpenBrief?: () => void): void {
+export function useKeyboardShortcuts(onToggleHelp: () => void): void {
   const pendingG = React.useRef(false);
   const gTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -124,13 +123,6 @@ export function useKeyboardShortcuts(onToggleHelp: () => void, onOpenBrief?: () 
       if (key === "?" || (e.shiftKey && key === "/")) {
         e.preventDefault();
         onToggleHelp();
-        return;
-      }
-
-      // Daily Intelligence Brief — single-key "b" (quick access)
-      if (key === "b" && !pendingG.current && onOpenBrief) {
-        e.preventDefault();
-        onOpenBrief();
         return;
       }
 
@@ -180,5 +172,5 @@ export function useKeyboardShortcuts(onToggleHelp: () => void, onOpenBrief?: () 
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onToggleHelp, onOpenBrief]);
+  }, [onToggleHelp]);
 }

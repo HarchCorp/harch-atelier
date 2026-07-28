@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 "use client"
 
 import * as React from "react"
@@ -274,7 +277,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{(() => { const tc = useTranslations('common'); return tc('toggleSidebar'); })()}</span>
     </Button>
   )
 }

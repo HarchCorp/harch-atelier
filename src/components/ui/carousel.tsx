@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 "use client"
 
 import * as React from "react"
@@ -178,6 +181,7 @@ function CarouselPrevious({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+  const t = useTranslations('common')
 
   return (
     <Button
@@ -196,7 +200,7 @@ function CarouselPrevious({
       {...props}
     >
       <ArrowLeft />
-      <span className="sr-only">Previous slide</span>
+      <span className="sr-only">{t('previousSlide')}</span>
     </Button>
   )
 }
@@ -208,6 +212,7 @@ function CarouselNext({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
+  const t = useTranslations('common')
 
   return (
     <Button
@@ -226,7 +231,7 @@ function CarouselNext({
       {...props}
     >
       <ArrowRight />
-      <span className="sr-only">Next slide</span>
+      <span className="sr-only">{t('nextSlide')}</span>
     </Button>
   )
 }

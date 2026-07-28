@@ -8,3 +8,8 @@ tool-results
 worklog.md
 worklog.md
 .next
+
+# Agent data + logs (generated, not committed)
+data/
+agents/orchestrator.log
+agents/*.log

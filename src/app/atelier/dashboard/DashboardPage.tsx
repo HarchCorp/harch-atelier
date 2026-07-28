@@ -1,0 +1,409 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { AtelierNav } from "../components/AtelierNav";
+import { AtelierFooter } from "../components/AtelierFooter";
+import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+
+const C = {
+  bg: "#FAFAFA", surface: "#FFFFFF", surfaceAlt: "#F4F4F5",
+  border: "#E5E5E5", text: "#0A0A0A", textSec: "#525252",
+  textMuted: "#71717A", accent: "#4A5D6E", sage: "#4A7B5F",
+  sageBright: "#6FA386", red: "#A0524B",
+  shadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+};
+
+export default function DashboardPage() {
+  const [companyName, setCompanyName] = useState("Bank of Africa");
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const runAudit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/atelier/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyName }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      } else {
+        setError(json.error || "Audit failed");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    runAudit();
+  }, []);
+
+  return (
+    <>
+      <ScrollProgress />
+      <CursorGlow />
+      <AtelierNav />
+
+      {/* Hero */}
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px 40px" }}>
+        <div style={{ fontSize: "12px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
+          Live Dashboard
+        </div>
+        <h1 style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, letterSpacing: "-0.03em", color: C.text, margin: "0 0 16px" }}>
+          Reputation Intelligence
+        </h1>
+        <p style={{ fontSize: "18px", color: C.textSec, maxWidth: "640px", marginBottom: "32px" }}>
+          Real-time reputation monitoring powered by HarchIQ. Enter any company name to run a full audit.
+        </p>
+
+        {/* Search bar */}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "40px" }}>
+          <input
+            type="text"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && runAudit()}
+            placeholder="Company name (e.g. Bank of Africa, Maroc Telecom, OCP Group)"
+            style={{
+              flex: 1, padding: "14px 20px", background: C.surface,
+              border: `1px solid ${C.border}`, borderRadius: "8px",
+              fontSize: "15px", color: C.text, fontFamily: "'Inter', sans-serif",
+              outline: "none",
+            }}
+          />
+          <button
+            onClick={runAudit}
+            disabled={loading}
+            style={{
+              padding: "14px 28px", background: C.sage, color: "#FFFFFF",
+              border: "none", borderRadius: "8px", fontSize: "15px",
+              fontWeight: 600, fontFamily: "'Inter', sans-serif",
+              cursor: loading ? "wait" : "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            {loading ? "Analyzing..." : "Run audit →"}
+          </button>
+        </div>
+      </section>
+
+      {/* Results */}
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px 80px" }}>
+        {loading && (
+          <div style={{ textAlign: "center", padding: "80px 0" }}>
+            <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
+            <div style={{ fontSize: "18px", color: C.textSec }}>Scraping 30+ media sources and analyzing sentiment...</div>
+            <div style={{ fontSize: "14px", color: C.textMuted, marginTop: "8px", fontFamily: "'JetBrains Mono', monospace" }}>
+              This takes 30-60 seconds
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: "24px", background: "rgba(160,82,75,0.05)", border: `1px solid ${C.red}`, borderRadius: "8px", color: C.red }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        {data && !loading && (
+          <div>
+            {/* Score header */}
+            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "32px", marginBottom: "40px", alignItems: "center" }}>
+              <ScoreRing score={data.reputation.score} />
+              <div>
+                <div style={{ fontSize: "28px", fontWeight: 800, color: C.text, marginBottom: "8px" }}>
+                  {data.companyName}
+                </div>
+                <div style={{ fontSize: "14px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", marginBottom: "16px" }}>
+                  {data.reportDate} · Processed in {(data.processingTimeMs / 1000).toFixed(1)}s
+                </div>
+                {/* Score breakdown */}
+                <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                  <ScoreComponent label="Sentiment" value={data.reputation.scoreComponents.sentiment} weight="40%" />
+                  <ScoreComponent label="AI Visibility" value={data.reputation.scoreComponents.aiVisibility} weight="30%" />
+                  <ScoreComponent label="Volume" value={data.reputation.scoreComponents.volume} weight="20%" />
+                  <ScoreComponent label="Authority" value={data.reputation.scoreComponents.authority} weight="10%" />
+                </div>
+              </div>
+            </div>
+
+            {/* KPI cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "40px" }}>
+              <KPICard label="Articles" value={data.reputation.mediaMetrics.totalArticles} />
+              <KPICard label="Mentions" value={data.reputation.mediaMetrics.totalMentions} />
+              <KPICard label="Sources" value={data.reputation.mediaMetrics.uniqueSources} />
+              <KPICard label="AI Citations" value={`${data.reputation.aiMetrics.totalCitations}/4`} />
+            </div>
+
+            {/* Sentiment bar */}
+            <Card title="Sentiment Breakdown">
+              <SentimentBar
+                positive={data.reputation.sentiment.positive}
+                neutral={data.reputation.sentiment.neutral}
+                negative={data.reputation.sentiment.negative}
+              />
+              <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
+                <Legend color={C.sage} label="Positive" value={`${data.reputation.sentiment.positive}%`} />
+                <Legend color={C.textMuted} label="Neutral" value={`${data.reputation.sentiment.neutral}%`} />
+                <Legend color={C.red} label="Negative" value={`${data.reputation.sentiment.negative}%`} />
+              </div>
+            </Card>
+
+            {/* AI Visibility */}
+            <Card title="AI Engine Visibility">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                {[
+                  { name: "ChatGPT", data: data.reputation.aiMetrics.chatgpt },
+                  { name: "Perplexity", data: data.reputation.aiMetrics.perplexity },
+                  { name: "Google AI", data: data.reputation.aiMetrics.googleAI },
+                  { name: "Claude", data: data.reputation.aiMetrics.glm },
+                ].map(engine => (
+                  <div key={engine.name} style={{ textAlign: "center", padding: "20px", background: C.surfaceAlt, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, marginBottom: "8px" }}>{engine.name}</div>
+                    <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: engine.data.cited ? C.sage : C.red }}>
+                      {engine.data.cited ? "✓" : "✗"}
+                    </div>
+                    <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
+                      {engine.data.position}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Risk Assessment */}
+            <Card title="Risk Assessment">
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+                <div style={{
+                  fontSize: "36px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                  color: data.reputation.risk.overallRisk >= 60 ? C.red : data.reputation.risk.overallRisk >= 40 ? "#C4964A" : C.sage,
+                }}>
+                  {data.reputation.risk.overallRisk}
+                </div>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{data.reputation.risk.riskLevel.toUpperCase()}</div>
+                  <div style={{ fontSize: "12px", color: C.textMuted }}>Overall risk score</div>
+                </div>
+              </div>
+              {data.reputation.risk.activeRisks.length > 0 ? (
+                <div>
+                  {data.reputation.risk.activeRisks.slice(0, 3).map((risk: any, i: number) => (
+                    <div key={i} style={{ padding: "12px 16px", background: "rgba(160,82,75,0.05)", borderRadius: "6px", marginBottom: "8px", border: `1px solid rgba(160,82,75,0.15)` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{risk.topic}</span>
+                        <span style={{ fontSize: "14px", fontWeight: 700, color: C.red, fontFamily: "'JetBrains Mono', monospace" }}>{risk.severity}/100</span>
+                      </div>
+                      <div style={{ fontSize: "13px", color: C.textSec }}>{risk.recommendation}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: "14px", color: C.textMuted }}>No active risks detected.</div>
+              )}
+            </Card>
+
+            {/* Topic clusters */}
+            {data.topics.length > 0 && (
+              <Card title="Topic Clusters">
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {data.topics.slice(0, 8).map((topic: any, i: number) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: C.surfaceAlt, borderRadius: "6px", border: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span style={{
+                          fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px",
+                          fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase",
+                          background: topic.riskLevel === "critical" ? C.red : topic.riskLevel === "high" ? "rgba(160,82,75,0.2)" : topic.riskLevel === "medium" ? "rgba(196,150,74,0.2)" : "rgba(74,123,95,0.1)",
+                          color: topic.riskLevel === "critical" ? "#FFFFFF" : topic.riskLevel === "high" ? C.red : topic.riskLevel === "medium" ? "#C4964A" : C.sage,
+                        }}>
+                          {topic.riskLevel}
+                        </span>
+                        <span style={{ fontSize: "14px", fontWeight: 500, color: C.text }}>{topic.label}</span>
+                      </div>
+                      <span style={{ fontSize: "13px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>{topic.articleCount} articles</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Recommendations */}
+            {data.reputation.recommendations.length > 0 && (
+              <Card title="AI-Generated Recommendations">
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {data.reputation.recommendations.map((rec: any, i: number) => (
+                    <div key={i} style={{ padding: "16px", background: C.surfaceAlt, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                        <span style={{
+                          fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px",
+                          fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase",
+                          background: rec.priority === "critical" ? C.red : rec.priority === "high" ? "rgba(160,82,75,0.15)" : rec.priority === "medium" ? "rgba(196,150,74,0.15)" : "rgba(74,123,95,0.1)",
+                          color: rec.priority === "critical" ? "#FFFFFF" : rec.priority === "high" ? C.red : rec.priority === "medium" ? "#C4964A" : C.sage,
+                        }}>
+                          {rec.priority}
+                        </span>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{rec.action}</span>
+                      </div>
+                      <div style={{ fontSize: "13px", color: C.textSec, marginBottom: "4px" }}>{rec.rationale}</div>
+                      <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>Timeline: {rec.timeline}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Top articles */}
+            {data.topArticles.length > 0 && (
+              <Card title="Top Articles">
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {data.topArticles.map((article: any, i: number) => (
+                    <a key={i} href={article.url} target="_blank" rel="noopener noreferrer" style={{
+                      display: "block", padding: "14px 16px", background: C.surfaceAlt,
+                      borderRadius: "8px", border: `1px solid ${C.border}`, textDecoration: "none",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: C.text, flex: 1 }}>{article.title}</span>
+                        <span style={{
+                          fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px",
+                          fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", flexShrink: 0,
+                          background: article.sentiment === "positive" ? "rgba(74,123,95,0.1)" : article.sentiment === "negative" ? "rgba(160,82,75,0.1)" : "rgba(113,113,122,0.1)",
+                          color: article.sentiment === "positive" ? C.sage : article.sentiment === "negative" ? C.red : C.textMuted,
+                        }}>
+                          {article.sentiment}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "4px", fontFamily: "'JetBrains Mono', monospace" }}>
+                        {article.sourceName} · {new Date(article.publishedAt).toLocaleDateString()}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* WhatsApp preview */}
+            <Card title="WhatsApp Daily Digest Preview">
+              <WhatsAppPreview message={generateWhatsAppPreview(data)} />
+            </Card>
+          </div>
+        )}
+
+        {!data && !loading && !error && (
+          <div style={{ textAlign: "center", padding: "80px 0", color: C.textMuted }}>
+            Enter a company name and click "Run audit"
+          </div>
+        )}
+      </section>
+
+      <AtelierFooter />
+      <BackToTop />
+
+      <style>{`
+        a:focus-visible, button:focus-visible, input:focus-visible {
+          outline: 2px solid ${C.accent}; outline-offset: 2px; border-radius: 2px;
+        }
+      `}</style>
+    </>
+  );
+}
+
+// ─── COMPONENTS ──────────────────────────────────────────────────
+
+function ScoreRing({ score }: { score: number }) {
+  const radius = 50;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (score / 100) * circ;
+  const color = score >= 70 ? C.sage : score >= 50 ? C.accent : C.red;
+  return (
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r={radius} fill="none" stroke={C.border} strokeWidth="6" />
+      <circle cx="60" cy="60" r={radius} fill="none" stroke={color} strokeWidth="6"
+        strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+        transform="rotate(-90 60 60)" />
+      <text x="60" y="58" textAnchor="middle" fontSize="28" fontWeight="800" fill={C.text} fontFamily="JetBrains Mono, monospace">{score}</text>
+      <text x="60" y="76" textAnchor="middle" fontSize="10" fill={C.textMuted} fontFamily="JetBrains Mono, monospace">/ 100</text>
+    </svg>
+  );
+}
+
+function ScoreComponent({ label, value, weight }: { label: string; value: number; weight: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: "20px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+      <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>{label} ({weight})</div>
+    </div>
+  );
+}
+
+function KPICard({ label, value }: { label: string; value: any }) {
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "20px", boxShadow: C.shadow }}>
+      <div style={{ fontSize: "28px", fontWeight: 800, color: C.sage, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: "6px" }}>{label}</div>
+    </div>
+  );
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "28px", marginBottom: "24px", boxShadow: C.shadow }}>
+      <div style={{ fontSize: "11px", fontWeight: 600, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'JetBrains Mono', monospace", marginBottom: "20px" }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function SentimentBar({ positive, neutral, negative }: { positive: number; neutral: number; negative: number }) {
+  return (
+    <div style={{ display: "flex", height: "32px", borderRadius: "6px", overflow: "hidden" }}>
+      <div style={{ width: `${positive}%`, background: C.sage, transition: "width 0.5s" }} />
+      <div style={{ width: `${neutral}%`, background: C.textMuted, transition: "width 0.5s" }} />
+      <div style={{ width: `${negative}%`, background: C.red, transition: "width 0.5s" }} />
+    </div>
+  );
+}
+
+function Legend({ color, label, value }: { color: string; label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: color }} />
+      <span style={{ fontSize: "13px", color: C.textSec }}>{label}</span>
+      <span style={{ fontSize: "13px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{value}</span>
+    </div>
+  );
+}
+
+function WhatsAppPreview({ message }: { message: string }) {
+  return (
+    <div style={{ maxWidth: "400px", margin: "0 auto" }}>
+      <div style={{ background: "#075E54", color: "#FFFFFF", padding: "12px 16px", borderRadius: "12px 12px 0 0", fontSize: "14px", fontWeight: 600 }}>
+        Harch Intelligence
+      </div>
+      <div style={{ background: "#DCF8C6", padding: "12px 16px", borderRadius: "0 0 12px 12px", fontSize: "14px", color: "#1A1A1A", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+        {message}
+      </div>
+      <div style={{ textAlign: "right", color: "#34B7F1", fontSize: "14px", padding: "4px 16px" }}>✓✓</div>
+    </div>
+  );
+}
+
+function generateWhatsAppPreview(data: any): string {
+  const r = data.reputation;
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  let msg = `📊 ${data.companyName} — Veille du ${today}\n\n`;
+  msg += `Médias: ${r.mediaMetrics.totalArticles} articles (${r.sentiment.positive}% pos, ${r.sentiment.neutral}% neu, ${r.sentiment.negative}% neg)\n`;
+  msg += `Score: ${r.score}/100\n`;
+  msg += `IA: ${r.aiMetrics.totalCitations}/4 moteurs citent ${data.companyName}\n`;
+  if (r.risk.riskLevel === "critical" || r.risk.riskLevel === "high") {
+    msg += `\n⚠️ ALERTE: Risque ${r.risk.riskLevel.toUpperCase()}\n`;
+  }
+  if (r.recommendations.length > 0) {
+    msg += `\n→ ${r.recommendations[0].action}\n`;
+  }
+  msg += `\n→ dashboard.harchcorp.com`;
+  return msg;
+}

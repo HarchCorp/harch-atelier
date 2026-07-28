@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   CircleDot,
   Command as CommandIcon,
-  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AlertsPopover } from "./alerts-popover";
-import { ThemeToggle } from "./theme-toggle";
+
 import { useRiskStore } from "@/lib/risk-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -46,10 +45,9 @@ interface TopBarProps {
   onAccountTypeChange: (t: AccountType) => void;
   onOpenPalette: () => void;
   onOpenAlert?: (a: AlertItem) => void;
-  onOpenBrief?: () => void;
 }
 
-export function TopBar({ accountType, onAccountTypeChange, onOpenPalette, onOpenAlert, onOpenBrief }: TopBarProps) {
+export function TopBar({ accountType, onAccountTypeChange, onOpenPalette, onOpenAlert }: TopBarProps) {
   const nav = navByAccountType[accountType];
   const meta = accountMeta[accountType];
 
@@ -119,25 +117,11 @@ export function TopBar({ accountType, onAccountTypeChange, onOpenPalette, onOpen
         <Search className="h-4 w-4" />
       </button>
 
-      {/* Daily Intelligence Brief */}
-      {onOpenBrief ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onOpenBrief}
-          className="hidden h-8 gap-1.5 border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:inline-flex"
-          aria-label="Open Daily Intelligence Brief"
-        >
-          <FileText className="h-3.5 w-3.5 text-emerald-600" />
-          <span>Brief</span>
-        </Button>
-      ) : null}
-
       {/* Alerts popover */}
       <AlertsPopover onOpenAlert={onOpenAlert} />
 
       {/* Theme toggle */}
-      <ThemeToggle />
+      
 
       {/* Account switcher */}
       <DropdownMenu>

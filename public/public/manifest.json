@@ -1,0 +1,75 @@
+{
+  "name": "Harch Corp",
+  "short_name": "Harch Corp",
+  "description": "Moroccan industrial conglomerate building Africa's industrial sovereignty across 8 verticals: AI data centers, renewable energy, cement, technology, mining, agriculture, water, and finance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "finance",
+    "technology",
+    "industrial"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Intelligence",
+      "short_name": "AI",
+      "url": "/subsidiaries/intelligence",
+      "description": "Carbon-Aware GPU Cloud"
+    },
+    {
+      "name": "Energy",
+      "short_name": "Energy",
+      "url": "/subsidiaries/energy",
+      "description": "2GW+ Renewable Energy Pipeline"
+    },
+    {
+      "name": "Investors",
+      "short_name": "IR",
+      "url": "/investors",
+      "description": "Investor Relations"
+    }
+  ]
+}

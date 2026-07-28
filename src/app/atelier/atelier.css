@@ -1,0 +1,56 @@
+/* ─── ATELIER GLOBAL STYLES ──────────────────────────────────────
+   Shared across all /atelier/* pages
+   Colors: LIGHT theme — #FAFAFA bg + #FFFFFF surface + #4A5D6E accent
+   Fonts: Inter (body/nav) + JetBrains Mono (data/numbers)
+*/
+
+* { box-sizing: border-box; }
+
+body {
+  background: #FAFAFA;
+  color: #0A0A0A;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  scroll-behavior: smooth;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #4A5D6E;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Skip link — visually hidden, revealed on focus (keyboard a11y) */
+.atelier-skip-link:focus,
+.atelier-skip-link:focus-visible {
+  top: 0 !important;
+  outline: 2px solid #FFFFFF;
+  outline-offset: 2px;
+}
+
+input::placeholder {
+  color: rgba(0,0,0,0.40);
+}
+
+input:focus {
+  border-color: #4A5D6E !important;
+  box-shadow: 0 0 0 3px rgba(74,93,110,0.1);
+  outline: none;
+}
+
+/* Responsive nav */
+@media (max-width: 900px) {
+  .atelier-nav-links { display: none !important; }
+  .atelier-burger { display: flex !important; }
+  .atelier-nav-mobile { display: flex !important; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #FAFAFA; }
+::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }

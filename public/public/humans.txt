@@ -1,0 +1,9 @@
+/* TEAM */
+Founder & CEO: Amine Harch El Korane
+Site: https://www.harchcorp.com
+Location: Casablanca, Morocco
+
+/* SITE */
+Last update: 2026/05/12
+Standards: HTML5, CSS3, JavaScript
+Software: Next.js, TypeScript, Tailwind CSS

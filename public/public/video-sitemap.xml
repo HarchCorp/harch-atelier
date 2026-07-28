@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url>
+    <loc>https://www.harchcorp.com/videos/v1_brand.mp4</loc>
+    <video:video>
+      <video:title>Harch Corp — Africa's Sovereign Infrastructure OS</video:title>
+      <video:description>Brand film: 8 subsidiaries, $2.4B pipeline, sovereign infrastructure for Africa.</video:description>
+      <video:thumbnail_loc>https://www.harchcorp.com/images/sections/intelligence-rack.jpg</video:thumbnail_loc>
+      <video:content_loc>https://www.harchcorp.com/videos/v1_brand.mp4</video:content_loc>
+      <video:duration>40</video:duration>
+      <video:publication_date>2026-07-07</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://www.harchcorp.com/videos/v4_intelligence.mp4</loc>
+    <video:video>
+      <video:title>Harch Intelligence — 1,798 GPUs</video:title>
+      <video:description>5 GPU hubs, 8ms to Europe, 89% less carbon.</video:description>
+      <video:thumbnail_loc>https://www.harchcorp.com/images/sections/intelligence-rack.jpg</video:thumbnail_loc>
+      <video:content_loc>https://www.harchcorp.com/videos/v4_intelligence.mp4</video:content_loc>
+      <video:duration>40</video:duration>
+      <video:publication_date>2026-07-07</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://www.harchcorp.com/videos/v5_energy.mp4</loc>
+    <video:video>
+      <video:title>Harch Energy — $14/MWh Solar</video:title>
+      <video:description>Lowest solar LCOE. 2GW+ pipeline. Net carbon-negative.</video:description>
+      <video:thumbnail_loc>https://www.harchcorp.com/images/sections/intelligence-rack.jpg</video:thumbnail_loc>
+      <video:content_loc>https://www.harchcorp.com/videos/v5_energy.mp4</video:content_loc>
+      <video:duration>40</video:duration>
+      <video:publication_date>2026-07-07</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://www.harchcorp.com/videos/v23_2_4B.mp4</loc>
+    <video:video>
+      <video:title>$2.4B Pipeline — Harch Corp</video:title>
+      <video:description>8 subsidiaries. 5 countries. $2.4B investment pipeline.</video:description>
+      <video:thumbnail_loc>https://www.harchcorp.com/images/sections/intelligence-rack.jpg</video:thumbnail_loc>
+      <video:content_loc>https://www.harchcorp.com/videos/v23_2_4B.mp4</video:content_loc>
+      <video:duration>40</video:duration>
+      <video:publication_date>2026-07-07</video:publication_date>
+    </video:video>
+  </url>
+</urlset>

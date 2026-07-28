@@ -13,7 +13,6 @@ interface DashboardShellProps {
   description: string;
   onOpenPalette: () => void;
   onOpenAlert?: (a: AlertItem) => void;
-  onOpenBrief?: () => void;
   children: React.ReactNode;
 }
 
@@ -24,17 +23,15 @@ export function DashboardShell({
   description,
   onOpenPalette,
   onOpenAlert,
-  onOpenBrief,
   children,
 }: DashboardShellProps) {
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50">
       <TopBar
         accountType={accountType}
         onAccountTypeChange={onAccountTypeChange}
         onOpenPalette={onOpenPalette}
         onOpenAlert={onOpenAlert}
-        onOpenBrief={onOpenBrief}
       />
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5 lg:px-6 lg:py-6">

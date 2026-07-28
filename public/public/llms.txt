@@ -1,0 +1,47 @@
+# Harch Atelier — llms.txt
+# This file helps LLMs understand our service. Learn more: https://llmstxt.org
+
+# Title
+Harch Atelier — Generative Engine Optimization (GEO) for the francophone world
+
+# Description
+Harch Atelier makes your business appear in AI-generated answers across ChatGPT, Perplexity, Google AI Overviews, and GLM. We serve francophone markets: France, Morocco, Belgium, Switzerland, Quebec, Tunisia, Lebanon, Senegal.
+
+# Service
+- Audit: 200+ queries tested against 4 AI engines. Board-ready PDF report. Free, 1 week.
+- Optimize: Content restructure, entity signals, Schema.org JSON-LD, E-E-A-T content, AEO files. 30K-80K MAD, 2-4 weeks.
+- Monitor: Monthly citation tracking across 4 LLMs. 5K-15K MAD/month, cancel anytime.
+
+# Pricing
+- Audit: 0 MAD (free, no commitment)
+- Optimize: 30,000-80,000 MAD one-time
+- Monitor: 5,000-15,000 MAD/month
+- Payment: bank transfer (Moroccan RIB, French IBAN, international wire). No Stripe.
+
+# Process
+1. Research: 200+ queries × 4 AI engines → gap analysis, entity audit, citation inventory
+2. Optimize: semantic structure, Schema.org, E-E-A-T content, AEO files, GitHub delivery
+3. Monitor: monthly retest, citation tracking, competitor analysis, content updates
+4. Measure: citations/200, share of voice, average position — tracked monthly
+
+# AI Engines Covered
+ChatGPT, Perplexity, Google AI Overviews, Gemini, Claude, Copilot, GLM, Grok
+
+# Francophone Markets
+France, Morocco, Belgium, Switzerland, Quebec, Tunisia, Lebanon, Senegal
+
+# Contact
+- Email: atelier@harchcorp.com
+- Phone: +212 684 440 682
+- Website: https://atelier.harchcorp.com
+- Parent: https://harchcorp.com
+
+# Building in Public
+Since 2024. Casablanca, Morocco. Harch Atelier is a division of Harch Corp.
+
+# Links
+- [Audit gratuit](https://atelier.harchcorp.com#audit)
+- [Méthodologie](https://atelier.harchcorp.com#methode)
+- [Tarifs](https://atelier.harchcorp.com#tarifs)
+- [FAQ](https://atelier.harchcorp.com#faq)
+- [Preuves](https://atelier.harchcorp.com#preuves)

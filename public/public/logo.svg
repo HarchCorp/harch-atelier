@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 32">
+  <!-- Atelier accent: emerald shield mark (reputation/intelligence signal) -->
+  <path d="M14 2 L26 6 L26 16 C26 22 20 28 14 30 C8 28 2 22 2 16 L2 6 Z" fill="#10b981" opacity="0.15"/>
+  <path d="M14 2 L26 6 L26 16 C26 22 20 28 14 30 C8 28 2 22 2 16 L2 6 Z" fill="none" stroke="#10b981" stroke-width="1.5"/>
+  <path d="M9 14 L13 18 L19 10" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark: HARCH | ATELIER (same DNA as harch-corp, Atelier slate accent on the second word) -->
+  <text x="36" y="24" font-family="Inter, sans-serif" font-weight="700" font-size="22" fill="#0a0a0a" letter-spacing="6">HARCH</text>
+  <text x="156" y="24" font-family="Inter, sans-serif" font-weight="300" font-size="22" fill="rgba(0,0,0,0.2)">|</text>
+  <text x="176" y="24" font-family="Inter, sans-serif" font-weight="300" font-size="22" fill="#4A5D6E" letter-spacing="6">ATELIER</text>
+</svg>

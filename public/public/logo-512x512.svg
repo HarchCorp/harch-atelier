@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Shield mark (Atelier accent: emerald, intelligence/reputation) -->
+  <path d="M256 32 L448 96 L448 256 C448 352 368 432 256 480 C144 432 64 352 64 256 L64 96 Z" fill="#10b981" opacity="0.12"/>
+  <path d="M256 32 L448 96 L448 256 C448 352 368 432 256 480 C144 432 64 352 64 256 L64 96 Z" fill="none" stroke="#10b981" stroke-width="8"/>
+  <path d="M176 240 L232 296 L336 184" fill="none" stroke="#10b981" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark below shield -->
+  <text x="256" y="560" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="48" fill="#0a0a0a" letter-spacing="12">HARCH</text>
+</svg>
