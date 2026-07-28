@@ -299,6 +299,9 @@ export default function DashboardPage() {
         )}
       </section>
 
+      {/* ─── Real Agent Intelligence (from /api/intel) ─── */}
+      <AgentIntelPanel />
+
       <AtelierFooter />
       <BackToTop />
 
@@ -406,4 +409,113 @@ function generateWhatsAppPreview(data: any): string {
   }
   msg += `\n→ dashboard.harchcorp.com`;
   return msg;
+}
+
+/* ─── Real Agent Intelligence Panel ─── */
+function AgentIntelPanel() {
+  const [intel, setIntel] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/intel")
+      .then((r) => r.json())
+      .then((d) => { setIntel(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const mentions = intel?.mentions || [];
+  const scores = intel?.scores || [];
+  const agents = intel?.agents || [];
+
+  return (
+    <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 32px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #4A7B5F, #4A5D6E)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <div>
+          <div style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            Live Agent Intelligence
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: "4px 0 0", letterSpacing: "-0.02em" }}>
+            Real scraped data — {mentions.length} mentions · {scores.length} brands scored
+          </h2>
+        </div>
+        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "#4A7B5F15", border: "1px solid #4A7B5F30", fontSize: 11, fontWeight: 700, color: C.sage }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.sage, animation: "pulse 2s infinite" }} />
+          AGENTS LIVE
+        </span>
+      </div>
+
+      {/* Agent status row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
+        {agents.map((a: any) => (
+          <div key={a.agentName} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.text, textTransform: "uppercase", letterSpacing: "0.04em" }}>{a.agentName}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: a.status === "success" ? "#4A7B5F20" : a.status === "running" ? "#4A5D6E20" : "#A0524B20", color: a.status === "success" ? C.sage : a.status === "running" ? C.accent : C.red }}>{a.status}</span>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{a.itemsProcessed}</div>
+            <div style={{ fontSize: 10, color: C.textMuted }}>items processed</div>
+          </div>
+        ))}
+      </div>
+
+      {/* HarchIQ scores */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.textSec, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+          HarchIQ Scores — 7 Moroccan brands
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {scores.sort((a: any, b: any) => b.score - a.score).map((s: any) => (
+            <div key={s.brand} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: `1px solid ${C.surfaceAlt}` }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: C.textMuted, minWidth: 24, fontSize: 13 }}>#{scores.indexOf(s) + 1}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>{s.brand}</span>
+              <div style={{ width: 100, height: 6, borderRadius: 3, background: C.surfaceAlt, overflow: "hidden" }}>
+                <div style={{ width: `${s.score}%`, height: "100%", background: s.score >= 90 ? C.sage : s.score >= 75 ? "#D97706" : C.red, borderRadius: 3 }} />
+              </div>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: C.text, minWidth: 32, textAlign: "right", fontSize: 15 }}>{s.score}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: s.score >= 90 ? C.sage : s.score >= 75 ? "#D97706" : C.red, minWidth: 28, fontSize: 13 }}>{s.grade}</span>
+              <span style={{ fontSize: 12, color: s.trend === "up" ? C.sage : s.trend === "down" ? C.red : C.textMuted, minWidth: 30 }}>{s.trend === "up" ? "↑" : s.trend === "down" ? "↓" : "→"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Latest mentions */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.textSec, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+          Latest Media Mentions — scraped from Moroccan sources
+        </div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 32, color: C.textMuted, fontSize: 13 }}>Loading agent data…</div>
+        ) : mentions.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 32, color: C.textMuted, fontSize: 13 }}>No mentions yet — run the agents.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {mentions.slice(0, 8).map((m: any) => (
+              <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: 10, borderRadius: 8, textDecoration: "none", border: `1px solid ${C.border}`, background: C.surfaceAlt, transition: "border-color 0.15s" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: m.sentiment === "positive" ? C.sage : m.sentiment === "negative" ? C.red : C.textMuted, marginTop: 5, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{m.title}</div>
+                  <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.textMuted }}>
+                    <span style={{ fontWeight: 600, color: C.accent }}>{m.brand}</span>
+                    <span>·</span>
+                    <span>{m.source}</span>
+                    <span>·</span>
+                    <span style={{ textTransform: "capitalize" }}>{m.sentiment}</span>
+                    <span>·</span>
+                    <span style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, border: `1px solid ${C.border}`, fontSize: 9, fontWeight: 600 }}>{m.pillar}</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+        <div style={{ marginTop: 12, fontSize: 10, color: C.textMuted, textAlign: "center" }}>
+          Data scraped by Harch Atelier agents from Le Matin, L'Économiste, Hespress, TelQuel, Médias24 + more · GLM-4 sentiment classification
+        </div>
+      </div>
+    </section>
+  );
 }
