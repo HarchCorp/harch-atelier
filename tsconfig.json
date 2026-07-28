@@ -42,6 +42,8 @@
     "harch-corp-live",
     "harch-corp-live.bak",
     "scripts",
-    "skills"
+    "skills",
+    "mini-services",
+    "agents"
   ]
 }
