@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
-import createNextIntlPlugin from 'next-intl/plugin';
 
-const withNextIntl = createNextIntlPlugin();
+// ═══════════════════════════════════════════════════════════════
+//  NEXT.CONFIG — Harch Atelier (atelier.harchcorp.com)
+//
+//  This repo deploys ONLY the Atelier product. No harch-corp routes,
+//  no i18n (next-intl removed — atelier is English-only for now),
+//  no harchcorp.com redirects.
+//
+//  Key config:
+//  • / → 308 permanent redirect to /atelier (SEO link equity)
+//  • standalone output (Vercel-friendly)
+//  • AEGIS security headers + strict CSP
+//  • Images: only atelier.harchcorp.com allowed as remote pattern
+// ═══════════════════════════════════════════════════════════════
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -17,11 +28,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'www.harchcorp.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'harchcorp.com',
+        hostname: 'atelier.harchcorp.com',
       },
     ],
   },
@@ -56,7 +63,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://translate.google.com https://www.googletagmanager.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.harchcorp.com https://img.shields.io; connect-src 'self' https://www.harchcorp.com https://vitals.vercel-insights.com; frame-src https://js.stripe.com https://hooks.stripe.com; worker-src 'self' blob:;",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://atelier.harchcorp.com; connect-src 'self' https://atelier.harchcorp.com https://vitals.vercel-insights.com; worker-src 'self' blob:;",
           },
         ],
       },
@@ -91,20 +98,18 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // ─── Root redirect: / → /atelier (308 permanent) ──────────
+      // This is the critical fix: atelier.harchcorp.com/ must serve
+      // the Atelier home, NOT the Harch Corp conglomerate home.
+      // The 308 permanent redirect consolidates SEO link equity to
+      // /atelier and is cached at the Vercel edge.
       {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'harchcorp.com',
-          },
-        ],
-        destination: 'https://www.harchcorp.com/:path*',
+        source: '/',
+        destination: '/atelier',
         permanent: true,
       },
     ];
   },
 };
 
-export default withNextIntl(nextConfig);
-// cache bust Tue Jul  7 04:29:04 UTC 2026
+export default nextConfig;
