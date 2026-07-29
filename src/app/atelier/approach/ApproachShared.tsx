@@ -31,9 +31,9 @@ export function Hero({ eyebrow, title, subtitle, color = C.sage }: { eyebrow: st
     <section style={{
       background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
       borderBottom: `1px solid ${C.border}`,
-      padding: "100px 32px 80px",
+      padding: "48px 16px 40px",
     }}>
-      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: "10px",
           padding: "6px 14px", background: C.surface,
@@ -46,14 +46,14 @@ export function Hero({ eyebrow, title, subtitle, color = C.sage }: { eyebrow: st
           {eyebrow}
         </div>
         <h1 style={{
-          fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+          fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
           letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
           margin: "0 0 28px", maxWidth: "900px",
         }}>
           {title}
         </h1>
         <p style={{
-          fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+          fontSize: "16px", color: C.textSec, lineHeight: 1.55,
           maxWidth: "760px",
         }}>
           {subtitle}
@@ -67,10 +67,10 @@ export function Section({ children, alt = false }: { children: React.ReactNode; 
   return (
     <section style={{
       background: alt ? C.surface : C.bg,
-      padding: "80px 32px",
+      padding: "48px 16px",
       borderTop: alt ? `1px solid ${C.border}` : "none",
     }}>
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         {children}
       </div>
     </section>
@@ -88,7 +88,7 @@ export function SectionHeader({ label, title }: { label: string; title: string }
         {label}
       </div>
       <h2 style={{
-        fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700,
+        fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700,
         color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px",
       }}>
         {title}
@@ -100,7 +100,7 @@ export function SectionHeader({ label, title }: { label: string; title: string }
 export function StatsGrid({ stats, color = C.sage }: { stats: { value: string; label: string }[]; color?: string }) {
   return (
     <div style={{
-      display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+      display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
       gap: "1px", background: C.border, border: `1px solid ${C.border}`,
       borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
     }}>
@@ -134,12 +134,12 @@ export function CardGrid({ items, color = C.sage }: { items: { title: string; de
             width: "44px", height: "44px", borderRadius: "10px",
             background: `${color}15`, color,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "20px", fontWeight: 700, marginBottom: "20px",
+            fontSize: "16px", fontWeight: 700, marginBottom: "20px",
             fontFamily: "'JetBrains Mono', monospace",
           }}>
             {item.icon}
           </div>
-          <h3 style={{ fontSize: "19px", fontWeight: 700, color: C.text, marginBottom: "12px", letterSpacing: "-0.01em" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.text, marginBottom: "12px", letterSpacing: "-0.01em" }}>
             {item.title}
           </h3>
           <p style={{ fontSize: "14px", color: C.textSec, lineHeight: 1.6, margin: 0 }}>
@@ -155,9 +155,9 @@ export function CTABottom({ title, subtitle, href = "/atelier/audit", cta = "Req
   return (
     <section style={{
       background: C.text, color: "#FFFFFF",
-      padding: "80px 32px", textAlign: "center",
+      padding: "48px 16px", textAlign: "center",
     }}>
-      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
         <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
           {title}
         </h2>

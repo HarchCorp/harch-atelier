@@ -93,9 +93,9 @@ export default function ContactPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -108,14 +108,14 @@ export default function ContactPage() {
             Contact us
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
             Let&apos;s talk reputation.
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Whether you want a demo, have a security question, or are interested in partnering —
@@ -125,7 +125,7 @@ export default function ContactPage() {
       </section>
 
       {/* CONTACT METHODS GRID */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: "20px",
@@ -140,7 +140,7 @@ export default function ContactPage() {
                 width: "44px", height: "44px", borderRadius: "10px",
                 background: `${C.sage}15`, color: C.sage,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "20px", marginBottom: "16px",
+                fontSize: "16px", marginBottom: "16px",
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 {m.icon}
@@ -179,14 +179,14 @@ export default function ContactPage() {
 
       {/* OFFICES */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Our offices
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
             Where we work.
           </h2>
 
@@ -235,9 +235,9 @@ export default function ContactPage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "80px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
             Prefer to talk to a human?
           </h2>

@@ -46,9 +46,9 @@ export default function CareersPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -65,7 +65,7 @@ export default function CareersPage() {
           </div>
 
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.05, color: C.text,
             margin: "0 0 28px",
           }}>
@@ -80,7 +80,7 @@ export default function CareersPage() {
           </h1>
 
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             marginBottom: "40px", maxWidth: "760px",
           }}>
             Harch Atelier is currently built by one person — Amine Harch El Korane,
@@ -118,7 +118,7 @@ export default function CareersPage() {
       </section>
 
       {/* VALUES */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "100px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
           color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -127,7 +127,7 @@ export default function CareersPage() {
           How we work
         </div>
         <h2 style={{
-          fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700,
+          fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700,
           color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px",
         }}>
           The values we&apos;ll hire against.
@@ -161,10 +161,10 @@ export default function CareersPage() {
 
       {/* HIRING ROADMAP — honest timeline */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -173,7 +173,7 @@ export default function CareersPage() {
             Hiring roadmap
           </div>
           <h2 style={{
-            fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700,
+            fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700,
             color: C.text, letterSpacing: "-0.03em",
             margin: "0 0 48px", maxWidth: "760px",
           }}>
@@ -215,9 +215,8 @@ export default function CareersPage() {
                 opacity: p.open ? 1 : 0.85,
               }}>
                 <div style={{
-                  display: "flex", justifyContent: "space-between",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px",
                   alignItems: "flex-start", marginBottom: "12px",
-                  flexWrap: "wrap", gap: "8px",
                 }}>
                   <h3 style={{
                     fontSize: "18px", fontWeight: 700, color: C.text,

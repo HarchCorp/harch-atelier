@@ -41,9 +41,9 @@ export function InsightReportPage({ data }: { data: ReportData }) {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -56,7 +56,7 @@ export function InsightReportPage({ data }: { data: ReportData }) {
             {data.eyebrow} · {data.pages} pages · {data.deliveryTime}
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
@@ -96,9 +96,9 @@ export function InsightReportPage({ data }: { data: ReportData }) {
       </section>
 
       {/* STATS */}
-      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "60px 32px" }}>
+      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
           gap: "1px", background: C.border, border: `1px solid ${C.border}`,
           borderRadius: "12px", overflow: "hidden",
         }}>
@@ -117,14 +117,14 @@ export function InsightReportPage({ data }: { data: ReportData }) {
 
       {/* WHAT'S INCLUDED */}
       <section style={{
-        background: C.surface, padding: "80px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             What's included
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 40px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 40px" }}>
             In every report.
           </h2>
           <div style={{
@@ -147,11 +147,11 @@ export function InsightReportPage({ data }: { data: ReportData }) {
       </section>
 
       {/* WHAT'S INSIDE */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "100px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
           Report structure
         </div>
-        <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
+        <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
           What&apos;s inside the {data.pages} pages.
         </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -164,7 +164,7 @@ export function InsightReportPage({ data }: { data: ReportData }) {
               borderLeft: `4px solid ${data.color}`,
             }}>
               <span style={{
-                fontSize: "20px", fontWeight: 800, color: data.color,
+                fontSize: "16px", fontWeight: 800, color: data.color,
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 {String(i + 1).padStart(2, "0")}
@@ -184,18 +184,18 @@ export function InsightReportPage({ data }: { data: ReportData }) {
 
       {/* SAMPLE QUESTIONS */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Questions this report answers
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 40px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 40px" }}>
             Big questions, clear answers.
           </h2>
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "12px",
           }}>
             {data.sampleQuestions.map((q, i) => (
@@ -222,11 +222,11 @@ export function InsightReportPage({ data }: { data: ReportData }) {
       </section>
 
       {/* PRICING */}
-      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "100px 32px" }}>
+      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
           Pricing
         </div>
-        <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 40px" }}>
+        <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 40px" }}>
           Choose your cadence.
         </h2>
         <div style={{
@@ -276,9 +276,9 @@ export function InsightReportPage({ data }: { data: ReportData }) {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "80px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
             Order your {data.eyebrow.toLowerCase()}.
           </h2>

@@ -284,7 +284,7 @@ function Hero() {
       <div aria-hidden style={{ position: "absolute", top: "-200px", right: "-100px", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", position: "relative", zIndex: 1, textAlign: "center" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1, textAlign: "center" }}>
         <Eyebrow color={C.sage}>Free audit · 7 days</Eyebrow>
         <h1
           style={{
@@ -302,7 +302,7 @@ function Hero() {
         </h1>
         <p
           style={{
-            fontSize: "20px",
+            fontSize: "16px",
             color: C.textSecondary,
             lineHeight: 1.5,
             maxWidth: "620px",
@@ -403,11 +403,11 @@ function AuditFormSection() {
     <section
       style={{
         background: C.surface,
-        padding: "80px 32px 100px",
+        padding: "48px 16px 40px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <div
           className="audit-grid"
           style={{
@@ -526,7 +526,7 @@ function AuditFormSection() {
                 borderBottom: `1px solid ${C.border}`,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
                 <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
                   Free audit request
                 </span>
@@ -549,7 +549,7 @@ function AuditFormSection() {
                   />
                 ))}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginTop: "10px" }}>
                 {["Company", "Sources", "Contact"].map((label, i) => (
                   <span
                     key={label}
@@ -664,7 +664,7 @@ function AuditFormSection() {
 function Step1({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k: string, v: string) => void }) {
   return (
     <div>
-      <h3 style={{ fontSize: "20px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
+      <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
         Tell us about your company
       </h3>
       <p style={{ fontSize: "13px", color: C.textMuted, margin: "0 0 24px" }}>
@@ -721,7 +721,7 @@ function Step1({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
 function Step2({ form, toggleSource }: { form: typeof INITIAL_FORM; toggleSource: (id: string) => void }) {
   return (
     <div>
-      <h3 style={{ fontSize: "20px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
+      <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
         What should we monitor?
       </h3>
       <p style={{ fontSize: "13px", color: C.textMuted, margin: "0 0 24px" }}>
@@ -803,7 +803,7 @@ function Step2({ form, toggleSource }: { form: typeof INITIAL_FORM; toggleSource
 function Step3({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k: string, v: string) => void }) {
   return (
     <div>
-      <h3 style={{ fontSize: "20px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
+      <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
         Where do we send the results?
       </h3>
       <p style={{ fontSize: "13px", color: C.textMuted, margin: "0 0 24px" }}>
@@ -934,7 +934,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
     <section
       style={{
         background: C.bg,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
         minHeight: "70vh",
       }}
@@ -1024,7 +1024,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
           <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "14px" }}>
             Your request summary
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "12px" }}>
             <SummaryItem label="Company" value={form.company || "—"} />
             <SummaryItem label="Sector" value={form.sector || "—"} />
             <SummaryItem label="Contact" value={form.name || "—"} />
@@ -1135,11 +1135,11 @@ function SampleDeliverable() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Sample deliverable</Eyebrow>
         <SectionTitle>Here's what your dashboard will look like.</SectionTitle>
         <SectionSub>
@@ -1193,7 +1193,7 @@ function SampleDeliverable() {
 
           <div style={{ padding: "28px" }}>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px", flexWrap: "wrap", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "20px", alignItems: "flex-start", marginBottom: "28px" }}>
               <div>
                 <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
                   Free audit · Day 3 of 7
@@ -1230,7 +1230,7 @@ function SampleDeliverable() {
                   border: `1px solid ${C.borderLight}`,
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
                   <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                     Reputation score · 7-day trend
                   </span>
@@ -1252,7 +1252,7 @@ function SampleDeliverable() {
                     <circle key={i} cx={p.x} cy={120 - (p.y / 100) * 120} r="4" fill={C.sage} />
                   ))}
                 </svg>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, marginTop: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, marginTop: "8px" }}>
                   <span>Day 1 · 67</span>
                   <span>Day 4 · 71</span>
                   <span>Day 7 · 74</span>
@@ -1340,11 +1340,11 @@ function WhyUs() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>Why our audit is different</Eyebrow>
         <SectionTitle>No tricks. No traps.</SectionTitle>
         <SectionSub>
@@ -1357,7 +1357,7 @@ function WhyUs() {
           className="why-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
           }}
         >

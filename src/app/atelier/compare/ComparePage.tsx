@@ -78,7 +78,7 @@ export default function ComparePage() {
         borderBottom: `1px solid ${C.border}`,
         padding: "80px 32px 40px",
       }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -388,15 +388,15 @@ export default function ComparePage() {
                 gap: "8px", marginTop: "16px",
               }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "20px", fontWeight: 800, color: C.sage, fontFamily: "'JetBrains Mono', monospace" }}>{c.innovation.score}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: C.sage, fontFamily: "'JetBrains Mono', monospace" }}>{c.innovation.score}</div>
                   <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>INNOV</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "20px", fontWeight: 800, color: C.accent, fontFamily: "'JetBrains Mono', monospace" }}>{c.performance.score}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: C.accent, fontFamily: "'JetBrains Mono', monospace" }}>{c.performance.score}</div>
                   <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>PERF</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "20px", fontWeight: 800, color: C.amber, fontFamily: "'JetBrains Mono', monospace" }}>{c.purpose.score}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: C.amber, fontFamily: "'JetBrains Mono', monospace" }}>{c.purpose.score}</div>
                   <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>PURP</div>
                 </div>
               </div>
@@ -419,7 +419,7 @@ export default function ComparePage() {
             Comparison Summary
           </div>
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "16px",
           }}>
             {[
@@ -452,7 +452,7 @@ export default function ComparePage() {
 
       {/* CTA */}
       <section style={{
-        background: C.bg, padding: "60px 32px", textAlign: "center",
+        background: C.bg, padding: "48px 16px", textAlign: "center",
       }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>

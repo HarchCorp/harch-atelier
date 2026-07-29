@@ -24,9 +24,8 @@ export default function InstitutionalAuditPreviewPage() {
         padding: "20px 32px",
       }}>
         <div style={{
-          maxWidth: "1280px", margin: "0 auto",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          flexWrap: "wrap", gap: "16px",
+          maxWidth: "1280px", margin: "0 auto", padding: "0 16px",
+          display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "16px", alignItems: "center",
         }}>
           <div>
             <div style={{
@@ -92,8 +91,7 @@ export default function InstitutionalAuditPreviewPage() {
         minHeight: "calc(100vh - 64px)",
       }}>
         <div style={{
-          maxWidth: "900px", margin: "0 auto",
-          background: C.surface, padding: "20px 0",
+          maxWidth: "900px", margin: "0 auto", padding: "20px 16px",
           boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
           borderRadius: "12px", overflow: "hidden",
         }}>

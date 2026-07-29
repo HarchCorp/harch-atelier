@@ -100,9 +100,9 @@ export default function TrustPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -115,7 +115,7 @@ export default function TrustPage() {
             Trust Center · Security & Compliance
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
@@ -126,7 +126,7 @@ export default function TrustPage() {
             }}>enterprise reputation.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             We monitor the reputations of Morocco&apos;s largest companies. That means we hold ourselves
@@ -158,11 +158,11 @@ export default function TrustPage() {
       </section>
 
       {/* COMPLIANCE FRAMEWORKS */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "100px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
           Compliance frameworks
         </div>
-        <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
+        <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
           Standards we adhere to.
         </h2>
 
@@ -177,11 +177,11 @@ export default function TrustPage() {
               boxShadow: C.shadow,
             }}>
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "flex-start",
                 marginBottom: "12px",
               }}>
                 <span style={{
-                  fontSize: "20px", color: C.sage,
+                  fontSize: "16px", color: C.sage,
                   fontFamily: "'JetBrains Mono', monospace",
                 }}>
                   {c.icon}
@@ -214,14 +214,14 @@ export default function TrustPage() {
 
       {/* SECURITY PRACTICES */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Security practices
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
             How we protect your data.
           </h2>
 
@@ -238,7 +238,7 @@ export default function TrustPage() {
                   width: "44px", height: "44px", borderRadius: "10px",
                   background: `${C.sage}15`, color: C.sage,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "20px", marginBottom: "16px",
+                  fontSize: "16px", marginBottom: "16px",
                 }}>
                   {p.icon}
                 </div>
@@ -265,9 +265,9 @@ export default function TrustPage() {
       {/* CONTACT SECURITY */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Security inquiries
           </div>

@@ -546,7 +546,7 @@ function Hero() {
       style={{
         position: "relative",
         background: C.bg,
-        padding: "80px 32px 100px",
+        padding: "48px 16px 40px",
         overflow: "hidden",
       }}
     >
@@ -603,7 +603,7 @@ function Hero() {
         </h1>
         <p
           style={{
-            fontSize: "19px",
+            fontSize: "16px",
             color: C.textSecondary,
             lineHeight: 1.55,
             maxWidth: "640px",
@@ -670,11 +670,11 @@ function SectorOverview() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>The six sectors</Eyebrow>
         <SectionTitle>Each sector has its own risk map.</SectionTitle>
         <SectionSub>
@@ -687,7 +687,7 @@ function SectorOverview() {
           className="sector-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "24px",
           }}
         >
@@ -755,7 +755,7 @@ function SectorOverviewCard({ sector }: { sector: Sector }) {
 
       {/* Sentiment bar */}
       <div style={{ marginBottom: "16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
           <span style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Sentiment split</span>
           <span style={{ fontSize: "12px", fontFamily: FONT.mono, fontWeight: 700, color: sector.accent }}>{sector.score}/100</span>
         </div>
@@ -803,11 +803,11 @@ function SectorDeepDive({ sector, alt = false }: { sector: Sector; alt?: boolean
       id={sector.id}
       style={{
         background: alt ? C.surfaceAlt : C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "32px" }}>
           <div
@@ -874,7 +874,7 @@ function SectorDeepDive({ sector, alt = false }: { sector: Sector; alt?: boolean
           className="deepdive-bottom"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "24px",
             marginTop: "24px",
           }}
@@ -936,12 +936,12 @@ function SectorDashboardMockup({ sector }: { sector: Sector }) {
 
       <div style={{ padding: "24px" }}>
         {/* Top: brand + score */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", gap: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "16px", alignItems: "flex-start", marginBottom: "24px" }}>
           <div>
             <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
               {sector.name} reputation score
             </div>
-            <div style={{ fontSize: "20px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
               {sector.exampleBrand}
             </div>
             <div style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.sage }}>
@@ -958,7 +958,7 @@ function SectorDashboardMockup({ sector }: { sector: Sector }) {
 
         {/* Sentiment bar */}
         <div style={{ marginBottom: "24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Sentiment · 30 days
             </span>
@@ -980,7 +980,7 @@ function SectorDashboardMockup({ sector }: { sector: Sector }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "10px",
             marginBottom: "20px",
           }}
@@ -999,7 +999,7 @@ function SectorDashboardMockup({ sector }: { sector: Sector }) {
             border: `1px solid ${C.borderLight}`,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               30-day mentions
             </span>
@@ -1044,7 +1044,7 @@ function KpiMini({ label, value }: { label: string; value: string }) {
         textAlign: "center",
       }}
     >
-      <div style={{ fontSize: "20px", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1 }}>
+      <div style={{ fontSize: "16px", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1 }}>
         {value}
       </div>
       <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, marginTop: "4px", letterSpacing: "0.06em", textTransform: "uppercase" }}>
@@ -1128,7 +1128,7 @@ function SectorAlertExample({ sector }: { sector: Sector }) {
       <div style={{ fontSize: "14px", fontWeight: 600, color: C.textPrimary, lineHeight: 1.4, marginBottom: "10px" }}>
         {sector.alertExample.title}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "10px", borderTop: `1px solid ${C.borderLight}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", paddingTop: "10px", borderTop: `1px solid ${C.borderLight}` }}>
         <div>
           <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted }}>Source: </span>
           <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textPrimary, fontWeight: 600 }}>{sector.alertExample.source}</span>
@@ -1181,7 +1181,7 @@ function SectorTopicBreakdown({ sector }: { sector: Sector }) {
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         {sector.topics.map((t, i) => (
           <div key={i}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "6px" }}>
               <span style={{ fontSize: "13px", color: C.textPrimary, fontWeight: 600 }}>{t.name}</span>
               <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted }}>{t.mentions} mentions</span>
             </div>
@@ -1235,11 +1235,11 @@ function CrossSectorComparison() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Cross-sector view</Eyebrow>
         <SectionTitle>Compare reputation scores across sectors.</SectionTitle>
         <SectionSub>
@@ -1405,7 +1405,7 @@ function CTA() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >

@@ -327,14 +327,14 @@ function Hero() {
       style={{
         position: "relative",
         background: C.bg,
-        padding: "80px 32px 100px",
+        padding: "48px 16px 40px",
         overflow: "hidden",
       }}
     >
       <div aria-hidden style={{ position: "absolute", top: "-200px", right: "-100px", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
-      <div style={{ maxWidth: "1280px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1 }}>
         <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "64px", alignItems: "center" }}>
           <div>
             <Eyebrow color={C.sage}>About · Harch Intelligence</Eyebrow>
@@ -354,7 +354,7 @@ function Hero() {
             </h1>
             <p
               style={{
-                fontSize: "20px",
+                fontSize: "16px",
                 color: C.textSecondary,
                 lineHeight: 1.5,
                 maxWidth: "560px",
@@ -499,11 +499,11 @@ function Mission() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Our mission</Eyebrow>
         <h2
           style={{
@@ -522,7 +522,7 @@ function Mission() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "24px",
             marginTop: "48px",
           }}
@@ -591,11 +591,11 @@ function Founder() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>The founder</Eyebrow>
         <SectionTitle>Built by one person, for now.</SectionTitle>
         <SectionSub>
@@ -653,7 +653,7 @@ function Founder() {
               >
                 H
               </div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
                 The Founder
               </div>
               <div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>
@@ -764,7 +764,7 @@ function Founder() {
 
 function FounderRow({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "16px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap",  alignItems: "baseline", gap: "16px" }}>
       <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0 }}>{label}</span>
       <span style={{ fontSize: "13px", color: C.textPrimary, fontWeight: 600, textAlign: "right" }}>{value}</span>
     </div>
@@ -797,11 +797,11 @@ function TechStack() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Tech stack</Eyebrow>
         <SectionTitle>What's under the hood.</SectionTitle>
         <SectionSub>
@@ -814,7 +814,7 @@ function TechStack() {
           className="tech-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "16px",
           }}
         >
@@ -916,11 +916,11 @@ function TimelineSection() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Building in public</Eyebrow>
         <SectionTitle>The story so far.</SectionTitle>
         <SectionSub>
@@ -978,7 +978,7 @@ function TimelineSection() {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = event.color)}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
                   <span style={{ fontSize: "12px", fontFamily: FONT.mono, fontWeight: 700, color: event.color, letterSpacing: "0.04em" }}>
                     {event.date}
                   </span>
@@ -1021,11 +1021,11 @@ function Numbers() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>By the numbers</Eyebrow>
         <SectionTitle>Harch Atelier in 2025.</SectionTitle>
         <SectionSub>
@@ -1085,11 +1085,11 @@ function Values() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Our values</Eyebrow>
         <SectionTitle>Four things we won't compromise on.</SectionTitle>
         <SectionSub>
@@ -1101,7 +1101,7 @@ function Values() {
           className="values-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
           }}
         >
@@ -1169,7 +1169,7 @@ function CTA() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >

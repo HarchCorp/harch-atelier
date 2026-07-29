@@ -156,7 +156,7 @@ export default function IntegrationsPage() {
                 }} />
                 <div>
                   <h3 style={{
-                    fontSize: "20px",
+                    fontSize: "16px",
                     fontWeight: 700,
                     color: C.text,
                     letterSpacing: "-0.02em",
@@ -219,7 +219,7 @@ export default function IntegrationsPage() {
                 {step.n}
               </div>
               <h3 style={{
-                fontSize: "19px",
+                fontSize: "16px",
                 fontWeight: 700,
                 color: C.text,
                 letterSpacing: "-0.01em",
@@ -248,7 +248,7 @@ export default function IntegrationsPage() {
           color: "#FFFFFF",
           borderRadius: "16px",
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
           gap: "48px",
           alignItems: "center",
         }}>

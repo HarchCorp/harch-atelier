@@ -94,7 +94,7 @@ export default function OurDataPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {group.sources.map(s => (
                   <div key={s.name} style={{
-                    display: "flex", justifyContent: "space-between",
+                    display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px",
                     alignItems: "center", padding: "8px 12px",
                     background: "#FAFAFA", borderRadius: "6px",
                     border: "1px solid #F0F0F0",
@@ -132,7 +132,7 @@ export default function OurDataPage() {
       <Section alt>
         <SectionHeader label="Data quality" title="How we keep it clean." />
         <div style={{
-          padding: "40px", background: "#FFFFFF",
+          padding: "24px", background: "#FFFFFF",
           border: "1px solid #E5E5E5", borderRadius: "16px",
           boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
         }}>

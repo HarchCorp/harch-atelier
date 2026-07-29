@@ -410,14 +410,14 @@ function Hero() {
       style={{
         position: "relative",
         background: C.bg,
-        padding: "80px 32px 100px",
+        padding: "48px 16px 40px",
         overflow: "hidden",
       }}
     >
       <div aria-hidden style={{ position: "absolute", top: "-200px", right: "-100px", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", position: "relative", zIndex: 1, textAlign: "center" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1, textAlign: "center" }}>
         <Eyebrow color={C.sage}>Tarifs · 3 tiers</Eyebrow>
         <h1
           style={{
@@ -435,7 +435,7 @@ function Hero() {
         </h1>
         <p
           style={{
-            fontSize: "20px",
+            fontSize: "16px",
             color: C.textSecondary,
             lineHeight: 1.5,
             maxWidth: "640px",
@@ -451,7 +451,7 @@ function Hero() {
           className="hero-anchors"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "16px",
             maxWidth: "760px",
             margin: "0 auto",
@@ -527,11 +527,11 @@ function PricingTiers() {
       id="tiers"
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>The three tiers</Eyebrow>
         <SectionTitle>Choose what fits — upgrade anytime.</SectionTitle>
         <SectionSub>
@@ -543,7 +543,7 @@ function PricingTiers() {
           className="tier-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "24px",
             alignItems: "start",
           }}
@@ -622,7 +622,7 @@ function TierCard({ tier }: { tier: Tier }) {
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "8px", marginBottom: "24px" }}>
         {tier.stats.map((s, i) => (
           <div key={i} style={{ padding: "10px", background: C.surfaceAlt, borderRadius: "4px", textAlign: "center", border: `1px solid ${C.borderLight}` }}>
             <div style={{ fontSize: "18px", fontWeight: 700, fontFamily: FONT.mono, color: tier.highlighted ? C.sage : C.textPrimary, lineHeight: 1 }}>
@@ -721,11 +721,11 @@ function ComparisonTable() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Detailed comparison</Eyebrow>
         <SectionTitle>Compare every feature, side by side.</SectionTitle>
         <SectionSub>
@@ -874,11 +874,11 @@ function DeliverablePreviews() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>What you actually get</Eyebrow>
         <SectionTitle>Three deliverables, every month.</SectionTitle>
         <SectionSub>
@@ -890,7 +890,7 @@ function DeliverablePreviews() {
           className="deliverable-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "24px",
           }}
         >
@@ -1004,7 +1004,7 @@ function WhatsAppPreview() {
         lineHeight: 1.7,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", paddingBottom: "8px", borderBottom: `1px solid ${C.borderLight}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "8px", paddingBottom: "8px", borderBottom: `1px solid ${C.borderLight}` }}>
         <span style={{ color: C.sage, fontWeight: 700 }}>Harch Atelier</span>
         <span style={{ color: C.textMuted, fontSize: "10px" }}>7:00</span>
       </div>
@@ -1036,7 +1036,7 @@ function DashboardPreview() {
         padding: "12px",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "10px" }}>
         <span style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>30-day trend</span>
         <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.sage, fontWeight: 700 }}>+27 pts</span>
       </div>
@@ -1050,7 +1050,7 @@ function DashboardPreview() {
         <path d={buildAreaPath(data, 200, 60, 100)} fill="url(#pricingDashGrad)" />
         <path d={buildLinePath(data, 200, 60, 100)} fill="none" stroke={C.accentDark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", marginTop: "10px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "6px", marginTop: "10px" }}>
         <DashMini label="Articles" value="247" />
         <DashMini label="Mentions" value="1.2K" />
         <DashMini label="AI cites" value="14" />
@@ -1091,7 +1091,7 @@ function PDFPreview() {
         <div style={{ flex: 2, height: "5px", background: C.neutral, borderRadius: "2px" }} />
         <div style={{ flex: 1, height: "5px", background: C.red, borderRadius: "2px" }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted }}>
         <span style={{ color: C.sage }}>68% pos</span>
         <span>22% neu</span>
         <span style={{ color: C.red }}>10% neg</span>
@@ -1112,11 +1112,11 @@ function AddOns() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Add-ons</Eyebrow>
         <SectionTitle>Need more? Add what you need.</SectionTitle>
         <SectionSub>
@@ -1128,7 +1128,7 @@ function AddOns() {
           className="addon-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
           }}
         >
@@ -1152,7 +1152,7 @@ function AddOns() {
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", gap: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", alignItems: "flex-start", marginBottom: "12px", gap: "12px" }}>
                 <h3 style={{ fontSize: "15px", fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.01em" }}>{a.name}</h3>
                 <span
                   style={{
@@ -1189,11 +1189,11 @@ function FAQMini() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>Pricing FAQ</Eyebrow>
         <SectionTitle>Common questions about pricing.</SectionTitle>
         <SectionSub>
@@ -1267,7 +1267,7 @@ function FAQMiniItem({ item }: { item: { q: string; a: string } }) {
         }}
       >
         <span style={{ fontSize: "15px", fontWeight: 600, color: C.textPrimary }}>{item.q}</span>
-        <span style={{ fontSize: "20px", color: C.textMuted, flexShrink: 0, transition: "transform 0.2s", transform: open ? "rotate(45deg)" : "rotate(0deg)" }}>+</span>
+        <span style={{ fontSize: "16px", color: C.textMuted, flexShrink: 0, transition: "transform 0.2s", transform: open ? "rotate(45deg)" : "rotate(0deg)" }}>+</span>
       </button>
       {open && (
         <div style={{ padding: "0 24px 20px", fontSize: "14px", color: C.textSecondary, lineHeight: 1.6 }}>
@@ -1287,7 +1287,7 @@ function CTA() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >

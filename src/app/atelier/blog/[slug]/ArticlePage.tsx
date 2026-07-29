@@ -96,7 +96,7 @@ export default function ArticlePage({ article }: { article: Article }) {
           </h1>
           <p
             style={{
-              fontSize: "20px",
+              fontSize: "16px",
               color: C.textSec,
               lineHeight: 1.55,
               margin: "0 0 32px",
@@ -227,7 +227,7 @@ export default function ArticlePage({ article }: { article: Article }) {
           padding: "64px 32px",
         }}
       >
-        <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 16px" }}>
           <div
             style={{
               display: "flex",
@@ -311,7 +311,7 @@ export default function ArticlePage({ article }: { article: Article }) {
       <section
         style={{
           background: `linear-gradient(135deg, ${C.accent} 0%, ${article.coverColor} 100%)`,
-          padding: "80px 32px",
+          padding: "48px 16px",
         }}
       >
         <div style={{ maxWidth: "720px", margin: "0 auto", textAlign: "center" }}>
@@ -368,8 +368,8 @@ export default function ArticlePage({ article }: { article: Article }) {
       </section>
 
       {/* RELATED ARTICLES */}
-      <section style={{ background: C.bg, padding: "80px 32px" }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <section style={{ background: C.bg, padding: "48px 16px" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div
             style={{
               fontSize: "11px",
@@ -540,7 +540,7 @@ function BlockRenderer({ block, accent }: { block: ContentBlock; accent: string 
       return (
         <h3
           style={{
-            fontSize: "19px",
+            fontSize: "16px",
             fontWeight: 600,
             color: C.text,
             letterSpacing: "-0.01em",

@@ -49,9 +49,9 @@ export default function AskHarchIQPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -64,14 +64,14 @@ export default function AskHarchIQPage() {
             Ask HarchIQ · Conversational Intelligence
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
             Ask anything. <span style={{ color: C.sage }}>Get reputation intelligence.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "48px",
           }}>
             HarchIQ is your conversational AI for reputation intelligence. Ask about any Moroccan or African
@@ -82,7 +82,7 @@ export default function AskHarchIQPage() {
       </section>
 
       {/* CHAT INTERFACE */}
-      <section style={{ maxWidth: "900px", margin: "0 auto", padding: "60px 32px" }}>
+      <section style={{ maxWidth: "900px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           background: C.surface, border: `1px solid ${C.border}`,
           borderRadius: "16px", boxShadow: C.shadow, overflow: "hidden",
@@ -249,14 +249,14 @@ export default function AskHarchIQPage() {
 
       {/* CAPABILITIES */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             What you can ask
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
             HarchIQ knows your business.
           </h2>
           <div style={{
@@ -302,9 +302,9 @@ export default function AskHarchIQPage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Enterprise access
           </div>

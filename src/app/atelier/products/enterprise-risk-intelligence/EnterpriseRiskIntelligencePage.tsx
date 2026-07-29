@@ -21,11 +21,11 @@ export default function EnterpriseRiskIntelligencePage() {
 
       {/* THE CHALLENGE */}
       <Section>
-        <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px", textAlign: "center" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             The Challenge
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
             Keeping ahead of external risk is a new frontier of competitive advantage.
           </h2>
           <p style={{ fontSize: "17px", color: "#525252", lineHeight: 1.7, marginBottom: "32px" }}>
@@ -67,7 +67,7 @@ export default function EnterpriseRiskIntelligencePage() {
 
       {/* STATS */}
       <Section>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <StatsGrid color={C.red} stats={[
             { value: "100M+", label: "entities and topics labeled per day by HarchIQ" },
             { value: "226+", label: "global markets covered" },
@@ -79,12 +79,12 @@ export default function EnterpriseRiskIntelligencePage() {
 
       {/* 360-DEGREE RISK VIEW */}
       <Section alt>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
               360-Degree Risk View
             </div>
-            <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
+            <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
               Report a 360-degree view of your enterprise risks.
             </h2>
             <p style={{ fontSize: "16px", color: "#525252", lineHeight: 1.65, marginBottom: "24px", maxWidth: "560px" }}>
@@ -156,7 +156,7 @@ export default function EnterpriseRiskIntelligencePage() {
 
       {/* COMPETITOR BENCHMARKS */}
       <Section>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "center" }}>
           <div>
             {/* Competitor risk benchmark visualization */}
             <div style={{ padding: "32px", background: "#FFFFFF", border: "1px solid #E5E5E5", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
@@ -171,7 +171,7 @@ export default function EnterpriseRiskIntelligencePage() {
                 { name: "Industry average", score: 62, color: C.accent },
               ].map(c => (
                 <div key={c.name} style={{ marginBottom: "14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", marginBottom: "4px" }}>
                     <span style={{ color: "#0A0A0A", fontWeight: 600 }}>{c.name}</span>
                     <span style={{ color: c.color, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{c.score}/100</span>
                   </div>
@@ -189,7 +189,7 @@ export default function EnterpriseRiskIntelligencePage() {
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
               Competitor Risk Benchmarks
             </div>
-            <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
+            <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
               Are you being impacted by more external risk than your competitors?
             </h2>
             <p style={{ fontSize: "16px", color: "#525252", lineHeight: 1.65, marginBottom: "24px", maxWidth: "560px" }}>
@@ -209,11 +209,11 @@ export default function EnterpriseRiskIntelligencePage() {
 
       {/* INDIVIDUAL EVENTS */}
       <Section alt>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px", textAlign: "center" }}>
             Individual Events
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px", textAlign: "center" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px", textAlign: "center" }}>
             Discover the individual events impacting your business.
           </h2>
           <p style={{ fontSize: "17px", color: "#525252", lineHeight: 1.65, marginBottom: "48px", textAlign: "center", maxWidth: "760px", marginLeft: "auto", marginRight: "auto" }}>

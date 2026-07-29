@@ -543,7 +543,7 @@ export default function Harch100Page() {
         borderBottom: `1px solid ${C.border}`,
         padding: "48px 16px",
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           {/* Top label */}
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
@@ -574,7 +574,7 @@ export default function Harch100Page() {
           </h1>
 
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "720px", marginBottom: "40px",
           }}>
             Morocco's most-talked about companies ranked by AI-powered reputation intelligence.
@@ -614,8 +614,7 @@ export default function Harch100Page() {
       {/* PILLARS SELECTOR — Innovation / Performance / Purpose */}
       <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-          flexWrap: "wrap", gap: "24px", marginBottom: "32px",
+          display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "flex-end",
         }}>
           <div>
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
@@ -760,7 +759,7 @@ export default function Harch100Page() {
                   <div style={{ width: `${c.performance.weight}%`, background: C.accent }} title={`Performance ${c.performance.weight}%`} />
                   <div style={{ width: `${c.purpose.weight}%`, background: "#B87333" }} title={`Purpose ${c.purpose.weight}%`} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted }}>
                   <span style={{ color: C.sage }}>● Innovation {c.innovation.weight}%</span>
                   <span style={{ color: C.accent }}>● Performance {c.performance.weight}%</span>
                   <span style={{ color: "#B87333" }}>● Purpose {c.purpose.weight}%</span>
@@ -769,10 +768,10 @@ export default function Harch100Page() {
                 {/* Share of voice */}
                 <div style={{
                   marginTop: "20px", paddingTop: "20px", borderTop: `1px solid ${C.borderLight}`,
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                 }}>
                   <div>
-                    <div style={{ fontSize: "20px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
                       {c.shareOfVoice}%
                     </div>
                     <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -780,7 +779,7 @@ export default function Harch100Page() {
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "20px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
                       {c.articles}
                     </div>
                     <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -1042,7 +1041,7 @@ export default function Harch100Page() {
         background: C.text, color: "#FFFFFF",
         padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -1218,7 +1217,7 @@ function ExpandedRow({ company, activePillar }: { company: Company; activePillar
                     {p}
                   </div>
                   <div style={{
-                    fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
                     color: C.text, lineHeight: 1,
                   }}>
                     {pd.score}
@@ -1333,7 +1332,7 @@ function ExpandedRow({ company, activePillar }: { company: Company; activePillar
                 Avg Risk
               </div>
               <div style={{
-                fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
                 color: avgRisk >= 60 ? C.red : avgRisk >= 45 ? "#B87333" : C.sage,
                 lineHeight: 1,
               }}>

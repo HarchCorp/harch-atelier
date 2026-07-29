@@ -62,9 +62,9 @@ export default function InsightsPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -77,14 +77,14 @@ export default function InsightsPage() {
             Insights · Whitepapers, reports, tools
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
             Insights to put reputation first.
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px",
           }}>
             Whitepapers, media intelligence reports, case studies, methodology deep-dives, and interactive tools.
@@ -94,7 +94,7 @@ export default function InsightsPage() {
       </section>
 
       {/* FEATURED */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
           color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -103,7 +103,7 @@ export default function InsightsPage() {
           Featured
         </div>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: "20px",
         }}>
           {FEATURED.map(r => (
@@ -124,7 +124,7 @@ export default function InsightsPage() {
               }}
             >
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                 marginBottom: "20px",
               }}>
                 <span style={{
@@ -154,7 +154,7 @@ export default function InsightsPage() {
                 {r.desc}
               </p>
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                 paddingTop: "20px", borderTop: `1px solid ${C.borderLight}`,
               }}>
                 <span style={{ fontSize: "12px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
@@ -171,10 +171,10 @@ export default function InsightsPage() {
 
       {/* ALL INSIGHTS GRID */}
       <section style={{
-        background: C.surface, padding: "80px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -207,7 +207,7 @@ export default function InsightsPage() {
                 }}
               >
                 <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                   marginBottom: "14px",
                 }}>
                   <span style={{
@@ -236,7 +236,7 @@ export default function InsightsPage() {
                   {r.desc}
                 </p>
                 <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                   paddingTop: "14px", borderTop: `1px solid ${C.borderLight}`,
                 }}>
                   <span style={{ fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
@@ -255,7 +255,7 @@ export default function InsightsPage() {
       {/* NEWSLETTER */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>

@@ -15,7 +15,7 @@ export default function TemplatesGallery() {
 
   return (
     <div style={{ background: "#FAFAFA", minHeight: "100vh", padding: "40px 32px" }}>
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         {/* Header */}
         <div style={{ marginBottom: "48px" }}>
           <div style={{ fontSize: "12px", fontFamily: "'JetBrains Mono', monospace", color: "#4A5D6E", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
@@ -125,7 +125,7 @@ export default function TemplatesGallery() {
         )}
 
         {/* Data flow diagram */}
-        <div style={{ background: "#FFFFFF", border: "1px solid #E5E5E5", borderRadius: "8px", padding: "40px" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid #E5E5E5", borderRadius: "8px", padding: "24px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#0A0A0A", marginBottom: "32px" }}>
             How data flows into templates
           </h2>
@@ -146,7 +146,7 @@ export default function TemplatesGallery() {
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#0A0A0A" }}>{step.label}</div>
                   <div style={{ fontSize: "12px", color: "#71717A", marginTop: "4px" }}>{step.desc}</div>
                 </div>
-                {i < 4 && <div style={{ fontSize: "20px", color: "#4A5D6E" }}>→</div>}
+                {i < 4 && <div style={{ fontSize: "16px", color: "#4A5D6E" }}>→</div>}
               </div>
             ))}
           </div>

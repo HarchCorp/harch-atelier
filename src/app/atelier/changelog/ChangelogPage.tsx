@@ -192,9 +192,9 @@ export default function ChangelogPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -207,14 +207,14 @@ export default function ChangelogPage() {
             Changelog · Product updates
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px",
           }}>
             What's new at <span style={{ color: C.sage }}>Harch Atelier.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "640px",
           }}>
             Every update to the Harch Atelier platform — new features, improvements, bug fixes, and breaking changes.
@@ -224,7 +224,7 @@ export default function ChangelogPage() {
       </section>
 
       {/* CHANGELOG ENTRIES */}
-      <section style={{ maxWidth: "900px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "900px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "48px" }}>
           {CHANGELOG.map((entry, i) => {
             const typeColor = TYPE_COLORS[entry.type];
@@ -286,7 +286,7 @@ export default function ChangelogPage() {
 
                     {/* Title */}
                     <h2 style={{
-                      fontSize: "20px", fontWeight: 700, color: C.text,
+                      fontSize: "16px", fontWeight: 700, color: C.text,
                       letterSpacing: "-0.02em", margin: "0 0 20px",
                     }}>
                       {entry.title}
@@ -331,7 +331,7 @@ export default function ChangelogPage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "80px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>

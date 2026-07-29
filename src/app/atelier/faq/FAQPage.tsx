@@ -434,7 +434,7 @@ function ChartSentimentSplit() {
         <div style={{ width: "22%", background: C.neutral }} />
         <div style={{ width: "10%", background: C.red }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontFamily: FONT.mono }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "11px", fontFamily: FONT.mono }}>
         <span style={{ color: C.sage }}>Positive · 68%</span>
         <span style={{ color: C.neutral }}>Neutral · 22%</span>
         <span style={{ color: C.red }}>Negative · 10%</span>
@@ -482,7 +482,7 @@ function ChartSentimentScale() {
         <div style={{ position: "absolute", left: "30%", top: 0, bottom: 0, width: "1px", background: C.textPrimary }} />
         <div style={{ position: "absolute", left: "70%", top: 0, bottom: 0, width: "1px", background: C.textPrimary }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted }}>
         <span style={{ color: C.red }}>-1.0</span>
         <span>-0.3</span>
         <span>+0.3</span>
@@ -536,7 +536,7 @@ function ChartAlertLatency() {
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: C.sageBg, border: `1px solid rgba(74,123,95,0.2)`, borderRadius: "4px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", padding: "10px 14px", background: C.sageBg, border: `1px solid rgba(74,123,95,0.2)`, borderRadius: "4px" }}>
         <span style={{ fontSize: "12px", color: C.textSecondary }}>Total latency</span>
         <span style={{ fontSize: "14px", fontFamily: FONT.mono, fontWeight: 700, color: C.sage }}>&lt; 5 min</span>
       </div>
@@ -604,7 +604,7 @@ function ChartModelStack() {
     { name: "fastText", role: "Language", color: C.red },
   ];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "8px" }}>
       {models.map((m) => (
         <div key={m.name} style={{ padding: "10px", background: C.surface, border: `1px solid ${C.borderLight}`, borderRadius: "4px", borderLeft: `3px solid ${m.color}` }}>
           <div style={{ fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>{m.role}</div>
@@ -717,7 +717,7 @@ function Hero({ search, setSearch }: { search: string; setSearch: (v: string) =>
       <div aria-hidden style={{ position: "absolute", top: "-200px", right: "-100px", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", position: "relative", zIndex: 1, textAlign: "center" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1, textAlign: "center" }}>
         <Eyebrow color={C.sage}>FAQ · 12 questions</Eyebrow>
         <h1
           style={{
@@ -735,7 +735,7 @@ function Hero({ search, setSearch }: { search: string; setSearch: (v: string) =>
         </h1>
         <p
           style={{
-            fontSize: "19px",
+            fontSize: "16px",
             color: C.textSecondary,
             lineHeight: 1.55,
             maxWidth: "620px",
@@ -812,7 +812,7 @@ function CategoryFilter({
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <div
           className="faq-chips"
           style={{
@@ -879,7 +879,7 @@ function FAQList({ faqs, openId, setOpenId }: { faqs: FAQ[]; openId: number | nu
         padding: "48px 32px 80px",
       }}
     >
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
         {faqs.length === 0 ? (
           <div
             style={{
@@ -1000,7 +1000,7 @@ function StillHaveQuestions() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "80px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >

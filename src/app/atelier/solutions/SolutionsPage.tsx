@@ -146,9 +146,9 @@ export default function SolutionsPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -165,7 +165,7 @@ export default function SolutionsPage() {
           </div>
 
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
@@ -178,7 +178,7 @@ export default function SolutionsPage() {
           </h1>
 
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Our PR solution offers unparalleled insights based on the world's most valuable earned media.
@@ -188,7 +188,7 @@ export default function SolutionsPage() {
 
           {/* Stats row */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -216,7 +216,7 @@ export default function SolutionsPage() {
       </section>
 
       {/* SOLUTIONS — One per section */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         {SOLUTIONS.map((sol, i) => (
           <SolutionSection key={sol.id} solution={sol} index={i + 1} />
         ))}
@@ -225,9 +225,9 @@ export default function SolutionsPage() {
       {/* STRATEGIC QUESTIONS — Signal AI whitepaper style */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px",
+        padding: "48px 16px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -289,9 +289,9 @@ export default function SolutionsPage() {
 
       {/* CTA */}
       <section style={{
-        background: C.bg, padding: "100px 32px", textAlign: "center",
+        background: C.bg, padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -339,7 +339,7 @@ function SolutionSection({ solution, index }: { solution: Solution; index: numbe
   const isReverse = index % 2 === 0;
   return (
     <div style={{
-      display: "grid", gridTemplateColumns: "1fr 1fr",
+      display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
       gap: "64px", alignItems: "center",
       padding: "60px 0", borderBottom: `1px solid ${C.border}`,
       direction: isReverse ? "rtl" : "ltr",
@@ -355,7 +355,7 @@ function SolutionSection({ solution, index }: { solution: Solution; index: numbe
             background: `${solution.color}15`,
             color: solution.color,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "20px", fontWeight: 700,
+            fontSize: "16px", fontWeight: 700,
             fontFamily: "'JetBrains Mono', monospace",
           }}>
             {solution.icon}

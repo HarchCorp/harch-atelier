@@ -185,7 +185,7 @@ export default function ProductsPage() {
           </div>
 
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
@@ -198,7 +198,7 @@ export default function ProductsPage() {
           </h1>
 
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Five integrated products that work standalone or together. Start with the platform,
@@ -245,7 +245,7 @@ export default function ProductsPage() {
           Our product suite
         </div>
         <h2 style={{
-          fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700,
+          fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700,
           color: C.text, letterSpacing: "-0.03em", margin: "0 0 60px",
         }}>
           Five products. One intelligence engine.
@@ -261,7 +261,7 @@ export default function ProductsPage() {
         background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center", padding: "0 16px" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto",  textAlign: "center", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.bg,
@@ -278,7 +278,7 @@ export default function ProductsPage() {
           </div>
 
           <h2 style={{
-            fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700,
+            fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700,
             color: C.text, letterSpacing: "-0.03em", margin: "0 0 28px",
           }}>
             No fake testimonials. Just a real product being built.

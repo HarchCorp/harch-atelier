@@ -290,7 +290,7 @@ export default function NewsPage() {
         borderBottom: `1px solid ${C.border}`,
         padding: "100px 32px 72px",
       }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 16px" }}>
           {/* Live badge */}
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
@@ -314,7 +314,7 @@ export default function NewsPage() {
           </div>
 
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.02, color: C.text,
             margin: "0 0 24px", maxWidth: "1000px",
             opacity: animateIn ? 1 : 0,
@@ -329,7 +329,7 @@ export default function NewsPage() {
           </h1>
 
           <p style={{
-            fontSize: "19px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "780px", marginBottom: "40px",
             opacity: animateIn ? 1 : 0,
             transition: "opacity 0.6s ease 0.1s",
@@ -387,8 +387,7 @@ export default function NewsPage() {
         borderBottom: `1px solid ${C.border}`,
       }}>
         <div style={{
-          maxWidth: "1200px", margin: "0 auto",
-          padding: "16px 32px",
+          maxWidth: "1200px", margin: "0 auto", padding: "16px 32px",
           display: "grid",
           gridTemplateColumns: "minmax(200px, 2fr) repeat(5, minmax(120px, 1fr))",
           gap: "12px", alignItems: "end",
@@ -427,7 +426,7 @@ export default function NewsPage() {
         background: C.bg,
       }}>
         <div style={{
-          maxWidth: "1200px", margin: "0 auto",
+          maxWidth: "1200px", margin: "0 auto", padding: "0 16px",
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: "20px",
@@ -458,7 +457,7 @@ export default function NewsPage() {
             <div style={{
               marginTop: "20px", paddingTop: "16px",
               borderTop: `1px solid ${C.borderLight}`,
-              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px",
+              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "12px",
             }}>
               {[
                 { label: "Positive", val: positiveCount, color: C.sage },
@@ -561,12 +560,10 @@ export default function NewsPage() {
         padding: "48px 32px 80px",
         background: C.bg,
       }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 16px" }}>
           {/* Feed header */}
           <div style={{
-            display: "flex", justifyContent: "space-between",
-            alignItems: "center", marginBottom: "24px",
-            flexWrap: "wrap", gap: "12px",
+            display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "24px",
           }}>
             <div>
               <div style={{
@@ -601,7 +598,7 @@ export default function NewsPage() {
           {/* Article list */}
           {filtered.length === 0 ? (
             <div style={{
-              padding: "80px 32px", textAlign: "center",
+              padding: "48px 16px", textAlign: "center",
               background: C.surface, border: `1px solid ${C.border}`,
               borderRadius: "12px",
             }}>
@@ -620,7 +617,7 @@ export default function NewsPage() {
           ) : (
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
               gap: "16px",
             }}>
               {filtered.map((a, idx) => (
@@ -785,7 +782,7 @@ export default function NewsPage() {
         borderBottom: `1px solid ${C.border}`,
       }}>
         <div style={{
-          maxWidth: "900px", margin: "0 auto",
+          maxWidth: "900px", margin: "0 auto", padding: "0 16px",
           display: "grid", gridTemplateColumns: "auto 1fr",
           gap: "40px", alignItems: "start",
         }}>
@@ -848,7 +845,7 @@ export default function NewsPage() {
           pointerEvents: "none",
         }} />
         <div style={{
-          maxWidth: "900px", margin: "0 auto", textAlign: "center",
+          maxWidth: "900px", margin: "0 auto", padding: "0 16px", textAlign: "center",
           position: "relative", zIndex: 1,
         }}>
           <div style={{

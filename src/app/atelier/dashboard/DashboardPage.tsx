@@ -240,7 +240,7 @@ export default function DashboardPage() {
             </div>
 
             {/* KPI cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "40px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "16px", marginBottom: "40px" }}>
               <KPICard label="Articles" value={data.reputation.mediaMetrics.totalArticles} />
               <KPICard label="Mentions" value={data.reputation.mediaMetrics.totalMentions} />
               <KPICard label="Sources" value={data.reputation.mediaMetrics.uniqueSources} />
@@ -263,7 +263,7 @@ export default function DashboardPage() {
 
             {/* AI Visibility */}
             <Card title="AI Engine Visibility">
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "16px" }}>
                 {[
                   { name: "ChatGPT", data: data.reputation.aiMetrics.chatgpt },
                   { name: "Perplexity", data: data.reputation.aiMetrics.perplexity },
@@ -301,7 +301,7 @@ export default function DashboardPage() {
                 <div>
                   {data.reputation.risk.activeRisks.slice(0, 3).map((risk: any, i: number) => (
                     <div key={i} style={{ padding: "12px 16px", background: "rgba(160,82,75,0.05)", borderRadius: "6px", marginBottom: "8px", border: `1px solid rgba(160,82,75,0.15)` }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "4px" }}>
                         <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{risk.topic}</span>
                         <span style={{ fontSize: "14px", fontWeight: 700, color: C.red, fontFamily: "'JetBrains Mono', monospace" }}>{risk.severity}/100</span>
                       </div>
@@ -372,7 +372,7 @@ export default function DashboardPage() {
                       display: "block", padding: "14px 16px", background: C.surfaceAlt,
                       borderRadius: "8px", border: `1px solid ${C.border}`, textDecoration: "none",
                     }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap",  alignItems: "baseline", gap: "12px" }}>
                         <span style={{ fontSize: "14px", fontWeight: 600, color: C.text, flex: 1 }}>{article.title}</span>
                         <span style={{
                           fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px",
@@ -443,7 +443,7 @@ function ScoreRing({ score }: { score: number }) {
 function ScoreComponent({ label, value, weight }: { label: string; value: number; weight: string }) {
   return (
     <div>
-      <div style={{ fontSize: "20px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+      <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
       <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>{label} ({weight})</div>
     </div>
   );
@@ -555,7 +555,7 @@ function AgentIntelPanel() {
       </div>
 
       {/* Agent status row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 12, marginBottom: 24 }}>
         {agents.map((a: any) => (
           <div key={a.agentName} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>

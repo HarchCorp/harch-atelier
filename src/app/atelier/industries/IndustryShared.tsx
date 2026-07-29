@@ -126,7 +126,7 @@ const cardStyle: React.CSSProperties = {
 const sectionStyle: React.CSSProperties = {
   maxWidth: "1280px",
   margin: "0 auto",
-  padding: "80px 32px",
+  padding: "48px 16px",
   borderTop: `1px solid ${C.border}`,
 };
 
@@ -179,9 +179,9 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -194,7 +194,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
             Industry Profile · {D.slug}
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 24px", maxWidth: "900px",
           }}>
@@ -297,7 +297,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
                 return (
                   <div key={i}>
                     <div style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                      display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "baseline",
                       marginBottom: "6px",
                     }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
@@ -481,7 +481,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
         </p>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: "20px",
         }}>
           <div style={cardStyle}>
@@ -545,7 +545,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
           <div style={{
             marginTop: "24px", paddingTop: "20px",
             borderTop: `1px solid ${C.borderLight}`,
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "16px",
           }}>
             {[
@@ -583,7 +583,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
             {D.pillars.map((p, i) => (
               <div key={i}>
                 <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "baseline",
                   marginBottom: "8px",
                 }}>
                   <span style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>{p.company}</span>
@@ -598,7 +598,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
           <div style={{
             marginTop: "28px", paddingTop: "20px",
             borderTop: `1px solid ${C.borderLight}`,
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "16px", fontSize: "12px", color: C.textSec, lineHeight: 1.55,
           }}>
             <div><strong style={{ color: C.accent }}>Innovation</strong> — patents, R&amp;D spend, digital transformation narrative, AI visibility.</div>
@@ -723,7 +723,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
           <div style={{
             marginTop: "24px", paddingTop: "20px",
             borderTop: `1px solid ${C.borderLight}`,
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "20px",
           }}>
             {[
@@ -749,8 +749,7 @@ export function IndustryPageLayout({ data }: { data: IndustryData }) {
 
       {/* 14. CTA ────────────────────────────────────────────────── */}
       <section style={{
-        maxWidth: "1280px", margin: "0 auto",
-        padding: "80px 32px 120px",
+        maxWidth: "1280px", margin: "0 auto", padding: "48px 16px 80px",
         borderTop: `1px solid ${C.border}`,
       }}>
         <div style={{

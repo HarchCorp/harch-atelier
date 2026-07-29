@@ -1227,7 +1227,7 @@ export default function IntelligencePage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: "20px",
+                fontSize: "16px",
                 fontWeight: 600,
                 color: C.text,
                 letterSpacing: "-0.02em",

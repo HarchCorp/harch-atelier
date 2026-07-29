@@ -108,9 +108,9 @@ export default function ResourcesPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -123,7 +123,7 @@ export default function ResourcesPage() {
             Resources · Whitepapers, reports, tools
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
@@ -134,7 +134,7 @@ export default function ResourcesPage() {
             }}>reputation first.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Whitepapers, media intelligence reports, case studies, methodology deep-dives, and interactive
@@ -144,7 +144,7 @@ export default function ResourcesPage() {
       </section>
 
       {/* RESOURCES GRID */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: "20px",
@@ -167,7 +167,7 @@ export default function ResourcesPage() {
               }}
             >
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                 marginBottom: "16px",
               }}>
                 <span style={{
@@ -197,7 +197,7 @@ export default function ResourcesPage() {
                 {r.desc}
               </p>
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                 paddingTop: "16px", borderTop: `1px solid ${C.borderLight}`,
               }}>
                 <span style={{
@@ -221,7 +221,7 @@ export default function ResourcesPage() {
       {/* NEWSLETTER CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>

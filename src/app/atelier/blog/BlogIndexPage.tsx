@@ -66,7 +66,7 @@ export default function BlogIndexPage() {
           padding: "100px 32px 72px",
         }}
       >
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div
             style={{
               display: "inline-flex",
@@ -97,7 +97,7 @@ export default function BlogIndexPage() {
           </div>
           <h1
             style={{
-              fontSize: "clamp(40px, 6vw, 68px)",
+              fontSize: "clamp(32px, 8vw, 48px)",
               fontWeight: 800,
               letterSpacing: "-0.04em",
               lineHeight: 1.0,
@@ -110,7 +110,7 @@ export default function BlogIndexPage() {
           </h1>
           <p
             style={{
-              fontSize: "20px",
+              fontSize: "16px",
               color: C.textSec,
               lineHeight: 1.55,
               maxWidth: "760px",
@@ -204,7 +204,7 @@ export default function BlogIndexPage() {
             style={{
               minHeight: "320px",
               background: `linear-gradient(135deg, ${featured.coverColor} 0%, ${C.accent} 100%)`,
-              padding: "40px",
+              padding: "24px",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -270,7 +270,7 @@ export default function BlogIndexPage() {
           </div>
 
           {/* Text side */}
-          <div style={{ padding: "40px", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "24px", display: "flex", flexDirection: "column" }}>
             <h2
               style={{
                 fontSize: "clamp(24px, 3vw, 32px)",
@@ -522,7 +522,7 @@ export default function BlogIndexPage() {
           background: C.surface,
           borderTop: `1px solid ${C.border}`,
           borderBottom: `1px solid ${C.border}`,
-          padding: "80px 32px",
+          padding: "48px 16px",
         }}
       >
         <div

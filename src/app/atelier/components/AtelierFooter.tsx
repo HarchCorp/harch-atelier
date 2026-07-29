@@ -2,18 +2,19 @@
 
 import BrandBadge from "@/components/BrandBadge";
 import { ATELIER_FOOTER_LINKS, ATELIER_COUNTRIES } from "./tokens";
+import { C } from "./tokens";
 
-// ─── ATELIER FOOTER — LIGHT THEME ───────────────────────────────
-// White background (#FFFFFF), light borders (#E5E5E5), text in #525252,
-// link hover #0A0A0A, sage country code badges on light cards, legal in #71717A.
+// ─── ATELIER FOOTER — DESIGN SYSTEM V2 (light, mobile-first) ────
+// White background, neutral borders, stone-500 accent, Space Mono.
+// Per DS V2: padding 48px 16px on mobile, 64px 32px on desktop.
 
 export function AtelierFooter() {
   return (
     <footer
       style={{
-        borderTop: "1px solid #E5E5E5",
-        background: "#FFFFFF",
-        padding: "64px 32px 32px",
+        borderTop: `1px solid ${C.border}`,
+        background: C.bg,
+        padding: "48px 16px 24px",
         position: "relative",
         zIndex: 1,
       }}
@@ -23,22 +24,23 @@ export function AtelierFooter() {
           maxWidth: "1280px",
           margin: "0 auto",
           display: "grid",
-          gridTemplateColumns: "1fr auto",
-          gap: "48px",
-          marginBottom: "48px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+          gap: "32px",
+          marginBottom: "32px",
           alignItems: "start",
         }}
       >
         {/* Brand block */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <BrandBadge subsidiary="Atelier" href="/atelier" size="md" theme="light" accentColor="#4A5D6E" />
+          <BrandBadge subsidiary="Atelier" href="/atelier" size="md" theme="light" accentColor={C.accent} />
           <p
             style={{
               marginTop: "8px",
-              fontSize: "14px",
-              color: "#71717A",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "13px",
+              color: C.textMuted,
+              fontFamily: C.fontMono,
               letterSpacing: "0.04em",
+              lineHeight: 1.5,
             }}
           >
             AI Reputation Intelligence — Afrique & monde francophone.
@@ -50,18 +52,19 @@ export function AtelierFooter() {
               alignItems: "center",
               marginTop: "12px",
               fontSize: "13px",
+              flexWrap: "wrap",
             }}
           >
             <a
               href="mailto:atelier@harchcorp.com"
-              style={{ color: "#525252", textDecoration: "none" }}
+              style={{ color: C.textBody, textDecoration: "none" }}
             >
               atelier@harchcorp.com
             </a>
-            <span style={{ color: "#A1A1AA" }}>·</span>
+            <span style={{ color: C.textMuted }}>·</span>
             <a
               href="tel:+212684440682"
-              style={{ color: "#525252", textDecoration: "none" }}
+              style={{ color: C.textBody, textDecoration: "none" }}
             >
               +212 684 440 682
             </a>
@@ -71,7 +74,7 @@ export function AtelierFooter() {
             style={{
               marginTop: "4px",
               fontSize: "13px",
-              color: "#4A5D6E",
+              color: C.accent,
               textDecoration: "none",
             }}
           >
@@ -80,17 +83,17 @@ export function AtelierFooter() {
         </div>
 
         {/* Link columns */}
-        <div style={{ display: "flex", gap: "48px" }}>
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
           {Object.entries(ATELIER_FOOTER_LINKS).map(([key, links]) => (
             <div
               key={key}
-              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+              style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "120px" }}
             >
               <div
                 style={{
                   fontSize: "11px",
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: "#71717A",
+                  fontFamily: C.fontMono,
+                  color: C.textMuted,
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
                   marginBottom: "8px",
@@ -104,15 +107,15 @@ export function AtelierFooter() {
                   href={link.href}
                   style={{
                     fontSize: "13px",
-                    color: "#525252",
+                    color: C.textBody,
                     textDecoration: "none",
                     transition: "color 0.2s",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "#0A0A0A")
+                    (e.currentTarget.style.color = C.text)
                   }
                   onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = "#525252")
+                    (e.currentTarget.style.color = C.textBody)
                   }
                 >
                   {link.label}
@@ -128,16 +131,16 @@ export function AtelierFooter() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
-          padding: "40px 0",
-          borderTop: "1px solid #E5E5E5",
-          marginTop: "40px",
+          padding: "32px 0",
+          borderTop: `1px solid ${C.border}`,
+          marginTop: "32px",
         }}
       >
         <div
           style={{
             fontSize: "11px",
-            fontFamily: "'JetBrains Mono', monospace",
-            color: "#71717A",
+            fontFamily: C.fontMono,
+            color: C.textMuted,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
             marginBottom: "16px",
@@ -148,8 +151,8 @@ export function AtelierFooter() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "16px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
+            gap: "12px",
           }}
         >
           {ATELIER_COUNTRIES.map((c) => (
@@ -158,10 +161,10 @@ export function AtelierFooter() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
-                padding: "12px 16px",
-                background: "#FAFAFA",
-                border: "1px solid #E5E5E5",
+                gap: "10px",
+                padding: "10px 12px",
+                background: C.bgSubtle,
+                border: `1px solid ${C.border}`,
                 borderRadius: "4px",
               }}
             >
@@ -169,23 +172,27 @@ export function AtelierFooter() {
                 style={{
                   fontSize: "11px",
                   fontWeight: 700,
-                  fontFamily: "'JetBrains Mono', monospace",
+                  fontFamily: C.fontMono,
                   color: "#FFFFFF",
                   padding: "4px 8px",
-                  background: "#4A7B5F",
-                  border: "1px solid #4A7B5F",
+                  background: C.accent,
+                  border: `1px solid ${C.accent}`,
                   borderRadius: "2px",
                   letterSpacing: "0.08em",
+                  flexShrink: 0,
                 }}
               >
                 {c.code}
               </span>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div
                   style={{
                     fontSize: "13px",
                     fontWeight: 600,
-                    color: "#0A0A0A",
+                    color: C.text,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {c.name}
@@ -193,8 +200,11 @@ export function AtelierFooter() {
                 <div
                   style={{
                     fontSize: "11px",
-                    color: "#71717A",
-                    fontFamily: "'JetBrains Mono', monospace",
+                    color: C.textMuted,
+                    fontFamily: C.fontMono,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {c.cities}
@@ -210,29 +220,29 @@ export function AtelierFooter() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
-          paddingTop: "32px",
-          borderTop: "1px solid #E5E5E5",
+          paddingTop: "24px",
+          borderTop: `1px solid ${C.border}`,
           display: "flex",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "16px",
+          gap: "12px",
         }}
       >
         <div
           style={{
             fontSize: "12px",
-            color: "#71717A",
-            fontFamily: "'JetBrains Mono', monospace",
+            color: C.textMuted,
+            fontFamily: C.fontMono,
             letterSpacing: "0.04em",
           }}
         >
-          Building in Public, depuis 2024 · Casablanca, Maroc
+          Building in Public, depuis 2026 · Casablanca, Maroc
         </div>
         <div
           style={{
             fontSize: "12px",
-            color: "#71717A",
-            fontFamily: "'JetBrains Mono', monospace",
+            color: C.textMuted,
+            fontFamily: C.fontMono,
             letterSpacing: "0.04em",
           }}
         >

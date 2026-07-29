@@ -29,9 +29,9 @@ export default function DecisionAugmentationPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -44,7 +44,7 @@ export default function DecisionAugmentationPage() {
             The new era of reputation-based decision making
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "980px",
           }}>
@@ -55,7 +55,7 @@ export default function DecisionAugmentationPage() {
             }}>Comms leaders.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             It has never been more important for Comms leaders to make the right decisions and make them confidently.
@@ -66,7 +66,7 @@ export default function DecisionAugmentationPage() {
 
           {/* Stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -90,8 +90,8 @@ export default function DecisionAugmentationPage() {
       </section>
 
       {/* THE PROBLEM */}
-      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "100px 32px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
               The problem
@@ -118,7 +118,7 @@ export default function DecisionAugmentationPage() {
           </div>
           <div style={{
             background: C.surface, border: `1px solid ${C.border}`,
-            borderRadius: "16px", padding: "40px", boxShadow: C.shadow,
+            borderRadius: "16px", padding: "24px", boxShadow: C.shadow,
             position: "relative",
           }}>
             <div style={{
@@ -147,9 +147,9 @@ export default function DecisionAugmentationPage() {
 
       {/* THE SHIFT — reputation over margin */}
       <section style={{
-        background: C.text, color: "#FFFFFF", padding: "100px 32px",
+        background: C.text, color: "#FFFFFF", padding: "48px 16px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             The shift
           </div>
@@ -157,11 +157,11 @@ export default function DecisionAugmentationPage() {
             Business leaders prioritize reputation over profit margin.
           </h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "center" }}>
             <div>
               {/* Bar chart 85% vs 15% */}
               <div style={{ marginBottom: "32px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "8px" }}>
                   <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>Reputation over margin</span>
                   <span style={{ fontSize: "14px", fontWeight: 700, color: C.sageBright, fontFamily: "'JetBrains Mono', monospace" }}>85%</span>
                 </div>
@@ -170,7 +170,7 @@ export default function DecisionAugmentationPage() {
                 </div>
               </div>
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "8px" }}>
                   <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>Margin over reputation</span>
                   <span style={{ fontSize: "14px", fontWeight: 700, color: "rgba(255,255,255,0.5)", fontFamily: "'JetBrains Mono', monospace" }}>15%</span>
                 </div>
@@ -194,7 +194,7 @@ export default function DecisionAugmentationPage() {
       </section>
 
       {/* THE SOLUTION — HarchIQ */}
-      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "100px 32px" }}>
+      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
           The solution · Meet HarchIQ
         </div>
@@ -253,12 +253,12 @@ export default function DecisionAugmentationPage() {
                 width: "44px", height: "44px", borderRadius: "10px",
                 background: `${p.color}15`, color: p.color,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "20px", fontWeight: 700, marginBottom: "20px",
+                fontSize: "16px", fontWeight: 700, marginBottom: "20px",
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 {p.icon}
               </div>
-              <h3 style={{ fontSize: "20px", fontWeight: 700, color: C.text, marginBottom: "16px", letterSpacing: "-0.02em" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.text, marginBottom: "16px", letterSpacing: "-0.02em" }}>
                 {p.title}
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -276,14 +276,14 @@ export default function DecisionAugmentationPage() {
 
       {/* USE CASE — EY-style trust score */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             In practice · Case study
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 24px", maxWidth: "800px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 24px", maxWidth: "800px" }}>
             Building a trust score for a Big 4 audit firm.
           </h2>
           <p style={{ fontSize: "16px", color: C.textSec, lineHeight: 1.65, marginBottom: "48px", maxWidth: "760px" }}>
@@ -325,9 +325,9 @@ export default function DecisionAugmentationPage() {
 
       {/* FUTURE-PROOFING */}
       <section style={{
-        background: C.bg, padding: "100px 32px", textAlign: "center",
+        background: C.bg, padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Future-proofing the Comms industry
           </div>

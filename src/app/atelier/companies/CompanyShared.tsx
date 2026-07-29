@@ -148,7 +148,7 @@ const cardStyle: React.CSSProperties = {
 const sectionStyle: React.CSSProperties = {
   maxWidth: "1280px",
   margin: "0 auto",
-  padding: "80px 32px",
+  padding: "48px 16px",
   borderTop: `1px solid ${C.border}`,
 };
 
@@ -215,7 +215,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
         borderBottom: `1px solid ${C.border}`,
         padding: "80px 32px 64px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "flex", alignItems: "center", gap: "10px",
             marginBottom: "32px", fontSize: "12px",
@@ -319,11 +319,11 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
             <div style={{
               marginTop: "16px", padding: "14px 16px",
               background: C.surfaceAlt, borderRadius: "8px",
-              display: "flex", justifyContent: "space-between", alignItems: "center",
+              display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
             }}>
               <div>
                 <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Previous month</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text }}>{D.prevScore}</div>
+                <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text }}>{D.prevScore}</div>
               </div>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: "6px",
@@ -408,7 +408,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
 
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: "20px",
         }}>
           <div style={cardStyle}>
@@ -554,7 +554,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
           <div style={{
             marginTop: "24px", paddingTop: "20px",
             borderTop: `1px solid ${C.borderLight}`,
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "16px",
           }}>
             <TrendStat label="4-quarter delta" value={`${D.quarterly.series[0].points[3] - D.quarterly.series[0].points[0] >= 0 ? "+" : ""}${D.quarterly.series[0].points[3] - D.quarterly.series[0].points[0]} pts`} color={D.quarterly.series[0].points[3] >= D.quarterly.series[0].points[0] ? C.sage : C.red} />
@@ -591,7 +591,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
                 padding: "28px",
               }}>
                 <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "flex-start",
                   marginBottom: "16px",
                 }}>
                   <span style={{
@@ -622,19 +622,19 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
                   borderTop: `1px solid ${C.borderLight}`,
                 }}>
                   <div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text, lineHeight: 1 }}>
+                    <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text, lineHeight: 1 }}>
                       {n.strength}
                     </div>
                     <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: "4px" }}>Strength</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: sentColor, lineHeight: 1 }}>
+                    <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: sentColor, lineHeight: 1 }}>
                       {n.sentiment > 0 ? "+" : ""}{n.sentiment.toFixed(2)}
                     </div>
                     <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: "4px" }}>Sentiment</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text, lineHeight: 1 }}>
+                    <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text, lineHeight: 1 }}>
                       {n.articles}
                     </div>
                     <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: "4px" }}>Articles</div>
@@ -714,7 +714,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
           <div style={{
             marginTop: "24px", paddingTop: "20px",
             borderTop: `1px solid ${C.borderLight}`,
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "16px",
           }}>
             {[
@@ -759,7 +759,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
                 borderTop: `3px solid ${eng.cited ? C.sage : C.red}`,
               }}>
                 <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
                   marginBottom: "16px",
                 }}>
                   <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: "'Inter', sans-serif" }}>
@@ -837,7 +837,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
         </p>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: "20px",
         }}>
           <div style={cardStyle}>
@@ -937,7 +937,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
                     </div>
                   </div>
                   <div style={{ textAlign: "right", minWidth: "80px" }}>
-                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text, lineHeight: 1 }}>
+                    <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: C.text, lineHeight: 1 }}>
                       {a.relevance}
                     </div>
                     <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: "4px" }}>
@@ -1042,7 +1042,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
           <div style={{
             paddingTop: "20px",
             borderTop: `1px solid ${C.borderLight}`,
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "20px",
           }}>
             {[
@@ -1070,8 +1070,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
 
       {/* 14. CTA ────────────────────────────────────────────────── */}
       <section style={{
-        maxWidth: "1280px", margin: "0 auto",
-        padding: "80px 32px 120px",
+        maxWidth: "1280px", margin: "0 auto", padding: "48px 16px 80px",
         borderTop: `1px solid ${C.border}`,
       }}>
         <div style={{
@@ -1185,7 +1184,7 @@ function PillarRow({ label, weight, score, color }: { label: string; weight: num
 function PillarStatCard({ label, weight, score, color }: { label: string; weight: number; score: number; color: string }) {
   return (
     <div style={cardStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "baseline", marginBottom: "12px" }}>
         <span style={{ fontSize: "13px", fontWeight: 700, color: C.text, fontFamily: "'Inter', sans-serif" }}>{label}</span>
         <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted }}>{weight}% weight</span>
       </div>
@@ -1203,7 +1202,7 @@ function TrendStat({ label, value, color }: { label: string; value: string; colo
   return (
     <div>
       <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>{label}</div>
-      <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color, lineHeight: 1 }}>{value}</div>
     </div>
   );
 }

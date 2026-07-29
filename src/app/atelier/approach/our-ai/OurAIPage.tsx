@@ -73,7 +73,7 @@ export default function OurAIPage() {
       <Section alt>
         <SectionHeader label="Trainable" title="HarchIQ learns your business." />
         <div style={{
-          padding: "40px", background: "#FFFFFF",
+          padding: "24px", background: "#FFFFFF",
           border: "1px solid #E5E5E5", borderRadius: "16px",
           boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
         }}>

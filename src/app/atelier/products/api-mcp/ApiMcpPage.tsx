@@ -181,7 +181,7 @@ export default function ApiMcpPage() {
 
       {/* STATS */}
       <Section>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <StatsGrid color={C.accent} stats={[
             { value: "10K", label: "API calls / day — Pro plan" },
             { value: "100K", label: "API calls / day — Enterprise" },
@@ -303,7 +303,7 @@ export default function ApiMcpPage() {
       {/* WEBHOOKS */}
       <Section alt>
         <SectionHeader label="Webhooks" title="Get pushed when reputation moves." />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "48px", alignItems: "start" }}>
           <div>
             <p style={{ fontSize: "16px", color: C.textSec, lineHeight: 1.65, marginBottom: "28px", maxWidth: "560px" }}>
               Subscribe to four event types. We POST JSON to your endpoint within 60 seconds of detection, retry with exponential backoff for 24 hours, and sign every payload with an HMAC-SHA256 header.
@@ -401,7 +401,7 @@ export default function ApiMcpPage() {
 
       {/* MCP SECTION */}
       <Section alt>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "start" }}>
           <div>
             <div style={{
               fontSize: "11px",
@@ -414,7 +414,7 @@ export default function ApiMcpPage() {
               Model Context Protocol
             </div>
             <h2 style={{
-              fontSize: "clamp(32px, 4vw, 44px)",
+              fontSize: "clamp(24px, 6vw, 36px)",
               fontWeight: 700,
               color: C.text,
               letterSpacing: "-0.03em",
@@ -474,7 +474,7 @@ export default function ApiMcpPage() {
                   background: `${C.accent}15`,
                   color: C.accent,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "20px", fontWeight: 800,
+                  fontSize: "16px", fontWeight: 800,
                   fontFamily: "'JetBrains Mono', monospace",
                 }}>
                   {client.icon}
@@ -547,7 +547,7 @@ export default function ApiMcpPage() {
 
       {/* AUTHENTICATION */}
       <Section alt>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "48px", alignItems: "start" }}>
           <div>
             <div style={{
               fontSize: "11px",

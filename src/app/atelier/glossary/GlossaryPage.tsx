@@ -547,7 +547,7 @@ function Hero({ search, setSearch }: { search: string; setSearch: (v: string) =>
         </h1>
         <p
           style={{
-            fontSize: "19px",
+            fontSize: "16px",
             color: C.textSecondary,
             lineHeight: 1.55,
             maxWidth: "640px",
@@ -687,7 +687,7 @@ function CategoryFilter({
         borderBottom: `1px solid ${C.borderLight}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <div
           className="glossary-chips"
           style={{
@@ -865,7 +865,7 @@ function TermCard({ term }: { term: GlossaryTerm }) {
 function TermGrid({ terms }: { terms: GlossaryTerm[] }) {
   return (
     <section style={{ background: C.bg, padding: "48px 32px 80px" }}>
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         {terms.length === 0 ? (
           <div
             style={{
@@ -930,7 +930,7 @@ function CTA() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "80px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >

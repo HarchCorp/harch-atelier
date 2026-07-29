@@ -348,9 +348,9 @@ export default function RiskTrackerPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "80px 32px 60px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -380,7 +380,7 @@ export default function RiskTrackerPage() {
           </h1>
 
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Industry Risk Dashboard reveals who's most vulnerable to operational, regulatory,
@@ -390,7 +390,7 @@ export default function RiskTrackerPage() {
 
           {/* Stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -626,7 +626,7 @@ export default function RiskTrackerPage() {
                   {meta.label}
                 </div>
                 <div style={{
-                  fontSize: "20px", fontWeight: 800, color: C.text,
+                  fontSize: "16px", fontWeight: 800, color: C.text,
                   fontFamily: "'JetBrains Mono', monospace", lineHeight: 1,
                 }}>
                   {data.avgScore}
@@ -644,10 +644,9 @@ export default function RiskTrackerPage() {
       </section>
 
       {/* TOP RISKS TABLE */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px 80px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px 80px" }}>
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-          marginBottom: "24px", flexWrap: "wrap", gap: "16px",
+          display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "16px", alignItems: "flex-end", marginBottom: "24px",
         }}>
           <div>
             <div style={{
@@ -764,10 +763,10 @@ export default function RiskTrackerPage() {
 
       {/* RISK CATALOG (30+ Risk Event Categories) */}
       <section style={{
-        background: C.surface, padding: "80px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -842,7 +841,7 @@ export default function RiskTrackerPage() {
       </section>
 
       {/* METHODOLOGY */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
           color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -887,7 +886,7 @@ export default function RiskTrackerPage() {
                 width: "44px", height: "44px", borderRadius: "10px",
                 background: `${C.sage}15`, color: C.sage,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "20px", fontWeight: 700, marginBottom: "16px",
+                fontSize: "16px", fontWeight: 700, marginBottom: "16px",
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 {s.icon}
@@ -926,7 +925,7 @@ export default function RiskTrackerPage() {
             Risk Score = (Frequency × 0.30) + (Impact Severity × 0.50) + (Velocity × 0.20)
           </h3>
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "16px",
           }}>
             {[
@@ -965,9 +964,9 @@ export default function RiskTrackerPage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "80px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.red, letterSpacing: "0.14em", textTransform: "uppercase",

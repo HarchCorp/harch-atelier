@@ -106,9 +106,9 @@ export default function PartnersPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -121,14 +121,14 @@ export default function PartnersPage() {
             Partners · Build with us
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
             Partner with Harch.
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             We work with PR agencies, technology platforms, industry associations, and individual consultants.
@@ -138,12 +138,12 @@ export default function PartnersPage() {
       </section>
 
       {/* PARTNER TYPES */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
           {PARTNER_TYPES.map(p => (
             <div key={p.title} style={{
               background: C.surface, border: `1px solid ${C.border}`,
-              borderRadius: "16px", padding: "40px", boxShadow: C.shadow,
+              borderRadius: "16px", padding: "24px", boxShadow: C.shadow,
               borderTop: `3px solid ${p.color}`,
             }}>
               <div style={{
@@ -174,7 +174,7 @@ export default function PartnersPage() {
               </div>
 
               <div style={{
-                display: "grid", gridTemplateColumns: "1fr 1fr",
+                display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
                 gap: "32px",
               }}>
                 <div>

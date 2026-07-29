@@ -83,9 +83,9 @@ export default function LegalPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -98,14 +98,14 @@ export default function LegalPage() {
             Legal · Trust & Compliance
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
             Legal & compliance.
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             All our policies, agreements, and compliance documents in one place. Plain language where possible,
@@ -138,7 +138,7 @@ export default function LegalPage() {
       </section>
 
       {/* LEGAL DOCS GRID */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: "20px",
@@ -160,7 +160,7 @@ export default function LegalPage() {
               }}
             >
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "flex-start",
                 marginBottom: "16px",
               }}>
                 <span style={{
@@ -203,7 +203,7 @@ export default function LegalPage() {
 
       {/* CONTACT */}
       <section style={{
-        background: C.surface, padding: "80px 32px", textAlign: "center",
+        background: C.surface, padding: "48px 16px", textAlign: "center",
         borderTop: `1px solid ${C.border}`,
       }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>

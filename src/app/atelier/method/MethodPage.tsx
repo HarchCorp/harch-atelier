@@ -389,7 +389,7 @@ function Hero() {
       style={{
         position: "relative",
         background: C.bg,
-        padding: "80px 32px 100px",
+        padding: "48px 16px 40px",
         overflow: "hidden",
       }}
     >
@@ -450,7 +450,7 @@ function Hero() {
             </h1>
             <p
               style={{
-                fontSize: "19px",
+                fontSize: "16px",
                 color: C.textSecondary,
                 lineHeight: 1.55,
                 maxWidth: "540px",
@@ -675,11 +675,11 @@ function OverviewSteps() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>How it works</Eyebrow>
         <SectionTitle>Three steps. No black box.</SectionTitle>
         <SectionSub>
@@ -693,7 +693,7 @@ function OverviewSteps() {
           className="overview-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "24px",
           }}
         >
@@ -870,11 +870,11 @@ function FlowDiagram() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Pipeline diagram</Eyebrow>
         <SectionTitle>From raw article to WhatsApp alert.</SectionTitle>
         <SectionSub>
@@ -1069,11 +1069,11 @@ function StepMonitor() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <div className="step-split" style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: "64px", alignItems: "start" }}>
           {/* Left: copy */}
           <div>
@@ -1149,7 +1149,7 @@ function StepMonitor() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
                   gap: "10px",
                 }}
               >
@@ -1281,7 +1281,7 @@ function MonitorIntakeMockup() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: "0",
           borderBottom: `1px solid ${C.border}`,
         }}
@@ -1403,11 +1403,11 @@ function StepAnalyze() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <div className="step-split" style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "64px", alignItems: "start" }}>
           {/* Left: analysis mockup */}
           <AnalysisPipelineMockup />
@@ -1602,7 +1602,7 @@ function AnalysisPipelineMockup() {
             marginBottom: "20px",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted }}>Source: hespress.com · 12 mars 2025</span>
             <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.sage }}>FR</span>
           </div>
@@ -1722,7 +1722,7 @@ function AnalysisPipelineMockup() {
             <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Final score
             </div>
-            <div style={{ fontSize: "20px", fontWeight: 700, fontFamily: FONT.mono, color: C.red, marginTop: "4px" }}>
+            <div style={{ fontSize: "16px", fontWeight: 700, fontFamily: FONT.mono, color: C.red, marginTop: "4px" }}>
               -0.61 <span style={{ fontSize: "12px", color: C.textMuted, fontWeight: 500 }}>/ -1.0</span>
             </div>
           </div>
@@ -1756,7 +1756,7 @@ function AnalysisStageRowMini({
         borderRadius: "4px",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
         <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
           {label}
         </span>
@@ -1804,11 +1804,11 @@ function StepDeliver() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <div style={{ textAlign: "center", marginBottom: "56px" }}>
           <div
             style={{
@@ -1870,7 +1870,7 @@ function StepDeliver() {
           className="deliver-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "24px",
           }}
         >
@@ -2006,7 +2006,7 @@ function StepDeliver() {
                 padding: "12px",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
                 <span style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>30-day trend</span>
                 <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.sage, fontWeight: 700 }}>+20 pts</span>
               </div>
@@ -2096,7 +2096,7 @@ function StepDeliver() {
                 <div style={{ flex: 1, height: "4px", background: C.neutral, borderRadius: "2px" }} />
                 <div style={{ flex: 0.5, height: "4px", background: C.red, borderRadius: "2px" }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted }}>
                 <span style={{ color: C.sage }}>68% pos</span>
                 <span>22% neu</span>
                 <span style={{ color: C.red }}>10% neg</span>
@@ -2118,11 +2118,11 @@ function DataTimeline() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>End-to-end timeline</Eyebrow>
         <SectionTitle>From publication to your inbox — in 5 minutes.</SectionTitle>
         <SectionSub>
@@ -2202,7 +2202,7 @@ function DataTimeline() {
               paddingTop: "24px",
               borderTop: `1px solid ${C.borderLight}`,
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
               gap: "20px",
             }}
           >
@@ -2239,11 +2239,11 @@ function SampleOutput() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow>Sample output</Eyebrow>
         <SectionTitle>What a real analysis record looks like.</SectionTitle>
         <SectionSub>
@@ -2395,11 +2395,11 @@ function Coverage() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
-      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Eyebrow color={C.sage}>Coverage</Eyebrow>
         <SectionTitle>What we monitor, in numbers.</SectionTitle>
         <SectionSub>
@@ -2411,7 +2411,7 @@ function Coverage() {
           className="coverage-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
             marginBottom: "40px",
           }}
@@ -2569,7 +2569,7 @@ function CTA() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >

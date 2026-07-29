@@ -474,7 +474,7 @@ function Hero() {
             </h1>
             <p
               style={{
-                fontSize: "20px",
+                fontSize: "16px",
                 color: C.textBody,
                 lineHeight: 1.5,
                 maxWidth: "560px",
@@ -915,7 +915,7 @@ function KpiMini({ label, value }: { label: string; value: string }) {
     >
       <div
         style={{
-          fontSize: "20px",
+          fontSize: "16px",
           fontWeight: 700,
           fontFamily: FONT.mono,
           color: C.textPrimary,
@@ -3458,7 +3458,7 @@ function VaultView() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "20px",
+                fontSize: "16px",
                 color: C.accent,
                 fontFamily: FONT.mono,
                 flexShrink: 0,
@@ -4066,7 +4066,7 @@ function PdfMockup() {
           {/* Title */}
           <h3
             style={{
-              fontSize: "20px",
+              fontSize: "16px",
               fontWeight: 700,
               color: C.textPrimary,
               margin: "0 0 4px",

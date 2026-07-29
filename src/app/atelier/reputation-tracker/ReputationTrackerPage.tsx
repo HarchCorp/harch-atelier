@@ -159,9 +159,9 @@ export default function ReputationTrackerPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -174,7 +174,7 @@ export default function ReputationTrackerPage() {
             Reputation Tracker · Live Monitoring
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "900px",
           }}>
@@ -185,7 +185,7 @@ export default function ReputationTrackerPage() {
             }}>across industries.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Track the reputation scores of Morocco's top companies in real-time. Sort by score, sentiment,
@@ -194,7 +194,7 @@ export default function ReputationTrackerPage() {
 
           {/* Stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -218,7 +218,7 @@ export default function ReputationTrackerPage() {
       </section>
 
       {/* TOP 3 PODIUM */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "60px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
           gap: "20px",
@@ -271,7 +271,7 @@ export default function ReputationTrackerPage() {
                 <div style={{ width: `${c.pillars.performance / (c.pillars.innovation + c.pillars.performance + c.pillars.purpose) * 100}%`, background: C.accent }} />
                 <div style={{ width: `${c.pillars.purpose / (c.pillars.innovation + c.pillars.performance + c.pillars.purpose) * 100}%`, background: "#B87333" }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted }}>
                 <span style={{ color: C.sage }}>● Innov. {c.pillars.innovation}</span>
                 <span style={{ color: C.accent }}>● Perf. {c.pillars.performance}</span>
                 <span style={{ color: "#B87333" }}>● Purpose {c.pillars.purpose}</span>
@@ -447,9 +447,9 @@ export default function ReputationTrackerPage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "80px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
             See your company on the tracker.
           </h2>

@@ -53,10 +53,10 @@ export default function OurCommitmentPage() {
               boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
             }}>
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "flex-start",
                 marginBottom: "12px",
               }}>
-                <span style={{ fontSize: "20px", color: C.amber, fontFamily: "'JetBrains Mono', monospace" }}>{c.icon}</span>
+                <span style={{ fontSize: "16px", color: C.amber, fontFamily: "'JetBrains Mono', monospace" }}>{c.icon}</span>
                 <span style={{
                   fontSize: "10px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                   padding: "3px 8px", borderRadius: "100px",
@@ -89,7 +89,7 @@ export default function OurCommitmentPage() {
       <Section alt>
         <SectionHeader label="Customer success" title="Your success is our success." />
         <div style={{
-          padding: "40px", background: "#FFFFFF",
+          padding: "24px", background: "#FFFFFF",
           border: "1px solid #E5E5E5", borderRadius: "16px",
           boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
         }}>

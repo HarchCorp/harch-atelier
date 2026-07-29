@@ -21,12 +21,12 @@ export default function ReputationDashboardsPage() {
 
       {/* SCORING METHODOLOGY */}
       <Section>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
               Harch AI Scoring Methodology
             </div>
-            <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
+            <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
               Quantifying reputation performance.
             </h2>
             <p style={{ fontSize: "16px", color: "#525252", lineHeight: 1.65, marginBottom: "24px", maxWidth: "560px" }}>
@@ -36,10 +36,10 @@ export default function ReputationDashboardsPage() {
               <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sage, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "12px", fontWeight: 700 }}>
                 Reputation Score Formula
               </div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: "#0A0A0A", fontFamily: "'JetBrains Mono', monospace", marginBottom: "16px", letterSpacing: "-0.02em" }}>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: "#0A0A0A", fontFamily: "'JetBrains Mono', monospace", marginBottom: "16px", letterSpacing: "-0.02em" }}>
                 Volume × 25% + Sentiment × 40% + Salience × 20% + Source Significance × 15%
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "12px" }}>
                 {[
                   { label: "Volume", weight: "25%", desc: "Coverage count" },
                   { label: "Sentiment", weight: "40%", desc: "Positive/negative ratio" },
@@ -47,7 +47,7 @@ export default function ReputationDashboardsPage() {
                   { label: "Source Sig.", weight: "15%", desc: "Outlet authority" },
                 ].map(s => (
                   <div key={s.label} style={{ padding: "12px", background: "#FAFAFA", borderRadius: "8px", border: "1px solid #F0F0F0" }}>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: C.sage, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginBottom: "4px" }}>{s.weight}</div>
+                    <div style={{ fontSize: "16px", fontWeight: 800, color: C.sage, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginBottom: "4px" }}>{s.weight}</div>
                     <div style={{ fontSize: "12px", fontWeight: 600, color: "#0A0A0A", marginBottom: "2px" }}>{s.label}</div>
                     <div style={{ fontSize: "10px", color: "#71717A", fontFamily: "'JetBrains Mono', monospace" }}>{s.desc}</div>
                   </div>
@@ -58,7 +58,7 @@ export default function ReputationDashboardsPage() {
           <div>
             {/* Visual: sample dashboard mockup */}
             <div style={{ padding: "32px", background: "#FFFFFF", border: "1px solid #E5E5E5", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid #F0F0F0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid #F0F0F0" }}>
                 <div>
                   <div style={{ fontSize: "11px", color: "#71717A", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>Reputation Score</div>
                   <div style={{ fontSize: "48px", fontWeight: 800, color: C.sage, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, letterSpacing: "-0.04em" }}>78</div>
@@ -76,7 +76,7 @@ export default function ReputationDashboardsPage() {
                   { name: "Purpose", score: 71, color: C.amber },
                 ].map(p => (
                   <div key={p.name} style={{ marginBottom: "10px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", marginBottom: "4px" }}>
                       <span style={{ color: "#0A0A0A", fontWeight: 600 }}>{p.name}</span>
                       <span style={{ color: "#525252", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{p.score}</span>
                     </div>
@@ -123,7 +123,7 @@ export default function ReputationDashboardsPage() {
                 {cap.icon}
               </div>
               <div>
-                <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em", margin: "0 0 12px" }}>
+                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em", margin: "0 0 12px" }}>
                   {cap.title}
                 </h3>
                 <p style={{ fontSize: "15px", color: "#525252", lineHeight: 1.65, margin: 0, maxWidth: "760px" }}>
@@ -137,12 +137,12 @@ export default function ReputationDashboardsPage() {
 
       {/* MATERIALITY MATRIX */}
       <Section>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "64px", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
               Materiality Matrix
             </div>
-            <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
+            <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.03em", margin: "0 0 24px" }}>
               Mitigate risks with internal vs external comparison.
             </h2>
             <p style={{ fontSize: "16px", color: "#525252", lineHeight: 1.65, marginBottom: "24px", maxWidth: "560px" }}>
@@ -222,7 +222,7 @@ export default function ReputationDashboardsPage() {
 
       {/* CUSTOM DASHBOARDS CTA */}
       <Section alt>
-        <div style={{ padding: "48px", background: "#0A0A0A", color: "#FFFFFF", borderRadius: "16px", textAlign: "center" }}>
+        <div style={{ padding: "28px", background: "#0A0A0A", color: "#FFFFFF", borderRadius: "16px", textAlign: "center" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Custom Dashboards
           </div>
@@ -266,7 +266,7 @@ export default function ReputationDashboardsPage() {
 
       {/* STATS */}
       <Section alt>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <StatsGrid color={C.sage} stats={[
             { value: "100M+", label: "entities and topics labeled per day by HarchIQ" },
             { value: "5.5M+", label: "articles ingested per day" },

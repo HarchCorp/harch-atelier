@@ -71,9 +71,9 @@ export default function MediaIntelligencePage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -86,7 +86,7 @@ export default function MediaIntelligencePage() {
             Harch AI 2026 Media Report · FY 2026
           </div>
           <h1 style={{
-            fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 800,
+            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px", maxWidth: "980px",
           }}>
@@ -97,7 +97,7 @@ export default function MediaIntelligencePage() {
             }}>corporate reputation.</span>
           </h1>
           <p style={{
-            fontSize: "20px", color: C.textSec, lineHeight: 1.55,
+            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "760px", marginBottom: "40px",
           }}>
             Authored by senior analysts at Harch AI using our technology to gather insights on the main
@@ -106,7 +106,7 @@ export default function MediaIntelligencePage() {
 
           {/* Report stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -130,11 +130,11 @@ export default function MediaIntelligencePage() {
       </section>
 
       {/* TOP TRENDS */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
           Signal AI Insight
         </div>
-        <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>
+        <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>
           How the top trends of 2026 evolved.
         </h2>
         <p style={{ fontSize: "16px", color: C.textSec, lineHeight: 1.6, marginBottom: "48px", maxWidth: "760px" }}>
@@ -202,14 +202,14 @@ export default function MediaIntelligencePage() {
 
       {/* INDUSTRY PILLAR ANALYSIS */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Reputation pillars by industry
           </div>
-          <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>
             What drives the narrative in each industry.
           </h2>
           <p style={{ fontSize: "16px", color: C.textSec, lineHeight: 1.6, marginBottom: "48px", maxWidth: "760px" }}>
@@ -237,7 +237,7 @@ export default function MediaIntelligencePage() {
                       <div style={{ width: `${ind.performance}%`, background: C.accent }} />
                       <div style={{ width: `${ind.purpose}%`, background: C.amber }} />
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
                       <span style={{ color: C.sage }}>● Innovation {ind.innovation}%</span>
                       <span style={{ color: C.accent }}>● Performance {ind.performance}%</span>
                       <span style={{ color: C.amber }}>● Purpose {ind.purpose}%</span>
@@ -261,18 +261,18 @@ export default function MediaIntelligencePage() {
       </section>
 
       {/* COMPANY SPOTLIGHTS */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "100px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
           Company spotlights
         </div>
-        <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
+        <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
           The stories that defined 2026.
         </h2>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
           {COMPANY_SPOTLIGHTS.map((s, i) => (
             <div key={i} style={{
-              padding: "40px", background: C.surface,
+              padding: "24px", background: C.surface,
               border: `1px solid ${C.border}`, borderRadius: "16px",
               boxShadow: C.shadow,
               display: "grid", gridTemplateColumns: "1fr 200px",
@@ -326,9 +326,9 @@ export default function MediaIntelligencePage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
             Get the full report
           </div>
