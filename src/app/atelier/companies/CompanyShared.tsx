@@ -8,7 +8,7 @@
 
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
-import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+import { ScrollProgress, CursorGlow, BackToTop, PhaseDisclaimer } from "../components/shared";
 import {
   BarChart,
   HorizontalBarChart,
@@ -207,6 +207,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
       <ScrollProgress />
       <CursorGlow />
       <AtelierNav />
+      <PhaseDisclaimer variant="data" />
 
       {/* 1. HERO ────────────────────────────────────────────────── */}
       <section style={{

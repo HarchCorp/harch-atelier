@@ -13,26 +13,119 @@ const C = {
   shadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
 };
 
+// ─── DEMO AUDIT DATA ───────────────────────────────────────────────
+// Anonymous visitors (no NextAuth session) get a 401 from
+// /atelier/api/audit. Instead of erroring out, we render this static
+// mock payload so the dashboard is still useful for prospects and
+// investors exploring the product. All numbers are illustrative.
+const DEMO_AUDIT_DATA = {
+  reportDate: new Date().toISOString().slice(0, 10),
+  processingTimeMs: 0,
+  reputation: {
+    score: 72,
+    scoreComponents: { sentiment: 68, aiVisibility: 75, volume: 70, authority: 65 },
+    mediaMetrics: { totalArticles: 142, totalMentions: 318, uniqueSources: 27 },
+    aiMetrics: {
+      totalCitations: 3,
+      chatgpt: { cited: true, position: 2 },
+      perplexity: { cited: true, position: 1 },
+      googleAI: { cited: true, position: 4 },
+      glm: { cited: false, position: "—" },
+    },
+    sentiment: { positive: 54, neutral: 31, negative: 15 },
+    risk: {
+      overallRisk: 38,
+      riskLevel: "moderate",
+      activeRisks: [
+        { topic: "Governance — board reshuffle coverage", severity: 52, recommendation: "Prepare a holding statement and brief tier-1 journalists before the next earnings call." },
+      ],
+    },
+    recommendations: [
+      { priority: "high", action: "Issue a clarifying press release on Q2 governance changes", rationale: "Coverage tone shifted negative after the AGM; a proactive statement would reset the narrative.", timeline: "5 days" },
+      { priority: "medium", action: "Engage GLM-4 visibility probe for francophone queries", rationale: "GLM is the only major engine not yet citing the brand — likely a corpus gap, not a sentiment issue.", timeline: "2 weeks" },
+    ],
+  },
+  topics: [
+    { riskLevel: "medium", label: "Gouvernance & conseil d'administration", articleCount: 18 },
+    { riskLevel: "low", label: "Résultats financiers Q2", articleCount: 31 },
+    { riskLevel: "low", label: "Inclusion financière & mobile banking", articleCount: 24 },
+    { riskLevel: "high", label: "Risque pays — note Moody's", articleCount: 9 },
+  ],
+  topArticles: [
+    { title: "Bank of Africa publie un résultat net en hausse de 12% au premier semestre", url: "https://example.com/bofa-q2", sourceName: "L'Économiste", publishedAt: "2026-07-12", sentiment: "positive" },
+    { title: "Remaniement du conseil d'administration : ce qu'il faut retenir", url: "https://example.com/bofa-board", sourceName: "Médias24", publishedAt: "2026-07-09", sentiment: "neutral" },
+    { title: "Moody's revoit à la baisse la perspective du secteur bancaire marocain", url: "https://example.com/moodys", sourceName: "TelQuel", publishedAt: "2026-07-05", sentiment: "negative" },
+  ],
+};
+
 export default function DashboardPage() {
   const [companyName, setCompanyName] = useState("Bank of Africa");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  // Non-blocking status banner (demo mode, async-queued, …). Kept
+  // separate from `error` so we can style it as info, not as a fault.
+  const [notice, setNotice] = useState<string | null>(null);
 
   const runAudit = async () => {
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch("/atelier/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ companyName }),
       });
+
+      // 401 — the audit endpoint is NextAuth-gated and we have no
+      // session. Fall back to demo data so the page is still useful
+      // to anonymous visitors (prospects, investors).
+      if (res.status === 401) {
+        setData({ ...DEMO_AUDIT_DATA, companyName });
+        setNotice(
+          "Demo mode — sign in to run a live audit. Numbers below are illustrative sample data.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // 202 — the audit API is async (BullMQ-enqueued). It returns
+      // { jobId, status, pollUrl, company } — NOT the legacy
+      // { success, data } contract this dashboard was originally
+      // written against. Surface the jobId so the user knows the
+      // request was accepted; live polling is a separate workstream.
+      if (res.status === 202) {
+        const queued = await res.json().catch(() => null);
+        setNotice(
+          `Audit queued${queued?.jobId ? ` (job #${queued.jobId})` : ""}. ` +
+            "Live progress polling coming soon — you'll receive the result via your WhatsApp daily digest.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Other non-OK responses — surface the API's error message.
+      if (!res.ok) {
+        let msg = `Audit failed (HTTP ${res.status})`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.error) msg = errJson.error;
+        } catch {
+          /* response body wasn't JSON */
+        }
+        setError(msg);
+        setLoading(false);
+        return;
+      }
+
+      // Legacy happy path — kept for forward-compat in case the API
+      // ever returns a synchronous { success, data } payload again.
       const json = await res.json();
-      if (json.success) {
+      if (json?.success && json?.data) {
         setData(json.data);
       } else {
-        setError(json.error || "Audit failed");
+        setError("Unexpected response from audit API");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
@@ -40,9 +133,12 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    runAudit();
-  }, []);
+  // NOTE: we intentionally do NOT call runAudit() on mount. The audit
+  // endpoint requires a NextAuth session AND enqueues a BullMQ job —
+  // auto-firing on every page load would (a) 401 for anonymous
+  // visitors and (b) waste queue capacity. The user must explicitly
+  // click "Run audit". (Previous code did `useEffect(() => runAudit(),
+  // [])` which was the root cause of AUDIT-1 P1 dashboard bug.)
 
   return (
     <>
@@ -94,6 +190,17 @@ export default function DashboardPage() {
 
       {/* Results */}
       <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px 80px" }}>
+        {notice && !loading && (
+          <div style={{
+            padding: "16px 20px", marginBottom: "24px",
+            background: "rgba(74,93,110,0.06)",
+            border: `1px solid ${C.accent}`, borderRadius: "8px",
+            color: C.text, fontSize: "14px",
+          }}>
+            <strong style={{ color: C.accent }}>ℹ</strong> {notice}
+          </div>
+        )}
+
         {loading && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>

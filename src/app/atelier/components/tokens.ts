@@ -1,28 +1,91 @@
 // Harch Atelier — shared constants and design tokens
 // Used by all atelier pages
+//
+// Source unique de vérité — Design System V2
+// Mapping direct vers les classes Tailwind neutral-* / stone-* / emerald-*
+// Toute page atelier devrait importer { C } from "./components/tokens" plutôt
+// que de répéter des hex custom.
 
-export const ATELIER_COLORS = {
-  bg: "#FAFAFA",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F4F4F5",
-  border: "#E5E5E5",
-  borderLight: "#F0F0F0",
-  accent: "#8B9DAF",
-  accentDark: "#4A5D6E",
-  accentBright: "#B8C8D8",
-  sage: "#4A7B5F",
-  sageBright: "#6FA386",
-  sageBg: "rgba(74,123,95,0.08)",
-  sageDim: "#3D6650",
-  textPrimary: "#0A0A0A",
-  textSecondary: "#525252",
-  textMuted: "#71717A",
-  textFaint: "rgba(0,0,0,0.40)",
-  red: "#A0524B",
-  redBg: "rgba(160,82,75,0.08)",
+// ─── DESIGN SYSTEM V2 — TOKENS ──────────────────────────────────────
+// Toutes les valeurs sont les équivalents hex des classes Tailwind
+// obligatoires définies dans HARCH_DESIGN_SYSTEM_V2.md.
+// Ne pas éditer ces valeurs sans valider le DS V2.
+export const C = {
+  // Backgrounds (Tailwind neutral-*)
+  bg: "#ffffff",          // bg-white
+  bgSubtle: "#fafafa",    // bg-neutral-50
+  bgHover: "#f5f5f5",     // bg-neutral-100 (hover on light surfaces)
+  bgDark: "#171717",      // bg-neutral-900
+  bgDarkest: "#0a0a0a",   // bg-neutral-950
+
+  // Text on light
+  text: "#0a0a0a",        // text-neutral-950 (primary)
+  textBody: "#525252",    // text-neutral-600 (body)
+  textMuted: "#737373",   // text-neutral-500 (muted)
+
+  // Text on dark
+  textOnDark: "#ffffff",          // text-white (primary)
+  textOnDarkBody: "#a3a3a3",      // text-neutral-400 (secondary)
+  textOnDarkMuted: "#737373",     // text-neutral-500 (muted)
+
+  // Borders
+  border: "#e5e5e5",        // border-neutral-200 (light)
+  borderStrong: "#d4d4d4",  // border-neutral-300 (secondary CTA on light)
+  borderDark: "#262626",    // border-neutral-800 (dark)
+
+  // Accents (Atelier = stone-500)
+  accent: "#78716c",       // stone-500 (Atelier accent — labels/stats/icons ONLY)
+  accentHover: "#57534e",  // stone-600
+  accentBright: "#a8a29e", // stone-400
+
+  // CTA (emerald-500 — Harch primary CTA, ALWAYS)
+  cta: "#10b981",          // emerald-500
+  ctaHover: "#34d399",     // emerald-400
+
+  // Status colors
+  warning: "#f59e0b",      // amber-500
+  warningBg: "#fffbeb",    // amber-50
+  warningBorder: "#fcd34d",// amber-300
+  warningText: "#b45309",  // amber-700
+  danger: "#ef4444",       // red-500
+  dangerBg: "#fef2f2",     // red-50
+  success: "#10b981",      // emerald-500
+  successBg: "#ecfdf5",    // emerald-50
+
+  // Fonts (FIXES — JAMAIS CHANGER)
+  fontSans: "'Inter', system-ui, sans-serif",
+  fontMono: "'Space Mono', monospace",
+
+  // Shadows
+  shadowSm: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+  shadowMd: "0 4px 6px rgba(0,0,0,0.05), 0 10px 15px rgba(0,0,0,0.05)",
 } as const;
 
-// ─── MEGA MENU NAV STRUCTURE (Signal AI style) ─────────────────
+// ─── LEGACY COLOR OBJECT (deprecated — use C instead) ────────────────
+// Conservé pour compat arrière. Valeurs alignées sur DS V2.
+// Ne pas référencer dans le nouveau code.
+export const ATELIER_COLORS = {
+  bg: C.bgSubtle,
+  surface: C.bg,
+  surfaceAlt: C.bgSubtle,
+  border: C.border,
+  borderLight: C.border,
+  accent: C.accent,
+  accentDark: C.accentHover,
+  accentBright: C.accentBright,
+  sage: C.accent,        // alias rétro-compatible (sage → stone-500)
+  sageBright: C.accentBright,
+  sageBg: "rgba(120,113,108,0.08)", // stone-500 @ 8%
+  sageDim: C.accentHover,
+  textPrimary: C.text,
+  textSecondary: C.textBody,
+  textMuted: C.textMuted,
+  textFaint: "rgba(0,0,0,0.40)",
+  red: C.danger,
+  redBg: C.dangerBg,
+} as const;
+
+// ─── MEGA MENU NAV STRUCTURE (Signal AI style) ─────────────────────
 // Each top-level item can have a dropdown with grouped sections
 
 export interface NavItem {
@@ -247,21 +310,21 @@ export const I18N = {
     navFaq: "FAQ",
     navAbout: "About",
     navCta: "Get started",
-    
+
     // Hero
     heroEyebrow: "AI Reputation Intelligence",
     heroTitle: "What does the world say about you?",
     heroSubhead: "We monitor 30+ media sources and 4 AI engines 24/7. You get sentiment analysis, crisis alerts on WhatsApp, and a monthly board-ready PDF. No engineers needed.",
     heroCtaPrimary: "Get your free audit",
     heroCtaSecondary: "See how it works",
-    
+
     // Sections
     whatWeDo: "What we do",
     howItWorks: "How it works",
     pricing: "Pricing",
     faq: "FAQ",
     about: "About",
-    
+
     // Features
     featureMedia: "Media Monitoring",
     featureMediaDesc: "30+ Moroccan and African media sources tracked 24/7",
@@ -271,7 +334,7 @@ export const I18N = {
     featureSentimentDesc: "Positive, neutral, negative — per entity, per article",
     featureAlerts: "Crisis Alerts",
     featureAlertsDesc: "WhatsApp alerts when negative sentiment spikes",
-    
+
     // Pricing
     pricingStarter: "Starter",
     pricingPro: "Pro",
@@ -280,12 +343,12 @@ export const I18N = {
     pricingProPrice: "15K",
     pricingEnterprisePrice: "50K",
     pricingCurrency: "MAD/mo",
-    
+
     // CTA
     ctaTitle: "Get your free reputation audit",
     ctaSubhead: "5 minutes to fill. 7 days to deliver. No credit card. No commitment.",
     ctaButton: "Get my audit",
-    
+
     // Footer
     footerTagline: "AI Reputation Intelligence for Africa",
     footerCountries: "8 markets covered",
@@ -300,21 +363,21 @@ export const I18N = {
     navFaq: "FAQ",
     navAbout: "À propos",
     navCta: "Démarrer",
-    
+
     // Hero
     heroEyebrow: "Intelligence de Réputation IA",
     heroTitle: "Que dit le monde de vous ?",
     heroSubhead: "On surveille 30+ sources médias et 4 moteurs IA 24/7. Vous recevez l'analyse de sentiment, les alertes crise sur WhatsApp, et un PDF mensuel board-ready. Aucun ingénieur requis.",
     heroCtaPrimary: "Obtenir un audit gratuit",
     heroCtaSecondary: "Voir comment ça marche",
-    
+
     // Sections
     whatWeDo: "Ce qu'on fait",
     howItWorks: "Comment ça marche",
     pricing: "Tarifs",
     faq: "FAQ",
     about: "À propos",
-    
+
     // Features
     featureMedia: "Veille Médias",
     featureMediaDesc: "30+ sources marocaines et africaines suivies 24/7",
@@ -324,7 +387,7 @@ export const I18N = {
     featureSentimentDesc: "Positif, neutre, négatif — par entité, par article",
     featureAlerts: "Alertes Crise",
     featureAlertsDesc: "Alertes WhatsApp quand le sentiment négatif explose",
-    
+
     // Pricing
     pricingStarter: "Starter",
     pricingPro: "Pro",
@@ -333,12 +396,12 @@ export const I18N = {
     pricingProPrice: "15K",
     pricingEnterprisePrice: "50K",
     pricingCurrency: "MAD/mois",
-    
+
     // CTA
     ctaTitle: "Obtenez votre audit de réputation gratuit",
     ctaSubhead: "5 minutes à remplir. 7 jours pour livrer. Sans CB. Sans engagement.",
     ctaButton: "Obtenir mon audit",
-    
+
     // Footer
     footerTagline: "Intelligence de Réputation IA pour l'Afrique",
     footerCountries: "8 marchés couverts",

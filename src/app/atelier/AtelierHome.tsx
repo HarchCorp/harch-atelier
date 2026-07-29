@@ -8,11 +8,15 @@ import {
   ScrollProgress,
   CursorGlow,
   BackToTop,
+  ForgeSparks,
+  TeslaTabs,
+  PhaseDisclaimer,
 } from "./components/shared";
+import { C as TOKENS } from "./components/tokens";
 
 // ═══════════════════════════════════════════════════════════════════════
 // HARCH ATELIER — AI REPUTATION INTELLIGENCE
-// Light theme · Inter + JetBrains Mono · SVG charts · No images
+// Design System V2 · Inter + Space Mono · SVG charts · No images
 // ═══════════════════════════════════════════════════════════════════════
 //
 // Product: AI Reputation Intelligence for Moroccan & African companies.
@@ -20,66 +24,82 @@ import {
 // visibility (ChatGPT / Perplexity / Gemini), and deliver insights via
 // WhatsApp + dashboard + monthly PDF.
 //
-// Palette (LOCKED — light):
-//   bg #FAFAFA · surface #FFFFFF · surfaceAlt #F4F4F5 · border #E5E5E5
-//   text #0A0A0A · secondary #525252 · muted #71717A
-//   accent #8B9DAF · accentDark #4A5D6E
-//   sage #4A7B5F · sageBright #6FA386 · red #A0524B
+// Design System V2 (HARCH_DESIGN_SYSTEM_V2.md):
+//   • Backgrounds  → neutral-50 / white / neutral-900 / neutral-950
+//   • Text         → neutral-950 / neutral-600 / neutral-500 / white / neutral-400
+//   • Borders      → neutral-200 (light) / neutral-800 (dark)
+//   • CTA primary  → bg-emerald-500 hover:bg-emerald-400 text-white (TOUJOURS)
+//   • Atelier accent → stone-500 (#78716c) — labels/stats/icônes UNIQUEMENT
+//   • Fonts        → Inter (body) + Space Mono (data) — JAMAIS JetBrains Mono
+//   • Détail visuel signature → Forge sparks (ForgeSparks component)
+//   • Interaction obligatoire → TeslaTabs (Discovery / Build / Vault)
+//
+// All colors come from `./components/tokens.ts` (source unique de vérité).
+// Legacy key aliases (sage, surface, textPrimary, …) below route to DS V2
+// tokens so existing JSX renders with stone-500 accent, neutral-500 muted,
+// emerald-500 CTA, etc. — no hex literals redefined locally.
 //
 // Sections:
-//   01  Hero + dashboard mockup
+//   01  Hero + dashboard mockup (ForgeSparks bg + TeslaTabs-ready)
 //   02  Logo wall (8 Moroccan companies)
 //   03  What we do (4 features)
 //   04  WhatsApp preview mockup
 //   05  Dashboard preview mockup
 //   06  HARCH 100 ranking table
-//   07  How it works (3 steps)
-//   08  Pricing (3 tiers)
+//   07  How it works (3 steps + TeslaTabs Discovery/Build/Vault)
+//   08  Pricing (3 tiers — CTA emerald-500)
 //   09  Report preview (PDF mockup)
-//   10  Final CTA (form)
+//   10  Final CTA (form — emerald-500 submit)
 //   11  Footer (AtelierFooter component)
 //
 // ═══════════════════════════════════════════════════════════════════════
 
-// ─── DESIGN TOKENS ─────────────────────────────────────────────────────
+// ─── DESIGN TOKENS (DS V2 — source: ./components/tokens.ts) ────────────
+// `C` is the imported DS V2 token object, extended with backward-compat
+// aliases so the existing 400+ color references resolve to DS V2 values.
+// NO hex literal is redefined here — every value comes from TOKENS.
 const C = {
-  bg: "#FAFAFA",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F4F4F5",
-  border: "#E5E5E5",
-  borderLight: "#F0F0F0",
-  textPrimary: "#0A0A0A",
-  textSecondary: "#525252",
-  textMuted: "#71717A",
-  textFaint: "#A1A1AA",
-  accent: "#8B9DAF",
-  accentDark: "#4A5D6E",
-  sage: "#4A7B5F",
-  sageBright: "#6FA386",
-  sageDark: "#3D6650",
-  sageBg: "rgba(74,123,95,0.08)",
-  red: "#A0524B",
-  redBg: "rgba(160,82,75,0.08)",
-  neutral: "#71717A",
-  neutralBg: "rgba(113,113,122,0.10)",
+  ...TOKENS,
+  // Legacy key aliases → DS V2 token values (DO NOT add new hex here)
+  surface: TOKENS.bg,             // was #FFFFFF → bg-white
+  surfaceAlt: TOKENS.bgHover,     // was #F4F4F5 → bg-neutral-100
+  borderLight: TOKENS.border,     // was #F0F0F0 → border-neutral-200
+  textPrimary: TOKENS.text,       // was #0A0A0A → text-neutral-950
+  textSecondary: TOKENS.textBody, // was #525252 → text-neutral-600
+  textFaint: TOKENS.textOnDarkBody, // was #A1A1AA → neutral-400
+  accentDark: TOKENS.accentHover,  // was #4A5D6E → stone-600
+  // sage → stone-500 (DS V2 §4 — Atelier accent is stone-500, not green)
+  sage: TOKENS.accent,            // stone-500 (#78716c)
+  sageBright: TOKENS.accentBright,// stone-400
+  sageDark: TOKENS.accentHover,   // stone-600
+  sageBg: "rgba(120,113,108,0.08)", // stone-500 @ 8% (replaces green tint)
+  red: TOKENS.danger,             // red-500
+  redBg: TOKENS.dangerBg,         // red-50
+  neutral: TOKENS.textMuted,      // neutral-500
+  neutralBg: "rgba(115,115,115,0.10)", // neutral-500 @ 10%
+  // WhatsApp brand colors — NOT part of DS V2, kept for mockup fidelity
+  // (the WhatsApp preview simulates the actual WhatsApp UI).
   whatsappGreen: "#25D366",
   whatsappTeal: "#075E54",
   whatsappBubble: "#DCF8C6",
   whatsappBg: "#E5DDD5",
   checkBlue: "#34B7F1",
-} as const;
+};
 
+// Font aliases — DS V2 mandates Inter (sans) + Space Mono (mono).
+// JAMAIS de JetBrains Mono. Was: 'JetBrains Mono', 'SF Mono', monospace.
 const FONT = {
-  sans: "'Inter', system-ui, -apple-system, sans-serif",
-  mono: "'JetBrains Mono', 'SF Mono', monospace",
-} as const;
+  sans: C.fontSans, // Inter — DS V2
+  mono: C.fontMono, // Space Mono — DS V2 (was JetBrains Mono)
+};
 
+// Shadow aliases — route to DS V2 shadow tokens (no custom rgba).
 const SHADOW = {
-  card: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-  cardHover: "0 2px 8px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.06)",
-  hero: "0 4px 12px rgba(0,0,0,0.04), 0 24px 48px rgba(0,0,0,0.06)",
-  deep: "0 8px 24px rgba(0,0,0,0.08), 0 32px 64px rgba(0,0,0,0.08)",
-} as const;
+  card: C.shadowSm,
+  cardHover: C.shadowMd,
+  hero: C.shadowMd,
+  deep: C.shadowMd,
+};
 
 // ─── DATA ──────────────────────────────────────────────────────────────
 
@@ -358,7 +378,7 @@ function IconSearch({ size = 16, color = C.textMuted }: { size?: number; color?:
   );
 }
 
-function IconWhatsapp({ size = 20, color = "#FFFFFF" }: { size?: number; color?: string }) {
+function IconWhatsapp({ size = 20, color = C.textOnDark }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
@@ -380,7 +400,16 @@ function Hero() {
         overflow: "hidden",
       }}
     >
-      {/* Subtle background accents */}
+      {/* DS V2 §6 — Forge sparks : détail visuel signature Atelier.
+          28 particules stone-500, opacité 0.10-0.30, animation pulse subtile.
+          pointer-events-none pour ne pas interférer avec les CTAs. */}
+      <ForgeSparks
+        color={C.accent}
+        count={32}
+        style={{ opacity: 0.6, zIndex: 0 }}
+      />
+
+      {/* Subtle background accents — stone-500 tints (DS V2 Atelier accent) */}
       <div
         aria-hidden
         style={{
@@ -390,9 +419,10 @@ function Hero() {
           width: "600px",
           height: "600px",
           background:
-            "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)",
+            "radial-gradient(circle, rgba(120,113,108,0.05), transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
+          zIndex: 0,
         }}
       />
       <div
@@ -404,9 +434,10 @@ function Hero() {
           width: "500px",
           height: "500px",
           background:
-            "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)",
+            "radial-gradient(circle, rgba(120,113,108,0.04), transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
+          zIndex: 0,
         }}
       />
 
@@ -422,7 +453,7 @@ function Hero() {
         <div className="hero-grid">
           {/* ─── Left: copy + CTAs ─── */}
           <div>
-            <Eyebrow color={C.sage}>
+            <Eyebrow color={C.accent}>
               AI Reputation Intelligence · Decision Augmentation
             </Eyebrow>
             <h1
@@ -431,17 +462,19 @@ function Hero() {
                 fontWeight: 700,
                 letterSpacing: "-0.04em",
                 lineHeight: 1.02,
-                color: C.textPrimary,
+                color: C.text,
                 margin: "0 0 24px",
               }}
             >
               Promote. Protect.{" "}
-              <span style={{ color: C.sage }}>Shape.</span>
+              {/* DS V2 §5 + Benchmark Pattern 2 — H1 split-color.
+                  Mot accent en stone-500 (C.accent). */}
+              <span style={{ color: C.accent }}>Shape.</span>
             </h1>
             <p
               style={{
                 fontSize: "20px",
-                color: C.textSecondary,
+                color: C.textBody,
                 lineHeight: 1.5,
                 maxWidth: "560px",
                 margin: "0 0 36px",
@@ -453,39 +486,39 @@ function Hero() {
               decisions and stay one step ahead.
             </p>
 
-            {/* CTAs */}
+            {/* CTAs — DS V2 §3 : primary = bg-emerald-500, secondary = border-neutral-300 */}
             <div
               className="hero-cta-row"
               style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}
             >
               <a
                 href="/atelier/audit"
-                className="btn-sage"
+                className="btn-primary"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "10px",
                   padding: "15px 28px",
-                  background: C.sage,
-                  color: "#FFFFFF",
+                  background: C.cta, // emerald-500 — DS V2 primary CTA
+                  color: C.textOnDark, // white
                   fontSize: "15px",
                   fontWeight: 600,
                   textDecoration: "none",
                   borderRadius: "3px",
-                  border: `1px solid ${C.sage}`,
+                  border: `1px solid ${C.cta}`,
                   cursor: "pointer",
                   fontFamily: FONT.sans,
-                  transition: "all 0.2s",
+                  transition: "background-color 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = C.sageDark;
+                  e.currentTarget.style.background = C.ctaHover; // emerald-400
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = C.sage;
+                  e.currentTarget.style.background = C.cta;
                 }}
               >
                 Request a demo
-                <IconArrow dir="right" size={16} color="#FFFFFF" />
+                <IconArrow dir="right" size={16} color={C.textOnDark} />
               </a>
               <a
                 href="/atelier/dashboard"
@@ -495,18 +528,18 @@ function Hero() {
                   gap: "10px",
                   padding: "15px 28px",
                   background: "transparent",
-                  color: C.accentDark,
+                  color: C.text, // neutral-950 — DS V2 secondary CTA on light
                   fontSize: "15px",
                   fontWeight: 500,
                   textDecoration: "none",
                   borderRadius: "3px",
-                  border: `1px solid ${C.accentDark}`,
+                  border: `1px solid ${C.borderStrong}`, // neutral-300
                   cursor: "pointer",
                   fontFamily: FONT.sans,
-                  transition: "all 0.2s",
+                  transition: "background-color 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(74,93,110,0.06)";
+                  e.currentTarget.style.background = C.bgHover; // neutral-100
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "transparent";
@@ -601,9 +634,9 @@ function HeroDashboardMockup() {
           background: C.surfaceAlt,
         }}
       >
-        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#E5E5E5" }} />
-        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#E5E5E5" }} />
-        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#E5E5E5" }} />
+        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: C.border }} />
+        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: C.border }} />
+        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: C.border }} />
         <span
           style={{
             marginLeft: "8px",
@@ -1326,14 +1359,14 @@ function WhatsAppMockup() {
               flexShrink: 0,
             }}
           >
-            <IconWhatsapp size={20} color="#FFFFFF" />
+            <IconWhatsapp size={20} color={C.textOnDark} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 fontSize: "15px",
                 fontWeight: 600,
-                color: "#FFFFFF",
+                color: C.textOnDark,
                 lineHeight: 1.2,
               }}
             >
@@ -1350,10 +1383,10 @@ function WhatsAppMockup() {
             </div>
           </div>
           {/* Header icons */}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textOnDark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
           </svg>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" style={{ marginLeft: "12px" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textOnDark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" style={{ marginLeft: "12px" }}>
             <circle cx="12" cy="12" r="1" />
             <circle cx="19" cy="12" r="1" />
             <circle cx="5" cy="12" r="1" />
@@ -1380,7 +1413,7 @@ function WhatsAppMockup() {
             <span
               style={{
                 fontSize: "11px",
-                color: "#FFFFFF",
+                color: C.textOnDark,
                 background: "rgba(255,255,255,0.2)",
                 padding: "4px 12px",
                 borderRadius: "10px",
@@ -1412,7 +1445,7 @@ function WhatsAppMockup() {
               <div
                 style={{
                   fontSize: "13px",
-                  color: "#0A0A0A",
+                  color: C.text,
                   lineHeight: 1.55,
                   whiteSpace: "pre-line",
                   fontFamily: FONT.sans,
@@ -1441,7 +1474,7 @@ function WhatsAppMockup() {
                 <span
                   style={{
                     fontSize: "10px",
-                    color: "#71717A",
+                    color: C.textMuted,
                     fontFamily: FONT.mono,
                   }}
                 >
@@ -1476,7 +1509,7 @@ function WhatsAppMockup() {
               <div
                 style={{
                   fontSize: "13px",
-                  color: "#0A0A0A",
+                  color: C.text,
                   lineHeight: 1.4,
                 }}
               >
@@ -1491,7 +1524,7 @@ function WhatsAppMockup() {
                   marginTop: "2px",
                 }}
               >
-                <span style={{ fontSize: "10px", color: "#71717A", fontFamily: FONT.mono }}>
+                <span style={{ fontSize: "10px", color: C.textMuted, fontFamily: FONT.mono }}>
                   07:00
                 </span>
                 <svg width="14" height="10" viewBox="0 0 16 11" fill="none">
@@ -1520,7 +1553,7 @@ function WhatsAppMockup() {
                 boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
               }}
             >
-              <div style={{ fontSize: "13px", color: "#0A0A0A", lineHeight: 1.4 }}>
+              <div style={{ fontSize: "13px", color: C.text, lineHeight: 1.4 }}>
                 détails
               </div>
               <div
@@ -1532,7 +1565,7 @@ function WhatsAppMockup() {
                   marginTop: "2px",
                 }}
               >
-                <span style={{ fontSize: "10px", color: "#71717A", fontFamily: FONT.mono }}>
+                <span style={{ fontSize: "10px", color: C.textMuted, fontFamily: FONT.mono }}>
                   07:02
                 </span>
                 <svg width="14" height="10" viewBox="0 0 16 11" fill="none">
@@ -1559,7 +1592,7 @@ function WhatsAppMockup() {
                 boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
               }}
             >
-              <div style={{ fontSize: "13px", color: "#0A0A0A", lineHeight: 1.5 }}>
+              <div style={{ fontSize: "13px", color: C.text, lineHeight: 1.5 }}>
                 📄 Rapport complet — Juillet 2026
                 {"\n"}
                 <span style={{ color: C.whatsappTeal, textDecoration: "underline" }}>
@@ -1575,7 +1608,7 @@ function WhatsAppMockup() {
                   marginTop: "4px",
                 }}
               >
-                <span style={{ fontSize: "10px", color: "#71717A", fontFamily: FONT.mono }}>
+                <span style={{ fontSize: "10px", color: C.textMuted, fontFamily: FONT.mono }}>
                   07:02
                 </span>
                 <svg width="14" height="10" viewBox="0 0 16 11" fill="none">
@@ -1623,7 +1656,7 @@ function WhatsAppMockup() {
               justifyContent: "center",
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={C.textOnDark}>
               <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
             </svg>
           </div>
@@ -1736,7 +1769,7 @@ function DashboardMockup() {
               height: "16px",
               borderRadius: "50%",
               background: C.red,
-              color: "#FFFFFF",
+              color: C.textOnDark,
               fontSize: "9px",
               fontWeight: 700,
               display: "flex",
@@ -1755,7 +1788,7 @@ function DashboardMockup() {
             height: "32px",
             borderRadius: "50%",
             background: C.accentDark,
-            color: "#FFFFFF",
+            color: C.textOnDark,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1838,7 +1871,7 @@ function DashboardMockup() {
                     fontSize: "10px",
                     fontWeight: 700,
                     fontFamily: FONT.mono,
-                    color: "#FFFFFF",
+                    color: C.textOnDark,
                     background: C.red,
                     padding: "2px 6px",
                     borderRadius: "8px",
@@ -2868,6 +2901,10 @@ function HowItWorks() {
             <TimelineDot label="Deliver" time="~120s" />
           </div>
         </div>
+
+        {/* DS V2 §7 — Interaction Tesla-style obligatoire.
+            3 tabs Discovery / Build / Vault — clic change le mockup au-dessus. */}
+        <HowItWorksInteractive />
       </div>
     </section>
   );
@@ -2986,10 +3023,10 @@ function TimelineDot({ label, time }: { label: string; time: string }) {
           width: "8px",
           height: "8px",
           borderRadius: "50%",
-          background: C.sage,
+          background: C.accent, // stone-500 (was C.sage)
         }}
       />
-      <span style={{ fontSize: "12px", color: C.textSecondary, fontFamily: FONT.sans }}>
+      <span style={{ fontSize: "12px", color: C.textBody, fontFamily: FONT.sans }}>
         {label}
       </span>
       <span
@@ -3001,6 +3038,453 @@ function TimelineDot({ label, time }: { label: string; time: string }) {
       >
         {time}
       </span>
+    </div>
+  );
+}
+
+// ─── HOW IT WORKS — Interactive TeslaTabs (DS V2 §7) ────────────────
+// 3 tabs Discovery / Build / Vault — clic change le mockup au-dessus.
+// Recommandation benchmark Pattern 3 (Real Product Preview) adaptée en
+// mockup interactif (le vrai screenshot WhatsApp est en Section 04).
+function HowItWorksInteractive() {
+  return (
+    <div style={{ marginTop: "80px" }}>
+      <Eyebrow color={C.accent}>See it in action</Eyebrow>
+      <SectionTitle maxW="720px">Three phases. One pipeline.</SectionTitle>
+      <SectionSub>
+        Click a tab to see what happens at each phase — from raw media
+        scrape to your WhatsApp inbox.
+      </SectionSub>
+      <TeslaTabs
+        ariaLabel="Harch Atelier pipeline phases"
+        tabs={[
+          { label: "Discovery", content: <DiscoveryView /> },
+          { label: "Build", content: <BuildView /> },
+          { label: "Vault", content: <VaultView /> },
+        ]}
+      />
+    </div>
+  );
+}
+
+function DiscoveryView() {
+  const mediaSources = [
+    "Le Matin",
+    "L'Économiste",
+    "Hespress",
+    "TelQuel",
+    "Médias24",
+    "Aujourd'hui Le Maroc",
+    "Le360",
+    "Yabiladi",
+    "Bladi",
+    "MâadBarid",
+  ];
+  const aiEngines = [
+    "ChatGPT",
+    "Perplexity",
+    "Google AI Overviews",
+    "Gemini",
+    "Claude",
+    "Copilot",
+    "Mistral",
+    "Grok",
+  ];
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: "12px",
+          fontFamily: FONT.mono,
+          color: C.accent,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          marginBottom: "12px",
+        }}
+      >
+        Phase 01 · Discovery
+      </div>
+      <h3
+        style={{
+          fontSize: "24px",
+          fontWeight: 700,
+          color: C.text,
+          margin: "0 0 24px",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        We scrape 30+ Moroccan and African media + 8 AI engines.
+      </h3>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "32px",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "11px",
+              fontFamily: FONT.mono,
+              color: C.textMuted,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: "12px",
+            }}
+          >
+            Moroccan &amp; African media · 30+
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {mediaSources.map((s) => (
+              <span
+                key={s}
+                style={{
+                  padding: "6px 10px",
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontFamily: FONT.mono,
+                  color: C.textBody,
+                  background: C.bgSubtle,
+                }}
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: "11px",
+              fontFamily: FONT.mono,
+              color: C.textMuted,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: "12px",
+            }}
+          >
+            AI engines · 8
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {aiEngines.map((s) => (
+              <span
+                key={s}
+                style={{
+                  padding: "6px 10px",
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontFamily: FONT.mono,
+                  color: C.textBody,
+                  background: C.bgSubtle,
+                }}
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div
+        style={{
+          marginTop: "24px",
+          paddingTop: "20px",
+          borderTop: `1px solid ${C.border}`,
+          display: "flex",
+          gap: "32px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "28px",
+              fontWeight: 700,
+              fontFamily: FONT.mono,
+              color: C.accent,
+            }}
+          >
+            5M+
+          </div>
+          <div
+            style={{
+              fontSize: "12px",
+              color: C.textMuted,
+              fontFamily: FONT.mono,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            articles ingested/day
+          </div>
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: "28px",
+              fontWeight: 700,
+              fontFamily: FONT.mono,
+              color: C.accent,
+            }}
+          >
+            120+
+          </div>
+          <div
+            style={{
+              fontSize: "12px",
+              color: C.textMuted,
+              fontFamily: FONT.mono,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            languages translated
+          </div>
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: "28px",
+              fontWeight: 700,
+              fontFamily: FONT.mono,
+              color: C.accent,
+            }}
+          >
+            24/7
+          </div>
+          <div
+            style={{
+              fontSize: "12px",
+              color: C.textMuted,
+              fontFamily: FONT.mono,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            scanning frequency
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BuildView() {
+  const pipeline = [
+    { step: "Ingest", desc: "Raw article + metadata captured", time: "~5s" },
+    { step: "NLP", desc: "Language detection + entity extraction", time: "~10s" },
+    { step: "Score", desc: "Sentiment + risk + topic classification", time: "~8s" },
+    { step: "Alert", desc: "Threshold check → WhatsApp if crisis", time: "~2s" },
+  ];
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: "12px",
+          fontFamily: FONT.mono,
+          color: C.accent,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          marginBottom: "12px",
+        }}
+      >
+        Phase 02 · Build
+      </div>
+      <h3
+        style={{
+          fontSize: "24px",
+          fontWeight: 700,
+          color: C.text,
+          margin: "0 0 24px",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        HarchIQ analyzes sentiment, risk, AI visibility per entity.
+      </h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {pipeline.map((p, i) => (
+          <div
+            key={p.step}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              padding: "14px 18px",
+              border: `1px solid ${C.border}`,
+              borderRadius: "6px",
+              background: C.bgSubtle,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "11px",
+                fontFamily: FONT.mono,
+                color: C.textMuted,
+                letterSpacing: "0.1em",
+                minWidth: "32px",
+              }}
+            >
+              0{i + 1}
+            </div>
+            <div
+              style={{
+                fontSize: "15px",
+                fontWeight: 600,
+                color: C.text,
+                minWidth: "80px",
+              }}
+            >
+              {p.step}
+            </div>
+            <div style={{ fontSize: "13px", color: C.textBody, flex: 1 }}>
+              {p.desc}
+            </div>
+            <div
+              style={{
+                fontSize: "12px",
+                fontFamily: FONT.mono,
+                color: C.accent,
+                padding: "4px 10px",
+                border: `1px solid ${C.border}`,
+                borderRadius: "4px",
+                background: C.bg,
+              }}
+            >
+              {p.time}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: "20px",
+          fontSize: "12px",
+          fontFamily: FONT.mono,
+          color: C.textMuted,
+          textAlign: "center",
+        }}
+      >
+        Engine: HarchIQ · Languages: FR / AR / EN · Latency: &lt; 30 sec per
+        article
+      </div>
+    </div>
+  );
+}
+
+function VaultView() {
+  const channels = [
+    {
+      name: "WhatsApp Daily Digest",
+      desc: "7:00 every morning — your reputation in 60-second read",
+      icon: "✆",
+      detail: "Real-time crisis alerts when sentiment shifts",
+    },
+    {
+      name: "Web Dashboard",
+      desc: "Full drill-down — articles, entities, trends, competitors",
+      icon: "▦",
+      detail: "Drag-and-drop visualization builder (Pro+)",
+    },
+    {
+      name: "Monthly PDF Report",
+      desc: "Board-ready, 12 pages, branded with your logo",
+      icon: "▤",
+      detail: "Executive summary + risk matrix + recommendations",
+    },
+  ];
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: "12px",
+          fontFamily: FONT.mono,
+          color: C.accent,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          marginBottom: "12px",
+        }}
+      >
+        Phase 03 · Vault
+      </div>
+      <h3
+        style={{
+          fontSize: "24px",
+          fontWeight: 700,
+          color: C.text,
+          margin: "0 0 24px",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        You get WhatsApp Daily Digest + dashboard + monthly PDF.
+      </h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {channels.map((c) => (
+          <div
+            key={c.name}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "16px",
+              padding: "16px 18px",
+              border: `1px solid ${C.border}`,
+              borderRadius: "6px",
+              background: C.bgSubtle,
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "6px",
+                background: "rgba(120,113,108,0.10)",
+                border: `1px solid ${C.border}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+                color: C.accent,
+                fontFamily: FONT.mono,
+                flexShrink: 0,
+              }}
+            >
+              {c.icon}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  color: C.text,
+                  marginBottom: "4px",
+                }}
+              >
+                {c.name}
+              </div>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: C.textBody,
+                  lineHeight: 1.5,
+                  marginBottom: "6px",
+                }}
+              >
+                {c.desc}
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: C.textMuted,
+                  fontFamily: FONT.mono,
+                }}
+              >
+                {c.detail}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -3180,8 +3664,8 @@ function PricingCard({
             top: "-12px",
             left: "50%",
             transform: "translateX(-50%)",
-            background: C.sage,
-            color: "#FFFFFF",
+            background: C.cta, // emerald-500 — DS V2 CTA primary
+            color: C.textOnDark, // white
             fontSize: "11px",
             fontWeight: 600,
             fontFamily: FONT.mono,
@@ -3201,7 +3685,7 @@ function PricingCard({
         style={{
           fontSize: "13px",
           fontFamily: FONT.mono,
-          color: tier.highlighted ? C.sage : C.textMuted,
+          color: tier.highlighted ? C.cta : C.textMuted, // emerald for highlighted tier label
           letterSpacing: "0.1em",
           textTransform: "uppercase",
           marginBottom: "12px",
@@ -3256,37 +3740,37 @@ function PricingCard({
         {tier.tagline}
       </p>
 
-      {/* CTA */}
+      {/* CTA — DS V2 §3 : highlighted tier = bg-emerald-500, others = secondary */}
       <a
         href="/atelier/audit"
         style={{
           display: "block",
           textAlign: "center",
           padding: "12px 20px",
-          background: tier.highlighted ? C.sage : "transparent",
-          color: tier.highlighted ? "#FFFFFF" : C.accentDark,
+          background: tier.highlighted ? C.cta : "transparent", // emerald-500 for highlighted
+          color: tier.highlighted ? C.textOnDark : C.text, // white / neutral-950
           fontSize: "14px",
           fontWeight: 600,
           textDecoration: "none",
           borderRadius: "3px",
           border: tier.highlighted
-            ? `1px solid ${C.sage}`
-            : `1px solid ${C.accentDark}`,
+            ? `1px solid ${C.cta}`
+            : `1px solid ${C.borderStrong}`, // neutral-300 for secondary
           cursor: "pointer",
           fontFamily: FONT.sans,
-          transition: "all 0.2s",
+          transition: "background-color 0.2s",
           marginBottom: "28px",
         }}
         onMouseEnter={(e) => {
           if (tier.highlighted) {
-            e.currentTarget.style.background = C.sageDark;
+            e.currentTarget.style.background = C.ctaHover; // emerald-400
           } else {
-            e.currentTarget.style.background = "rgba(74,93,110,0.06)";
+            e.currentTarget.style.background = C.bgHover; // neutral-100
           }
         }}
         onMouseLeave={(e) => {
           if (tier.highlighted) {
-            e.currentTarget.style.background = C.sage;
+            e.currentTarget.style.background = C.cta;
           } else {
             e.currentTarget.style.background = "transparent";
           }
@@ -3968,25 +4452,25 @@ function FinalCTA() {
                 justifyContent: "center",
                 gap: "10px",
                 padding: "15px 28px",
-                background: C.sage,
-                color: "#FFFFFF",
+                background: C.cta, // emerald-500 — DS V2 primary CTA
+                color: C.textOnDark, // white
                 fontSize: "15px",
                 fontWeight: 600,
-                border: `1px solid ${C.sage}`,
+                border: `1px solid ${C.cta}`,
                 borderRadius: "3px",
                 cursor: "pointer",
                 fontFamily: FONT.sans,
-                transition: "all 0.2s",
+                transition: "background-color 0.2s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = C.sageDark;
+                e.currentTarget.style.background = C.ctaHover; // emerald-400
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = C.sage;
+                e.currentTarget.style.background = C.cta;
               }}
             >
               Get my free audit
-              <IconArrow dir="right" size={16} color="#FFFFFF" />
+              <IconArrow dir="right" size={16} color={C.textOnDark} />
             </button>
             <div
               style={{
@@ -4009,7 +4493,7 @@ function FinalCTA() {
           <div
             style={{
               background: C.surface,
-              border: `1px solid ${C.sage}`,
+              border: `1px solid ${C.cta}`, // emerald-500 — success confirmation
               borderRadius: "8px",
               padding: "40px 32px",
               boxShadow: SHADOW.card,
@@ -4020,15 +4504,15 @@ function FinalCTA() {
                 width: "56px",
                 height: "56px",
                 borderRadius: "50%",
-                background: C.sageBg,
-                border: `1px solid rgba(74,123,95,0.3)`,
+                background: C.successBg, // emerald-50 — success state
+                border: `1px solid rgba(16,185,129,0.3)`, // emerald-500 @ 30%
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 margin: "0 auto 20px",
               }}
             >
-              <IconCheck size={28} color={C.sage} />
+              <IconCheck size={28} color={C.cta} />
             </div>
             <h3
               style={{
@@ -4212,7 +4696,7 @@ const pageStyles = `
 
   /* Focus visible */
   a:focus-visible, button:focus-visible, input:focus-visible {
-    outline: 2px solid #4A5D6E;
+    outline: 2px solid ${C.accentHover}; /* stone-600 — DS V2 Atelier accent */
     outline-offset: 2px;
   }
 `;
@@ -4228,6 +4712,9 @@ export default function AtelierHome() {
       <ScrollProgress />
       <CursorGlow />
       <AtelierNav />
+      {/* MASTER_VISION "Obligations absolues" + DS V2 — disclaimer pre-launch
+          global. Affiché sur toutes les pages Atelier. */}
+      <PhaseDisclaimer />
       <main style={{ position: "relative", zIndex: 1 }}>
         <Hero />
         <LogoWall />
