@@ -1187,3 +1187,264 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDE (Atelier-specific)
+   
+   Problem: Atelier pages use inline styles (style={{ padding: "100px 32px" }})
+   which have maximum specificity. To override on mobile, we need !important.
+   
+   This block targets viewports <= 768px and fixes:
+   1. Padding reduction (100px → 48px, 32px → 16px)
+   2. Grid collapse to single column
+   3. Font-size clamping for huge headings
+   4. Fixed-width containers → 100% width
+   5. WhatsApp/dashboard mockups → max-width 100%
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* ─── 1. Global overflow safety ─────────────────────────────── */
+  html, body, main, section, div, article, aside, footer, header, nav {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* ─── 2. Section padding reduction ──────────────────────────── */
+  /* Target inline padding: "100px 32px" / "80px 32px" / "120px 32px" */
+  section[style*="padding: 100px"],
+  section[style*="padding:100px"],
+  section[style*="padding: 80px"],
+  section[style*="padding:80px"],
+  section[style*="padding: 120px"],
+  section[style*="padding:120px"],
+  section[style*="padding: 60px"],
+  section[style*="padding:60px"] {
+    padding: 48px 16px !important;
+  }
+  
+  /* Target inline padding: "100px 32px 80px" variations */
+  section[style*="32px"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  /* Inner containers with maxWidth + margin auto */
+  div[style*="maxWidth: 1100px"],
+  div[style*="maxWidth:1100px"],
+  div[style*="maxWidth: 1280px"],
+  div[style*="maxWidth:1280px"],
+  div[style*="maxWidth: 900px"],
+  div[style*="maxWidth:900px"],
+  div[style*="maxWidth: 1200px"],
+  div[style*="maxWidth:1200px"],
+  div[style*="maxWidth: 760px"],
+  div[style*="maxWidth:760px"],
+  div[style*="maxWidth: 800px"],
+  div[style*="maxWidth:800px"],
+  div[style*="maxWidth: 1000px"],
+  div[style*="maxWidth:1000px"] {
+    max-width: 100% !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  /* ─── 3. Grid collapse to single column ────────────────────── */
+  /* Target gridTemplateColumns: repeat(N, 1fr) where N > 1 */
+  div[style*="gridTemplateColumns: repeat(3"],
+  div[style*="gridTemplateColumns: repeat(4"],
+  div[style*="gridTemplateColumns: repeat(5"],
+  div[style*="gridTemplateColumns:repeat(3"],
+  div[style*="gridTemplateColumns:repeat(4"],
+  div[style*="gridTemplateColumns:repeat(5"] {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  div[style*="gridTemplateColumns: repeat(2"],
+  div[style*="gridTemplateColumns:repeat(2"] {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  /* auto-fit grids with minmax — reduce minmax for mobile */
+  div[style*="minmax(380px"],
+  div[style*="minmax(320px"],
+  div[style*="minmax(400px"],
+  div[style*="minmax(360px"] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  div[style*="minmax(280px"],
+  div[style*="minmax(240px"],
+  div[style*="minmax(180px"] {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  }
+  
+  /* ─── 4. Hero H1 font-size clamping ────────────────────────── */
+  h1[style*="fontSize: clamp(40px"],
+  h1[style*="fontSize:clamp(40px"],
+  h1[style*="fontSize: clamp(48px"],
+  h1[style*="fontSize:clamp(48px"],
+  h1[style*="fontSize: clamp(56px"],
+  h1[style*="fontSize:clamp(56px"],
+  h1[style*="fontSize: clamp(68px"],
+  h1[style*="fontSize:clamp(68px"] {
+    font-size: clamp(32px, 8vw, 48px) !important;
+    line-height: 1.1 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  h2[style*="fontSize: clamp(32px"],
+  h2[style*="fontSize:clamp(32px"],
+  h2[style*="fontSize: clamp(44px"],
+  h2[style*="fontSize:clamp(44px"],
+  h2[style*="fontSize: clamp(48px"],
+  h2[style*="fontSize:clamp(48px"] {
+    font-size: clamp(24px, 6vw, 36px) !important;
+    line-height: 1.15 !important;
+  }
+  
+  /* ─── 5. WhatsApp + Dashboard mockups → 100% width ─────────── */
+  /* Mockups that have fixed widths need to be constrained */
+  div[style*="width: 380px"],
+  div[style*="width:380px"],
+  div[style*="width: 400px"],
+  div[style*="width:400px"],
+  div[style*="width: 420px"],
+  div[style*="width:420px"],
+  div[style*="width: 440px"],
+  div[style*="width:440px"],
+  div[style*="width: 480px"],
+  div[style*="width:480px"],
+  div[style*="width: 500px"],
+  div[style*="width:500px"],
+  div[style*="width: 600px"],
+  div[style*="width:600px"],
+  div[style*="width: 700px"],
+  div[style*="width:700px"],
+  div[style*="width: 800px"],
+  div[style*="width:800px"],
+  div[style*="width: 900px"],
+  div[style*="width:900px"],
+  div[style*="width: 1000px"],
+  div[style*="width:1000px"],
+  div[style*="width: 1100px"],
+  div[style*="width:1100px"],
+  div[style*="width: 1200px"],
+  div[style*="width:1200px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  /* ─── 6. Flex row → column on mobile ───────────────────────── */
+  /* Target flex containers that should stack vertically */
+  div[style*="display: flex"][style*="justifyContent: space-between"]:not([style*="flexDirection: column"]) {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  
+  /* ─── 7. Pricing cards stack ───────────────────────────────── */
+  /* Pricing 3-column grids should stack */
+  section[style*="pricing"] div[style*="gridTemplateColumns"],
+  div[data-pricing-grid] {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* ─── 8. Table responsive → horizontal scroll wrapper ──────── */
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+  }
+  
+  thead, tbody, tr {
+    display: table !important;
+    width: max-content !important;
+    max-width: 100% !important;
+  }
+  
+  /* ─── 9. Button full-width on mobile ───────────────────────── */
+  a[style*="display: inline-block"][style*="padding: 16px 32px"],
+  a[style*="display:inline-block"][style*="padding:16px 32px"],
+  a[style*="display: inline-block"][style*="padding: 14px 28px"],
+  a[style*="display:inline-block"][style*="padding:14px 28px"],
+  button[style*="padding: 16px 32px"],
+  button[style*="padding:16px 32px"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+  }
+  
+  /* ─── 10. Nav bar collapse ─────────────────────────────────── */
+  /* Horizontal nav links should wrap or hide on mobile */
+  nav[style*="display: flex"][style*="gap: 32px"],
+  nav[style*="display:flex"][style*="gap:32px"],
+  nav[style*="display: flex"][style*="gap: 24px"],
+  nav[style*="display:flex"][style*="gap:24px"] {
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+    font-size: 13px !important;
+  }
+  
+  /* ─── 11. Card padding reduction ───────────────────────────── */
+  div[style*="padding: 40px"],
+  div[style*="padding:40px"],
+  div[style*="padding: 32px"],
+  div[style*="padding:32px"],
+  div[style*="padding: 48px"],
+  div[style*="padding:48px"] {
+    padding: 20px !important;
+  }
+  
+  /* ─── 12. Font-size reductions for body text ───────────────── */
+  p[style*="fontSize: 20px"],
+  p[style*="fontSize:20px"],
+  p[style*="fontSize: 19px"],
+  p[style*="fontSize:19px"],
+  p[style*="fontSize: 18px"],
+  p[style*="fontSize:18px"] {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+  
+  /* ─── 13. Badge/pill adjustment ────────────────────────────── */
+  /* Small badges with inline-flex should not overflow */
+  div[style*="display: inline-flex"][style*="padding: 6px 14px"],
+  div[style*="display:inline-flex"][style*="padding:6px 14px"] {
+    font-size: 10px !important;
+    padding: 4px 10px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SMALL MOBILE (<= 480px) — Additional tightening
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  section[style*="padding: 48px"],
+  section[style*="padding:48px"] {
+    padding: 32px 12px !important;
+  }
+  
+  h1 {
+    font-size: 28px !important;
+  }
+  
+  h2 {
+    font-size: 22px !important;
+  }
+  
+  /* Stats numbers — smaller on tiny screens */
+  div[style*="fontSize: 28px"],
+  div[style*="fontSize:28px"],
+  div[style*="fontSize: 32px"],
+  div[style*="fontSize:32px"] {
+    font-size: 22px !important;
+  }
+}

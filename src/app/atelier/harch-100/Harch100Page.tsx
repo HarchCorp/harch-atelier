@@ -541,7 +541,7 @@ export default function Harch100Page() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "80px 32px 60px",
+        padding: "48px 16px",
       }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           {/* Top label */}
@@ -585,7 +585,7 @@ export default function Harch100Page() {
 
           {/* Stats row */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -612,7 +612,7 @@ export default function Harch100Page() {
       </section>
 
       {/* PILLARS SELECTOR — Innovation / Performance / Purpose */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "60px 32px 30px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "flex-end",
           flexWrap: "wrap", gap: "24px", marginBottom: "32px",
@@ -685,7 +685,7 @@ export default function Harch100Page() {
       </section>
 
       {/* TOP 3 PODIUM — Premium cards */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "20px 32px 60px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px 48px" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
           gap: "20px",
@@ -695,7 +695,7 @@ export default function Harch100Page() {
               background: C.surface,
               border: `1px solid ${i === 0 ? C.sage : C.border}`,
               borderRadius: "16px",
-              padding: "32px 28px",
+              padding: "24px 20px",
               position: "relative", overflow: "hidden",
               boxShadow: i === 0 ? "0 8px 32px rgba(74,123,95,0.12)" : C.shadow,
               transform: animateIn ? "translateY(0)" : "translateY(20px)",
@@ -795,7 +795,7 @@ export default function Harch100Page() {
       </section>
 
       {/* MAIN RANKING TABLE */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px 80px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px 48px" }}>
         {/* Data source status banner */}
         {loading && (
           <div style={{
@@ -875,7 +875,8 @@ export default function Harch100Page() {
           background: C.surface, border: `1px solid ${C.border}`,
           borderRadius: "12px", overflow: "hidden", boxShadow: C.shadow,
         }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "880px" }}>
             <thead>
               <tr style={{ background: C.surfaceAlt }}>
                 <th style={thStyle}>#</th>
@@ -989,11 +990,12 @@ export default function Harch100Page() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Methodology */}
         <div style={{
-          marginTop: "40px", padding: "28px 32px",
+          marginTop: "40px", padding: "20px 16px",
           background: C.surface, borderRadius: "12px",
           border: `1px solid ${C.border}`, boxShadow: C.shadow,
         }}>
@@ -1020,7 +1022,7 @@ export default function Harch100Page() {
                 <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, marginBottom: "6px" }}>
                   {s.title}
                 </div>
-                <div style={{ fontSize: "12px", color: C.textSec, lineHeight: 1.55 }}>
+                <div style={{ fontSize: "12px", color: C.textSec, lineHeight: 1.7 }}>
                   {s.body}
                 </div>
               </div>
@@ -1038,7 +1040,7 @@ export default function Harch100Page() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "80px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           <div style={{
@@ -1085,7 +1087,6 @@ export default function Harch100Page() {
           outline: 2px solid ${C.accent}; outline-offset: 2px; border-radius: 4px;
         }
         @media (max-width: 900px) {
-          table { font-size: 11px; }
           th, td { padding: 8px 6px !important; }
         }
       `}</style>
@@ -1153,10 +1154,10 @@ function ExpandedRow({ company, activePillar }: { company: Company; activePillar
   const maxRiskAxis = riskAxes[riskValues.indexOf(maxRisk)];
 
   return (
-    <div style={{ padding: "24px 32px", background: C.surfaceAlt }}>
+    <div style={{ padding: "20px 16px", background: C.surfaceAlt }}>
       <div style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
-        gap: "32px", maxWidth: "1300px",
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+        gap: "24px", maxWidth: "1300px",
       }}>
         {/* Column 1: Quarterly trend + pillars */}
         <div>
@@ -1197,7 +1198,7 @@ function ExpandedRow({ company, activePillar }: { company: Company; activePillar
             ))}
           </div>
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "12px", marginTop: "20px",
           }}>
             {(["Innovation", "Performance", "Purpose"] as Pillar[]).map(p => {
@@ -1317,7 +1318,7 @@ function ExpandedRow({ company, activePillar }: { company: Company; activePillar
           </div>
           {/* Risk summary stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "8px", marginTop: "12px",
           }}>
             <div style={{
@@ -1442,7 +1443,7 @@ function LiveAgentRanking() {
   const C = { bg: "#FAFAFA", surface: "#FFFFFF", border: "#E5E5E5", text: "#0A0A0A", textSec: "#525252", textMuted: "#71717A", accent: "#4A5D6E", sage: "#4A7B5F", red: "#A0524B" };
 
   return (
-    <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 32px" }}>
+    <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #4A7B5F, #4A5D6E)" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
@@ -1465,7 +1466,8 @@ function LiveAgentRanking() {
         <div style={{ textAlign: "center", padding: 48, color: C.textMuted, fontSize: 13 }}>Loading live agent data…</div>
       ) : (
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: "640px" }}>
             <thead>
               <tr style={{ background: "#F8F8F8", borderBottom: `1px solid ${C.border}` }}>
                 {["Rank", "Company", "Score", "Grade", "Trend", "Articles", "Sentiment"].map((h) => (
@@ -1499,6 +1501,7 @@ function LiveAgentRanking() {
               ))}
             </tbody>
           </table>
+          </div>
           <div style={{ padding: "12px 16px", background: "#F8F8F8", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textMuted, textAlign: "center" }}>
             {source === "agent-live"
               ? "Live data — scraped by Harch Atelier agents from Moroccan media + classified by GLM-4"

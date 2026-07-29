@@ -166,9 +166,9 @@ export default function ProductsPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "100px 32px 80px",
+        padding: "48px 16px 40px",
       }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -208,7 +208,7 @@ export default function ProductsPage() {
 
           {/* Stats */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
             gap: "1px", background: C.border, border: `1px solid ${C.border}`,
             borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
           }}>
@@ -236,7 +236,7 @@ export default function ProductsPage() {
       </section>
 
       {/* PRODUCTS GRID — Alternating layout */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "80px 32px" }}>
+      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
         <div style={{
           fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
           color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -258,10 +258,10 @@ export default function ProductsPage() {
 
       {/* BUILDING IN PUBLIC — Pre-launch phase */}
       <section style={{
-        background: C.surface, padding: "100px 32px",
+        background: C.surface, padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center", padding: "0 16px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.bg,
@@ -318,9 +318,9 @@ export default function ProductsPage() {
       {/* CTA */}
       <section style={{
         background: C.text, color: "#FFFFFF",
-        padding: "100px 32px", textAlign: "center",
+        padding: "48px 16px", textAlign: "center",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase",
@@ -367,7 +367,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   return (
     <div style={{
       background: C.surface, border: `1px solid ${C.border}`,
-      borderRadius: "16px", padding: "40px", marginBottom: "24px",
+      borderRadius: "16px", padding: "24px", marginBottom: "24px",
       boxShadow: C.shadow, position: "relative", overflow: "hidden",
     }}>
       {/* Accent stripe */}
@@ -377,8 +377,8 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       }} />
 
       <div style={{
-        display: "grid", gridTemplateColumns: "auto 1fr auto",
-        gap: "24px", alignItems: "flex-start", marginBottom: "24px",
+        display: "flex", flexWrap: "wrap",
+        gap: "16px", alignItems: "flex-start", marginBottom: "24px",
       }}>
         <div style={{
           width: "56px", height: "56px", borderRadius: "12px",
@@ -390,10 +390,10 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         }}>
           {product.icon}
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <div style={{
             display: "flex", alignItems: "center", gap: "12px",
-            marginBottom: "6px",
+            flexWrap: "wrap", marginBottom: "6px",
           }}>
             <span style={{
               fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
@@ -411,7 +411,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             </span>
           </div>
           <h3 style={{
-            fontSize: "26px", fontWeight: 700, color: C.text,
+            fontSize: "clamp(18px, 4vw, 26px)", fontWeight: 700, color: C.text,
             letterSpacing: "-0.02em", margin: "0 0 8px",
           }}>
             {product.name}
@@ -442,6 +442,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       {/* Features grid */}
       <div style={{
         paddingTop: "24px", borderTop: `1px solid ${C.borderLight}`,
+        marginTop: "8px",
       }}>
         <div style={{
           fontSize: "10px", fontFamily: "'JetBrains Mono', monospace",
@@ -451,13 +452,13 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           Features
         </div>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: "8px 24px",
         }}>
           {product.features.map((f, i) => (
             <div key={i} style={{
               display: "flex", gap: "10px",
-              fontSize: "13px", color: C.textSec, lineHeight: 1.5,
+              fontSize: "13px", color: C.textSec, lineHeight: 1.6,
             }}>
               <span style={{
                 color: product.color, fontWeight: 700, flexShrink: 0,

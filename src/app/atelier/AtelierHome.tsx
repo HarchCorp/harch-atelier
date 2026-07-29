@@ -396,7 +396,7 @@ function Hero() {
       style={{
         position: "relative",
         background: C.bg,
-        padding: "80px 32px 100px",
+        padding: "60px 20px",
         overflow: "hidden",
       }}
     >
@@ -446,6 +446,7 @@ function Hero() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
           position: "relative",
           zIndex: 1,
         }}
@@ -676,6 +677,7 @@ function HeroDashboardMockup() {
             justifyContent: "space-between",
             alignItems: "flex-start",
             marginBottom: "24px",
+            flexWrap: "wrap",
             gap: "16px",
           }}
         >
@@ -814,7 +816,7 @@ function HeroDashboardMockup() {
           className="hero-kpi-row"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "10px",
             marginBottom: "20px",
           }}
@@ -839,6 +841,8 @@ function HeroDashboardMockup() {
               justifyContent: "space-between",
               alignItems: "center",
               marginBottom: "8px",
+              flexWrap: "wrap",
+              gap: "12px",
             }}
           >
             <span
@@ -947,13 +951,14 @@ function LogoWall() {
         background: C.surface,
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "56px 32px",
+        padding: "48px 16px",
       }}
     >
       <div
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <div
@@ -973,7 +978,7 @@ function LogoWall() {
           className="logo-wall-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "16px",
           }}
         >
@@ -1061,7 +1066,7 @@ function WhatWeDo() {
       id="features"
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -1069,6 +1074,7 @@ function WhatWeDo() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <Eyebrow>What we do</Eyebrow>
@@ -1085,7 +1091,7 @@ function WhatWeDo() {
           className="feature-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
           }}
         >
@@ -1219,7 +1225,7 @@ function WhatsAppPreview() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -1227,6 +1233,7 @@ function WhatsAppPreview() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <div className="whatsapp-split">
@@ -1676,7 +1683,7 @@ function DashboardPreview() {
       id="dashboard"
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -1684,6 +1691,7 @@ function DashboardPreview() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <Eyebrow>The dashboard</Eyebrow>
@@ -1806,7 +1814,6 @@ function DashboardMockup() {
         className="dash-layout"
         style={{
           display: "grid",
-          gridTemplateColumns: "200px 1fr 280px",
           minHeight: "560px",
         }}
       >
@@ -2016,6 +2023,8 @@ function DashboardMockup() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: "16px",
+                flexWrap: "wrap",
+                gap: "12px",
               }}
             >
               <div
@@ -2067,7 +2076,7 @@ function DashboardMockup() {
             className="dash-mini-stats"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
               gap: "12px",
               marginTop: "16px",
             }}
@@ -2158,6 +2167,8 @@ function DashboardMockup() {
                   padding: "8px 0",
                   borderBottom: `1px solid ${C.borderLight}`,
                   fontSize: "12px",
+                  flexWrap: "wrap",
+                  gap: "12px",
                 }}
               >
                 <span style={{ color: C.textSecondary, fontFamily: FONT.sans }}>
@@ -2407,6 +2418,8 @@ function TopicRow({
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: "6px",
+          flexWrap: "wrap",
+          gap: "12px",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -2485,7 +2498,7 @@ function Harch100() {
     <section
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -2493,6 +2506,7 @@ function Harch100() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <Eyebrow color={C.sage}>The HARCH 100</Eyebrow>
@@ -2512,14 +2526,15 @@ function Harch100() {
             border: `1px solid ${C.border}`,
             borderRadius: "8px",
             boxShadow: SHADOW.card,
-            overflow: "hidden",
+            overflowX: "auto",
+            overflowY: "hidden",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {/* Table header */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "60px 1fr 120px 120px 180px",
               padding: "14px 24px",
               background: C.surfaceAlt,
               borderBottom: `1px solid ${C.border}`,
@@ -2606,7 +2621,6 @@ function Harch100Row({
       className="harch-table-row"
       style={{
         display: "grid",
-        gridTemplateColumns: "60px 1fr 120px 120px 180px",
         padding: "18px 24px",
         borderBottom: `1px solid ${C.borderLight}`,
         alignItems: "center",
@@ -2783,7 +2797,7 @@ function HowItWorks() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -2791,6 +2805,7 @@ function HowItWorks() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <Eyebrow>How it works</Eyebrow>
@@ -2806,7 +2821,7 @@ function HowItWorks() {
           className="how-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "24px",
             position: "relative",
           }}
@@ -3118,7 +3133,7 @@ function DiscoveryView() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
           gap: "32px",
         }}
       >
@@ -3556,7 +3571,7 @@ function Pricing() {
       id="pricing"
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -3564,6 +3579,7 @@ function Pricing() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <Eyebrow color={C.sage}>Pricing</Eyebrow>
@@ -3579,7 +3595,7 @@ function Pricing() {
           className="pricing-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
             alignItems: "stretch",
           }}
@@ -3868,7 +3884,7 @@ function ReportPreview() {
     <section
       style={{
         background: C.surface,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
       }}
     >
@@ -3876,6 +3892,7 @@ function ReportPreview() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
+          padding: "0 16px",
         }}
       >
         <div className="report-split">
@@ -4010,6 +4027,8 @@ function PdfMockup() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
           <div>
@@ -4135,7 +4154,7 @@ function PdfMockup() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
               gap: "8px",
               marginBottom: "20px",
             }}
@@ -4242,6 +4261,8 @@ function PdfMockup() {
             fontSize: "9px",
             fontFamily: FONT.mono,
             color: C.textMuted,
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
           <span>Harch Atelier · Confidential</span>
@@ -4335,7 +4356,7 @@ function FinalCTA() {
       id="audit"
       style={{
         background: C.surfaceAlt,
-        padding: "100px 32px",
+        padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
         position: "relative",
         overflow: "hidden",
@@ -4414,7 +4435,7 @@ function FinalCTA() {
               className="cta-form-grid"
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
                 gap: "16px",
                 marginBottom: "16px",
               }}
