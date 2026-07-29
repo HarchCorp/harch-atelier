@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
-import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+import { ScrollProgress, CursorGlow, BackToTop, PhaseDisclaimer } from "../components/shared";
 import { RadarChart } from "../components/charts/Charts";
 
 // ═══════════════════════════════════════════════════════════════
@@ -535,6 +535,7 @@ export default function Harch100Page() {
       <ScrollProgress />
       <CursorGlow />
       <AtelierNav />
+      <PhaseDisclaimer variant="data" />
 
       {/* HERO — Signal AI 500 style */}
       <section style={{

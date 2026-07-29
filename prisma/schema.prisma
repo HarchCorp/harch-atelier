@@ -1,32 +1,339 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ═══════════════════════════════════════════════════════════════
+//  HARCH ATELIER — PRISMA SCHEMA v4.1 (Raw Intelligence Export)
+//  Neon PostgreSQL — Clean schema, no advisory models
+// ═══════════════════════════════════════════════════════════════
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+
+// ─── CORE ENTITIES ──────────────────────────────────────────────
+
+model Company {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  aliases        String[]
+  sector         String
+  ticker         String?
+  foundedYear    Int?
+  headquarters   String?
+  website        String?
+  description    String?
+  logoUrl        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  articles         Article[]
+  sentimentScores  SentimentScore[]
+  riskAssessments  RiskAssessment[]
+  reputationScores ReputationScore[]
+  aiVisibility     AIVisibility[]
+  entities         EntityMention[]
+}
+
+model Article {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title         String
+  url           String   @unique
+  source        String
+  sourceId      String?
+  publishedAt   DateTime?
+  scrapedAt     DateTime @default(now())
+  content       String?
+  summary       String?
+  language      String?
+  sentimentLabel String?
+  sentimentScore Float?
+  relevanceScore Float?
+  urlHash       String   @unique
+  processed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, publishedAt])
+  @@index([source])
+  @@index([sentimentLabel])
+  @@index([processed])
+}
+
+// ─── ANALYTICS ──────────────────────────────────────────────────
+
+model SentimentScore {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  score         Float
+  positivePct   Float
+  neutralPct    Float
+  negativePct   Float
+  articleCount  Int
+  language      String?
+  sourceBreakdown Json?
+  calculatedAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, calculatedAt])
+}
+
+model RiskAssessment {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  overallRisk   Float
+  riskLevel     String
+  category      String
+  frequency     Float?
+  impactSeverity Float?
+  velocity      Float?
+  riskScore     Float
+  trajectory    String?
+  articleCount  Int?
+  assessedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, assessedAt])
+  @@index([riskLevel])
+  @@index([category])
+}
+
+model ReputationScore {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  overall       Float
+  sentiment     Float?
+  aiVisibility  Float?
+  volume        Float?
+  authority     Float?
+  innovationScore Float?
+  innovationWeight Float?
+  performanceScore Float?
+  performanceWeight Float?
+  purposeScore  Float?
+  purposeWeight Float?
+  shareOfVoice  Float?
+  trend         String?
+  calculatedAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, calculatedAt])
+}
+
+model AIVisibility {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  platform      String
+  cited         Boolean
+  position      String?
+  sentiment     String?
+  confidence    Float?
+  summary       String?
+  checkedAt     DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, platform])
+  @@index([companyId, checkedAt])
+}
+
+// ─── ENTITY GRAPH ───────────────────────────────────────────────
+
+model Entity {
+  id            String   @id @default(cuid())
+  entityType    String
+  name          String
+  aliases       String[]
+  confidence    Float    @default(0.5)
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @default(now())
+  sources       String[]
+  tags          String[]
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mentions      EntityMention[]
+
+  @@index([entityType])
+  @@index([name])
+}
+
+model EntityMention {
+  id            String   @id @default(cuid())
+  entityId      String
+  entity        Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  articleId     String?
+  mentionText   String
+  sentimentLabel String?
+  sentimentScore Float?
+  mentionedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([entityId])
+  @@index([companyId])
+}
+
+// ─── GLM CACHE (24h TTL strict) ─────────────────────────────────
+
+model GLMAnalysis {
+  id            String   @id @default(cuid())
+  inputHash     String   @unique
+  model         String
+  promptType    String
+  inputPayload  Json
+  outputPayload Json
+  inputTokens   Int?
+  outputTokens  Int?
+  latencyMs     Int?
+  createdAt     DateTime @default(now())
+
+  @@index([inputHash])
+  @@index([promptType])
+  @@index([createdAt])
+}
+
+// ─── JOBS & LOGGING ─────────────────────────────────────────────
+
+model Job {
+  id            String   @id @default(cuid())
+  jobType       String
+  status        String   @default("pending")
+  payload       Json?
+  result        Json?
+  error         String?
+  progress      Int      @default(0)
+  scheduledAt   DateTime @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  durationMs    Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([jobType, status])
+  @@index([status])
+}
+
+model ScraperLog {
+  id            String   @id @default(cuid())
+  sourceId      String
+  sourceName    String
+  sourceUrl     String
+  status        String
+  articlesFound Int      @default(0)
+  articlesNew   Int      @default(0)
+  errorMessage  String?
+  durationMs    Int?
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  @@index([sourceId, startedAt])
+  @@index([status])
+}
+
+model SystemLog {
+  id            String   @id @default(cuid())
+  level         String
+  category      String
+  message       String
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([level, createdAt])
+  @@index([category])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  action        String
+  resource      String
+  ipAddress     String?
+  userAgent     String?
+  result        String
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
+// ─── AUTH ───────────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String?
+  role          String   @default("user")
+  plan          String   @default("free")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+  apiKeys       ApiKey[]
+  accounts      Account[]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken  String   @unique
+  expires       DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([expires])
+}
+
+model ApiKey {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash       String   @unique
+  name          String
+  tier          String   @default("pro")
+  lastUsedAt    DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([keyHash])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

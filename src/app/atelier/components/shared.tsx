@@ -261,3 +261,86 @@ export const topLineStyle: React.CSSProperties = {
   background: "linear-gradient(to right, transparent, #4A5D6E, transparent)",
   opacity: 0.5,
 };
+
+// ─── PHASE DISCLAIMER — Pre-launch transparency banner ─────────
+// Per MASTER_VISION.md "Obligations absolues":
+// ✅ Toute nouvelle page du site doit inclure le disclaimer
+//
+// Usage:
+//   import { PhaseDisclaimer } from "../components/shared";
+//   <PhaseDisclaimer />        // default — pre-launch
+//   <PhaseDisclaimer variant="data" />  // for pages with scraped/scored data
+//
+// The disclaimer is honest about Atelier's pre-launch status and
+// (for variant="data") about the fact that scores are AI-estimated
+// from public sources, not official company statements.
+
+interface PhaseDisclaimerProps {
+  variant?: "default" | "data";
+  compact?: boolean;
+}
+
+export function PhaseDisclaimer({
+  variant = "default",
+  compact = false,
+}: PhaseDisclaimerProps) {
+  const isData = variant === "data";
+
+  return (
+    <div
+      role="note"
+      style={{
+        background: isData ? "#FFFBEB" : "#F4F4F5",
+        borderBottom: `1px solid ${isData ? "#FCD34D" : "#E5E5E5"}`,
+        padding: compact ? "10px 32px" : "14px 32px",
+        fontFamily: "'Inter', system-ui, sans-serif",
+        fontSize: compact ? "12px" : "13px",
+        color: "#525252",
+        textAlign: "center",
+        lineHeight: 1.5,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: isData ? "#B45309" : "#71717A",
+          marginRight: "10px",
+        }}
+      >
+        {isData ? "Data notice" : "Pre-launch"}
+      </span>
+      {isData ? (
+        <>
+          Scores are AI-estimated from public media + AI engine outputs, not
+          official statements by the listed companies. Data refreshes weekly.{" "}
+          <a
+            href="/atelier/method"
+            style={{ color: "#4A5D6E", textDecoration: "underline" }}
+          >
+            Methodology
+          </a>
+          .
+        </>
+      ) : (
+        <>
+          Harch Atelier is in pre-launch phase. Built by{" "}
+          <strong style={{ color: "#0A0A0A" }}>
+            Amine Harch El Korane
+          </strong>{" "}
+          (16 ans, Casablanca). First pilot clients being signed Q3 2026.{" "}
+          <a
+            href="/atelier/about"
+            style={{ color: "#4A5D6E", textDecoration: "underline" }}
+          >
+            Building in Public
+          </a>
+          .
+        </>
+      )}
+    </div>
+  );
+}

@@ -56,7 +56,7 @@ const jsonLd = {
       description:
         "AI Reputation Intelligence for African enterprises. Monitor 30+ media sources and 8 AI engines, powered by HarchIQ, our trainable AI, deliver insights via WhatsApp and PDF.",
       email: "atelier@harchcorp.com",
-      foundingDate: "2024",
+      foundingDate: "2026",
       founder: {
         "@type": "Person",
         name: "Amine Harch El Korane",

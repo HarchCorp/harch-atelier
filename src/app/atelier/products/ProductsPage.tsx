@@ -2,7 +2,7 @@
 
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
-import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+import { ScrollProgress, CursorGlow, BackToTop, PhaseDisclaimer } from "../components/shared";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCH ATELIER — PRODUCTS PAGE
@@ -150,32 +150,9 @@ const PRODUCTS: Product[] = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote: "Harch AI's reporting doesn't just help us understand current conditions — it illuminates our path forward. Their insights have directly influenced the direction of our communications strategy.",
-    name: "Tourang Nazari",
-    role: "Director of Communications",
-    company: "Moroccan Financial Institution",
-  },
-  {
-    quote: "After 20+ years of ill-thought-through PR reports put in front of executives, we finally have a reporting mechanism with Harch AI that's seen as truly strategic across the business. Our key stakeholders recognize the value and actively promote them across the management team.",
-    name: "Matt Cross",
-    role: "Global Head of External Communications",
-    company: "African Holdings Group",
-  },
-  {
-    quote: "We considered a number of platforms for media monitoring, but Harch AI stood out to us as being dynamic, forward-thinking, and keen to offer us a package that would best suit our needs.",
-    name: "Communications Lead",
-    role: "International NGO",
-    company: "Casablanca",
-  },
-  {
-    quote: "Harch AI allows us to give clients early warning of threats to their reputation. We help them plan an efficient response, and in that way provide them with a unique, impactful service.",
-    name: "PR Agency Director",
-    role: "Senior Partner",
-    company: "Rabat",
-  },
-];
+// Note: testimonials removed — Atelier is in pre-launch phase.
+// Per MASTER_VISION.md "Interdictions absolues": never invent testimonials.
+// Real customer quotes will be added here as we sign our first clients.
 
 export default function ProductsPage() {
   return (
@@ -183,6 +160,7 @@ export default function ProductsPage() {
       <ScrollProgress />
       <CursorGlow />
       <AtelierNav />
+      <PhaseDisclaimer />
 
       {/* HERO */}
       <section style={{
@@ -278,73 +256,62 @@ export default function ProductsPage() {
         ))}
       </section>
 
-      {/* TESTIMONIALS — Signal AI style */}
+      {/* BUILDING IN PUBLIC — Pre-launch phase */}
       <section style={{
         background: C.surface, padding: "100px 32px",
         borderTop: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
           <div style={{
+            display: "inline-flex", alignItems: "center", gap: "10px",
+            padding: "6px 14px", background: C.bg,
+            border: `1px solid ${C.border}`, borderRadius: "100px",
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "16px",
+            color: C.amber, letterSpacing: "0.14em", textTransform: "uppercase",
+            marginBottom: "24px",
           }}>
-            What our clients say
+            <span style={{
+              width: "6px", height: "6px", borderRadius: "50%",
+              background: C.amber, animation: "pulse 2s infinite",
+            }} />
+            Pre-launch · Building in Public
           </div>
+
           <h2 style={{
             fontSize: "clamp(32px, 4vw, 44px)", fontWeight: 700,
-            color: C.text, letterSpacing: "-0.03em", margin: "0 0 60px",
-            maxWidth: "760px",
+            color: C.text, letterSpacing: "-0.03em", margin: "0 0 28px",
           }}>
-            Trusted by Comms leaders across Morocco & Africa.
+            No fake testimonials. Just a real product being built.
           </h2>
 
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
-            gap: "24px",
+          <p style={{
+            fontSize: "18px", color: C.textSec, lineHeight: 1.6,
+            marginBottom: "32px",
           }}>
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} style={{
-                padding: "32px", background: C.bg,
-                border: `1px solid ${C.border}`, borderRadius: "12px",
-                display: "flex", flexDirection: "column",
-              }}>
-                <div style={{
-                  fontSize: "48px", color: C.sage, lineHeight: 1,
-                  fontFamily: "'Inter', serif", marginBottom: "16px",
-                }}>
-                  "
-                </div>
-                <p style={{
-                  fontSize: "15px", color: C.text, lineHeight: 1.6,
-                  marginBottom: "24px", flex: 1,
-                }}>
-                  {t.quote}
-                </p>
-                <div style={{
-                  paddingTop: "20px", borderTop: `1px solid ${C.borderLight}`,
-                }}>
-                  <div style={{
-                    fontSize: "14px", fontWeight: 700, color: C.text,
-                    marginBottom: "4px",
-                  }}>
-                    {t.name}
-                  </div>
-                  <div style={{
-                    fontSize: "12px", color: C.textSec, marginBottom: "2px",
-                  }}>
-                    {t.role}
-                  </div>
-                  <div style={{
-                    fontSize: "11px", color: C.textMuted,
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}>
-                    {t.company}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+            Harch Atelier is in pre-launch phase. We're not going to show you fake
+            client logos or invented quotes — that's not how we build trust.
+            What we can show you: a working product, a real methodology, and an
+            honest audit of your reputation across 30+ Moroccan and African media
+            sources plus 8 AI engines.
+          </p>
+
+          <p style={{
+            fontSize: "15px", color: C.textMuted, lineHeight: 1.6,
+            marginBottom: "40px", fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            Real customer case studies will be added here as we sign our first clients.
+            <br />
+            Until then — judge us on the product, not on marketing.
+          </p>
+
+          <a href="/atelier/audit" style={{
+            display: "inline-block", padding: "16px 32px",
+            background: C.sage, color: "#FFFFFF",
+            fontSize: "15px", fontWeight: 600, textDecoration: "none",
+            borderRadius: "8px", fontFamily: "'Inter', sans-serif",
+          }}>
+            Get a free audit →
+          </a>
         </div>
       </section>
 

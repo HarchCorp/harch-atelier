@@ -13,3 +13,37 @@ worklog.md
 /data/
 agents/orchestrator.log
 agents/*.log
+
+# ─── NEVER commit these (junk + agent internals) ─────────────────
+skills/
+mini-services/
+src-v27-backup/
+agent-ctx/
+harch-handover/
+examples/
+docs/
+download/
+qa-*.png
+*.backup-*
+*.bak
+
+# ─── Build artifacts ─────────────────────────────────────────────
+/build
+/dist
+/coverage
+*.tsbuildinfo
+
+# ─── OS / Editor ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ─── Env files (keep .env.example tracked) ───────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+!.env.example
