@@ -12,7 +12,7 @@ import { C } from "../components/tokens";
 //
 //  Create invitation modal lets admin choose:
 //  - Email, Name, Company
-//  - Account type (trader / enterprise / investor)
+//  - Account type (brand-monitor / market-competitor / investment-bank / harch-alpha)
 //  - Plan (decouverte / veille / investor)
 //  - Payment status (auto / 1mo / 3mo / 12mo paid)
 //
@@ -61,7 +61,6 @@ interface CreatedInvitation {
   email: string;
   name: string;
   accountType: string;
-  plan: string;
   role: string;
   expiresAt: string;
 }
@@ -419,7 +418,7 @@ export function AdminDashboard() {
             </div>
 
             <div style={{ padding: "12px 14px", background: C.bgSubtle, borderRadius: "4px", fontSize: "12px", color: C.textBody, lineHeight: 1.5, marginBottom: "24px" }}>
-              <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Account:</strong> {createdInvitation.accountType} · <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Plan:</strong> {createdInvitation.plan} · <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Expires:</strong> {new Date(createdInvitation.expiresAt).toLocaleDateString("en-US")}
+              <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Account:</strong> {createdInvitation.accountType} · <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Expires:</strong> {new Date(createdInvitation.expiresAt).toLocaleDateString("en-US")}
             </div>
 
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
