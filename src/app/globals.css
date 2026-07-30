@@ -1448,3 +1448,53 @@
     font-size: 22px !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   HARCHIQ CONSOLE — Mobile drawer styles
+   The sidebar becomes a slide-in drawer on mobile (<768px)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  .console-sidebar {
+    position: fixed !important;
+    top: 49px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.08);
+  }
+  .console-sidebar[data-open="true"] {
+    transform: translateX(0);
+  }
+  .console-hamburger {
+    display: flex !important;
+  }
+  .console-tier-info {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .console-hamburger {
+    display: none !important;
+  }
+  .console-mobile-overlay {
+    display: none !important;
+  }
+}
+
+/* Console hamburger — hidden by default on desktop, shown on mobile */
+.console-hamburger {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .console-hamburger {
+    display: flex !important;
+  }
+}
