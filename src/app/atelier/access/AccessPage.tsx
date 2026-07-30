@@ -22,7 +22,6 @@ interface InvitationData {
   id: string;
   email: string;
   name: string;
-  plan: string;
   role: string;
   accountType: string;
   company: string | null;
@@ -152,14 +151,10 @@ export function AccessPage({ token }: { token: string }) {
   }
 
   const accountTypeLabel: Record<string, string> = {
-    enterprise: "Enterprise",
-    trader: "Trader",
-    investor: "Investor",
-  };
-  const planLabel: Record<string, string> = {
-    decouverte: "Discovery — 5K MAD/month",
-    veille: "Watch — 15K MAD/month",
-    investor: "Investor — 50K+ MAD/month",
+    "brand-monitor": "Brand Monitor",
+    "market-competitor": "Market & Competitor",
+    "investment-bank": "Investment Bank",
+    "harch-alpha": "Harch Alpha",
   };
 
   return (
@@ -200,7 +195,7 @@ export function AccessPage({ token }: { token: string }) {
               </div>
               <div>
                 <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "4px" }}>Plan</div>
-                <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{invitation ? planLabel[invitation.plan] || invitation.plan : "—"}</div>
+
               </div>
               {invitation?.company && (
                 <div>
