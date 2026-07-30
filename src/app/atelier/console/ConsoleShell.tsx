@@ -955,6 +955,9 @@ export function ConsoleShell({
           weather={weather}
           tier={tier}
           accountType={accountType}
+          theme={theme}
+          displayName={displayName}
+          companyName={companyName}
         />
 
         <DashboardRightPanel />
@@ -1392,37 +1395,291 @@ function DashboardMain({
   weather,
   tier,
   accountType,
+  theme,
+  displayName,
+  companyName,
 }: {
   activeNav: NavId;
   weather: WeatherData;
   tier: AccountType;
   accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
+  theme: OfferTheme;
+  displayName: string;
+  companyName: string;
 }) {
-  // Trader console — different content entirely
+  // Harch Alpha — trader console
   if (accountType === "harch-alpha") {
-    return <TraderView activeNav={activeNav} />;
+    return <TraderView activeNav={activeNav} theme={theme} displayName={displayName} />;
   }
 
-  // Investor console — portfolio roll-up
+  // Investment Bank — investor console
   if (accountType === "investment-bank") {
-    return <InvestorView activeNav={activeNav} />;
+    return <InvestorView activeNav={activeNav} theme={theme} displayName={displayName} />;
   }
 
-  // Enterprise console (default)
+  // Market & Competitor — enterprise + competitor intel
+  if (accountType === "market-competitor") {
+    if (activeNav === "competitors") {
+      return <NeighborsView tier={tier} theme={theme} />;
+    }
+    if (activeNav === "alerts") {
+      return <PlaceholderView title="Crisis alerts" subtitle="Real-time WhatsApp + dashboard alerts when competitors make a move or negative sentiment spikes." theme={theme} />;
+    }
+    if (activeNav === "reports") {
+      return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs with your reputation + competitor benchmark." theme={theme} />;
+    }
+    return <MarketCompetitorView weather={weather} theme={theme} displayName={displayName} companyName={companyName} />;
+  }
+
+  // Brand Monitor — default enterprise console
   if (activeNav === "competitors") {
-    return <NeighborsView tier={tier} />;
+    return <PlaceholderView title="Competitor tracking" subtitle="Upgrade to Market & Competitor Intel to track up to 10 direct competitors with the Neighbor Index." theme={theme} />;
   }
   if (activeNav === "alerts") {
-    return <PlaceholderView title="Crisis alerts" subtitle="Real-time WhatsApp + dashboard alerts when negative sentiment spikes." />;
+    return <PlaceholderView title="Crisis alerts" subtitle="Real-time WhatsApp alerts when negative sentiment spikes on your brand." theme={theme} />;
   }
   if (activeNav === "reports") {
-    return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs delivered the 1st of each month." />;
+    return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs delivered the 1st of each month." theme={theme} />;
   }
-  // monitoring + sentiment → the default Sentiment Analysis dashboard view
-  return <SentimentView weather={weather} />;
+  return <BrandMonitorView weather={weather} theme={theme} displayName={displayName} companyName={companyName} />;
 }
 
-// ─── Sentiment view (default) ──────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  BRAND MONITOR VIEW — calm, panoramic, "your reputation today"
+//  Tone: reassuring, personal, "here's what they're saying about YOU"
+// ═══════════════════════════════════════════════════════════════
+
+function BrandMonitorView({
+  weather,
+  theme,
+  displayName,
+  companyName,
+}: {
+  weather: WeatherData;
+  theme: OfferTheme;
+  displayName: string;
+  companyName: string;
+}) {
+  const welcomeMsg = theme.welcome(displayName, companyName);
+  const score = weather.score || 67;
+  const skyColor = score >= 70 ? theme.accent : score >= 50 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="dash-main" style={{ padding: "24px", background: C.surface, overflowX: "hidden" }}>
+      {/* Welcome banner */}
+      <div style={{ padding: "16px 20px", background: theme.accentBg, borderRadius: "8px", marginBottom: "24px", borderLeft: `3px solid ${theme.accent}` }}>
+        <div style={{ fontSize: "15px", fontWeight: 600, color: C.textPrimary, lineHeight: 1.5 }}>
+          {welcomeMsg}
+        </div>
+      </div>
+
+      {/* Page title */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+            {companyName}
+          </div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.02em" }}>
+            Reputation Weather
+          </h3>
+        </div>
+      </div>
+
+      {/* Score widget */}
+      <div style={{ padding: "32px 24px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", marginBottom: "24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "24px", alignItems: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: FONT.mono, fontSize: "clamp(48px, 10vw, 72px)", fontWeight: 700, color: skyColor, lineHeight: 1, letterSpacing: "-0.04em" }}>
+            {score}
+          </div>
+          <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            / 100
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "20px", fontWeight: 600, color: C.textPrimary, marginBottom: "8px", letterSpacing: "-0.01em" }}>
+            {weather.sky || "Partly cloudy"}
+          </div>
+          <div style={{ fontSize: "14px", color: C.textSecondary, lineHeight: 1.5, marginBottom: "12px" }}>
+            {weather.skyDescription || "Overall positive sentiment, with a few areas of attention."}
+          </div>
+          <div style={{ fontSize: "12px", fontFamily: FONT.mono, color: weather.trend === "up" ? theme.accent : weather.trend === "down" ? "#ef4444" : C.textMuted }}>
+            {weather.trend === "up" ? "↑" : weather.trend === "down" ? "↓" : "→"} {weather.trendValue}
+          </div>
+        </div>
+      </div>
+
+      {/* Breakdown bar */}
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
+          Sentiment breakdown
+        </div>
+        <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", background: C.surfaceAlt, marginBottom: "12px" }}>
+          <div style={{ width: `${weather.breakdown?.positive ?? 58}%`, background: theme.accent }} />
+          <div style={{ width: `${weather.breakdown?.neutral ?? 27}%`, background: C.border }} />
+          <div style={{ width: `${weather.breakdown?.negative ?? 15}%`, background: "#ef4444" }} />
+        </div>
+        <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", fontSize: "12px", fontFamily: FONT.mono }}>
+          <span style={{ color: theme.accent }}>
+            <span style={{ fontWeight: 700 }}>{weather.breakdown?.positive ?? 58}%</span>
+            <span style={{ color: C.textMuted, marginLeft: "6px" }}>positive</span>
+          </span>
+          <span style={{ color: C.textSecondary }}>
+            <span style={{ fontWeight: 700 }}>{weather.breakdown?.neutral ?? 27}%</span>
+            <span style={{ color: C.textMuted, marginLeft: "6px" }}>neutral</span>
+          </span>
+          <span style={{ color: "#ef4444" }}>
+            <span style={{ fontWeight: 700 }}>{weather.breakdown?.negative ?? 15}%</span>
+            <span style={{ color: C.textMuted, marginLeft: "6px" }}>negative</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Today's signals */}
+      {weather.todaySignals && weather.todaySignals.length > 0 && (
+        <div>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
+            Today's signals
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {weather.todaySignals.map((signal, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "12px 16px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontFamily: FONT.mono, fontSize: "12px", color: C.textMuted, minWidth: "48px" }}>{signal.time}</span>
+                <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: theme.accent, minWidth: "80px" }}>{signal.source}</span>
+                <span style={{ fontSize: "14px", color: C.textPrimary, flex: 1, minWidth: "200px" }}>{signal.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MARKET & COMPETITOR VIEW — aggressive, comparative, "you vs them"
+//  Tone: competitive, "here's where you're winning, here's where you're losing"
+// ═══════════════════════════════════════════════════════════════
+
+function MarketCompetitorView({
+  weather,
+  theme,
+  displayName,
+  companyName,
+}: {
+  weather: WeatherData;
+  theme: OfferTheme;
+  displayName: string;
+  companyName: string;
+}) {
+  const welcomeMsg = theme.welcome(displayName, companyName);
+  const yourScore = weather.score || 67;
+
+  return (
+    <div className="dash-main" style={{ padding: "24px", background: C.surface, overflowX: "hidden" }}>
+      {/* Welcome banner — aggressive tone */}
+      <div style={{ padding: "16px 20px", background: theme.accentBg, borderRadius: "8px", marginBottom: "24px", borderLeft: `3px solid ${theme.accent}` }}>
+        <div style={{ fontSize: "15px", fontWeight: 600, color: C.textPrimary, lineHeight: 1.5 }}>
+          {welcomeMsg}
+        </div>
+        <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "6px" }}>
+          You're tracking 5 competitors in the Banking sector
+        </div>
+      </div>
+
+      {/* Page title */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: theme.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+            {companyName} vs Competitors
+          </div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.02em" }}>
+            Competitive Position
+          </h3>
+        </div>
+      </div>
+
+      {/* Your score vs average */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "16px", marginBottom: "24px" }}>
+        <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: theme.accent, lineHeight: 1 }}>
+            {yourScore}
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Your score
+          </div>
+        </div>
+        <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: C.textMuted, lineHeight: 1 }}>
+            71
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Sector average
+          </div>
+        </div>
+        <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: yourScore >= 71 ? theme.accent : "#ef4444", lineHeight: 1 }}>
+            {yourScore >= 71 ? "+" : ""}{yourScore - 71}
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            vs sector
+          </div>
+        </div>
+      </div>
+
+      {/* Competitive landscape */}
+      <div>
+        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
+          Competitive landscape
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {[
+            { name: "Attijariwafa Bank", score: 84, delta: yourScore - 84, trend: "stable" },
+            { name: "Bank of Africa", score: 72, delta: yourScore - 72, trend: "up" },
+            { name: `${companyName} (You)`, score: yourScore, delta: 0, trend: weather.trend, isYou: true },
+            { name: "CIH Bank", score: 68, delta: yourScore - 68, trend: "stable" },
+            { name: "Société Générale Maroc", score: 58, delta: yourScore - 58, trend: "down" },
+          ].sort((a, b) => b.score - a.score).map((comp, i) => (
+            <div key={i} style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              padding: "12px 16px",
+              background: comp.isYou ? theme.accentBg : C.surface,
+              border: `1px solid ${comp.isYou ? theme.accent : C.border}`,
+              borderRadius: "6px",
+              flexWrap: "wrap",
+            }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: "14px", fontWeight: 700, color: C.textMuted, minWidth: "24px" }}>#{i + 1}</span>
+              <span style={{ fontSize: "14px", fontWeight: comp.isYou ? 700 : 500, color: comp.isYou ? theme.accent : C.textPrimary, flex: 1, minWidth: "200px" }}>
+                {comp.name}
+              </span>
+              <div style={{ width: "120px", height: "6px", background: C.surfaceAlt, borderRadius: "3px", overflow: "hidden" }}>
+                <div style={{ width: `${comp.score}%`, height: "100%", background: comp.isYou ? theme.accent : C.textMuted }} />
+              </div>
+              <span style={{ fontFamily: FONT.mono, fontSize: "16px", fontWeight: 700, color: C.textPrimary, minWidth: "40px", textAlign: "right" }}>
+                {comp.score}
+              </span>
+              <span style={{ fontFamily: FONT.mono, fontSize: "12px", color: comp.delta > 0 ? theme.accent : comp.delta < 0 ? "#ef4444" : C.textMuted, minWidth: "50px", textAlign: "right" }}>
+                {comp.delta > 0 ? "+" : ""}{comp.delta}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Call to action */}
+      <div style={{ marginTop: "24px", padding: "16px 20px", background: C.surfaceAlt, borderRadius: "8px", fontSize: "13px", color: C.textSecondary, lineHeight: 1.5 }}>
+        <strong style={{ color: theme.accent, fontFamily: FONT.mono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Competitor moves
+        </strong>
+        <br />
+        Click "Competitors" in the sidebar to see detailed moves, impact levels, and the Neighbor Index for each rival.
+      </div>
+    </div>
+  );
+}
+
+// ─── Sentiment view (legacy, used by chart) ──────────────────────
 // Mirrors the DashboardMockup main area verbatim. The company name and
 // the "Avg sentiment" stat are wired to /api/console/weather.
 function SentimentView({ weather }: { weather: WeatherData }) {
@@ -1657,7 +1914,7 @@ interface TraderAsset {
   sentimentArticleCount: number;
 }
 
-function TraderView({ activeNav }: { activeNav: NavId }) {
+function TraderView({ activeNav, theme, displayName }: { activeNav: NavId; theme: OfferTheme; displayName: string }) {
   const [assets, setAssets] = useState<TraderAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
@@ -1919,7 +2176,7 @@ interface InvestorPortfolio {
   }[];
 }
 
-function InvestorView({ activeNav }: { activeNav: NavId }) {
+function InvestorView({ activeNav, theme, displayName }: { activeNav: NavId; theme: OfferTheme; displayName: string }) {
   const [portfolios, setPortfolios] = useState<InvestorPortfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [invStats, setInvStats] = useState<{
@@ -2155,7 +2412,7 @@ function KpiCell({ label, value, sub, color }: { label: string; value: number | 
   );
 }
 
-function PlaceholderView({ title, subtitle }: { title: string; subtitle: string }) {
+function PlaceholderView({ title, subtitle, theme }: { title: string; subtitle: string; theme: OfferTheme }) {
   return (
     <div
       className="dash-main"
@@ -2210,7 +2467,7 @@ function PlaceholderView({ title, subtitle }: { title: string; subtitle: string 
 
 // ─── Neighbors view (kept from previous ConsoleShell, restyled) ────
 // Lives in the main area when "Competitors" is active in the sidebar.
-function NeighborsView({ tier }: { tier: AccountType }) {
+function NeighborsView({ tier, theme }: { tier: AccountType; theme: OfferTheme }) {
   const [neighbors, setNeighbors] = useState<Neighbor[]>(MOCK_NEIGHBORS);
   const [yourScore, setYourScore] = useState<number>(67);
   const [loading, setLoading] = useState(true);
