@@ -9,7 +9,7 @@ import crypto from "crypto";
 //  GET /api/admin/invitations — list all invitations (admin only)
 //  POST /api/admin/invitations — create a new invitation (admin only)
 //
-//  POST body: { email, name, plan, role?, company?, message?, requestId? }
+//  POST body: { email, name, accountType, role?, company?, message?, requestId? }
 //  Returns: { invitation: { id, token, url, email, name, password } }
 //
 //  The password is auto-generated (12 chars, secure random).
@@ -47,7 +47,7 @@ export async function GET() {
         token: true,
         email: true,
         name: true,
-        plan: true,
+        accountType: true,
         role: true,
         company: true,
         message: true,
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, name, plan, role, company, message, requestId, accountType } = body;
+    const { email, name, role, company, message, requestId, accountType } = body;
 
     if (!email || !name) {
       return NextResponse.json({ error: "Email and name are required" }, { status: 400 });
@@ -118,7 +118,6 @@ export async function POST(req: NextRequest) {
         name,
         passwordHash: placeholderHash,  // placeholder — replaced on activation
         accountType: finalAccountType,
-        plan: plan || "decouverte",
         role: role || "user",
         company,
         message,
@@ -151,7 +150,6 @@ export async function POST(req: NextRequest) {
         email,
         name,
         accountType: finalAccountType,
-        plan: invitation.plan,
         role: invitation.role,
         expiresAt: invitation.expiresAt,
       },

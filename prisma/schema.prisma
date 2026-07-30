@@ -385,7 +385,6 @@ model Invitation {
   name          String
   passwordHash  String    // bcrypt hash of admin-generated password (NEVER plaintext)
   accountType   String    @default("brand-monitor")  // brand-monitor | market-competitor | investment-bank | harch-alpha
-  plan          String    @default("decouverte")  // decouverte | veille | investor (subscription)
   role          String    @default("user")        // user | admin
   company       String?
   message       String?   // optional personal message from admin
