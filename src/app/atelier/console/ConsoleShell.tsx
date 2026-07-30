@@ -499,99 +499,6 @@ interface Neighbor {
   }[];
 }
 
-const MOCK_NEIGHBORS: Neighbor[] = [
-  {
-    id: "n1",
-    name: "Attijariwafa Bank",
-    sector: "Banking",
-    rank: 1,
-    reputationScore: 84,
-    yourScore: 67,
-    delta: 17,
-    recentMoves: [
-      {
-        title: "Q2 results announcement — record net income",
-        date: "2 days ago",
-        impactLevel: 3,
-        impactDescription: "Rank 1 neighbor. Strong positive coverage may overshadow your Q2 narrative. Consider timing your next announcement around theirs.",
-      },
-      {
-        title: "New mobile banking app launch",
-        date: "1 week ago",
-        impactLevel: 2,
-        impactDescription: "Digital transformation narrative. If you have a similar product, expect comparison articles.",
-      },
-    ],
-  },
-  {
-    id: "n2",
-    name: "Bank of Africa",
-    sector: "Banking",
-    rank: 1,
-    reputationScore: 72,
-    yourScore: 67,
-    delta: 5,
-    recentMoves: [
-      {
-        title: "Nigeria market entry (Prestige Bank acquisition)",
-        date: "3 weeks ago",
-        impactLevel: 3,
-        impactDescription: "Pan-African expansion story. If you don't have a comparable Africa narrative, you'll be perceived as local-only.",
-      },
-    ],
-  },
-  {
-    id: "n3",
-    name: "CIH Bank",
-    sector: "Banking",
-    rank: 2,
-    reputationScore: 68,
-    yourScore: 67,
-    delta: 1,
-    recentMoves: [
-      {
-        title: "Fintech partnership with Chinese operator",
-        date: "5 days ago",
-        impactLevel: 2,
-        impactDescription: "Rank 2 neighbor. Innovation narrative but smaller market share. Watch for analyst comparisons.",
-      },
-    ],
-  },
-  {
-    id: "n4",
-    name: "Société Générale Maroc",
-    sector: "Banking",
-    rank: 2,
-    reputationScore: 58,
-    yourScore: 67,
-    delta: -9,
-    recentMoves: [
-      {
-        title: "Parent company headwinds in France",
-        date: "2 weeks ago",
-        impactLevel: 1,
-        impactDescription: "Rank 2 neighbor in decline. Your positive trajectory stands out by contrast — leverage this in comms.",
-      },
-    ],
-  },
-  {
-    id: "n5",
-    name: "Banque Centrale Populaire",
-    sector: "Banking",
-    rank: 3,
-    reputationScore: 71,
-    yourScore: 67,
-    delta: 4,
-    recentMoves: [
-      {
-        title: "Cooperative model anniversary event",
-        date: "1 month ago",
-        impactLevel: 1,
-        impactDescription: "Rank 3 neighbor. Different business model, low direct comparison risk.",
-      },
-    ],
-  },
-];
 
 // ═══════════════════════════════════════════════════════════════
 //  PAGE STYLES (responsive grid for the 3-column layout)
@@ -1485,8 +1392,8 @@ function PlaceholderView({ title, subtitle, theme }: { title: string; subtitle: 
 // ─── Neighbors view (kept from previous ConsoleShell, restyled) ────
 // Lives in the main area when "Competitors" is active in the sidebar.
 function NeighborsView({ tier, theme }: { tier: AccountType; theme: OfferTheme }) {
-  const [neighbors, setNeighbors] = useState<Neighbor[]>(MOCK_NEIGHBORS);
-  const [yourScore, setYourScore] = useState<number>(67);
+  const [neighbors, setNeighbors] = useState<Neighbor[]>([]);
+  const [yourScore, setYourScore] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [selectedNeighbor, setSelectedNeighbor] = useState<string | null>(null);
   const [filterRank, setFilterRank] = useState<1 | 2 | 3 | null>(null);
