@@ -26,7 +26,7 @@ const SetupSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
   password: z.string().min(8).max(100),
-  plan: z.enum(["decouverte", "veille", "investor"]).default("investor"),
+  accountType: z.enum(["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"]).default("brand-monitor"),
 });
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { token, email, name, password, plan } = parsed.data;
+    const { token, email, name, password, accountType } = parsed.data;
 
     // Verify SETUP_TOKEN
     const expectedToken = process.env.SETUP_TOKEN;

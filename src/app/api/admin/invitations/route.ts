@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     // Validate accountType
     const validAccountTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
-    const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "enterprise";
+    const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "brand-monitor";
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
