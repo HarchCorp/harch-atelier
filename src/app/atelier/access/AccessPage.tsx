@@ -30,7 +30,6 @@ interface InvitationData {
   expiresAt: string;
   usedAt: string | null;
   status: string;
-  message?: string;
 }
 
 export function AccessPage({ token }: { token: string }) {

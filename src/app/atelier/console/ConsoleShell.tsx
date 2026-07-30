@@ -682,7 +682,7 @@ function MeteoSection({ tier }: { tier: AccountType }) {
               <span style={{ fontFamily: C.fontMono, fontSize: "12px", color: C.textMuted, minWidth: "48px" }}>{signal.time}</span>
               <span style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.accent, minWidth: "80px" }}>{signal.source}</span>
               <span style={{ fontSize: "14px", color: C.text, flex: 1, minWidth: "200px" }}>{signal.title}</span>
-              <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: signal.weight === "fort" ? `${C.danger}15` : signal.weight === "moyen" ? `${C.warning}15` : `${C.textMuted}15`, color: signal.weight === "fort" ? C.danger : signal.weight === "moyen" ? C.warning : C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: signal.weight === "strong" ? `${C.danger}15` : signal.weight === "medium" ? `${C.warning}15` : `${C.textMuted}15`, color: signal.weight === "strong" ? C.danger : signal.weight === "medium" ? C.warning : C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                 {signal.weight}
               </span>
             </div>
