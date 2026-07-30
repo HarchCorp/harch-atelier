@@ -1,0 +1,100 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+
+// ═══════════════════════════════════════════════════════════════
+//  GET /api/console/alerts
+//
+//  Returns crisis alerts for the primary company:
+//  - Articles with strong negative sentiment (score < -0.4)
+//  - Risk assessments with high/critical level
+//  - Recent articles sorted by urgency
+//
+//  Auth: requires session (brand-monitor, market-competitor, investment-bank)
+// ═══════════════════════════════════════════════════════════════
+
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
+  if (!allowedTypes.includes(session.user?.accountType || "") && session.user?.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const companySlug = url.searchParams.get("company");
+    const company = companySlug
+      ? await prisma.company.findUnique({ where: { slug: companySlug } })
+      : await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+
+    if (!company) return NextResponse.json({ error: "No company found" }, { status: 404 });
+
+    // Get negative articles from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [negativeArticles, highRisks] = await Promise.all([
+      prisma.article.findMany({
+        where: {
+          companyId: company.id,
+          sentimentLabel: "negative",
+          publishedAt: { gte: sevenDaysAgo },
+        },
+        orderBy: { publishedAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          title: true,
+          source: true,
+          url: true,
+          sentimentScore: true,
+          publishedAt: true,
+        },
+      }),
+      prisma.riskAssessment.findMany({
+        where: { companyId: company.id, riskLevel: { in: ["high", "critical"] } },
+        orderBy: { riskScore: "desc" },
+        take: 5,
+        select: { id: true, category: true, riskLevel: true, riskScore: true, trajectory: true, articleCount: true },
+      }),
+    ]);
+
+    const alerts = negativeArticles.map((a) => ({
+      id: a.id,
+      type: "negative_article" as const,
+      title: a.title,
+      source: a.source,
+      url: a.url,
+      severity: (a.sentimentScore ?? 0) < -0.6 ? "critical" : "high" as const,
+      sentimentScore: a.sentimentScore,
+      detectedAt: a.publishedAt,
+    }));
+
+    const riskAlerts = highRisks.map((r) => ({
+      id: r.id,
+      type: "risk_assessment" as const,
+      title: `${r.category} risk — ${r.riskLevel}`,
+      source: "HarchIQ Risk Engine",
+      url: null,
+      severity: r.riskLevel === "critical" ? "critical" : "high" as const,
+      sentimentScore: null,
+      detectedAt: null,
+      details: `Score: ${r.riskScore}/100 · Trajectory: ${r.trajectory} · ${r.articleCount} articles`,
+    }));
+
+    return NextResponse.json({
+      company: { name: company.name, slug: company.slug },
+      alerts: [...alerts, ...riskAlerts],
+      totalAlerts: alerts.length + riskAlerts.length,
+      criticalCount: [...alerts, ...riskAlerts].filter((a) => a.severity === "critical").length,
+    });
+  } catch (err) {
+    console.error("Alerts API error:", err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
+  }
+}

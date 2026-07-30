@@ -1237,10 +1237,10 @@ function DashboardMain({
       return <NeighborsView tier={tier} theme={theme} />;
     }
     if (activeNav === "alerts") {
-      return <PlaceholderView title="Crisis alerts" subtitle="Real-time WhatsApp + dashboard alerts when competitors make a move or negative sentiment spikes." theme={theme} />;
+      return <AlertsView theme={theme} />;
     }
     if (activeNav === "reports") {
-      return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs with your reputation + competitor benchmark." theme={theme} />;
+      return <ReportsView theme={theme} companyName={companyName} />;
     }
     return <CompetitorIntelDashboard userName={displayName} userEmail={null} companyName={companyName} sector="Banking" />;
   }
@@ -1250,10 +1250,10 @@ function DashboardMain({
     return <PlaceholderView title="Competitor tracking" subtitle="Upgrade to Market & Competitor Intel to track up to 10 direct competitors with the Neighbor Index." theme={theme} />;
   }
   if (activeNav === "alerts") {
-    return <PlaceholderView title="Crisis alerts" subtitle="Real-time WhatsApp alerts when negative sentiment spikes on your brand." theme={theme} />;
+    return <AlertsView theme={theme} />;
   }
   if (activeNav === "reports") {
-    return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs delivered the 1st of each month." theme={theme} />;
+    return <ReportsView theme={theme} companyName={companyName} />;
   }
   return <BrandMonitorDashboard userName={displayName} userEmail={null} companyName={companyName} />;
 }
@@ -1318,6 +1318,251 @@ function KpiCell({ label, value, sub, color }: { label: string; value: number | 
         {label}
       </div>
       {sub && <div style={{ fontSize: "9px", color: "#737373", fontFamily: "'Space Mono', monospace", marginTop: "2px" }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ALERTS VIEW — crisis alerts from /api/console/alerts
+// ═══════════════════════════════════════════════════════════════
+
+interface ConsoleAlert {
+  id: string;
+  type: "negative_article" | "risk_assessment";
+  title: string;
+  source: string;
+  url: string | null;
+  severity: "critical" | "high";
+  sentimentScore: number | null;
+  detectedAt: string | null;
+  details?: string;
+}
+
+function AlertsView({ theme }: { theme: OfferTheme }) {
+  const [alerts, setAlerts] = useState<ConsoleAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/console/alerts");
+        if (!res.ok) { setError(true); return; }
+        const data = await res.json();
+        setAlerts(data.alerts ?? []);
+      } catch { setError(true); }
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.surface }}>
+        <div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>Loading alerts…</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.surface }}>
+        <div style={{ padding: "32px", border: `1px dashed ${theme.accent}40`, borderRadius: "8px", textAlign: "center", background: theme.accentBg }}>
+          <div style={{ fontSize: "13px", color: C.textSecondary, fontFamily: FONT.mono }}>Can't reach alert system. Retrying…</div>
+        </div>
+      </div>
+    );
+  }
+
+  const criticalCount = alerts.filter((a) => a.severity === "critical").length;
+
+  return (
+    <div className="dash-main" style={{ padding: "24px", background: C.surface, overflowX: "hidden" }}>
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: theme.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+          {theme.label}
+        </div>
+        <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.02em" }}>
+          Crisis Alerts
+        </h3>
+        <p style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "4px" }}>
+          {alerts.length} active alert{alerts.length !== 1 ? "s" : ""} · {criticalCount} critical
+        </p>
+      </div>
+
+      {alerts.length === 0 ? (
+        <div style={{ padding: "48px 32px", border: `1px solid ${C.border}`, borderRadius: "8px", textAlign: "center", background: C.bgSubtle }}>
+          <div style={{ fontSize: "16px", fontWeight: 600, color: C.textPrimary, marginBottom: "8px" }}>All clear.</div>
+          <div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>No crisis alerts in the last 7 days. Your reputation is stable.</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {alerts.map((alert) => {
+            const sevColor = alert.severity === "critical" ? C.red : "#d97706";
+            return (
+              <div key={alert.id} style={{
+                padding: "16px 20px",
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+                borderLeft: `4px solid ${sevColor}`,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                  <div style={{ flex: 1, minWidth: "200px" }}>
+                    <a
+                      href={alert.url || "#"}
+                      target={alert.url ? "_blank" : undefined}
+                      rel={alert.url ? "noopener noreferrer" : undefined}
+                      style={{ fontSize: "14px", fontWeight: 600, color: C.textPrimary, textDecoration: alert.url ? "underline" : "none" }}
+                    >
+                      {alert.title}
+                    </a>
+                  </div>
+                  <span style={{
+                    fontSize: "10px", fontFamily: FONT.mono, padding: "3px 8px", borderRadius: "2px",
+                    background: `${sevColor}15`, color: sevColor, textTransform: "uppercase", letterSpacing: "0.1em",
+                    flexShrink: 0,
+                  }}>
+                    {alert.severity}
+                  </span>
+                </div>
+                <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: FONT.mono }}>
+                  {alert.source}{alert.detectedAt ? ` · ${new Date(alert.detectedAt).toLocaleDateString("en-US")}` : ""}
+                  {alert.details ? ` · ${alert.details}` : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REPORTS VIEW — monthly report summary from /api/console/reports
+// ═══════════════════════════════════════════════════════════════
+
+interface ReportData {
+  company: { name: string; sector: string };
+  reportPeriod: string;
+  reputation: { score: number; trend: string; shareOfVoice: number };
+  articles: { total: number; positive: number; negative: number; neutral: number; positivePct: number; negativePct: number };
+  topSources: { name: string; count: number }[];
+  aiVisibility: { citedEngines: number; totalEngines: number; visibilityScore: number };
+  risks: { category: string; level: string; score: number }[];
+}
+
+function ReportsView({ theme, companyName }: { theme: OfferTheme; companyName: string }) {
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/console/reports");
+        if (!res.ok) { setError(true); return; }
+        setReport(await res.json());
+      } catch { setError(true); }
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <div className="dash-main" style={{ padding: "24px", background: C.surface }}><div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>Generating report…</div></div>;
+  if (error || !report) return <div className="dash-main" style={{ padding: "24px", background: C.surface }}><div style={{ padding: "32px", border: `1px dashed ${theme.accent}40`, borderRadius: "8px", textAlign: "center" }}><div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>Can't generate report. Retrying…</div></div></div>;
+
+  return (
+    <div className="dash-main" style={{ padding: "24px", background: C.surface, overflowX: "hidden" }}>
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: theme.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+          {report.company.name} · {report.reportPeriod}
+        </div>
+        <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.02em" }}>
+          Monthly Report
+        </h3>
+      </div>
+
+      {/* KPI row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "16px", marginBottom: "24px" }}>
+        <div style={{ padding: "20px", border: "1px solid #e5e5e5", borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: theme.accent }}>{report.reputation.score}</div>
+          <div style={{ fontSize: "10px", color: "#737373", fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase" }}>Reputation score</div>
+        </div>
+        <div style={{ padding: "20px", border: "1px solid #e5e5e5", borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: "#0a0a0a" }}>{report.articles.total}</div>
+          <div style={{ fontSize: "10px", color: "#737373", fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase" }}>Articles tracked</div>
+        </div>
+        <div style={{ padding: "20px", border: "1px solid #e5e5e5", borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: theme.accent }}>{report.aiVisibility.visibilityScore}%</div>
+          <div style={{ fontSize: "10px", color: "#737373", fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase" }}>AI visibility</div>
+        </div>
+        <div style={{ padding: "20px", border: "1px solid #e5e5e5", borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: report.reputation.shareOfVoice > 15 ? theme.accent : "#737373" }}>{report.reputation.shareOfVoice}%</div>
+          <div style={{ fontSize: "10px", color: "#737373", fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase" }}>Share of voice</div>
+        </div>
+      </div>
+
+      {/* Sentiment breakdown */}
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>Sentiment breakdown</div>
+        <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", background: "#f4f4f5", marginBottom: "8px" }}>
+          <div style={{ width: `${report.articles.positivePct}%`, background: theme.accent }} />
+          <div style={{ width: `${100 - report.articles.positivePct - report.articles.negativePct}%`, background: "#e5e5e5" }} />
+          <div style={{ width: `${report.articles.negativePct}%`, background: "#ef4444" }} />
+        </div>
+        <div style={{ display: "flex", gap: "24px", fontSize: "12px", fontFamily: FONT.mono }}>
+          <span style={{ color: theme.accent }}>{report.articles.positive} positive ({report.articles.positivePct}%)</span>
+          <span style={{ color: "#525252" }}>{report.articles.neutral} neutral</span>
+          <span style={{ color: "#ef4444" }}>{report.articles.negative} negative ({report.articles.negativePct}%)</span>
+        </div>
+      </div>
+
+      {/* Top sources */}
+      {report.topSources.length > 0 && (
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>Top sources</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.topSources.map((src, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#f4f4f5", borderRadius: "4px" }}>
+                <span style={{ fontSize: "13px", color: "#0a0a0a" }}>{src.name}</span>
+                <span style={{ fontSize: "13px", fontFamily: FONT.mono, color: "#737373" }}>{src.count} articles</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Risk summary */}
+      {report.risks.length > 0 && (
+        <div>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>Risk summary</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.risks.map((r, i) => {
+              const riskColor = r.level === "high" || r.level === "critical" ? "#ef4444" : r.level === "medium" ? "#d97706" : "#059669";
+              return (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#f4f4f5", borderRadius: "4px", borderLeft: `3px solid ${riskColor}` }}>
+                  <span style={{ fontSize: "13px", color: "#0a0a0a" }}>{r.category}</span>
+                  <span style={{ fontSize: "13px", fontFamily: FONT.mono, color: riskColor }}>{r.level} · {r.score}/100</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Download button */}
+      <div style={{ marginTop: "32px", textAlign: "center" }}>
+        <button
+          onClick={() => window.print()}
+          style={{
+            padding: "12px 24px", background: theme.accent, color: "#ffffff",
+            border: "none", borderRadius: "4px", fontSize: "14px", fontWeight: 600,
+            cursor: "pointer", fontFamily: FONT.sans,
+          }}
+        >
+          Download PDF (Print)
+        </button>
+      </div>
     </div>
   );
 }
