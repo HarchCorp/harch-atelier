@@ -50,6 +50,37 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   // NextAuth v4 PagesOptions only exposes `signIn` (no `signUp`).
   pages: { signIn: "/atelier/login" },
+  // Cookies configured for cross-origin tunnel compatibility.
+  // Using `sameSite: "lax"` without a hardcoded domain lets the cookie work
+  // on whatever host the browser is actually on (localhost, trycloudflare.com, etc.).
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+    csrfToken: {
+      name: "next-auth.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+    callbackUrl: {
+      name: "next-auth.callback-url",
+      options: {
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+  },
   providers: [
     CredentialsProvider({
       name: "credentials",
