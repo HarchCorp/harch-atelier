@@ -262,7 +262,7 @@ export const ATELIER_FOOTER_LINKS = {
   outils: [
     { href: "/atelier/harch-100", label: "Harch 100 Ranking" },
     { href: "/atelier/risk-tracker", label: "Risk Tracker" },
-    { href: "/atelier/dashboard", label: "Live Dashboard" },
+    { href: "/atelier/console", label: "Console" },
     { href: "/atelier/templates", label: "Report Templates" },
     { href: "/atelier/templates/institutional-audit", label: "Institutional Audit" },
   ],

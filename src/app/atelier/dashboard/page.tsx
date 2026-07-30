@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import DashboardPage from "./DashboardPage";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Live Dashboard — AI Reputation Monitoring",
-  description: "Real-time reputation dashboard. Sentiment trends, media coverage, AI visibility, competitor benchmarking, crisis alerts.",
-  alternates: { canonical: "https://atelier.harchcorp.com/dashboard" },
-};
-
+// Old /atelier/dashboard route → redirect to /atelier/console
 export default function Page() {
-  return <DashboardPage />;
+  redirect("/atelier/console");
 }
