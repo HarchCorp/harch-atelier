@@ -1940,15 +1940,13 @@ function NeighborsView({ tier, theme }: { tier: AccountType; theme: OfferTheme }
         </div>
       </div>
 
-      {/* Tier gate */}
-      {tier === "decouverte" && (
-        <div style={{ marginTop: "20px", padding: "14px 18px", background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: "6px", fontSize: "12px", color: C.textSecondary, lineHeight: 1.5 }}>
-          <strong style={{ color: C.textPrimary, fontFamily: FONT.mono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-            Discovery tier ·
-          </strong>{" "}
-          You're seeing sample data. Upgrade to Watch tier to track your real neighbors with the Neighbor Index.
-        </div>
-      )}
+      {/* Info note */}
+      <div style={{ marginTop: "20px", padding: "14px 18px", background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: "6px", fontSize: "12px", color: C.textSecondary, lineHeight: 1.5 }}>
+        <strong style={{ color: theme.accent, fontFamily: FONT.mono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          {theme.label} ·
+        </strong>{" "}
+        Competitor data updates daily from 30+ media sources. Click any neighbor to see their recent moves and impact analysis.
+      </div>
     </div>
   );
 }
