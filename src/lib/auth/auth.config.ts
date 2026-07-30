@@ -17,12 +17,13 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
-// Augment NextAuth JWT & Session types so role/plan are visible to
+// Augment NextAuth JWT & Session types so role/plan/accountType are visible to
 // callers of `getServerSession(authOptions)` and `getToken()`.
 declare module "next-auth" {
   interface User {
     role?: string;
     plan?: string;
+    accountType?: string;  // trader | enterprise | investor
   }
   interface Session {
     user: {
@@ -32,6 +33,7 @@ declare module "next-auth" {
       image?: string | null;
       role?: string;
       plan?: string;
+      accountType?: string;
     };
   }
 }
@@ -40,6 +42,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: string;
     plan?: string;
+    accountType?: string;
   }
 }
 
@@ -49,7 +52,6 @@ export const authOptions: NextAuthOptions = {
   // Explicit secret (env var must be set, otherwise NextAuth silently fails)
   secret: process.env.NEXTAUTH_SECRET,
   // NextAuth v4 PagesOptions only exposes `signIn` (no `signUp`).
-  // The /register page is linked directly from the login form.
   pages: { signIn: "/atelier/login" },
   providers: [
     CredentialsProvider({
@@ -78,6 +80,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           plan: user.plan,
+          accountType: user.accountType,
         };
       },
     }),
@@ -87,6 +90,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as { role?: string }).role;
         token.plan = (user as { plan?: string }).plan;
+        token.accountType = (user as { accountType?: string }).accountType;
       }
       return token;
     },
@@ -94,8 +98,25 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { role?: string }).role = token.role;
         (session.user as { plan?: string }).plan = token.plan;
+        (session.user as { accountType?: string }).accountType = token.accountType;
       }
       return session;
     },
   },
 };
+
+// ─── Helper: route a user to the correct console based on accountType ──
+// Admins always go to /atelier/admin.
+// Other users go to /atelier/console/<accountType>.
+export function getConsolePath(accountType?: string, role?: string): string {
+  if (role === "admin") return "/atelier/admin";
+  switch (accountType) {
+    case "trader":
+      return "/atelier/console/trader";
+    case "investor":
+      return "/atelier/console/investor";
+    case "enterprise":
+    default:
+      return "/atelier/console/enterprise";
+  }
+}

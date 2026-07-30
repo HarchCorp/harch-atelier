@@ -10,16 +10,17 @@ async function main() {
   const password = "HarchAtelier2026!";
   const plan = "investor";
   const role = "admin";
+  const accountType = "enterprise";  // admin can access all consoles via /atelier/admin
 
   // Check if admin exists
   const existing = await prisma.user.findFirst({ where: { role: "admin" } });
   if (existing) {
     console.log("Admin already exists:", existing.email);
-    console.log("Updating password...");
+    console.log("Updating password + accountType...");
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.user.update({
       where: { id: existing.id },
-      data: { passwordHash, name, plan, role },
+      data: { passwordHash, name, plan, role, accountType },
     });
     console.log("Admin updated:", email);
     return;
@@ -35,8 +36,8 @@ async function main() {
   // Create admin
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { email, name, passwordHash, role, plan },
-    select: { id: true, email: true, name: true, role: true, plan: true, createdAt: true },
+    data: { email, name, passwordHash, role, plan, accountType },
+    select: { id: true, email: true, name: true, role: true, plan: true, accountType: true, createdAt: true },
   });
 
   console.log("Admin created successfully:");

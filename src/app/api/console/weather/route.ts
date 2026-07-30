@@ -22,10 +22,20 @@ import { authOptions } from "@/lib/auth/auth.config";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  // Auth check
+  // Auth check — STRICT (no anonymous access)
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ACCOUNT TYPE GATE — only enterprise + investor accounts can see
+  // company reputation data. Traders monitor markets, not companies.
+  const allowedTypes = ["enterprise", "investor"];
+  if (!allowedTypes.includes(session.user?.accountType || "")) {
+    return NextResponse.json(
+      { error: "Forbidden — this data is for enterprise and investor accounts only" },
+      { status: 403 }
+    );
   }
 
   try {

@@ -25,6 +25,8 @@ export function LoginPage() {
     setLoading(true);
     setError(null);
 
+    // Use a callback URL that lets the server decide where to send the user
+    // based on their accountType (handled by /atelier/console smart redirect)
     const result = await signIn("credentials", {
       email,
       password,

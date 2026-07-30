@@ -51,6 +51,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // ACCOUNT TYPE GATE — competitors data is enterprise + investor only
+  const allowedTypes = ["enterprise", "investor"];
+  if (!allowedTypes.includes(session.user?.accountType || "")) {
+    return NextResponse.json(
+      { error: "Forbidden — competitor data is for enterprise and investor accounts only" },
+      { status: 403 }
+    );
+  }
+
   try {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 // ═══════════════════════════════════════════════════════════════
@@ -75,11 +76,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, name, plan, role, company, message, requestId } = body;
+    const { email, name, plan, role, company, message, requestId, accountType } = body;
 
     if (!email || !name) {
       return NextResponse.json({ error: "Email and name are required" }, { status: 400 });
     }
+
+    // Validate accountType
+    const validAccountTypes = ["enterprise", "trader", "investor"];
+    const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "enterprise";
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -99,7 +104,8 @@ export async function POST(req: NextRequest) {
     }
 
     const token = generateToken();
-    const password = generatePassword();
+    const plainPassword = generatePassword();
+    const passwordHash = await bcrypt.hash(plainPassword, 12);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7-day expiry
 
@@ -108,7 +114,8 @@ export async function POST(req: NextRequest) {
         token,
         email,
         name,
-        password,
+        passwordHash,  // STORED HASHED — never plaintext
+        accountType: finalAccountType,
         plan: plan || "decouverte",
         role: role || "user",
         company,
@@ -129,7 +136,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Build the access URL (omit password from URL — it's shown in admin UI)
+    // Build the access URL
     const baseUrl = process.env.NEXTAUTH_URL || "https://atelier.harchcorp.com";
     const accessUrl = `${baseUrl}/atelier/access?token=${token}`;
 
@@ -141,7 +148,8 @@ export async function POST(req: NextRequest) {
         url: accessUrl,
         email,
         name,
-        password, // returned so admin can copy + send to user
+        password: plainPassword,  // returned ONCE to admin so they can send it
+        accountType: finalAccountType,
         plan: invitation.plan,
         role: invitation.role,
         expiresAt: invitation.expiresAt,

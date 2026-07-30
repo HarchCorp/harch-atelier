@@ -705,9 +705,9 @@ const pageStyles = `
 //  MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
-export function ConsoleShell() {
+export function ConsoleShell({ accountType = "enterprise" }: { accountType?: "enterprise" | "trader" | "investor" }) {
   // Tier switcher (kept from previous ConsoleShell)
-  const [tier, setTier] = useState<AccountType>("decouverte");
+  const [tier, setTier] = useState<AccountType>(accountType === "investor" ? "investor" : accountType === "trader" ? "veille" : "decouverte");
 
   // Active nav item (drives main-area content)
   const [activeNav, setActiveNav] = useState<NavId>("monitoring");
