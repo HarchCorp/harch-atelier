@@ -37,7 +37,7 @@ export function AtelierNav() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const [lang, setLang] = useState<Lang>("fr");
+  const [lang, setLang] = useState<Lang>("en");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -48,7 +48,7 @@ export function AtelierNav() {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("atelier-lang");
-      if (stored === "fr" || stored === "en") setLang(stored);
+      if (stored === "en" || stored === "fr") setLang(stored);
     } catch {}
   }, []);
 
