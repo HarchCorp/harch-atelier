@@ -26,6 +26,13 @@ interface AccessRequest {
   name: string;
   company: string | null;
   role: string | null;
+  accountType: string | null;
+  companySize: string | null;
+  useCase: string | null;
+  budget: string | null;
+  phone: string | null;
+  country: string | null;
+  referralSource: string | null;
   message: string | null;
   status: string;
   createdAt: string;
@@ -433,16 +440,71 @@ function tabStyle(active: boolean): React.CSSProperties {
 }
 
 function RequestCard({ request, onAccept }: { request: AccessRequest; onAccept: () => void }) {
+  const sizeLabels: Record<string, string> = {
+    startup: "Startup (1-10)",
+    sme: "SME (11-50)",
+    "mid-market": "Mid-market (51-500)",
+    enterprise: "Enterprise (500+)",
+  };
+  const typeLabels: Record<string, string> = {
+    enterprise: "Enterprise",
+    trader: "Trader",
+    investor: "Investor",
+  };
+
   return (
     <div style={{ padding: "16px 20px", background: "#fff", border: `1px solid ${C.border}`, borderRadius: "6px", marginBottom: "8px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
         <div style={{ flex: 1, minWidth: "200px" }}>
+          {/* Name + email */}
           <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{request.name}</div>
           <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono }}>{request.email}</div>
-          {request.company && <div style={{ fontSize: "12px", color: C.textBody, marginTop: "4px" }}>{request.company}</div>}
-          {request.role && <div style={{ fontSize: "11px", color: C.accent, fontFamily: C.fontMono, marginTop: "4px" }}>{request.role}</div>}
-          {request.message && <div style={{ fontSize: "13px", color: C.textBody, marginTop: "8px", lineHeight: 1.5, padding: "8px 12px", background: C.bgSubtle, borderRadius: "4px" }}>{request.message}</div>}
+
+          {/* Tags row */}
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" }}>
+            {request.accountType && (
+              <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: `${C.accent}15`, color: C.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                {typeLabels[request.accountType] || request.accountType}
+              </span>
+            )}
+            {request.companySize && (
+              <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: C.bgSubtle, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                {sizeLabels[request.companySize] || request.companySize}
+              </span>
+            )}
+            {request.budget && (
+              <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: `${C.cta}15`, color: C.cta, letterSpacing: "0.1em" }}>
+                {request.budget}
+              </span>
+            )}
+          </div>
+
+          {/* Details */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "8px", marginTop: "12px", fontSize: "12px" }}>
+            {request.company && <div><span style={{ color: C.textMuted }}>Company:</span> <span style={{ color: C.textBody }}>{request.company}</span></div>}
+            {request.role && <div><span style={{ color: C.textMuted }}>Role:</span> <span style={{ color: C.textBody }}>{request.role}</span></div>}
+            {request.phone && <div><span style={{ color: C.textMuted }}>Phone:</span> <span style={{ color: C.textBody }}>{request.phone}</span></div>}
+            {request.country && <div><span style={{ color: C.textMuted }}>Country:</span> <span style={{ color: C.textBody }}>{request.country}</span></div>}
+            {request.referralSource && <div><span style={{ color: C.textMuted }}>Referral:</span> <span style={{ color: C.textBody }}>{request.referralSource}</span></div>}
+          </div>
+
+          {/* Use case */}
+          {request.useCase && (
+            <div style={{ fontSize: "13px", color: C.textBody, marginTop: "8px", lineHeight: 1.5, padding: "8px 12px", background: C.bgSubtle, borderRadius: "4px" }}>
+              <span style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>Use case: </span>
+              {request.useCase}
+            </div>
+          )}
+
+          {/* Message */}
+          {request.message && (
+            <div style={{ fontSize: "13px", color: C.textBody, marginTop: "8px", lineHeight: 1.5, padding: "8px 12px", background: C.bgSubtle, borderRadius: "4px" }}>
+              <span style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>Note: </span>
+              {request.message}
+            </div>
+          )}
         </div>
+
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
           <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "3px 8px", borderRadius: "2px", background: request.status === "pending" ? `${C.warning}15` : `${C.cta}15`, color: request.status === "pending" ? C.warning : C.cta, textTransform: "uppercase", letterSpacing: "0.1em" }}>
             {request.status}

@@ -8,7 +8,8 @@ import { z } from "zod";
 //  Public route — anyone can submit an access request.
 //  Admin reviews and creates invitations from these requests.
 //
-//  Body: { email, name, company?, role?, message? }
+//  Body: { email, name, company?, role?, accountType?, companySize?,
+//          useCase?, budget?, phone?, country?, referralSource?, message? }
 // ═══════════════════════════════════════════════════════════════
 
 const Schema = z.object({
@@ -16,6 +17,13 @@ const Schema = z.object({
   name: z.string().min(1).max(100),
   company: z.string().max(200).optional(),
   role: z.string().max(100).optional(),
+  accountType: z.enum(["trader", "enterprise", "investor"]).default("enterprise"),
+  companySize: z.enum(["startup", "sme", "mid-market", "enterprise"]).optional(),
+  useCase: z.string().max(500).optional(),
+  budget: z.string().max(50).optional(),
+  phone: z.string().max(30).optional(),
+  country: z.string().max(100).default("Morocco"),
+  referralSource: z.string().max(200).optional(),
   message: z.string().max(2000).optional(),
 });
 
@@ -33,11 +41,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, name, company, role, message } = parsed.data;
+    const data = parsed.data;
 
     // Check if email already has a pending request
     const existing = await prisma.accessRequest.findFirst({
-      where: { email, status: "pending" },
+      where: { email: data.email, status: "pending" },
     });
 
     if (existing) {
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already has an account
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
     if (existingUser) {
       return NextResponse.json(
         { error: "An account already exists with this email. Please contact us if you've lost access." },
@@ -57,7 +65,20 @@ export async function POST(req: NextRequest) {
     }
 
     const request = await prisma.accessRequest.create({
-      data: { email, name, company, role, message },
+      data: {
+        email: data.email,
+        name: data.name,
+        company: data.company,
+        role: data.role,
+        accountType: data.accountType,
+        companySize: data.companySize,
+        useCase: data.useCase,
+        budget: data.budget,
+        phone: data.phone,
+        country: data.country,
+        referralSource: data.referralSource,
+        message: data.message,
+      },
     });
 
     return NextResponse.json({

@@ -349,18 +349,23 @@ model VerificationToken {
 // Admin reviews and creates invitations from these requests.
 
 model AccessRequest {
-  id        String   @id @default(cuid())
-  email     String
-  name      String
-  company   String?
-  role      String?  // e.g. "Comms Director", "CEO", "Analyst"
-  accountType String? @default("enterprise") // trader | enterprise | investor
-  message   String?
-  status    String   @default("pending")  // pending | accepted | rejected
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String
+  name          String
+  company       String?
+  role          String?
+  accountType   String?  @default("enterprise") // trader | enterprise | investor
+  companySize   String?  // startup | sme | mid-market | enterprise
+  useCase       String?  // what they want to monitor
+  budget        String?  // monthly budget range
+  phone         String?  // for WhatsApp
+  country       String?  // default: Morocco
+  referralSource String? // how they heard about us
+  message       String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  // When accepted, link to the invitation created from this request
   invitationId String?
   invitation   Invitation? @relation(fields: [invitationId], references: [id], onDelete: SetNull)
 
