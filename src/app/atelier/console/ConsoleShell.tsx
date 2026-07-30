@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { C as TOKENS } from "../components/tokens";
+import { BrandMonitorDashboard } from "./views/BrandMonitorDashboard";
+import { CompetitorIntelDashboard } from "./views/CompetitorIntelDashboard";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ CONSOLE — Shell (CONSOLE-V3)
@@ -1428,7 +1430,7 @@ function DashboardMain({
     if (activeNav === "reports") {
       return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs with your reputation + competitor benchmark." theme={theme} />;
     }
-    return <MarketCompetitorView weather={weather} theme={theme} displayName={displayName} companyName={companyName} />;
+    return <CompetitorIntelDashboard userName={displayName} userEmail={null} companyName={companyName} sector="Banking" />;
   }
 
   // Brand Monitor — default enterprise console
@@ -1441,7 +1443,7 @@ function DashboardMain({
   if (activeNav === "reports") {
     return <PlaceholderView title="Monthly reports" subtitle="Board-ready PDFs delivered the 1st of each month." theme={theme} />;
   }
-  return <BrandMonitorView weather={weather} theme={theme} displayName={displayName} companyName={companyName} />;
+  return <BrandMonitorDashboard userName={displayName} userEmail={null} companyName={companyName} />;
 }
 
 // ═══════════════════════════════════════════════════════════════
