@@ -99,13 +99,25 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // ─── Root redirect: / → /atelier (308 permanent) ──────────
-      // This is the critical fix: atelier.harchcorp.com/ must serve
-      // the Atelier home, NOT the Harch Corp conglomerate home.
-      // The 308 permanent redirect consolidates SEO link equity to
-      // /atelier and is cached at the Vercel edge.
       {
         source: '/',
         destination: '/atelier',
+        permanent: true,
+      },
+      // ─── Old console route names → new 4-offer names ──────────
+      {
+        source: '/atelier/console/enterprise',
+        destination: '/atelier/console/brand-monitor',
+        permanent: true,
+      },
+      {
+        source: '/atelier/console/trader',
+        destination: '/atelier/console/harch-alpha',
+        permanent: true,
+      },
+      {
+        source: '/atelier/console/investor',
+        destination: '/atelier/console/investment-bank',
         permanent: true,
       },
     ];
