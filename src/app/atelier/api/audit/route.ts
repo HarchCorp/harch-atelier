@@ -77,14 +77,14 @@ function resolveCompanySlug(companyName: string): string {
   return slug || `company-${Date.now()}`;
 }
 
-// ─── PLAN → RATE LIMIT MAP ────────────────────────────────────────
-// The directive mandates Free = 3/day, Pro = 50/day. Any unrecognized
-// plan is downgraded to Free so a misconfigured user can't bypass the
-// quota by setting an arbitrary plan string on their User row.
+// ─── ACCOUNT TYPE → RATE LIMIT MAP ───────────────────────────────
+// Rate limits per account type. Admins bypass entirely.
 
-const PLAN_LIMITS: Record<string, number> = {
-  free: 3,
-  pro: 50,
+const ACCOUNT_LIMITS: Record<string, number> = {
+  "brand-monitor": 10,
+  "market-competitor": 50,
+  "investment-bank": 100,
+  "harch-alpha": 20,
 };
 
 const RATE_LIMIT_WINDOW_SECONDS = 86_400; // 24 hours
