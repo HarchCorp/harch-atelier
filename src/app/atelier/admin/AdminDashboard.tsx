@@ -13,7 +13,7 @@ import { C } from "../components/tokens";
 //  Create invitation modal lets admin choose:
 //  - Email, Name, Company
 //  - Account type (brand-monitor / market-competitor / investment-bank / harch-alpha)
-//  - Plan (decouverte / veille / investor)
+
 //  - Payment status (auto / 1mo / 3mo / 12mo paid)
 //
 //  NO temporary password — user creates their own when they open
@@ -45,7 +45,6 @@ interface Invitation {
   email: string;
   name: string;
   accountType: string;
-  plan: string;
   role: string;
   company: string | null;
   message: string | null;
@@ -87,7 +86,7 @@ export function AdminDashboard() {
   const [formName, setFormName] = useState("");
   const [formCompany, setFormCompany] = useState("");
   const [formAccountType, setFormAccountType] = useState("brand-monitor");
-  const [formPlan, setFormPlan] = useState("decouverte");
+
   const [formPayment, setFormPayment] = useState("auto");
   const [formMessage, setFormMessage] = useState("");
   const [creating, setCreating] = useState(false);
@@ -129,7 +128,7 @@ export function AdminDashboard() {
       setFormName(request.name);
       setFormCompany(request.company || "");
       setFormAccountType("brand-monitor");
-      setFormPlan("veille");
+
       setFormPayment("auto");
       setFormMessage("");
       setFormError(null);
@@ -140,7 +139,7 @@ export function AdminDashboard() {
       setFormName("");
       setFormCompany("");
       setFormAccountType("brand-monitor");
-      setFormPlan("decouverte");
+
       setFormPayment("auto");
       setFormMessage("");
       setFormError(null);
@@ -167,7 +166,6 @@ export function AdminDashboard() {
           name: formName,
           company: formCompany || undefined,
           accountType: formAccountType,
-          plan: formPlan,
           message: formMessage || undefined,
           requestId: requestId,
           paymentStatus: formPayment,  // stored in message for now (TODO: add field)
@@ -340,16 +338,6 @@ export function AdminDashboard() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Plan */}
-              <div>
-                <label style={labelStyle}>Subscription plan *</label>
-                <select value={formPlan} onChange={(e) => setFormPlan(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="decouverte">Discovery — 5K MAD/month</option>
-                  <option value="veille">Watch — 15K MAD/month</option>
-                  <option value="investment-bank">Investment Bank — 50K+ MAD/month</option>
-                </select>
               </div>
 
               {/* Payment */}
@@ -571,7 +559,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
           <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{invitation.name}</div>
           <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono }}>{invitation.email}</div>
           <div style={{ fontSize: "11px", color: C.textBody, fontFamily: C.fontMono, marginTop: "4px" }}>
-            Type: {invitation.accountType} · Plan: {invitation.plan} · Created: {new Date(invitation.createdAt).toLocaleDateString("en-US")}
+            Type: {invitation.accountType} · Created: {new Date(invitation.createdAt).toLocaleDateString("en-US")}
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>

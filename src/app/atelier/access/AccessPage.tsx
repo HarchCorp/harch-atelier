@@ -193,10 +193,6 @@ export function AccessPage({ token }: { token: string }) {
                 <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "4px" }}>Account type</div>
                 <div style={{ fontSize: "14px", fontWeight: 600, color: C.accent }}>{invitation ? accountTypeLabel[invitation.accountType] || invitation.accountType : "—"}</div>
               </div>
-              <div>
-                <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "4px" }}>Plan</div>
-
-              </div>
               {invitation?.company && (
                 <div>
                   <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "4px" }}>Company</div>
