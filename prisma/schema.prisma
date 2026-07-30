@@ -36,6 +36,9 @@ model Company {
   reputationScores ReputationScore[]
   aiVisibility     AIVisibility[]
   entities         EntityMention[]
+  assets           Asset[]           // link: Company → listed Asset(s)
+  portfolioHoldings PortfolioHolding[]
+  dossiers         Dossier[]
 }
 
 model Article {
@@ -283,6 +286,8 @@ model User {
   sessions      Session[]
   apiKeys       ApiKey[]
   accounts      Account[]
+  portfolios    Portfolio[]
+  dossiers      Dossier[]
 }
 
 model Account {
@@ -349,6 +354,7 @@ model AccessRequest {
   name      String
   company   String?
   role      String?  // e.g. "Comms Director", "CEO", "Analyst"
+  accountType String? @default("enterprise") // trader | enterprise | investor
   message   String?
   status    String   @default("pending")  // pending | accepted | rejected
   createdAt DateTime @default(now())
@@ -390,4 +396,107 @@ model Invitation {
   @@index([token])
   @@index([email])
   @@index([createdAt])
+}
+
+// ─── TRADER MODELS (Asset, AssetPrice, AssetSentiment) ──────────
+// Traders monitor ASSETS (stocks, crypto, commodities, FX), not
+// companies. The same Article pipeline feeds both: an article about
+// OCP feeds Company.reputationScore (enterprise) AND Asset.sentiment
+// (trader) via the company.ticker → Asset.ticker link.
+
+model Asset {
+  id          String   @id @default(cuid())
+  ticker      String   @unique  // e.g. "OCP", "ATW", "IAM", "BTC", "EURUSD"
+  name        String
+  assetType   String   // stock | crypto | commodity | fx | index
+  exchange    String?  // e.g. "BVC" (Bourse de Casablanca), "BINANCE"
+  companyId   String?  // link to Company if asset is a listed stock
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices      AssetPrice[]
+  sentiments  AssetSentiment[]
+  portfolioHoldings PortfolioHolding[]
+
+  @@index([assetType])
+  @@index([exchange])
+}
+
+model AssetPrice {
+  id          String   @id @default(cuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  price       Float
+  volume      Float?
+  changePct   Float?   // % change vs previous close
+  tradedAt    DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([assetId, tradedAt])
+}
+
+model AssetSentiment {
+  id            String   @id @default(cuid())
+  assetId       String
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  score         Float    // -1 to 1 (sentiment)
+  positivePct   Float
+  neutralPct    Float
+  negativePct   Float
+  articleCount  Int
+  calculatedAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([assetId, calculatedAt])
+}
+
+// ─── INVESTOR MODELS (Portfolio, PortfolioHolding, Dossier) ─────
+// Investors track multiple PORTFOLIOS of companies/assets and run
+// due diligence DOSSIERS on targets. ESG + Controversy screening
+// is built on top of RiskAssessment (already exists).
+
+model Portfolio {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Fund VI", "ESG Fund", "Co-invest Pool"
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  holdings    PortfolioHolding[]
+
+  @@index([userId])
+}
+
+model PortfolioHolding {
+  id          String   @id @default(cuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  companyId   String?  // optional link to Company
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  assetId     String?  // optional link to Asset
+  asset       Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  weight      Float    // portfolio weight (0-1)
+  addedAt     DateTime @default(now())
+
+  @@index([portfolioId])
+}
+
+model Dossier {
+  id          String   @id @default(cuid())
+  title       String   // e.g. "OCP Group — DD Q3 2026"
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId   String?  // the target company being investigated
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  status      String   @default("draft")  // draft | generating | ready | archived
+  pdfUrl      String?  // generated PDF URL
+  pageCount   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }
