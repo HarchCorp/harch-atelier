@@ -66,7 +66,7 @@ interface CreatedInvitation {
 }
 
 interface AdminStats {
-  users: { total: number; enterprise: number; trader: number; investor: number };
+  users: { total: number; "brand-monitor": number; "market-competitor": number; "investment-bank": number; "harch-alpha": number };
   requests: { pending: number; accepted: number };
   invitations: { active: number; used: number };
   data: { articles: number; companies: number; assets: number; portfolios: number; dossiers: number };
