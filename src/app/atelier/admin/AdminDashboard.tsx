@@ -208,9 +208,14 @@ export function AdminDashboard() {
           </span>
           <a href="/atelier/console" style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textDecoration: "none" }}>→ Console</a>
         </div>
-        <button onClick={() => openCreateModal()} style={{ padding: "8px 14px", background: C.cta, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
-          + New invitation
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={() => openCreateModal()} style={{ padding: "8px 14px", background: C.cta, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+            + New invitation
+          </button>
+          <button onClick={() => { if (confirm("Sign out?")) window.location.href = "/api/auth/signout"; }} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* KPI strip */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { signOut } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { C as TOKENS } from "../components/tokens";
 
@@ -845,6 +846,8 @@ export function ConsoleShell({ accountType = "enterprise" }: { accountType?: "en
         onTierChange={setTier}
         onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
         mobileMenuOpen={mobileMenuOpen}
+        accountType={accountType}
+        isAdmin={false}
       />
 
       {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
@@ -896,11 +899,15 @@ function DashboardTopBar({
   onTierChange,
   onMobileMenuToggle,
   mobileMenuOpen,
+  accountType,
+  isAdmin,
 }: {
   tier: AccountType;
   onTierChange: (t: AccountType) => void;
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
+  accountType: "enterprise" | "trader" | "investor";
+  isAdmin: boolean;
 }) {
   return (
     <header
@@ -981,40 +988,44 @@ function DashboardTopBar({
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Tier switcher (kept from previous ConsoleShell) */}
-      <div
-        className="console-tier-switcher"
-        style={{
-          display: "flex",
-          gap: "0",
-          border: `1px solid ${C.border}`,
-          borderRadius: "4px",
-          overflow: "hidden",
-          background: C.surfaceAlt,
-        }}
-      >
-        {ACCOUNT_TIERS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => onTierChange(t.id)}
-            style={{
-              padding: "8px 12px",
-              background: tier === t.id ? C.text : "transparent",
-              color: tier === t.id ? C.surface : C.textSecondary,
-              border: "none",
-              fontFamily: FONT.sans,
-              fontSize: "11px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.15s",
-              letterSpacing: "0.02em",
-            }}
-            title={t.tagline}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tier switcher — ADMIN ONLY (for testing/previewing different tiers).
+          Regular users never see this. */}
+      {isAdmin && (
+        <div
+          className="console-tier-switcher"
+          style={{
+            display: "flex",
+            gap: "0",
+            border: `1px solid ${C.border}`,
+            borderRadius: "4px",
+            overflow: "hidden",
+            background: C.surfaceAlt,
+          }}
+          title="Admin preview only — users can't switch tiers"
+        >
+          {ACCOUNT_TIERS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => onTierChange(t.id)}
+              style={{
+                padding: "8px 12px",
+                background: tier === t.id ? C.text : "transparent",
+                color: tier === t.id ? C.surface : C.textSecondary,
+                border: "none",
+                fontFamily: FONT.sans,
+                fontSize: "11px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.15s",
+                letterSpacing: "0.02em",
+              }}
+              title={t.tagline}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Notification bell with red "3" badge — exact copy of the mockup */}
       <div style={{ position: "relative", cursor: "pointer" }} title="3 new alerts">
@@ -1044,6 +1055,36 @@ function DashboardTopBar({
         </span>
       </div>
 
+      {/* Logout button */}
+      <button
+        onClick={() => signOut({ callbackUrl: "/atelier/login", redirect: true })}
+        style={{
+          padding: "6px 12px",
+          background: "transparent",
+          border: `1px solid ${C.border}`,
+          borderRadius: "4px",
+          color: C.textSecondary,
+          fontFamily: FONT.sans,
+          fontSize: "11px",
+          fontWeight: 600,
+          cursor: "pointer",
+          transition: "all 0.15s",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+        }}
+        title="Sign out"
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary; }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        <span className="console-logout-label">Sign out</span>
+      </button>
+
       {/* User avatar — exact copy of the mockup */}
       <div
         style={{
@@ -1070,6 +1111,7 @@ function DashboardTopBar({
           .console-iq-label { display: none !important; }
           .console-search { display: none !important; }
           .console-tier-switcher { display: none !important; }
+          .console-logout-label { display: none !important; }
         }
       `}</style>
     </header>
