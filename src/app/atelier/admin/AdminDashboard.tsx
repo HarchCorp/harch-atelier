@@ -466,9 +466,10 @@ function RequestCard({ request, onAccept }: { request: AccessRequest; onAccept: 
     enterprise: "Enterprise (500+)",
   };
   const typeLabels: Record<string, string> = {
-    enterprise: "Enterprise",
-    trader: "Trader",
-    investor: "Investor",
+    "brand-monitor": "Brand Monitor",
+    "market-competitor": "Market & Competitor",
+    "investment-bank": "Investment Bank",
+    "harch-alpha": "Harch Alpha",
   };
 
   return (
