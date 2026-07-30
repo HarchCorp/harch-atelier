@@ -173,8 +173,8 @@ const FAQS: FAQ[] = [
         chart={<ChartPricingCompare />}
         bullets={[
           "Virement bancaire en MAD ou EUR",
-          "Facture mensuelle, payable sous 30 jours",
-          "Aucun engagement de durée (Starter et Pro)",
+          "Monthly invoice, payable within 30 days",
+          "No long-term commitment (Starter and Pro)",
           "Enterprise: contrat annuel, SLA 99.9%",
         ]}
         note="We can also accept Wise, PayPal, or crypto for international clients — ask us."

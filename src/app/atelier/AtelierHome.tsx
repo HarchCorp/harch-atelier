@@ -1464,14 +1464,14 @@ function WhatsAppMockup() {
                   fontFamily: FONT.sans,
                 }}
               >
-                <strong>📊 Bank of Africa — Veille du 18/07</strong>
+                <strong>📊 Bank of Africa — Daily Brief — 18/07</strong>
                 {"\n\n"}
                 <strong>Médias:</strong> 12 articles (8 positifs, 3 neutres, 1 négatif){"\n"}
                 <strong>Social:</strong> 340 mentions (78% positif){"\n"}
                 <strong>IA:</strong> ChatGPT vous cite #2 sur &lsquo;meilleure banque Maroc&rsquo;
                 {"\n\n"}
                 <span style={{ color: C.red, fontWeight: 600 }}>
-                  ⚠️ Alerte: Sujet &lsquo;frais bancaires&rsquo; en hausse (+47% en 24h)
+                  ⚠️ Alert: 'banking fees' topic rising (+47% in 24h)
                 </span>
               </div>
               {/* Timestamp + checks */}
@@ -1606,7 +1606,7 @@ function WhatsAppMockup() {
               }}
             >
               <div style={{ fontSize: "13px", color: C.text, lineHeight: 1.5 }}>
-                📄 Rapport complet — Juillet 2026
+                📄 Full Report — July 2026
                 {"\n"}
                 <span style={{ color: C.whatsappTeal, textDecoration: "underline" }}>
                   atelier.harchcorp.com/r/boa-07-2026
@@ -3519,7 +3519,7 @@ function Pricing() {
     {
       name: "Starter",
       price: "5K",
-      period: "MAD / mois",
+      period: "MAD / month",
       tagline: "For solo comms directors who need the essentials.",
       features: [
         "Daily WhatsApp digest (7:00)",
@@ -3535,7 +3535,7 @@ function Pricing() {
     {
       name: "Pro",
       price: "15K",
-      period: "MAD / mois",
+      period: "MAD / month",
       tagline: "For comms teams who need the full picture, daily.",
       features: [
         "Everything in Starter, plus:",
@@ -3554,7 +3554,7 @@ function Pricing() {
     {
       name: "Enterprise",
       price: "50K",
-      period: "MAD / mois",
+      period: "MAD / month",
       tagline: "For groups & institutions with analyst needs.",
       features: [
         "Everything in Pro, plus:",
@@ -4049,7 +4049,7 @@ function PdfMockup() {
                 textTransform: "uppercase",
               }}
             >
-              Rapport Mensuel
+              Monthly Report
             </div>
           </div>
           <div
@@ -4080,7 +4080,7 @@ function PdfMockup() {
               lineHeight: 1.2,
             }}
           >
-            Rapport de Réputation
+            Reputation Report
           </h3>
           <div
             style={{
@@ -4099,7 +4099,7 @@ function PdfMockup() {
               marginBottom: "20px",
             }}
           >
-            Période: 01/06/2026 — 30/06/2026 · 30 jours
+            Period: 01/06/2026 — 30/06/2026 · 30 days
           </div>
 
           {/* Executive summary */}
@@ -4182,7 +4182,7 @@ function PdfMockup() {
               marginBottom: "10px",
             }}
           >
-            Sentiment Trend — 30 jours
+            Sentiment Trend — 30 days
           </div>
           <div
             style={{

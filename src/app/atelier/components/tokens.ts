@@ -368,7 +368,7 @@ export const I18N = {
     heroEyebrow: "Intelligence de Réputation IA",
     heroTitle: "Que dit le monde de vous ?",
     heroSubhead: "On surveille 30+ sources médias et 4 moteurs IA 24/7. Vous recevez l'analyse de sentiment, les alertes crise sur WhatsApp, et un PDF mensuel board-ready. Aucun ingénieur requis.",
-    heroCtaPrimary: "Obtenir un audit gratuit",
+    heroCtaPrimary: "Get a free audit",
     heroCtaSecondary: "Voir comment ça marche",
 
     // Sections
@@ -379,14 +379,14 @@ export const I18N = {
     about: "À propos",
 
     // Features
-    featureMedia: "Veille Médias",
+    featureMedia: "Media Monitoring",
     featureMediaDesc: "30+ sources marocaines et africaines suivies 24/7",
     featureAi: "Visibilité IA",
     featureAiDesc: "Ce que ChatGPT, Perplexity, Google AI disent de vous",
     featureSentiment: "Analyse de Sentiment",
     featureSentimentDesc: "Positif, neutre, négatif — par entité, par article",
-    featureAlerts: "Alertes Crise",
-    featureAlertsDesc: "Alertes WhatsApp quand le sentiment négatif explose",
+    featureAlerts: "Crisis Alerts",
+    featureAlertsDesc: "WhatsApp alerts when negative sentiment spikes",
 
     // Pricing
     pricingStarter: "Starter",
@@ -395,12 +395,12 @@ export const I18N = {
     pricingStarterPrice: "5K",
     pricingProPrice: "15K",
     pricingEnterprisePrice: "50K",
-    pricingCurrency: "MAD/mois",
+    pricingCurrency: "MAD/month",
 
     // CTA
-    ctaTitle: "Obtenez votre audit de réputation gratuit",
-    ctaSubhead: "5 minutes à remplir. 7 jours pour livrer. Sans CB. Sans engagement.",
-    ctaButton: "Obtenir mon audit",
+    ctaTitle: "Get your free reputation audit",
+    ctaSubhead: "5 minutes to fill. 7 days to deliver. No credit card. No commitment.",
+    ctaButton: "Get my audit",
 
     // Footer
     footerTagline: "Intelligence de Réputation IA pour l'Afrique",

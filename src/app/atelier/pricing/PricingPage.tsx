@@ -15,7 +15,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════
 //
 // Product: AI Reputation Intelligence — 3 tiers, transparent pricing.
-// Starter 5K · Pro 15K · Enterprise 50K MAD / mois
+// Starter 5K · Pro 15K · Enterprise 50K MAD / month
 //
 // Palette (LOCKED — light):
 //   bg #FAFAFA · surface #FFFFFF · surfaceAlt #F4F4F5 · border #E5E5E5
@@ -90,7 +90,7 @@ const TIERS: Tier[] = [
     id: "starter",
     name: "Starter",
     price: "5,000",
-    period: "MAD / mois",
+    period: "MAD / month",
     tagline: "Pour la PME qui démarre sa veille réputation",
     highlighted: false,
     features: [
@@ -98,13 +98,13 @@ const TIERS: Tier[] = [
       "3 moteurs IA trackés (ChatGPT, Perplexity, Gemini)",
       "Daily digest WhatsApp à 7h00",
       "Dashboard en temps réel",
-      "Rapport PDF mensuel (8 pages)",
-      "Alerte crise (sentiment < -0.5)",
+      "Monthly PDF report (8 pages)",
+      "Crisis alert (sentiment < -0.5)",
       "1 marque suivie",
       "Support email (48h)",
     ],
     notIncluded: [
-      "Rapport PDF board-ready (32 pages)",
+      "Board-ready PDF report (32 pages)",
       "Benchmark concurrents",
       "API access",
     ],
@@ -124,7 +124,7 @@ const TIERS: Tier[] = [
     id: "pro",
     name: "Pro",
     price: "15,000",
-    period: "MAD / mois",
+    period: "MAD / month",
     tagline: "Pour l'entreprise qui veut piloter sa réputation",
     highlighted: true,
     features: [
@@ -132,8 +132,8 @@ const TIERS: Tier[] = [
       "8 moteurs IA trackés",
       "Daily digest WhatsApp à 7h00",
       "Dashboard en temps réel + historique 90j",
-      "Rapport PDF mensuel board-ready (32 pages)",
-      "Alerte crise < 5min + alertes personnalisées",
+      "Monthly board-ready PDF report (32 pages)",
+      "Crisis alert < 5min + custom alerts",
       "3 marques suivies (ou filiales)",
       "Benchmark concurrents (jusqu'à 3)",
       "Support email + WhatsApp (24h)",
@@ -162,7 +162,7 @@ const TIERS: Tier[] = [
     id: "enterprise",
     name: "Enterprise",
     price: "50,000",
-    period: "MAD / mois",
+    period: "MAD / month",
     tagline: "Pour le groupe multi-filiales et multi-pays",
     highlighted: false,
     features: [
@@ -170,8 +170,8 @@ const TIERS: Tier[] = [
       "8 moteurs IA + crawl custom",
       "Daily digest WhatsApp multi-destinataires",
       "Dashboard + historique 365j + API",
-      "Rapport PDF mensuel + trimestriel board-ready",
-      "Alerte crise < 5min + playbook comms",
+      "Monthly + quarterly board-ready PDF report",
+      "Crisis alert < 5min + comms playbook",
       "Marques illimitées (filiales, produits)",
       "Benchmark concurrents illimité",
       "Topic taxonomy custom",
@@ -223,8 +223,8 @@ const COMPARISON_ROWS: { category: string; features: { name: string; starter: st
     features: [
       { name: "Daily digest WhatsApp", starter: "7h00", pro: "7h00", enterprise: "7h00 + custom" },
       { name: "Dashboard", starter: "live", pro: "live + 90j", enterprise: "live + 365j + API" },
-      { name: "Rapport PDF mensuel", starter: "8 pages", pro: "32 pages", enterprise: "32 + trimestriel" },
-      { name: "Alerte crise", starter: "< 1h", pro: "< 5min", enterprise: "< 5min + playbook" },
+      { name: "Monthly PDF report", starter: "8 pages", pro: "32 pages", enterprise: "32 + trimestriel" },
+      { name: "Crisis alert", starter: "< 1h", pro: "< 5min", enterprise: "< 5min + playbook" },
       { name: "Multi-destinataires", starter: false, pro: "3", enterprise: "∞" },
     ],
   },
@@ -240,9 +240,9 @@ const COMPARISON_ROWS: { category: string; features: { name: string; starter: st
 ];
 
 const ADDONS = [
-  { name: "Brand addition", price: "+2,000 MAD/mois", desc: "Each additional brand or subsidiary tracked on top of your tier allowance." },
-  { name: "Custom source", price: "+1,500 MAD/mois", desc: "Add a niche or industry source we don't cover yet (forum, blog, trade press)." },
-  { name: "Custom AI engine", price: "+3,000 MAD/mois", desc: "Track a regional or vertical AI engine (e.g. regional chatbot, voice assistant)." },
+  { name: "Brand addition", price: "+2,000 MAD/month", desc: "Each additional brand or subsidiary tracked on top of your tier allowance." },
+  { name: "Custom source", price: "+1,500 MAD/month", desc: "Add a niche or industry source we don't cover yet (forum, blog, trade press)." },
+  { name: "Custom AI engine", price: "+3,000 MAD/month", desc: "Track a regional or vertical AI engine (e.g. regional chatbot, voice assistant)." },
   { name: "Extra report", price: "+1,000 MAD", desc: "Additional PDF report — quarterly, board prep, or one-off deep dive." },
   { name: "Onboarding call", price: "+2,000 MAD", desc: "2-hour onboarding with our analyst team to set up your taxonomy and alerts." },
   { name: "Workshop", price: "+8,000 MAD", desc: "Half-day workshop with your comms team on reputation strategy and tools." },
@@ -251,15 +251,15 @@ const ADDONS = [
 const FAQ_MINI = [
   {
     q: "Pourquoi pas de carte bancaire?",
-    a: "Nous facturons par virement bancaire, en MAD ou EUR. Aucun engagement de durée — vous payez mois par mois, vous arrêtez quand vous voulez.",
+    a: "We invoice by bank transfer, in MAD or EUR. No long-term commitment — you pay month by month, you cancel whenever you want.",
   },
   {
-    q: "Y a-t-il un engagement de durée?",
-    a: "Non. Starter et Pro sont mensuels, sans engagement. Enterprise est annuel avec un SLA, mais résiliable avec 90 jours de préavis.",
+    q: "Is there a long-term commitment?",
+    a: "No. Starter and Pro are monthly, no commitment. Enterprise is annual with an SLA, but cancellable with 90 days notice.",
   },
   {
     q: "Puis-je changer de tier en cours?",
-    a: "Oui, à tout moment. L'upgrade est immédiat. Le downgrade s'applique au mois suivant. Aucun frais de changement.",
+    a: "Yes, at any time. Upgrades are immediate. Downgrades apply the following month. No change fees.",
   },
   {
     q: "Que se passe-t-il si je dépasse mon quota?",
@@ -500,13 +500,13 @@ function Hero() {
           }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <IconCheck size={12} color={C.sage} /> Sans engagement
+            <IconCheck size={12} color={C.sage} /> No commitment
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <IconCheck size={12} color={C.sage} /> Virement bancaire
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <IconCheck size={12} color={C.sage} /> Audit gratuit 7 jours
+            <IconCheck size={12} color={C.sage} /> Free 7-day audit
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <IconCheck size={12} color={C.sage} /> Annulation 1 clic
@@ -617,7 +617,7 @@ function TierCard({ tier }: { tier: Tier }) {
           <span style={{ fontSize: "14px", fontFamily: FONT.mono, color: C.textMuted }}>{tier.period}</span>
         </div>
         <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.04em" }}>
-          ≈ {tier.id === "starter" ? "€460" : tier.id === "pro" ? "€1,380" : "€4,600"} / mois · virement bancaire
+          ≈ {tier.id === "starter" ? "€460" : tier.id === "pro" ? "€1,380" : "€4,600"} / month · bank transfer
         </div>
       </div>
 
