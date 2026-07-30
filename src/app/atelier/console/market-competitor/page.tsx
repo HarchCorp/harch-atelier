@@ -15,5 +15,5 @@ export default async function MarketCompetitorConsolePage() {
   if (session.user?.role !== "admin" && session.user?.accountType !== "market-competitor") {
     redirect(`/atelier/console/${session.user?.accountType || "brand-monitor"}`);
   }
-  return <ConsoleShell accountType="market-competitor" />;
+  return <ConsoleShell accountType="market-competitor" userName={session.user.name} userEmail={session.user.email} />;
 }

@@ -15,5 +15,5 @@ export default async function HarchAlphaConsolePage() {
   if (session.user?.role !== "admin" && session.user?.accountType !== "harch-alpha") {
     redirect(`/atelier/console/${session.user?.accountType || "brand-monitor"}`);
   }
-  return <ConsoleShell accountType="harch-alpha" />;
+  return <ConsoleShell accountType="harch-alpha" userName={session.user.name} userEmail={session.user.email} />;
 }

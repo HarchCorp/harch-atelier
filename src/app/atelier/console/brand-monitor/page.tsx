@@ -15,5 +15,5 @@ export default async function BrandMonitorConsolePage() {
   if (session.user?.role !== "admin" && session.user?.accountType !== "brand-monitor") {
     redirect(`/atelier/console/${session.user?.accountType || "brand-monitor"}`);
   }
-  return <ConsoleShell accountType="brand-monitor" />;
+  return <ConsoleShell accountType="brand-monitor" userName={session.user.name} userEmail={session.user.email} />;
 }

@@ -746,11 +746,83 @@ const pageStyles = `
 `;
 
 // ═══════════════════════════════════════════════════════════════
+//  OFFER THEMES — each offer has its own personality
+// ═══════════════════════════════════════════════════════════════
+
+interface OfferTheme {
+  accent: string;
+  accentBg: string;
+  label: string;
+  tagline: string;
+  welcome: (name: string, company: string) => string;
+  vibe: string;
+}
+
+const OFFER_THEMES: Record<string, OfferTheme> = {
+  "brand-monitor": {
+    accent: "#059669",
+    accentBg: "rgba(5,150,105,0.08)",
+    label: "Brand Monitor",
+    tagline: "Your reputation, monitored 24/7",
+    welcome: (name, company) => `Good morning, ${name}. Here's what they're saying about ${company} today.`,
+    vibe: "calm",
+  },
+  "market-competitor": {
+    accent: "#d97706",
+    accentBg: "rgba(217,119,6,0.10)",
+    label: "Competitor Intel",
+    tagline: "Know your rivals' every move",
+    welcome: (name, company) => `${name}, your competitors moved overnight. Here's the delta.`,
+    vibe: "aggressive",
+  },
+  "investment-bank": {
+    accent: "#1e3a5f",
+    accentBg: "rgba(30,58,95,0.06)",
+    label: "Investor Desk",
+    tagline: "Due diligence, certified",
+    welcome: (name, _company) => `${name}, 2 holdings crossed the risk threshold. Review required.`,
+    vibe: "cold",
+  },
+  "harch-alpha": {
+    accent: "#0891b2",
+    accentBg: "rgba(8,145,178,0.10)",
+    label: "Alpha Desk",
+    tagline: "Be first. Be fast. Be right.",
+    welcome: (name, _company) => `${name}, pre-market brief 07:00. 1 divergence detected on IAM.`,
+    vibe: "raw",
+  },
+};
+
+function getOfferTheme(accountType: string): OfferTheme {
+  return OFFER_THEMES[accountType] || OFFER_THEMES["brand-monitor"];
+}
+
+function getInitials(name?: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
-export function ConsoleShell({ accountType = "brand-monitor" }: { accountType?: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha" }) {
-  // Tier switcher (kept from previous ConsoleShell)
+export function ConsoleShell({
+  accountType = "brand-monitor",
+  userName,
+  userEmail,
+}: {
+  accountType?: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
+  userName?: string | null;
+  userEmail?: string | null;
+}) {
+  const theme = getOfferTheme(accountType);
+  const initials = getInitials(userName);
+  const displayName = userName?.split(" ")[0] || "User";
+  const companyName = "OCP Group"; // TODO: from session.user.companyId → Company.name
+
+  // Tier switcher (admin only — hidden from regular users)
   const [tier, setTier] = useState<AccountType>("decouverte");
 
   // Active nav item (drives main-area content) — default depends on accountType
@@ -848,6 +920,11 @@ export function ConsoleShell({ accountType = "brand-monitor" }: { accountType?: 
         mobileMenuOpen={mobileMenuOpen}
         accountType={accountType}
         isAdmin={false}
+        theme={theme}
+        initials={initials}
+        displayName={displayName}
+        userEmail={userEmail}
+        companyName={companyName}
       />
 
       {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
@@ -901,6 +978,11 @@ function DashboardTopBar({
   mobileMenuOpen,
   accountType,
   isAdmin,
+  theme,
+  initials,
+  displayName,
+  userEmail,
+  companyName,
 }: {
   tier: AccountType;
   onTierChange: (t: AccountType) => void;
@@ -908,6 +990,11 @@ function DashboardTopBar({
   mobileMenuOpen: boolean;
   accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
   isAdmin: boolean;
+  theme: OfferTheme;
+  initials: string;
+  displayName: string;
+  userEmail?: string | null;
+  companyName: string;
 }) {
   return (
     <header
@@ -951,7 +1038,7 @@ function DashboardTopBar({
           style={{
             fontSize: "10px",
             fontFamily: FONT.mono,
-            color: C.sage,
+            color: theme.accent,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
             borderLeft: `1px solid ${C.border}`,
@@ -959,7 +1046,7 @@ function DashboardTopBar({
           }}
           className="console-iq-label"
         >
-          HarchIQ Console
+          {theme.label}
         </span>
       </div>
 
@@ -1085,14 +1172,14 @@ function DashboardTopBar({
         <span className="console-logout-label">Sign out</span>
       </button>
 
-      {/* User avatar — exact copy of the mockup */}
+      {/* User avatar — dynamic initials from real name */}
       <div
         style={{
           width: "32px",
           height: "32px",
           borderRadius: "50%",
-          background: C.accentDark,
-          color: C.textOnDark,
+          background: theme.accent,
+          color: "#ffffff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1100,9 +1187,9 @@ function DashboardTopBar({
           fontWeight: 600,
           fontFamily: FONT.sans,
         }}
-        title="Signed in"
+        title={userEmail ? `${displayName} · ${userEmail}` : displayName}
       >
-        AB
+        {initials}
       </div>
 
       {/* Responsive hide for narrow screens */}

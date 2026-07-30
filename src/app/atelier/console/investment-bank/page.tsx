@@ -15,5 +15,5 @@ export default async function InvestmentBankConsolePage() {
   if (session.user?.role !== "admin" && session.user?.accountType !== "investment-bank") {
     redirect(`/atelier/console/${session.user?.accountType || "brand-monitor"}`);
   }
-  return <ConsoleShell accountType="investment-bank" />;
+  return <ConsoleShell accountType="investment-bank" userName={session.user.name} userEmail={session.user.email} />;
 }
