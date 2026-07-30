@@ -345,20 +345,9 @@ function DashMiniStat({
 //  CONSOLE-SPECIFIC STATE & TYPES
 // ═══════════════════════════════════════════════════════════════
 
-type AccountType = "decouverte" | "veille" | "investor";
-
-interface AccountTier {
-  id: AccountType;
-  label: string;
-  tagline: string;
-  price: string;
-}
-
-const ACCOUNT_TIERS: AccountTier[] = [
-  { id: "decouverte", label: "Discovery", tagline: "Essential monitoring", price: "5K MAD / month" },
-  { id: "veille",     label: "Watch",     tagline: "With neighbors",     price: "15K MAD / month" },
-  { id: "investor",   label: "Investor",  tagline: "Full access",        price: "50K+ MAD / month" },
-];
+// ─── Offer themes (4 commercial offers) ──────────────────────────
+// Each offer has its own accent color, label, and personality.
+// The sidebar "Plan" card uses these instead of the old subscription tier system.
 
 // Sidebar nav items — visual style matches DashboardMockup.
 // `id` is the route key (drives main area content switching).
@@ -637,7 +626,6 @@ export function ConsoleShell({
   const companyName = "OCP Group"; // TODO: from session.user.companyId → Company.name
 
   // Tier switcher (admin only — hidden from regular users)
-  const [tier, setTier] = useState<AccountType>("decouverte");
 
   // Active nav item (drives main-area content) — default depends on accountType
   const [activeNav, setActiveNav] = useState<NavId>(defaultActiveNav(accountType));
@@ -728,8 +716,6 @@ export function ConsoleShell({
       )}
 
       <DashboardTopBar
-        tier={tier}
-        onTierChange={setTier}
         onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
         mobileMenuOpen={mobileMenuOpen}
         accountType={accountType}
@@ -760,14 +746,13 @@ export function ConsoleShell({
           onDragOver={onDragOver}
           onDrop={onDrop}
           draggedId={draggedId}
-          tier={tier}
           mobileOpen={mobileMenuOpen}
+          theme={theme}
         />
 
         <DashboardMain
           activeNav={activeNav}
           weather={weather}
-          tier={tier}
           accountType={accountType}
           theme={theme}
           displayName={displayName}
@@ -784,13 +769,11 @@ export function ConsoleShell({
 
 // ═══════════════════════════════════════════════════════════════
 //  TOP BAR
-//  Reproduces the DashboardMockup top bar verbatim, plus the tier
+//  Reproduces the DashboardMockup top bar verbatim, plus the offer
 //  switcher and mobile hamburger from the previous ConsoleShell.
 // ═══════════════════════════════════════════════════════════════
 
 function DashboardTopBar({
-  tier,
-  onTierChange,
   onMobileMenuToggle,
   mobileMenuOpen,
   accountType,
@@ -801,8 +784,6 @@ function DashboardTopBar({
   userEmail,
   companyName,
 }: {
-  tier: AccountType;
-  onTierChange: (t: AccountType) => void;
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
   accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
@@ -892,44 +873,6 @@ function DashboardTopBar({
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Tier switcher — ADMIN ONLY (for testing/previewing different tiers).
-          Regular users never see this. */}
-      {isAdmin && (
-        <div
-          className="console-tier-switcher"
-          style={{
-            display: "flex",
-            gap: "0",
-            border: `1px solid ${C.border}`,
-            borderRadius: "4px",
-            overflow: "hidden",
-            background: C.surfaceAlt,
-          }}
-          title="Admin preview only — users can't switch tiers"
-        >
-          {ACCOUNT_TIERS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => onTierChange(t.id)}
-              style={{
-                padding: "8px 12px",
-                background: tier === t.id ? C.text : "transparent",
-                color: tier === t.id ? C.surface : C.textSecondary,
-                border: "none",
-                fontFamily: FONT.sans,
-                fontSize: "11px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                letterSpacing: "0.02em",
-              }}
-              title={t.tagline}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Notification bell with red "3" badge — exact copy of the mockup */}
       <div style={{ position: "relative", cursor: "pointer" }} title="3 new alerts">
@@ -1014,7 +957,6 @@ function DashboardTopBar({
         @media (max-width: 768px) {
           .console-iq-label { display: none !important; }
           .console-search { display: none !important; }
-          .console-tier-switcher { display: none !important; }
           .console-logout-label { display: none !important; }
         }
       `}</style>
@@ -1036,13 +978,11 @@ interface SidebarProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (id: NavId) => void;
   draggedId: NavId | null;
-  tier: AccountType;
   mobileOpen: boolean;
+  theme: OfferTheme;
 }
 
 function DashboardSidebar(props: SidebarProps) {
-  const currentTier = ACCOUNT_TIERS.find((t) => t.id === props.tier)!;
-
   return (
     <aside
       className={`dash-sidebar console-drawer${props.mobileOpen ? "" : ""}`}
@@ -1170,10 +1110,10 @@ function DashboardSidebar(props: SidebarProps) {
             Plan
           </div>
           <div style={{ fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
-            {currentTier.label}
+            {props.theme.label}
           </div>
           <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "4px" }}>
-            {currentTier.price}
+            {props.theme.tagline}
           </div>
           <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "2px" }}>
             28 days remaining
@@ -1207,7 +1147,6 @@ function DashboardSidebar(props: SidebarProps) {
 function DashboardMain({
   activeNav,
   weather,
-  tier,
   accountType,
   theme,
   displayName,
@@ -1215,7 +1154,6 @@ function DashboardMain({
 }: {
   activeNav: NavId;
   weather: WeatherData;
-  tier: AccountType;
   accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
   theme: OfferTheme;
   displayName: string;
@@ -1234,7 +1172,7 @@ function DashboardMain({
   // Market & Competitor — enterprise + competitor intel
   if (accountType === "market-competitor") {
     if (activeNav === "competitors") {
-      return <NeighborsView tier={tier} theme={theme} />;
+      return <NeighborsView theme={theme} />;
     }
     if (activeNav === "alerts") {
       return <AlertsView theme={theme} />;
@@ -1636,7 +1574,7 @@ function PlaceholderView({ title, subtitle, theme }: { title: string; subtitle: 
 
 // ─── Neighbors view (kept from previous ConsoleShell, restyled) ────
 // Lives in the main area when "Competitors" is active in the sidebar.
-function NeighborsView({ tier, theme }: { tier: AccountType; theme: OfferTheme }) {
+function NeighborsView({ theme }: { theme: OfferTheme }) {
   const [neighbors, setNeighbors] = useState<Neighbor[]>([]);
   const [yourScore, setYourScore] = useState<number>(0);
   const [loading, setLoading] = useState(true);
