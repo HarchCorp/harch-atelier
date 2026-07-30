@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { C } from "../../components/tokens";
+import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 
@@ -81,6 +82,7 @@ export function AlphaDeskDashboard({
   } | null>(null);
   const [corrLoading, setCorrLoading] = useState(false);
   const [loading, setLoading] = useState(!injectedKpis);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (injectedKpis) return;
@@ -119,7 +121,7 @@ export function AlphaDeskDashboard({
           });
         }
       } catch {
-        // graceful degradation
+        setError(true);
       }
       setLoading(false);
     })();
@@ -154,7 +156,7 @@ export function AlphaDeskDashboard({
   };
 
   return (
-    <div className="dash-main" style={{ padding: "24px", background: DARK_BG, overflowX: "hidden", color: TEXT_ON_DARK, fontFamily: FONT.sans }}>
+    <div className="dash-main" style={{ padding: "24px", background: "#0a0a0a", overflowX: "hidden", color: "#ffffff", fontFamily: FONT.sans, minHeight: "calc(100vh - 57px)", forcedColorAdjust: "none" as const }}>
       {/* ─── Pre-market brief banner ─── */}
       <div
         style={{
@@ -184,6 +186,15 @@ export function AlphaDeskDashboard({
       </div>
 
       {/* ─── KPI cards: latency / spike / ticker ─── */}
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: "16px", marginBottom: "24px" }}>
+          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #262626", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} dark /></div>
+          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #262626", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} dark /></div>
+          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #262626", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} dark /></div>
+        </div>
+      ) : error ? (
+        <div style={{ marginBottom: "24px" }}><ErrorState accent={ACCENT} message="Signal lost — reconnecting to market feed…" dark /></div>
+      ) : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: "16px", marginBottom: "24px" }}>
         <div style={{ padding: "20px", background: DARK_SURFACE, border: `1px solid ${DARK_BORDER}`, borderRadius: "8px", textAlign: "center" }}>
           <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: ACCENT, lineHeight: 1 }}>
@@ -210,6 +221,7 @@ export function AlphaDeskDashboard({
           </div>
         </div>
       </div>
+      )}
 
       {/* ─── Asset ticker feed — dense, terminal-style ─── */}
       <div style={{ marginBottom: "24px" }}>

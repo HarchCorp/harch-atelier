@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { C } from "../../components/tokens";
+import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 const SHADOW = { card: C.shadowSm, deep: C.shadowMd };
@@ -74,6 +75,7 @@ export function BrandMonitorDashboard({
   const [signals, setSignals] = useState<BrandMonitorSignal[]>(injectedSignals ?? []);
   const [sources, setSources] = useState<BrandMonitorSource[]>(injectedSources ?? []);
   const [loading, setLoading] = useState(!injectedKpis);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (injectedKpis) return;
@@ -95,7 +97,7 @@ export function BrandMonitorDashboard({
         setSignals(data.todaySignals ?? []);
         setSources(data.mainSources ?? []);
       } catch {
-        // graceful degradation — keep defaults
+        setError(true);
       }
       setLoading(false);
     })();
@@ -136,6 +138,15 @@ export function BrandMonitorDashboard({
       </div>
 
       {/* ─── Score widget ─── */}
+      {loading ? (
+        <div style={{ padding: "32px 24px", background: "#ffffff", border: "1px solid #e5e5e5", borderRadius: "8px", marginBottom: "24px" }}>
+          <SkeletonLoader accent={ACCENT} lines={2} height={48} />
+        </div>
+      ) : error ? (
+        <div style={{ marginBottom: "24px" }}>
+          <ErrorState accent={ACCENT} message="Can't reach reputation sources. Retrying…" />
+        </div>
+      ) : (
       <div
         style={{
           padding: "32px 24px",
@@ -178,6 +189,7 @@ export function BrandMonitorDashboard({
           </div>
         </div>
       </div>
+      )}
 
       {/* ─── Sentiment breakdown ─── */}
       <div style={{ marginBottom: "24px" }}>

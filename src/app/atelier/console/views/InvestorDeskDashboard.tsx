@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { C } from "../../components/tokens";
+import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 
@@ -83,6 +84,7 @@ export function InvestorDeskDashboard({
   const [holdings, setHoldings] = useState<InvestorHolding[]>(injectedHoldings ?? []);
   const [redFlags, setRedFlags] = useState<RedFlag[]>(injectedRedFlags ?? []);
   const [loading, setLoading] = useState(!injectedKpis);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (injectedKpis) return;
@@ -141,7 +143,7 @@ export function InvestorDeskDashboard({
         }
         setHoldings(fetchedHoldings);
       } catch {
-        // graceful degradation
+        setError(true);
       }
       setLoading(false);
     })();
@@ -184,6 +186,15 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ─── KPI cards: adverse media / UBO risk / M&A sentiment ─── */}
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "16px", marginBottom: "24px" }}>
+          <div style={{ padding: "20px", background: "#ffffff", border: "1px solid #e5e5e5", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} /></div>
+          <div style={{ padding: "20px", background: "#ffffff", border: "1px solid #e5e5e5", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} /></div>
+          <div style={{ padding: "20px", background: "#ffffff", border: "1px solid #e5e5e5", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} /></div>
+        </div>
+      ) : error ? (
+        <div style={{ marginBottom: "24px" }}><ErrorState accent={ACCENT} message="Can't reach risk screening data. Retrying…" /></div>
+      ) : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "16px", marginBottom: "24px" }}>
         <div style={{ padding: "20px", background: "#ffffff", border: `1px solid ${adverseColor}40`, borderRadius: "8px", textAlign: "center" }}>
           <div style={{ fontSize: "36px", fontWeight: 800, fontFamily: FONT.mono, color: adverseColor, lineHeight: 1 }}>
@@ -210,6 +221,7 @@ export function InvestorDeskDashboard({
           </div>
         </div>
       </div>
+      )}
 
       {/* ─── Holdings table — dense, tabular, Palantir vibe ─── */}
       <div style={{ marginBottom: "24px" }}>
