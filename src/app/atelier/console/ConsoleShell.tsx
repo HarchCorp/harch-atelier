@@ -454,7 +454,13 @@ const ACCOUNT_TIERS: AccountTier[] = [
 
 // Sidebar nav items — visual style matches DashboardMockup.
 // `id` is the route key (drives main area content switching).
-type NavId = "monitoring" | "sentiment" | "competitors" | "alerts" | "reports";
+// Nav items differ per accountType:
+//   enterprise: Monitoring / Sentiment / Competitors / Alerts / Reports
+//   trader:     Watchlist / Sentiment→Price / AI Alpha / Alerts / Pre-Market
+//   investor:   Portfolios / DD Dossiers / ESG / Risks / Reports
+type NavId = "monitoring" | "sentiment" | "competitors" | "alerts" | "reports"
+  | "watchlist" | "sentiment-price" | "ai-alpha" | "pre-market"
+  | "portfolios" | "dossiers" | "esg" | "risks";
 
 interface NavItem {
   id: NavId;
@@ -463,14 +469,51 @@ interface NavItem {
   badge?: string;
 }
 
-function buildNavItems(activeId: NavId): NavItem[] {
+function buildNavItems(activeId: NavId, accountType: "enterprise" | "trader" | "investor"): NavItem[] {
+  const iconColor = (id: NavId) => activeId === id ? C.sage : C.textMuted;
+
+  if (accountType === "trader") {
+    return [
+      { id: "watchlist",       label: "Watchlist",       icon: <IconMonitor size={16} color={iconColor("watchlist")} /> },
+      { id: "sentiment-price", label: "Sentiment→Price", icon: <IconChart size={16}  color={iconColor("sentiment-price")} /> },
+      { id: "ai-alpha",        label: "AI Alpha",        icon: <IconUsers size={16}  color={iconColor("ai-alpha")} /> },
+      { id: "alerts",          label: "Alerts",          icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
+      { id: "pre-market",      label: "Pre-Market",      icon: <IconReport size={16} color={iconColor("pre-market")} /> },
+    ];
+  }
+
+  if (accountType === "investor") {
+    return [
+      { id: "portfolios", label: "Portfolios", icon: <IconMonitor size={16} color={iconColor("portfolios")} /> },
+      { id: "dossiers",   label: "DD Dossiers", icon: <IconReport size={16} color={iconColor("dossiers")} /> },
+      { id: "esg",        label: "ESG Screen",  icon: <IconChart size={16}  color={iconColor("esg")} /> },
+      { id: "risks",      label: "Risk Map",    icon: <IconUsers size={16}  color={iconColor("risks")} /> },
+      { id: "alerts",     label: "Alerts",      icon: <BellIcon size={16}   color={iconColor("alerts")} /> },
+    ];
+  }
+
+  // enterprise (default)
   return [
-    { id: "monitoring", label: "Monitoring", icon: <IconMonitor size={16} color={activeId === "monitoring" ? C.sage : C.textMuted} /> },
-    { id: "sentiment",  label: "Sentiment",  icon: <IconChart size={16}  color={activeId === "sentiment"  ? C.sage : C.textMuted} /> },
-    { id: "competitors",label: "Competitors",icon: <IconUsers size={16}  color={activeId === "competitors"? C.sage : C.textMuted} /> },
-    { id: "alerts",     label: "Alerts",     icon: <BellIcon size={16}   color={activeId === "alerts"     ? C.sage : C.textMuted} />, badge: "3" },
-    { id: "reports",    label: "Reports",    icon: <IconReport size={16} color={activeId === "reports"    ? C.sage : C.textMuted} /> },
+    { id: "monitoring",  label: "Monitoring",  icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
+    { id: "sentiment",   label: "Sentiment",   icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
+    { id: "competitors", label: "Competitors", icon: <IconUsers size={16}  color={iconColor("competitors")} /> },
+    { id: "alerts",      label: "Alerts",      icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
+    { id: "reports",     label: "Reports",     icon: <IconReport size={16} color={iconColor("reports")} /> },
   ];
+}
+
+// Default nav order per accountType
+function defaultNavOrder(accountType: "enterprise" | "trader" | "investor"): NavId[] {
+  if (accountType === "trader") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
+  if (accountType === "investor") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
+  return ["monitoring", "sentiment", "competitors", "alerts", "reports"];
+}
+
+// Default active nav per accountType
+function defaultActiveNav(accountType: "enterprise" | "trader" | "investor"): NavId {
+  if (accountType === "trader") return "watchlist";
+  if (accountType === "investor") return "portfolios";
+  return "monitoring";
 }
 
 // Bell icon for the sidebar (without the red dot — keeps the muted look
@@ -709,13 +752,11 @@ export function ConsoleShell({ accountType = "enterprise" }: { accountType?: "en
   // Tier switcher (kept from previous ConsoleShell)
   const [tier, setTier] = useState<AccountType>(accountType === "investor" ? "investor" : accountType === "trader" ? "veille" : "decouverte");
 
-  // Active nav item (drives main-area content)
-  const [activeNav, setActiveNav] = useState<NavId>("monitoring");
+  // Active nav item (drives main-area content) — default depends on accountType
+  const [activeNav, setActiveNav] = useState<NavId>(defaultActiveNav(accountType));
 
-  // Sidebar order — supports drag&drop reordering
-  const [navOrder, setNavOrder] = useState<NavId[]>([
-    "monitoring", "sentiment", "competitors", "alerts", "reports",
-  ]);
+  // Sidebar order — supports drag&drop reordering, default per accountType
+  const [navOrder, setNavOrder] = useState<NavId[]>(defaultNavOrder(accountType));
   const [draggedId, setDraggedId] = useState<NavId | null>(null);
 
   // Mobile drawer
@@ -779,7 +820,7 @@ export function ConsoleShell({ accountType = "enterprise" }: { accountType?: "en
   };
 
   const orderedNavItems: NavItem[] = navOrder
-    .map((id) => buildNavItems(activeNav).find((n) => n.id === id))
+    .map((id) => buildNavItems(activeNav, accountType).find((n) => n.id === id))
     .filter((n): n is NavItem => n !== null);
 
   return (
@@ -1562,6 +1603,52 @@ function TraderView({ activeNav }: { activeNav: NavId }) {
     index: C.textMuted,
   };
 
+  // Nav-based content switching for trader
+  if (activeNav === "ai-alpha") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>AI Alpha Signals</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>AI Engine Visibility</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          Tracks how ChatGPT, Perplexity, Gemini, and Claude cite your watchlist assets on prompts like "best stock Morocco 2026".
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon — uses AIVisibility model on asset-queries.</span>
+        </div>
+      </div>
+    );
+  }
+  if (activeNav === "pre-market") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>Pre-Market Brief · 7:00 AM</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>Today's Market Weather</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          Daily pre-market brief delivered via WhatsApp at 7:00 AM Casa time.
+          <br />Top 3 sentiment movers, BAM/AMMC regulatory signals, divergence alerts, MASI opening forecast.
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon — WhatsApp Daily Digest integration.</span>
+        </div>
+      </div>
+    );
+  }
+  if (activeNav === "alerts") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>Double-Trigger Alerts</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>Alert Rules</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          Create rules that trigger only when 2 conditions are met simultaneously (e.g. sentiment -10pts AND price -3% in 24h).
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon — AlertRule model already in schema.</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: watchlist + correlation view
   return (
     <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
       {/* Header */}
@@ -1740,6 +1827,68 @@ function InvestorView({ activeNav }: { activeNav: NavId }) {
     return <div style={{ padding: "48px 32px", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading portfolios…</div>;
   }
 
+  // Nav-based content switching for investor
+  if (activeNav === "dossiers") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>Due Diligence Dossiers</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>DD Report Generator</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          Generate board-ready PDF dossiers (50-100 pages) for any tracked company.
+          <br />Includes: financial overview, media sentiment, AI visibility, risk assessment, ESG screening, geopolitical exposure.
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon — uses existing dossier-generator pipeline.</span>
+        </div>
+      </div>
+    );
+  }
+  if (activeNav === "esg") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>ESG & Controversy Screening</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>Sustainability Screening</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          SFDR Article 8/9 alignment, controversy detection, environmental risk scoring.
+          <br />Built on RiskAssessment data (Environmental + Regulatory categories).
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon.</span>
+        </div>
+      </div>
+    );
+  }
+  if (activeNav === "risks") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>Risk Map</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>Geopolitical + Operational Risks</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          Cross-portfolio risk heatmap: environmental, operational, regulatory, labor, reputational.
+          <br />Per-country exposure (Morocco, Senegal, Côte d'Ivoire, Tunisia, etc.).
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon.</span>
+        </div>
+      </div>
+    );
+  }
+  if (activeNav === "alerts") {
+    return (
+      <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>Portfolio Alerts</div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>Risk Threshold Alerts</h3>
+        </div>
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          Get notified when a portfolio company's reputation drops below threshold, when a high-risk event is detected, or when AI visibility changes.
+          <br /><span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>Coming soon.</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: portfolio overview
   return (
     <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
       {/* Header */}
