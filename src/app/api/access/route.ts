@@ -7,18 +7,15 @@ import { z } from "zod";
 //  POST /api/access?token=XXX
 //
 //  Public route — accepts an invitation.
-//  Creates a user account from the invitation data, then marks
-//  the invitation as used.
+//  Creates a user account from the invitation data + the password
+//  the user chose on the access page.
 //
-//  The invitation already contains: email, name, password (pre-set
-//  by admin), plan, role. The user just needs to confirm.
-//
-//  Optional body override: { password? } — user can change the
-//  pre-set password during onboarding.
+//  Body: { password } — REQUIRED (user creates their own password,
+//  no temporary password anymore)
 // ═══════════════════════════════════════════════════════════════
 
 const Schema = z.object({
-  password: z.string().min(8).max(100).optional(),
+  password: z.string().min(8).max(100),
 });
 
 export const dynamic = "force-dynamic";
@@ -64,35 +61,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Parse optional password override
+    // Parse REQUIRED password (user creates their own)
     const body = await req.json().catch(() => ({}));
     const parsed = Schema.safeParse(body);
-    const useCustomPassword = parsed.success && parsed.data.password;
-    const customPassword = useCustomPassword ? parsed.data.password! : null;
 
-    // If user provides custom password, hash it. Otherwise use the pre-hashed
-    // password from the invitation — but we can't recover plaintext from a hash.
-    // So: if no custom password, we re-hash a fresh random one and force the
-    // user to reset it on first login. For now, we require a custom password
-    // OR we use a fresh random one that admin must communicate separately.
-    // SIMPLER: if no custom password, generate a new random one and return it.
-    let finalPasswordHash: string;
-    let returnedPassword: string | null = null;
-
-    if (customPassword) {
-      finalPasswordHash = await bcrypt.hash(customPassword, 12);
-    } else {
-      // Use the invitation's pre-hashed password (user will sign in with the
-      // password admin set during invitation creation)
-      finalPasswordHash = invitation.passwordHash;
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Password is required (min 8 characters)", details: parsed.error.issues },
+        { status: 400 }
+      );
     }
+
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
     // Create the user
     const user = await prisma.user.create({
       data: {
         email: invitation.email,
         name: invitation.name,
-        passwordHash: finalPasswordHash,
+        passwordHash,
         role: invitation.role,
         plan: invitation.plan,
         accountType: invitation.accountType,
@@ -119,9 +106,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: "created",
       user,
-      message: customPassword
-        ? "Your account is ready. You can now sign in with your chosen password."
-        : "Your account is ready. Sign in with the password the admin sent you.",
+      message: "Your account is ready. You can now sign in.",
     });
   } catch (err) {
     console.error("Access acceptance error:", err);
@@ -154,6 +139,7 @@ export async function GET(req: NextRequest) {
         name: true,
         plan: true,
         role: true,
+        accountType: true,
         company: true,
         message: true,
         createdAt: true,

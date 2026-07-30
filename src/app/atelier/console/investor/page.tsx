@@ -14,11 +14,9 @@ export default async function InvestorConsolePage() {
   if (!session) {
     redirect("/atelier/login?callbackUrl=/atelier/console/investor");
   }
-  if (session.user?.role === "admin") {
-    redirect("/atelier/admin");
-  }
-  // STRICT GATE: only investor accounts can access this console
-  if (session.user?.accountType !== "investor") {
+  // Admin CAN visit this console (to see what investors see)
+  // But non-investor users are redirected to their own console
+  if (session.user?.role !== "admin" && session.user?.accountType !== "investor") {
     redirect(`/atelier/console/${session.user?.accountType || "enterprise"}`);
   }
 

@@ -12,8 +12,8 @@ import { C } from "../components/tokens";
 //  Flow:
 //  1. User clicks the link admin sent them
 //  2. This page loads, fetches invitation details via GET /api/access
-//  3. Shows: "Thanks for using us. Your access is ready."
-//  4. User can change the pre-set password (optional)
+//  3. Shows: "Welcome. Your access is ready."
+//  4. User MUST set their own password (no temporary password)
 //  5. User clicks "Activate my account" → POST /api/access
 //  6. Account is created → user is signed in → redirected to Console
 // ═══════════════════════════════════════════════════════════════
@@ -24,6 +24,7 @@ interface InvitationData {
   name: string;
   plan: string;
   role: string;
+  accountType: string;
   company: string | null;
   message: string | null;
   createdAt: string;
@@ -36,7 +37,8 @@ export function AccessPage({ token }: { token: string }) {
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [activating, setActivating] = useState(false);
 
   useEffect(() => {
@@ -57,24 +59,24 @@ export function AccessPage({ token }: { token: string }) {
   }, [token]);
 
   const handleActivate = async () => {
-    setActivating(true);
     setError(null);
 
-    try {
-      const body: { password?: string } = {};
-      if (newPassword.trim()) {
-        if (newPassword.length < 8) {
-          setError("Password must be at least 8 characters.");
-          setActivating(false);
-          return;
-        }
-        body.password = newPassword;
-      }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
 
+    setActivating(true);
+
+    try {
       const res = await fetch(`/api/access?token=${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ password }),
       });
 
       const data = await res.json();
@@ -85,19 +87,20 @@ export function AccessPage({ token }: { token: string }) {
         return;
       }
 
-      // Account created — now sign in
-      // The invitation had a pre-set password; if user changed it, use the new one
-      // Otherwise we need to use the pre-set one (but we don't have it client-side)
-      // So we redirect to admin login... no, that's wrong.
-      // Better: auto sign-in using the password the user set (or the pre-set one if unchanged)
+      // Account created — now sign in with the password the user just set
+      const result = await signIn("credentials", {
+        email: invitation?.email,
+        password,
+        redirect: false,
+        callbackUrl: "/atelier/console",
+      });
 
-      // Actually, we need a different approach. Let me just redirect to a simple
-      // "account ready" page and ask them to sign in via the admin login URL.
-      // No wait — admin login is admin-only. Regular users need a login page too.
-
-      // For now: show success, redirect to /atelier/login (which we're keeping
-      // as a minimal sign-in form for invited users only)
-      window.location.href = "/atelier/login?activated=true";
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        // Fallback: redirect to login
+        window.location.href = "/atelier/login?activated=true";
+      }
     } catch {
       setError("Network error");
       setActivating(false);
@@ -112,7 +115,7 @@ export function AccessPage({ token }: { token: string }) {
     );
   }
 
-  if (error) {
+  if (error && !invitation) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px", fontFamily: C.fontSans }}>
         <div style={{ maxWidth: "480px", textAlign: "center" }}>
@@ -148,6 +151,17 @@ export function AccessPage({ token }: { token: string }) {
     );
   }
 
+  const accountTypeLabel: Record<string, string> = {
+    enterprise: "Enterprise",
+    trader: "Trader",
+    investor: "Investor",
+  };
+  const planLabel: Record<string, string> = {
+    decouverte: "Discovery — 5K MAD/month",
+    veille: "Watch — 15K MAD/month",
+    investor: "Investor — 50K+ MAD/month",
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: C.fontSans }}>
       <header style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}` }}>
@@ -165,7 +179,7 @@ export function AccessPage({ token }: { token: string }) {
             Welcome, {invitation?.name?.split(" ")[0]}.
           </h1>
           <p style={{ fontSize: "15px", color: C.textBody, lineHeight: 1.6, marginBottom: "32px" }}>
-            Thank you for joining HarchIQ Console. Your access is ready — just confirm below to activate your account.
+            Thank you for joining HarchIQ Console. Create your password to activate your account.
           </p>
 
           {/* Pre-filled info */}
@@ -181,8 +195,12 @@ export function AccessPage({ token }: { token: string }) {
                 <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{invitation?.email}</div>
               </div>
               <div>
+                <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "4px" }}>Account type</div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: C.accent }}>{invitation ? accountTypeLabel[invitation.accountType] || invitation.accountType : "—"}</div>
+              </div>
+              <div>
                 <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "4px" }}>Plan</div>
-                <div style={{ fontSize: "14px", fontWeight: 600, color: C.accent, textTransform: "capitalize" }}>{invitation?.plan}</div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{invitation ? planLabel[invitation.plan] || invitation.plan : "—"}</div>
               </div>
               {invitation?.company && (
                 <div>
@@ -193,21 +211,34 @@ export function AccessPage({ token }: { token: string }) {
             </div>
           </div>
 
-          {/* Optional: set custom password */}
-          <div style={{ marginBottom: "24px" }}>
+          {/* Password fields — user creates their own */}
+          <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
-              Set your password (optional)
+              Create your password *
             </label>
             <input
               type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Leave empty to use the pre-set password"
-              style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box", outline: "none" }}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimum 8 characters"
+              required
+              style={inputStyle}
+              autoFocus
             />
-            <div style={{ marginTop: "6px", fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono }}>
-              Min 8 characters. If left empty, we&apos;ll use the password the admin set for you.
-            </div>
+          </div>
+
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
+              Confirm your password *
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
+              required
+              style={inputStyle}
+            />
           </div>
 
           {error && (
@@ -218,13 +249,31 @@ export function AccessPage({ token }: { token: string }) {
 
           <button
             onClick={handleActivate}
-            disabled={activating}
-            style={{ width: "100%", padding: "14px 20px", background: activating ? C.border : C.cta, border: "none", color: "#ffffff", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600, cursor: activating ? "not-allowed" : "pointer", borderRadius: "4px" }}
+            disabled={activating || !password || !confirmPassword}
+            style={{ width: "100%", padding: "14px 20px", background: activating || !password || !confirmPassword ? C.border : C.cta, border: "none", color: "#ffffff", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600, cursor: activating || !password || !confirmPassword ? "not-allowed" : "pointer", borderRadius: "4px" }}
           >
             {activating ? "Activating..." : "Activate my account →"}
           </button>
+
+          <div style={{ marginTop: "16px", fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, textAlign: "center", lineHeight: 1.5 }}>
+            By activating your account, you agree to use HarchIQ Console
+            <br />responsibly and keep your credentials confidential.
+          </div>
         </div>
       </main>
     </div>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 14px",
+  border: "1px solid #e5e5e5",
+  borderRadius: "4px",
+  fontFamily: "'Inter', system-ui, sans-serif",
+  fontSize: "14px",
+  color: "#0a0a0a",
+  background: "#ffffff",
+  boxSizing: "border-box",
+  outline: "none",
+};

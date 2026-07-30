@@ -40,7 +40,8 @@ export async function GET(
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user?.accountType !== "trader") {
+  // Admin can access any API (to preview what traders see)
+  if (session.user?.accountType !== "trader" && session.user?.role !== "admin") {
     return NextResponse.json(
       { error: "Forbidden — trader account required" },
       { status: 403 }

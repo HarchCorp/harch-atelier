@@ -18,7 +18,8 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user?.accountType !== "investor") {
+  // Admin can access any API (to preview what investors see)
+  if (session.user?.accountType !== "investor" && session.user?.role !== "admin") {
     return NextResponse.json(
       { error: "Forbidden — investor account required" },
       { status: 403 }

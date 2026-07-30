@@ -14,11 +14,9 @@ export default async function TraderConsolePage() {
   if (!session) {
     redirect("/atelier/login?callbackUrl=/atelier/console/trader");
   }
-  if (session.user?.role === "admin") {
-    redirect("/atelier/admin");
-  }
-  // STRICT GATE: only trader accounts can access this console
-  if (session.user?.accountType !== "trader") {
+  // Admin CAN visit this console (to see what traders see)
+  // But non-trader users are redirected to their own console
+  if (session.user?.role !== "admin" && session.user?.accountType !== "trader") {
     redirect(`/atelier/console/${session.user?.accountType || "enterprise"}`);
   }
 

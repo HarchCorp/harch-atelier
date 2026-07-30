@@ -14,13 +14,9 @@ export default async function EnterpriseConsolePage() {
   if (!session) {
     redirect("/atelier/login?callbackUrl=/atelier/console/enterprise");
   }
-  // STRICT GATE: only enterprise accounts can access this console
-  // Admins are redirected to their own admin dashboard
-  if (session.user?.role === "admin") {
-    redirect("/atelier/admin");
-  }
-  if (session.user?.accountType !== "enterprise") {
-    // Cross-access attempt — redirect to their own console
+  // Admin CAN visit this console (to see what users see)
+  // But non-enterprise users are redirected to their own console
+  if (session.user?.role !== "admin" && session.user?.accountType !== "enterprise") {
     redirect(`/atelier/console/${session.user?.accountType || "enterprise"}`);
   }
 

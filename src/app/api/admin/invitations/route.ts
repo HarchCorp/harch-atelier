@@ -104,17 +104,19 @@ export async function POST(req: NextRequest) {
     }
 
     const token = generateToken();
-    const plainPassword = generatePassword();
-    const passwordHash = await bcrypt.hash(plainPassword, 12);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7-day expiry
+
+    // NO temporary password — user creates their own on the access page
+    // We store a placeholder hash (will be replaced when user activates)
+    const placeholderHash = await bcrypt.hash(generatePassword(), 12);
 
     const invitation = await prisma.invitation.create({
       data: {
         token,
         email,
         name,
-        passwordHash,  // STORED HASHED — never plaintext
+        passwordHash: placeholderHash,  // placeholder — replaced on activation
         accountType: finalAccountType,
         plan: plan || "decouverte",
         role: role || "user",
@@ -148,7 +150,6 @@ export async function POST(req: NextRequest) {
         url: accessUrl,
         email,
         name,
-        password: plainPassword,  // returned ONCE to admin so they can send it
         accountType: finalAccountType,
         plan: invitation.plan,
         role: invitation.role,

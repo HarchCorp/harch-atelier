@@ -10,10 +10,14 @@ import { C } from "../components/tokens";
 //  1. Requests — people who filled the public form
 //  2. Invitations — links you've created (active + used)
 //
-//  From a request, admin can click "Create invitation" which:
-//  - Auto-generates a secure password
-//  - Creates a unique access URL
-//  - Shows both so admin can copy + send to the user
+//  Create invitation modal lets admin choose:
+//  - Email, Name, Company
+//  - Account type (trader / enterprise / investor)
+//  - Plan (decouverte / veille / investor)
+//  - Payment status (auto / 1mo / 3mo / 12mo paid)
+//
+//  NO temporary password — user creates their own when they open
+//  the invitation link.
 // ═══════════════════════════════════════════════════════════════
 
 interface AccessRequest {
@@ -33,6 +37,7 @@ interface Invitation {
   token: string;
   email: string;
   name: string;
+  accountType: string;
   plan: string;
   role: string;
   company: string | null;
@@ -48,7 +53,7 @@ interface CreatedInvitation {
   url: string;
   email: string;
   name: string;
-  password: string;
+  accountType: string;
   plan: string;
   role: string;
   expiresAt: string;
@@ -59,9 +64,20 @@ export function AdminDashboard() {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Form state
+  const [formEmail, setFormEmail] = useState("");
+  const [formName, setFormName] = useState("");
+  const [formCompany, setFormCompany] = useState("");
+  const [formAccountType, setFormAccountType] = useState("enterprise");
+  const [formPlan, setFormPlan] = useState("decouverte");
+  const [formPayment, setFormPayment] = useState("auto");
+  const [formMessage, setFormMessage] = useState("");
   const [creating, setCreating] = useState(false);
-  const [copied, setCopied] = useState<"url" | "password" | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -88,56 +104,75 @@ export function AdminDashboard() {
     fetchData();
   }, [fetchData]);
 
-  const createInvitation = async (request?: AccessRequest) => {
+  const openCreateModal = (request?: AccessRequest) => {
+    if (request) {
+      setFormEmail(request.email);
+      setFormName(request.name);
+      setFormCompany(request.company || "");
+      setFormAccountType("enterprise");
+      setFormPlan("veille");
+      setFormPayment("auto");
+      setFormMessage("");
+      setFormError(null);
+      // Store requestId to link after creation
+      (openCreateModal as unknown as { _requestId?: string })._requestId = request.id;
+    } else {
+      setFormEmail("");
+      setFormName("");
+      setFormCompany("");
+      setFormAccountType("enterprise");
+      setFormPlan("decouverte");
+      setFormPayment("auto");
+      setFormMessage("");
+      setFormError(null);
+      (openCreateModal as unknown as { _requestId?: string })._requestId = undefined;
+    }
+    setShowCreateModal(true);
+  };
+
+  const handleCreate = async () => {
+    setFormError(null);
+    if (!formEmail.trim() || !formName.trim()) {
+      setFormError("Email and name are required.");
+      return;
+    }
+
     setCreating(true);
     try {
-      const body = request
-        ? {
-            email: request.email,
-            name: request.name,
-            company: request.company || undefined,
-            requestId: request.id,
-            plan: "veille", // default plan
-          }
-        : {
-            email: "",
-            name: "",
-            plan: "decouverte",
-          };
-
-      // If no request, prompt for email + name
-      if (!request) {
-        const email = prompt("Email:");
-        if (!email) { setCreating(false); return; }
-        const name = prompt("Full name:");
-        if (!name) { setCreating(false); return; }
-        body.email = email;
-        body.name = name;
-      }
-
+      const requestId = (openCreateModal as unknown as { _requestId?: string })._requestId;
       const res = await fetch("/api/admin/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          email: formEmail,
+          name: formName,
+          company: formCompany || undefined,
+          accountType: formAccountType,
+          plan: formPlan,
+          message: formMessage || undefined,
+          requestId: requestId,
+          paymentStatus: formPayment,  // stored in message for now (TODO: add field)
+        }),
       });
 
       const data = await res.json();
       if (res.ok && data.invitation) {
         setCreatedInvitation(data.invitation);
-        fetchData(); // refresh lists
+        setShowCreateModal(false);
+        fetchData();
       } else {
-        alert(data.error || "Failed to create invitation");
+        setFormError(data.error || "Failed to create invitation");
       }
     } catch {
-      alert("Network error");
+      setFormError("Network error");
     }
     setCreating(false);
   };
 
-  const copyToClipboard = (text: string, type: "url" | "password") => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(type);
-    setTimeout(() => setCopied(null), 2000);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const pendingRequests = requests.filter((r) => r.status === "pending");
@@ -153,19 +188,17 @@ export function AdminDashboard() {
           </span>
           <a href="/atelier/console" style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textDecoration: "none" }}>→ Console</a>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button onClick={() => createInvitation()} disabled={creating} style={{ padding: "8px 14px", background: C.cta, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: creating ? "not-allowed" : "pointer" }}>
-            + New invitation
-          </button>
-        </div>
+        <button onClick={() => openCreateModal()} style={{ padding: "8px 14px", background: C.cta, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+          + New invitation
+        </button>
       </header>
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "0", borderBottom: `1px solid ${C.border}`, padding: "0 24px" }}>
-        <button onClick={() => setTab("requests")} style={{ padding: "12px 16px", background: "transparent", border: "none", borderBottom: tab === "requests" ? `2px solid ${C.accent}` : "2px solid transparent", color: tab === "requests" ? C.text : C.textMuted, fontFamily: C.fontSans, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+        <button onClick={() => setTab("requests")} style={tabStyle(tab === "requests")}>
           Requests {pendingRequests.length > 0 && <span style={{ marginLeft: "6px", fontSize: "10px", fontFamily: C.fontMono, padding: "2px 6px", borderRadius: "8px", background: C.danger, color: "#fff" }}>{pendingRequests.length}</span>}
         </button>
-        <button onClick={() => setTab("invitations")} style={{ padding: "12px 16px", background: "transparent", border: "none", borderBottom: tab === "invitations" ? `2px solid ${C.accent}` : "2px solid transparent", color: tab === "invitations" ? C.text : C.textMuted, fontFamily: C.fontSans, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+        <button onClick={() => setTab("invitations")} style={tabStyle(tab === "invitations")}>
           Invitations ({invitations.length})
         </button>
       </div>
@@ -185,7 +218,7 @@ export function AdminDashboard() {
                     <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
                       Pending ({pendingRequests.length})
                     </div>
-                    {pendingRequests.map((r) => <RequestCard key={r.id} request={r} onAccept={() => createInvitation(r)} />)}
+                    {pendingRequests.map((r) => <RequestCard key={r.id} request={r} onAccept={() => openCreateModal(r)} />)}
                   </div>
                 )}
                 {acceptedRequests.length > 0 && (
@@ -193,7 +226,7 @@ export function AdminDashboard() {
                     <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
                       Accepted ({acceptedRequests.length})
                     </div>
-                    {acceptedRequests.map((r) => <RequestCard key={r.id} request={r} onAccept={() => createInvitation(r)} />)}
+                    {acceptedRequests.map((r) => <RequestCard key={r.id} request={r} onAccept={() => openCreateModal(r)} />)}
                   </div>
                 )}
               </>
@@ -212,39 +245,142 @@ export function AdminDashboard() {
         )}
       </main>
 
-      {/* Created invitation modal */}
+      {/* Create invitation modal */}
+      {showCreateModal && (
+        <div onClick={() => setShowCreateModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "32px", maxWidth: "560px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
+              New invitation
+            </div>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: "0 0 24px" }}>
+              Create access for a new user
+            </h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Email */}
+              <div>
+                <label style={labelStyle}>Email *</label>
+                <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="user@company.com" style={inputStyle} />
+              </div>
+
+              {/* Name */}
+              <div>
+                <label style={labelStyle}>Full name *</label>
+                <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Jane Doe" style={inputStyle} />
+              </div>
+
+              {/* Company */}
+              <div>
+                <label style={labelStyle}>Company</label>
+                <input type="text" value={formCompany} onChange={(e) => setFormCompany(e.target.value)} placeholder="Bank of Africa" style={inputStyle} />
+              </div>
+
+              {/* Account type */}
+              <div>
+                <label style={labelStyle}>Account type *</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "8px" }}>
+                  {[
+                    { value: "enterprise", label: "Enterprise", desc: "Monitor own reputation" },
+                    { value: "trader", label: "Trader", desc: "Monitor assets/markets" },
+                    { value: "investor", label: "Investor", desc: "DD + portfolio" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFormAccountType(opt.value)}
+                      style={{
+                        padding: "12px",
+                        background: formAccountType === opt.value ? C.bgSubtle : "transparent",
+                        border: `1px solid ${formAccountType === opt.value ? C.accent : C.border}`,
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: formAccountType === opt.value ? C.accent : C.text }}>{opt.label}</div>
+                      <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "4px" }}>{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Plan */}
+              <div>
+                <label style={labelStyle}>Subscription plan *</label>
+                <select value={formPlan} onChange={(e) => setFormPlan(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="decouverte">Discovery — 5K MAD/month</option>
+                  <option value="veille">Watch — 15K MAD/month</option>
+                  <option value="investor">Investor — 50K+ MAD/month</option>
+                </select>
+              </div>
+
+              {/* Payment */}
+              <div>
+                <label style={labelStyle}>Payment status</label>
+                <select value={formPayment} onChange={(e) => setFormPayment(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="auto">Auto-renew (monthly)</option>
+                  <option value="1mo">1 month paid</option>
+                  <option value="3mo">3 months paid</option>
+                  <option value="12mo">12 months paid</option>
+                  <option value="trial">Free trial (14 days)</option>
+                </select>
+              </div>
+
+              {/* Message */}
+              <div>
+                <label style={labelStyle}>Personal message (optional)</label>
+                <textarea value={formMessage} onChange={(e) => setFormMessage(e.target.value)} placeholder="Welcome to HarchIQ..." rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+              </div>
+
+              {formError && (
+                <div style={{ padding: "12px 14px", background: C.dangerBg, border: `1px solid ${C.danger}30`, borderRadius: "4px", fontSize: "13px", color: C.danger }}>
+                  {formError}
+                </div>
+              )}
+
+              <div style={{ padding: "12px 14px", background: C.bgSubtle, borderRadius: "4px", fontSize: "12px", color: C.textBody, lineHeight: 1.5 }}>
+                <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Note:</strong> The user will create their own password when they open the invitation link. No temporary password is generated.
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                <button onClick={() => setShowCreateModal(false)} style={{ padding: "10px 16px", background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, fontFamily: C.fontSans, fontSize: "13px", fontWeight: 500, cursor: "pointer", borderRadius: "4px" }}>
+                  Cancel
+                </button>
+                <button onClick={handleCreate} disabled={creating} style={{ padding: "10px 16px", background: creating ? C.border : C.cta, color: "#fff", border: "none", fontFamily: C.fontSans, fontSize: "13px", fontWeight: 600, cursor: creating ? "not-allowed" : "pointer", borderRadius: "4px" }}>
+                  {creating ? "Creating..." : "Create invitation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Created invitation modal — shows URL only (no password) */}
       {createdInvitation && (
         <div onClick={() => setCreatedInvitation(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "32px", maxWidth: "560px", width: "100%" }}>
             <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.cta, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
               Invitation created
             </div>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: "0 0 24px" }}>
-              Send this to {createdInvitation.name}
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: "0 0 8px" }}>
+              Send this link to {createdInvitation.name}
             </h2>
+            <p style={{ fontSize: "13px", color: C.textBody, marginBottom: "24px", lineHeight: 1.5 }}>
+              The user will open this link, see their account info, and create their own password. No temporary password needed.
+            </p>
 
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Access link</label>
+              <label style={labelStyle}>Access link</label>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input readOnly value={createdInvitation.url} style={{ flex: 1, padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontMono, fontSize: "12px", color: C.text, background: C.bgSubtle }} />
-                <button onClick={() => copyToClipboard(createdInvitation.url, "url")} style={{ padding: "10px 14px", background: C.text, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
-                  {copied === "url" ? "Copied" : "Copy"}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Temporary password</label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <input readOnly value={createdInvitation.password} style={{ flex: 1, padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontMono, fontSize: "14px", fontWeight: 700, color: C.text, background: C.bgSubtle }} />
-                <button onClick={() => copyToClipboard(createdInvitation.password, "password")} style={{ padding: "10px 14px", background: C.text, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
-                  {copied === "password" ? "Copied" : "Copy"}
+                <button onClick={() => copyToClipboard(createdInvitation.url)} style={{ padding: "10px 14px", background: C.text, color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+                  {copied ? "Copied" : "Copy"}
                 </button>
               </div>
             </div>
 
             <div style={{ padding: "12px 14px", background: C.bgSubtle, borderRadius: "4px", fontSize: "12px", color: C.textBody, lineHeight: 1.5, marginBottom: "24px" }}>
-              <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Plan:</strong> {createdInvitation.plan} · <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Expires:</strong> {new Date(createdInvitation.expiresAt).toLocaleDateString("en-US")}
+              <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Account:</strong> {createdInvitation.accountType} · <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Plan:</strong> {createdInvitation.plan} · <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Expires:</strong> {new Date(createdInvitation.expiresAt).toLocaleDateString("en-US")}
             </div>
 
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
@@ -257,6 +393,43 @@ export function AdminDashboard() {
       )}
     </div>
   );
+}
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "11px",
+  fontFamily: "'Space Mono', monospace",
+  color: "#737373",
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  marginBottom: "6px",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  border: "1px solid #e5e5e5",
+  borderRadius: "4px",
+  fontFamily: "'Inter', system-ui, sans-serif",
+  fontSize: "14px",
+  color: "#0a0a0a",
+  background: "#ffffff",
+  boxSizing: "border-box",
+  outline: "none",
+};
+
+function tabStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: "12px 16px",
+    background: "transparent",
+    border: "none",
+    borderBottom: active ? "2px solid #78716c" : "2px solid transparent",
+    color: active ? "#0a0a0a" : "#737373",
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: "13px",
+    fontWeight: 600,
+    cursor: "pointer",
+  };
 }
 
 function RequestCard({ request, onAccept }: { request: AccessRequest; onAccept: () => void }) {
@@ -305,7 +478,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
           <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{invitation.name}</div>
           <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono }}>{invitation.email}</div>
           <div style={{ fontSize: "11px", color: C.textBody, fontFamily: C.fontMono, marginTop: "4px" }}>
-            Plan: {invitation.plan} · Created: {new Date(invitation.createdAt).toLocaleDateString("en-US")}
+            Type: {invitation.accountType} · Plan: {invitation.plan} · Created: {new Date(invitation.createdAt).toLocaleDateString("en-US")}
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
