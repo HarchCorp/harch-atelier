@@ -540,9 +540,21 @@ function Content({ section, tier }: { section: Section; tier: AccountType }) {
 }
 
 function MeteoSection({ tier }: { tier: AccountType }) {
-  const meteo = {
+  // Real data from /api/console/weather (with mock fallback)
+  const [meteo, setMeteo] = useState<{
+    score: number;
+    trend: "up" | "down" | "stable";
+    trendValue: string;
+    sky: string;
+    skyDescription: string;
+    breakdown: { positive: number; neutral: number; negative: number };
+    sources: { name: string; articles: number; sentiment: string }[];
+    todaySignals: { time: string; source: string; title: string; weight: "strong" | "medium" | "low" }[];
+    companyName?: string;
+    loading: boolean;
+  }>({
     score: 67,
-    trend: "up" as "up" | "down" | "stable",
+    trend: "up",
     trendValue: "+2 pts vs last week",
     sky: "Partly cloudy",
     skyDescription: "Overall positive sentiment, with a few areas of attention.",
@@ -558,7 +570,46 @@ function MeteoSection({ tier }: { tier: AccountType }) {
       { time: "09:32", source: "Twitter/X", title: "Influencer mention (12K followers)", weight: "medium" },
       { time: "14:15", source: "TelQuel", title: "Question on your ESG governance", weight: "low" },
     ],
-  };
+    loading: true,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/console/weather");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data || data.error) return;
+
+        setMeteo({
+          score: data.score ?? 50,
+          trend: data.trend ?? "stable",
+          trendValue: data.trendValue ?? "",
+          sky: data.sky ?? "Unknown",
+          skyDescription: data.skyDescription ?? "",
+          breakdown: data.breakdown ?? { positive: 0, neutral: 0, negative: 0 },
+          sources: (data.mainSources ?? []).map((s: { name: string; articles: number; sentiment: string }) => ({
+            name: s.name,
+            articles: s.articles,
+            sentiment: s.sentiment,
+          })),
+          todaySignals: (data.todaySignals ?? []).map((s: { time: string; source: string; title: string; weight: "strong" | "medium" | "low" }) => ({
+            time: s.time,
+            source: s.source,
+            title: s.title,
+            weight: s.weight,
+          })),
+          companyName: data.company?.name,
+          loading: false,
+        });
+      } catch {
+        // keep mock data, set loading false
+        if (!cancelled) setMeteo((prev) => ({ ...prev, loading: false }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const skyColor = meteo.score >= 70 ? C.cta : meteo.score >= 50 ? C.warning : C.danger;
 
@@ -806,14 +857,39 @@ const MOCK_NEIGHBORS: Neighbor[] = [
 ];
 
 function NeighborsSection({ tier }: { tier: AccountType }) {
-  const [selectedNeighbor, setSelectedNeighbor] = useState<string | null>(MOCK_NEIGHBORS[0].id);
+  const [neighbors, setNeighbors] = useState<Neighbor[]>(MOCK_NEIGHBORS);
+  const [yourScore, setYourScore] = useState<number>(67);
+  const [loading, setLoading] = useState(true);
+  const [selectedNeighbor, setSelectedNeighbor] = useState<string | null>(null);
   const [filterRank, setFilterRank] = useState<1 | 2 | 3 | null>(null);
 
-  const filteredNeighbors = filterRank
-    ? MOCK_NEIGHBORS.filter((n) => n.rank === filterRank)
-    : MOCK_NEIGHBORS;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/console/neighbors");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data || data.error) return;
 
-  const selected = MOCK_NEIGHBORS.find((n) => n.id === selectedNeighbor);
+        if (data.neighbors && data.neighbors.length > 0) {
+          setNeighbors(data.neighbors);
+          setYourScore(data.company?.yourScore ?? 67);
+          setSelectedNeighbor(data.neighbors[0].id);
+        }
+        if (!cancelled) setLoading(false);
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filteredNeighbors = filterRank
+    ? neighbors.filter((n) => n.rank === filterRank)
+    : neighbors;
+
+  const selected = neighbors.find((n) => n.id === selectedNeighbor) ?? neighbors[0];
 
   const rankLabel = (rank: 1 | 2 | 3) => {
     if (rank === 1) return "Rank 1 — Direct";
