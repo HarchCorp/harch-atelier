@@ -46,9 +46,11 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
+  // Explicit secret (env var must be set, otherwise NextAuth silently fails)
+  secret: process.env.NEXTAUTH_SECRET,
   // NextAuth v4 PagesOptions only exposes `signIn` (no `signUp`).
   // The /register page is linked directly from the login form.
-  pages: { signIn: "/login" },
+  pages: { signIn: "/atelier/login" },
   providers: [
     CredentialsProvider({
       name: "credentials",

@@ -45,9 +45,9 @@ interface AccountTier {
 }
 
 const ACCOUNT_TIERS: AccountTier[] = [
-  { id: "decouverte", label: "Découverte", tagline: "Veille essentielle", price: "5K MAD / mois" },
-  { id: "veille", label: "Veille", tagline: "Avec voisins", price: "15K MAD / mois" },
-  { id: "investor", label: "Investor", tagline: "Accès complet", price: "50K+ MAD / mois" },
+  { id: "decouverte", label: "Discovery", tagline: "Essential monitoring", price: "5K MAD / month" },
+  { id: "veille", label: "Watch", tagline: "With neighbors", price: "15K MAD / month" },
+  { id: "investor", label: "Investor", tagline: "Full access", price: "50K+ MAD / month" },
 ];
 
 // ─── NATIVE SECTIONS (menu items) ────────────────────────────────
@@ -62,16 +62,16 @@ interface Section {
 }
 
 const NATIVE_SECTIONS: Section[] = [
-  { id: "meteo", label: "Météo", description: "Bulletin du jour — sentiment global", tiers: ["decouverte", "veille", "investor"], count: 67, countLabel: "/100", isNative: true },
-  { id: "signaux", label: "Signaux", description: "HarchIQ Signal — antenne activée", tiers: ["decouverte", "veille", "investor"], count: 3, countLabel: "nouveaux", isNative: true },
-  { id: "voisins", label: "Voisins", description: "Concurrents directs suivis", tiers: ["veille", "investor"], count: 5, countLabel: "suivis", isNative: true },
-  { id: "presence", label: "Présence", description: "Votre place dans la conversation", tiers: ["decouverte", "veille", "investor"], count: 23, countLabel: "% secteur", isNative: true },
-  { id: "empreinte-ia", label: "Empreinte IA", description: "Votre visibilité sur les moteurs IA", tiers: ["decouverte", "veille", "investor"], count: 4, countLabel: "/8 moteurs", isNative: true },
-  { id: "ecoute", label: "Écoute", description: "Articles collectés (30+ sources)", tiers: ["decouverte", "veille", "investor"], count: 2546, countLabel: "articles", isNative: true },
-  { id: "pression", label: "Pression", description: "Niveau de pression médiatique", tiers: ["decouverte", "veille", "investor"], count: 2, countLabel: "/5", isNative: true },
-  { id: "sujets", label: "Sujets", description: "Thèmes émergents détectés", tiers: ["decouverte", "veille", "investor"], count: 12, countLabel: "émergents", isNative: true },
-  { id: "calendrier", label: "Calendrier", description: "Événements à venir (AG, earnings)", tiers: ["decouverte", "veille", "investor"], count: 3, countLabel: "événements", isNative: true },
-  { id: "rapports", label: "Rapports", description: "PDF board-ready mensuels", tiers: ["decouverte", "veille", "investor"], count: 1, countLabel: "prêt", isNative: true },
+  { id: "meteo", label: "Weather", description: "Today's bulletin — overall sentiment", tiers: ["decouverte", "veille", "investor"], count: 67, countLabel: "/100", isNative: true },
+  { id: "signaux", label: "Signals", description: "HarchIQ Signal — antenna active", tiers: ["decouverte", "veille", "investor"], count: 3, countLabel: "new", isNative: true },
+  { id: "voisins", label: "Neighbors", description: "Direct competitors tracked", tiers: ["veille", "investor"], count: 5, countLabel: "tracked", isNative: true },
+  { id: "presence", label: "Presence", description: "Your share of the conversation", tiers: ["decouverte", "veille", "investor"], count: 23, countLabel: "% sector", isNative: true },
+  { id: "empreinte-ia", label: "AI Footprint", description: "Your visibility on AI engines", tiers: ["decouverte", "veille", "investor"], count: 4, countLabel: "/8 engines", isNative: true },
+  { id: "ecoute", label: "Listening", description: "Articles collected (30+ sources)", tiers: ["decouverte", "veille", "investor"], count: 2546, countLabel: "articles", isNative: true },
+  { id: "pression", label: "Pressure", description: "Media pressure level", tiers: ["decouverte", "veille", "investor"], count: 2, countLabel: "/5", isNative: true },
+  { id: "sujets", label: "Topics", description: "Emerging themes detected", tiers: ["decouverte", "veille", "investor"], count: 12, countLabel: "emerging", isNative: true },
+  { id: "calendrier", label: "Calendar", description: "Upcoming events (AGM, earnings)", tiers: ["decouverte", "veille", "investor"], count: 3, countLabel: "events", isNative: true },
+  { id: "rapports", label: "Reports", description: "Monthly board-ready PDFs", tiers: ["decouverte", "veille", "investor"], count: 1, countLabel: "ready", isNative: true },
 ];
 
 interface CustomSection {
@@ -81,7 +81,7 @@ interface CustomSection {
 }
 
 const DEFAULT_CUSTOM_SECTIONS: CustomSection[] = [
-  { id: "custom-1", label: "Mon CEO", query: "Amine Harch El Korane" },
+  { id: "custom-1", label: "My CEO", query: "Amine Harch El Korane" },
 ];
 
 const STORAGE_KEY = "harchiq-console-layout-v1";
@@ -140,7 +140,7 @@ export function ConsoleShell() {
       const native = NATIVE_SECTIONS.find((s) => s.id === id);
       if (native) return native;
       const custom = layout.customSections.find((s) => s.id === id);
-      if (custom) return { id: custom.id, label: custom.label, description: `Recherche : "${custom.query}"`, tiers: [layout.tier], isNative: false };
+      if (custom) return { id: custom.id, label: custom.label, description: `Search: "${custom.query}"`, tiers: [layout.tier], isNative: false };
       return null;
     })
     .filter((s): s is Section => s !== null);
@@ -225,7 +225,7 @@ export function ConsoleShell() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, padding: "48px 16px", fontFamily: C.fontSans }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
-          Chargement de la Console HarchIQ…
+          Loading HarchIQ Console…
         </div>
       </div>
     );
@@ -443,8 +443,8 @@ function SideMenu(props: SideMenuProps) {
                     </div>
                   )}
                   <div className="section-actions" style={{ display: "flex", flexDirection: "column", gap: "2px", opacity: 0, transition: "opacity 0.15s" }}>
-                    <button onClick={(e) => { e.stopPropagation(); props.onMoveUp(section.id); }} style={{ padding: "1px 4px", background: "transparent", border: `1px solid ${C.border}`, color: C.textMuted, fontSize: "8px", cursor: "pointer", fontFamily: C.fontMono, lineHeight: 1 }} title="Monter">▲</button>
-                    <button onClick={(e) => { e.stopPropagation(); props.onMoveDown(section.id); }} style={{ padding: "1px 4px", background: "transparent", border: `1px solid ${C.border}`, color: C.textMuted, fontSize: "8px", cursor: "pointer", fontFamily: C.fontMono, lineHeight: 1 }} title="Descendre">▼</button>
+                    <button onClick={(e) => { e.stopPropagation(); props.onMoveUp(section.id); }} style={{ padding: "1px 4px", background: "transparent", border: `1px solid ${C.border}`, color: C.textMuted, fontSize: "8px", cursor: "pointer", fontFamily: C.fontMono, lineHeight: 1 }} title="Move up">▲</button>
+                    <button onClick={(e) => { e.stopPropagation(); props.onMoveDown(section.id); }} style={{ padding: "1px 4px", background: "transparent", border: `1px solid ${C.border}`, color: C.textMuted, fontSize: "8px", cursor: "pointer", fontFamily: C.fontMono, lineHeight: 1 }} title="Move down">▼</button>
                   </div>
                 </div>
               </div>
@@ -454,17 +454,17 @@ function SideMenu(props: SideMenuProps) {
 
         <div style={{ padding: "16px 20px 0" }}>
           <button onClick={props.onAddSection} style={{ width: "100%", padding: "10px 12px", background: "transparent", border: `1px dashed ${C.border}`, color: C.textBody, fontFamily: C.fontSans, fontSize: "12px", fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textBody; }}>
-            + Ajouter une section
+            + Add section
           </button>
           <div style={{ marginTop: "6px", fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono, textAlign: "center" }}>
-            Illimité · recherches sauvegardées
+            Unlimited · saved searches
           </div>
         </div>
 
         {hiddenAvailable.length > 0 && (
           <div style={{ padding: "24px 20px 0", borderTop: `1px solid ${C.border}`, marginTop: "24px" }}>
             <button onClick={() => setShowHidden(!showHidden)} style={{ width: "100%", padding: "8px 0", background: "transparent", border: "none", color: C.textMuted, fontFamily: C.fontMono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>Masquées</span>
+              <span>Hidden</span>
               <span>{hiddenAvailable.length}</span>
             </button>
             {showHidden && (
@@ -522,10 +522,10 @@ function Content({ section, tier }: { section: Section; tier: AccountType }) {
         {section.description}
       </p>
       <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "12px" }}>
-        Section en cours de construction.
+        Section under construction.
         <br />
         <span style={{ color: C.accent, marginTop: "8px", display: "inline-block" }}>
-          {section.label} sera disponible dans la prochaine itération.
+          {section.label} will be available in the next iteration.
         </span>
       </div>
     </main>
@@ -536,20 +536,20 @@ function MeteoSection({ tier }: { tier: AccountType }) {
   const meteo = {
     score: 67,
     trend: "up" as "up" | "down" | "stable",
-    trendValue: "+2 pts vs semaine dernière",
-    sky: "Partiellement nuageux",
-    skyDescription: "Sentiment globalement positif, avec quelques zones d'attention.",
+    trendValue: "+2 pts vs last week",
+    sky: "Partly cloudy",
+    skyDescription: "Overall positive sentiment, with a few areas of attention.",
     breakdown: { positive: 58, neutral: 27, negative: 15 },
     sources: [
-      { name: "Hespress", articles: 142, sentiment: "positif" },
-      { name: "Le360", articles: 89, sentiment: "neutre" },
-      { name: "Medias24", articles: 67, sentiment: "positif" },
-      { name: "TelQuel", articles: 45, sentiment: "négatif" },
+      { name: "Hespress", articles: 142, sentiment: "positive" },
+      { name: "Le360", articles: 89, sentiment: "neutral" },
+      { name: "Medias24", articles: 67, sentiment: "positive" },
+      { name: "TelQuel", articles: 45, sentiment: "negative" },
     ],
     todaySignals: [
-      { time: "07:00", source: "Hespress", title: "Article positif sur votre dernier communiqué", weight: "fort" },
-      { time: "09:32", source: "Twitter/X", title: "Mention d'un influenceur (12K followers)", weight: "moyen" },
-      { time: "14:15", source: "TelQuel", title: "Question sur votre gouvernance ESG", weight: "faible" },
+      { time: "07:00", source: "Hespress", title: "Positive article on your latest press release", weight: "strong" },
+      { time: "09:32", source: "Twitter/X", title: "Influencer mention (12K followers)", weight: "medium" },
+      { time: "14:15", source: "TelQuel", title: "Question on your ESG governance", weight: "low" },
     ],
   };
 
@@ -558,13 +558,13 @@ function MeteoSection({ tier }: { tier: AccountType }) {
   return (
     <main style={{ padding: "32px 24px", maxWidth: "100%", overflowX: "hidden" }}>
       <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-        Section 01 · Météo
+        Section 01 · Weather
       </div>
       <h1 style={{ fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 8px" }}>
-        Bulletin du jour
+        Today's bulletin
       </h1>
       <p style={{ fontSize: "15px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "32px" }}>
-        {new Date().toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+        {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
       </p>
 
       <div style={{ padding: "32px 24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px", marginBottom: "32px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "24px", alignItems: "center" }}>
@@ -591,7 +591,7 @@ function MeteoSection({ tier }: { tier: AccountType }) {
 
       <div style={{ marginBottom: "32px" }}>
         <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-          Répartition
+          Breakdown
         </div>
         <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", background: C.bgSubtle, marginBottom: "12px" }}>
           <div style={{ width: `${meteo.breakdown.positive}%`, background: C.cta }} />
@@ -601,22 +601,22 @@ function MeteoSection({ tier }: { tier: AccountType }) {
         <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", fontSize: "12px", fontFamily: C.fontMono }}>
           <span style={{ color: C.cta }}>
             <span style={{ fontWeight: 700 }}>{meteo.breakdown.positive}%</span>
-            <span style={{ color: C.textMuted, marginLeft: "6px" }}>positif</span>
+            <span style={{ color: C.textMuted, marginLeft: "6px" }}>positive</span>
           </span>
           <span style={{ color: C.textBody }}>
             <span style={{ fontWeight: 700 }}>{meteo.breakdown.neutral}%</span>
-            <span style={{ color: C.textMuted, marginLeft: "6px" }}>neutre</span>
+            <span style={{ color: C.textMuted, marginLeft: "6px" }}>neutral</span>
           </span>
           <span style={{ color: C.danger }}>
             <span style={{ fontWeight: 700 }}>{meteo.breakdown.negative}%</span>
-            <span style={{ color: C.textMuted, marginLeft: "6px" }}>négatif</span>
+            <span style={{ color: C.textMuted, marginLeft: "6px" }}>negative</span>
           </span>
         </div>
       </div>
 
       <div style={{ marginBottom: "32px" }}>
         <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-          Signaux du jour
+          Today's signals
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {meteo.todaySignals.map((signal, i) => (
@@ -634,7 +634,7 @@ function MeteoSection({ tier }: { tier: AccountType }) {
 
       <div>
         <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-          Sources principales
+          Main sources
         </div>
         <div style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden" }}>
           <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -652,7 +652,7 @@ function MeteoSection({ tier }: { tier: AccountType }) {
                     <td style={{ padding: "10px 16px", color: C.text, fontWeight: 500 }}>{src.name}</td>
                     <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: C.textBody }}>{src.articles}</td>
                     <td style={{ padding: "10px 16px" }}>
-                      <span style={{ fontSize: "11px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: src.sentiment === "positif" ? `${C.cta}15` : src.sentiment === "négatif" ? `${C.danger}15` : `${C.textMuted}15`, color: src.sentiment === "positif" ? C.cta : src.sentiment === "négatif" ? C.danger : C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                      <span style={{ fontSize: "11px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: src.sentiment === "positive" ? `${C.cta}15` : src.sentiment === "negative" ? `${C.danger}15` : `${C.textMuted}15`, color: src.sentiment === "positive" ? C.cta : src.sentiment === "negative" ? C.danger : C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                         {src.sentiment}
                       </span>
                     </td>
@@ -667,9 +667,9 @@ function MeteoSection({ tier }: { tier: AccountType }) {
       {tier === "decouverte" && (
         <div style={{ marginTop: "32px", padding: "16px 20px", background: C.bgSubtle, border: `1px solid ${C.border}`, borderRadius: "6px", fontSize: "13px", color: C.textBody, lineHeight: 1.5 }}>
           <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-            Tier Découverte ·
+            Discovery tier ·
           </strong>{" "}
-          Passez au tier Veille pour suivre vos Voisins (concurrents directs) avec l&apos;Indice de Voisinage.
+          Upgrade to Watch tier to track your Neighbors (direct competitors) with the Neighbor Index.
         </div>
       )}
     </main>
@@ -689,35 +689,35 @@ function AddSectionModal({
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "32px", maxWidth: "480px", width: "100%" }}>
         <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
-          Nouvelle section
+          New section
         </div>
         <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em", margin: "0 0 24px" }}>
-          Recherche sauvegardée
+          Saved search
         </h2>
 
         <div style={{ marginBottom: "16px" }}>
           <label style={{ display: "block", fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
-            Nom de la section
+            Section name
           </label>
-          <input type="text" value={label} onChange={(e) => onLabelChange(e.target.value)} placeholder="Ex : Mon CEO, Mon produit phare" style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box" }} autoFocus />
+          <input type="text" value={label} onChange={(e) => onLabelChange(e.target.value)} placeholder="Ex: My CEO, My flagship product" style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box" }} autoFocus />
         </div>
 
         <div style={{ marginBottom: "24px" }}>
           <label style={{ display: "block", fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
-            Recherche
+            Search query
           </label>
-          <input type="text" value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Ex : Amine Harch El Korane" style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box" }} />
+          <input type="text" value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Ex: Amine Harch El Korane" style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: "4px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box" }} />
           <div style={{ marginTop: "6px", fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono }}>
-            HarchIQ Signal surveillera cette requête sur 30+ sources.
+            HarchIQ Signal will monitor this query across 30+ sources.
           </div>
         </div>
 
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{ padding: "10px 16px", background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, fontFamily: C.fontSans, fontSize: "13px", fontWeight: 500, cursor: "pointer", borderRadius: "4px" }}>
-            Annuler
+            Cancel
           </button>
           <button onClick={onSubmit} disabled={!label.trim() || !query.trim()} style={{ padding: "10px 16px", background: !label.trim() || !query.trim() ? C.border : C.cta, border: "none", color: "#ffffff", fontFamily: C.fontSans, fontSize: "13px", fontWeight: 600, cursor: !label.trim() || !query.trim() ? "not-allowed" : "pointer", borderRadius: "4px" }}>
-            Créer la section
+            Create section
           </button>
         </div>
       </div>
