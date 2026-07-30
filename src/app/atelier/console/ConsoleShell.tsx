@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { C as TOKENS } from "../components/tokens";
@@ -1242,7 +1242,7 @@ function DashboardMain({
     if (activeNav === "reports") {
       return <ReportsView theme={theme} companyName={companyName} />;
     }
-    return <CompetitorIntelDashboard userName={displayName} userEmail={null} companyName={companyName} sector="Banking" />;
+    return <CompetitorIntelDashboard userName={displayName} userEmail={null} companyName={companyName} sector="Mining & Phosphates" />;
   }
 
   // Brand Monitor — default enterprise console

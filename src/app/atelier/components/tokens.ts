@@ -352,7 +352,7 @@ export const I18N = {
     // Footer
     footerTagline: "AI Reputation Intelligence for Africa",
     footerCountries: "8 markets covered",
-    footerLegal: "Building in Public · Since 2024 · Casablanca, Morocco",
+    footerLegal: "Building in Public · Since 2026 · Casablanca, Morocco",
   },
   fr: {
     // Nav
@@ -405,6 +405,6 @@ export const I18N = {
     // Footer
     footerTagline: "Intelligence de Réputation IA pour l'Afrique",
     footerCountries: "8 marchés couverts",
-    footerLegal: "Building in Public · Depuis 2024 · Casablanca, Maroc",
+    footerLegal: "Building in Public · Depuis 2026 · Casablanca, Maroc",
   },
 } as const;

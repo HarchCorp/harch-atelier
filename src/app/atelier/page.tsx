@@ -34,12 +34,22 @@ export const metadata: Metadata = {
     url: "https://atelier.harchcorp.com",
     siteName: "Harch Atelier",
     locale: "en_US",
+    images: [
+      {
+        url: "/public/images/og-harch-corp.png",
+        width: 1200,
+        height: 630,
+        alt: "Harch Atelier — AI Reputation Intelligence for Africa",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Harch Atelier — AI Reputation Intelligence for Africa",
     description:
       "Monitor what media and AI say about your company. Sentiment analysis, crisis alerts on WhatsApp, monthly board-ready PDF reports.",
+    images: ["/public/images/og-harch-corp.png"],
   },
 };
 

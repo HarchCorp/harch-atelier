@@ -5,7 +5,7 @@ import AboutPage from "./AboutPage";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "About Harch Atelier — Building in Public Since 2024",
+    absolute: "About Harch Atelier — Building in Public Since 2026",
   },
   description:
     "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Building in Public from Casablanca, Morocco.",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     canonical: "https://atelier.harchcorp.com/about",
   },
   openGraph: {
-    title: "About Harch Atelier — Building in Public Since 2024",
+    title: "About Harch Atelier — Building in Public Since 2026",
     description:
       "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Building in Public from Casablanca, Morocco.",
     type: "profile",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Harch Atelier — Building in Public Since 2024",
+    title: "About Harch Atelier — Building in Public Since 2026",
     description:
       "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Casablanca, Morocco.",
   },
@@ -48,7 +48,7 @@ const jsonLd = {
   name: "About Harch Atelier",
   url: "https://atelier.harchcorp.com/about",
   description:
-    "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Building in Public from Casablanca, Morocco since 2024.",
+    "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Building in Public from Casablanca, Morocco since 2026.",
   mainEntity: {
     "@type": "Organization",
     "@id": "https://atelier.harchcorp.com/#organization",
@@ -57,7 +57,7 @@ const jsonLd = {
     description:
       "AI reputation intelligence division of Harch Corp. We monitor 30+ media sources and 8 AI engines, powered by HarchIQ, our trainable AI, and deliver insights via WhatsApp, dashboard, and monthly PDF.",
     email: "atelier@harchcorp.com",
-    foundingDate: "2024",
+    foundingDate: "2026",
     founder: {
       "@type": "Person",
       name: "Amine Harch El Korane",
