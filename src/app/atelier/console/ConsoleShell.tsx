@@ -1499,18 +1499,33 @@ function TraderView({ activeNav }: { activeNav: NavId }) {
     window: string;
   } | null>(null);
   const [corrLoading, setCorrLoading] = useState(false);
+  const [traderStats, setTraderStats] = useState<{
+    totalAssets: number;
+    avgSentiment: number;
+    topMover: { ticker: string; name: string; change: number } | null;
+    topGainer: { ticker: string; name: string; changePct: number } | null;
+    topLoser: { ticker: string; name: string; changePct: number } | null;
+    typeBreakdown: Record<string, number>;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/trader/assets");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.assets) {
-          setAssets(data.assets);
-          if (data.assets.length > 0) {
-            setSelectedTicker(data.assets[0].ticker);
+        const [assetsRes, statsRes] = await Promise.all([
+          fetch("/api/trader/assets"),
+          fetch("/api/trader/stats"),
+        ]);
+        if (assetsRes.ok) {
+          const data = await assetsRes.json();
+          if (data.assets) {
+            setAssets(data.assets);
+            if (data.assets.length > 0) {
+              setSelectedTicker(data.assets[0].ticker);
+            }
           }
+        }
+        if (statsRes.ok) {
+          setTraderStats(await statsRes.json());
         }
       } catch {
         // ignore
@@ -1560,6 +1575,17 @@ function TraderView({ activeNav }: { activeNav: NavId }) {
           </h3>
         </div>
       </div>
+
+      {/* KPI strip */}
+      {traderStats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "1px", background: C.border, border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "24px" }}>
+          <KpiCell label="Assets tracked" value={traderStats.totalAssets} />
+          <KpiCell label="Avg sentiment" value={traderStats.avgSentiment.toFixed(2)} color={traderStats.avgSentiment > 0.1 ? C.cta : traderStats.avgSentiment < -0.1 ? C.danger : C.textMuted} />
+          {traderStats.topGainer && <KpiCell label="Top gainer" value={`${traderStats.topGainer.ticker} +${traderStats.topGainer.changePct.toFixed(1)}%`} color={C.cta} />}
+          {traderStats.topLoser && <KpiCell label="Top loser" value={`${traderStats.topLoser.ticker} ${traderStats.topLoser.changePct.toFixed(1)}%`} color={C.danger} />}
+          {traderStats.topMover && <KpiCell label="Sentiment mover" value={`${traderStats.topMover.ticker} ${traderStats.topMover.change > 0 ? "+" : ""}${traderStats.topMover.change.toFixed(2)}`} color={traderStats.topMover.change > 0 ? C.cta : C.danger} />}
+        </div>
+      )}
 
       {/* Assets table */}
       <div style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "24px" }}>
@@ -1680,14 +1706,29 @@ interface InvestorPortfolio {
 function InvestorView({ activeNav }: { activeNav: NavId }) {
   const [portfolios, setPortfolios] = useState<InvestorPortfolio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [invStats, setInvStats] = useState<{
+    portfolios: number;
+    holdings: number;
+    companiesTracked: number;
+    avgReputation: number | null;
+    totalHighRisks: number;
+    dossiers: { total: number; ready: number; draft: number };
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/investor/portfolios");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.portfolios) setPortfolios(data.portfolios);
+        const [portRes, statsRes] = await Promise.all([
+          fetch("/api/investor/portfolios"),
+          fetch("/api/investor/stats"),
+        ]);
+        if (portRes.ok) {
+          const data = await portRes.json();
+          if (data.portfolios) setPortfolios(data.portfolios);
+        }
+        if (statsRes.ok) {
+          setInvStats(await statsRes.json());
+        }
       } catch {
         // ignore
       }
@@ -1710,6 +1751,18 @@ function InvestorView({ activeNav }: { activeNav: NavId }) {
           Portfolio Overview
         </h3>
       </div>
+
+      {/* KPI strip */}
+      {invStats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 130px), 1fr))", gap: "1px", background: C.border, border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "24px" }}>
+          <KpiCell label="Portfolios" value={invStats.portfolios} />
+          <KpiCell label="Holdings" value={invStats.holdings} />
+          <KpiCell label="Companies" value={invStats.companiesTracked} />
+          <KpiCell label="Avg reputation" value={invStats.avgReputation ?? "—"} color={invStats.avgReputation ? (invStats.avgReputation >= 70 ? C.cta : invStats.avgReputation >= 50 ? C.warning : C.danger) : C.textMuted} />
+          <KpiCell label="High risks" value={invStats.totalHighRisks} color={invStats.totalHighRisks > 0 ? C.danger : C.cta} />
+          <KpiCell label="DD dossiers" value={invStats.dossiers.total} sub={`${invStats.dossiers.ready} ready · ${invStats.dossiers.draft} draft`} />
+        </div>
+      )}
 
       {portfolios.length === 0 ? (
         <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
@@ -1809,6 +1862,20 @@ const thStyle: React.CSSProperties = {
   textTransform: "uppercase",
   fontWeight: 600,
 };
+
+function KpiCell({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color?: string }) {
+  return (
+    <div style={{ background: "#ffffff", padding: "16px 20px" }}>
+      <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'Space Mono', monospace", color: color || "#0a0a0a", lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "9px", color: "#737373", fontFamily: "'Space Mono', monospace", marginTop: "6px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        {label}
+      </div>
+      {sub && <div style={{ fontSize: "9px", color: "#737373", fontFamily: "'Space Mono', monospace", marginTop: "2px" }}>{sub}</div>}
+    </div>
+  );
+}
 
 function PlaceholderView({ title, subtitle }: { title: string; subtitle: string }) {
   return (

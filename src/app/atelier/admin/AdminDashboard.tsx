@@ -66,10 +66,18 @@ interface CreatedInvitation {
   expiresAt: string;
 }
 
+interface AdminStats {
+  users: { total: number; enterprise: number; trader: number; investor: number };
+  requests: { pending: number; accepted: number };
+  invitations: { active: number; used: number };
+  data: { articles: number; companies: number; assets: number; portfolios: number; dossiers: number };
+}
+
 export function AdminDashboard() {
   const [tab, setTab] = useState<"requests" | "invitations">("requests");
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation | null>(null);
@@ -89,9 +97,10 @@ export function AdminDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [reqRes, invRes] = await Promise.all([
+      const [reqRes, invRes, statsRes] = await Promise.all([
         fetch("/api/admin/requests"),
         fetch("/api/admin/invitations"),
+        fetch("/api/admin/stats"),
       ]);
       if (reqRes.ok) {
         const reqData = await reqRes.json();
@@ -100,6 +109,10 @@ export function AdminDashboard() {
       if (invRes.ok) {
         const invData = await invRes.json();
         setInvitations(invData.invitations || []);
+      }
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
       }
     } catch {
       // ignore
@@ -199,6 +212,19 @@ export function AdminDashboard() {
           + New invitation
         </button>
       </header>
+
+      {/* KPI strip */}
+      {stats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "1px", background: C.border, border: `1px solid ${C.border}`, margin: "0 24px", borderRadius: "6px", overflow: "hidden" }}>
+          <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users.enterprise}E · ${stats.users.trader}T · ${stats.users.investor}I`} />
+          <KpiCell label="Pending requests" value={stats.requests.pending} color={stats.requests.pending > 0 ? C.warning : undefined} />
+          <KpiCell label="Active invites" value={stats.invitations.active} color={stats.invitations.active > 0 ? C.cta : undefined} />
+          <KpiCell label="Companies" value={stats.data.companies} />
+          <KpiCell label="Articles" value={stats.data.articles} />
+          <KpiCell label="Assets" value={stats.data.assets} />
+          <KpiCell label="Portfolios" value={stats.data.portfolios} />
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "0", borderBottom: `1px solid ${C.border}`, padding: "0 24px" }}>
@@ -562,6 +588,20 @@ function EmptyState({ text }: { text: string }) {
   return (
     <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
       {text}
+    </div>
+  );
+}
+
+function KpiCell({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color?: string }) {
+  return (
+    <div style={{ background: C.bg, padding: "16px 20px" }}>
+      <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: C.fontMono, color: color || C.text, lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "6px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        {label}
+      </div>
+      {sub && <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "2px" }}>{sub}</div>}
     </div>
   );
 }
