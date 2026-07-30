@@ -150,8 +150,8 @@ const TOPICS = [
   { name: "Frais bancaires", positive: 42, negative: 48, mentions: 89, risk: true },
   { name: "Service client", positive: 71, negative: 18, mentions: 67, risk: false },
   { name: "Application mobile", positive: 65, negative: 22, mentions: 54, risk: false },
-  { name: "Taux de crédit", positive: 55, negative: 30, mentions: 41, risk: false },
-  { name: "Réseau d'agences", positive: 73, negative: 15, mentions: 38, risk: false },
+  { name: "Credit rates", positive: 55, negative: 30, mentions: 41, risk: false },
+  { name: "Branch network", positive: 73, negative: 15, mentions: 38, risk: false },
 ];
 
 // ─── SHARED HELPERS ────────────────────────────────────────────────────
@@ -1526,7 +1526,7 @@ function WhatsAppMockup() {
                   lineHeight: 1.4,
                 }}
               >
-                Répondez &laquo; détails &raquo; pour le rapport complet.
+                Reply 'details' for the full report.
               </div>
               <div
                 style={{
@@ -1567,7 +1567,7 @@ function WhatsAppMockup() {
               }}
             >
               <div style={{ fontSize: "13px", color: C.text, lineHeight: 1.4 }}>
-                détails
+                details
               </div>
               <div
                 style={{
@@ -4137,10 +4137,10 @@ function PdfMockup() {
               (<strong style={{ color: C.textPrimary }}>78/100</strong>), au rang
               <strong style={{ color: C.textPrimary }}> #6 </strong>
               national. Le sentiment positif progresse de{" "}
-              <strong style={{ color: C.sage }}>+4,2 pts</strong>, porté par la
+              <strong style={{ color: C.sage }}>+4.2 pts</strong>, driven by
               couverture de la transformation digitale. Cependant, le sujet{" "}
               <strong style={{ color: C.red }}>&laquo; frais bancaires &raquo;</strong>{" "}
-              présente un risque émergent (+47% en 24h).
+              shows an emerging risk (+47% in 24h).
             </p>
           </div>
 
