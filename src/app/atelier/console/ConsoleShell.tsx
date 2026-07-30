@@ -71,14 +71,6 @@ const SENTIMENT_30D = {
   negative: [13, 12, 14, 12, 11, 10, 10, 10,  9,  8,  9, 10, 11, 10,  9,  8,  8,  8,  8,  9, 11, 10, 10,  9,  8,  8,  8,  8,  9, 10],
 };
 
-// Top topics for dashboard right panel
-const TOPICS = [
-  { name: "Frais bancaires", positive: 42, negative: 48, mentions: 89, risk: true },
-  { name: "Service client", positive: 71, negative: 18, mentions: 67, risk: false },
-  { name: "Application mobile", positive: 65, negative: 22, mentions: 54, risk: false },
-  { name: "Taux de crédit", positive: 55, negative: 30, mentions: 41, risk: false },
-  { name: "Réseau d'agences", positive: 73, negative: 15, mentions: 38, risk: false },
-];
 
 // ─── SVG PATH HELPERS (copied from AtelierHome.tsx) ────────────────
 
@@ -348,95 +340,6 @@ function DashMiniStat({
   );
 }
 
-function TopicRow({
-  topic,
-}: {
-  topic: { name: string; positive: number; negative: number; mentions: number; risk: boolean };
-}) {
-  return (
-    <div
-      style={{
-        marginBottom: "16px",
-        paddingBottom: "16px",
-        borderBottom: `1px solid ${C.borderLight}`,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "6px",
-          flexWrap: "wrap",
-          gap: "12px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          {topic.risk && (
-            <span
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: C.red,
-                display: "inline-block",
-              }}
-            />
-          )}
-          <span
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              color: C.textPrimary,
-            }}
-          >
-            {topic.name}
-          </span>
-        </div>
-        <span
-          style={{
-            fontSize: "11px",
-            fontFamily: FONT.mono,
-            color: C.textMuted,
-          }}
-        >
-          {topic.mentions} mentions
-        </span>
-      </div>
-      {/* Sentiment bar */}
-      <div
-        style={{
-          display: "flex",
-          height: "6px",
-          borderRadius: "3px",
-          overflow: "hidden",
-          background: C.borderLight,
-        }}
-      >
-        <div style={{ width: `${topic.positive}%`, background: C.sage }} />
-        <div
-          style={{
-            width: `${100 - topic.positive - topic.negative}%`,
-            background: C.neutral,
-          }}
-        />
-        <div style={{ width: `${topic.negative}%`, background: C.red }} />
-      </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: "4px",
-          fontSize: "10px",
-          fontFamily: FONT.mono,
-        }}
-      >
-        <span style={{ color: C.sage }}>{topic.positive}% pos</span>
-        <span style={{ color: C.red }}>{topic.negative}% neg</span>
-      </div>
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════
 //  CONSOLE-SPECIFIC STATE & TYPES
@@ -964,7 +867,7 @@ export function ConsoleShell({
           companyName={companyName}
         />
 
-        <DashboardRightPanel />
+        <DashboardRightPanel theme={theme} accountType={accountType} />
       </div>
 
       <style>{pageStyles}</style>
@@ -1891,7 +1794,40 @@ function NeighborsView({ tier, theme }: { tier: AccountType; theme: OfferTheme }
 //   • AI Visibility mini card (ChatGPT / Perplexity / Gemini)
 // ═══════════════════════════════════════════════════════════════
 
-function DashboardRightPanel() {
+function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accountType: string }) {
+  const [aiData, setAiData] = useState<{ platform: string; cited: boolean; position: string | null; sentiment: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/console/weather");
+        if (!res.ok) return;
+        const data = await res.json();
+        // We don't have a dedicated AI visibility API yet, but the weather
+        // endpoint returns company context. For now, use static structure
+        // until /api/console/ai-visibility is built.
+        setAiData([
+          { platform: "ChatGPT", cited: true, position: "#2", sentiment: "positive" },
+          { platform: "Perplexity", cited: true, position: "#3", sentiment: "neutral" },
+          { platform: "Gemini", cited: true, position: "#4", sentiment: "positive" },
+          { platform: "Claude", cited: true, position: "#3", sentiment: "positive" },
+        ]);
+      } catch {
+        // graceful
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const topics = [
+    { label: "Financial results", count: 39, trend: "up" as const },
+    { label: "Digital transformation", count: 35, trend: "up" as const },
+    { label: "Pan-African expansion", count: 24, trend: "stable" as const },
+    { label: "Sustainability / ESG", count: 25, trend: "up" as const },
+    { label: "Leadership visibility", count: 47, trend: "stable" as const },
+  ];
+
   return (
     <div
       className="dash-right"
@@ -1914,8 +1850,16 @@ function DashboardRightPanel() {
         Top 5 Topics
       </div>
 
-      {TOPICS.map((topic, i) => (
-        <TopicRow key={i} topic={topic} />
+      {topics.map((topic, i) => (
+        <div key={i} style={{ marginBottom: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+            <span style={{ fontSize: "13px", fontWeight: 500, color: C.textPrimary }}>{topic.label}</span>
+            <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted }}>{topic.count}</span>
+          </div>
+          <div style={{ height: "4px", background: C.border, borderRadius: "2px", overflow: "hidden" }}>
+            <div style={{ width: `${(topic.count / 50) * 100}%`, height: "100%", background: theme.accent }} />
+          </div>
+        </div>
       ))}
 
       {/* AI visibility mini card */}
@@ -1941,55 +1885,45 @@ function DashboardRightPanel() {
           AI Visibility
         </div>
         <div style={{ fontSize: "13px", color: C.textSecondary, marginBottom: "12px" }}>
-          <strong style={{ color: C.textPrimary }}>&laquo; meilleure banque Maroc &raquo;</strong>
+          <strong style={{ color: C.textPrimary }}>4 / 8 engines cite you</strong>
         </div>
-        {[
-          { engine: "ChatGPT",    rank: "#2", change: "↑ 1" },
-          { engine: "Perplexity", rank: "#3", change: "—"   },
-          { engine: "Gemini",     rank: "#4", change: "↓ 1" },
-        ].map((ai) => (
-          <div
-            key={ai.engine}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "8px 0",
-              borderBottom: `1px solid ${C.borderLight}`,
-              fontSize: "12px",
-              flexWrap: "wrap",
-              gap: "12px",
-            }}
-          >
-            <span style={{ color: C.textSecondary, fontFamily: FONT.sans }}>
-              {ai.engine}
-            </span>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <span
-                style={{
-                  fontFamily: FONT.mono,
-                  fontWeight: 700,
-                  color: C.textPrimary,
-                }}
-              >
-                {ai.rank}
+        {loading ? (
+          <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, padding: "8px 0" }}>Loading…</div>
+        ) : (
+          aiData.map((ai) => (
+            <div
+              key={ai.platform}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 0",
+                borderBottom: `1px solid ${C.borderLight}`,
+                fontSize: "12px",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <span style={{ color: C.textSecondary, fontFamily: FONT.sans }}>
+                {ai.platform}
               </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontFamily: FONT.mono,
-                  color: ai.change.startsWith("↑")
-                    ? C.sage
-                    : ai.change.startsWith("↓")
-                    ? C.red
-                    : C.textMuted,
-                }}
-              >
-                {ai.change}
-              </span>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <span style={{ fontFamily: FONT.mono, fontWeight: 700, color: ai.cited ? theme.accent : C.textMuted }}>
+                  {ai.cited ? ai.position : "—"}
+                </span>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    fontFamily: FONT.mono,
+                    color: ai.cited ? (ai.sentiment === "positive" ? theme.accent : ai.sentiment === "negative" ? C.red : C.textMuted) : C.textMuted,
+                  }}
+                >
+                  {ai.cited ? ai.sentiment : "not cited"}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
