@@ -83,6 +83,9 @@ export function AlphaDeskDashboard({
   const [corrLoading, setCorrLoading] = useState(false);
   const [loading, setLoading] = useState(!injectedKpis);
   const [error, setError] = useState(false);
+  const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "stock" | "crypto" | "fx" | "commodity">("all");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
     if (injectedKpis) return;
@@ -155,6 +158,63 @@ export function AlphaDeskDashboard({
     index: TEXT_MUTED_DARK,
   };
 
+  // Refresh assets
+  const refreshAssets = async () => {
+    setRefreshing(true);
+    try {
+      const [assetsRes, statsRes] = await Promise.all([
+        fetch("/api/trader/assets"),
+        fetch("/api/trader/stats"),
+      ]);
+      if (assetsRes.ok) {
+        const data = await assetsRes.json();
+        const assetRows: AlphaAssetRow[] = (data.assets ?? []).map((a: Record<string, unknown>) => ({
+          ticker: a.ticker as string,
+          name: a.name as string,
+          assetType: a.assetType as string,
+          latestPrice: (a.latestPrice as number) ?? null,
+          latestChange: (a.latestChange as number) ?? null,
+          latestSentiment: (a.latestSentiment as number) ?? null,
+          correlation: null,
+        }));
+        setAssets(assetRows);
+      }
+      if (statsRes.ok) {
+        const s = await statsRes.json();
+        setKpis({
+          latencySignal: 420,
+          sentimentSpike: 0,
+          assetTicker: s.topMover?.ticker ?? "—",
+          assetsTracked: s.totalAssets ?? 0,
+          avgSentiment: s.avgSentiment ?? 0,
+          topGainer: s.topGainer ?? null,
+          topLoser: s.topLoser ?? null,
+        });
+      }
+      setLastRefresh(new Date());
+    } catch {
+      // ignore
+    }
+    setRefreshing(false);
+  };
+
+  // Filter assets by type
+  const filteredAssets = assets.filter((a) => assetTypeFilter === "all" || a.assetType === assetTypeFilter);
+
+  // Export assets to CSV
+  const exportAssetsCSV = () => {
+    const headers = ["Ticker", "Name", "Type", "Price", "Change%", "Sentiment"];
+    const rows = filteredAssets.map((a) => [a.ticker, `"${a.name}"`, a.assetType, a.latestPrice ?? "—", a.latestChange ?? "—", a.latestSentiment ?? "—"]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `alpha-assets-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="dash-main" style={{ padding: "24px", background: "#ffffff", overflowX: "hidden", color: "#0a0a0a", fontFamily: FONT.sans }}>
       {/* ─── Pre-market brief banner ─── */}
@@ -225,8 +285,72 @@ export function AlphaDeskDashboard({
 
       {/* ─── Asset ticker feed — dense, terminal-style ─── */}
       <div style={{ marginBottom: "24px" }}>
-        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-          Asset feed — click to view correlation
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            Asset feed — click to view correlation ({filteredAssets.length})
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Asset type filter chips */}
+            {(["all", "stock", "crypto", "fx", "commodity"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setAssetTypeFilter(f)}
+                style={{
+                  padding: "4px 10px",
+                  fontSize: "10px",
+                  fontFamily: FONT.mono,
+                  fontWeight: 600,
+                  border: `1px solid ${assetTypeFilter === f ? ACCENT : DARK_BORDER}`,
+                  borderRadius: "12px",
+                  background: assetTypeFilter === f ? `${ACCENT}15` : "#ffffff",
+                  color: assetTypeFilter === f ? ACCENT : TEXT_MUTED_DARK,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {f}
+              </button>
+            ))}
+            <button
+              onClick={refreshAssets}
+              disabled={refreshing}
+              style={{
+                padding: "4px 10px",
+                fontSize: "10px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: `1px solid ${DARK_BORDER}`,
+                borderRadius: "12px",
+                background: "#ffffff",
+                color: "#525252",
+                cursor: refreshing ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+                opacity: refreshing ? 0.6 : 1,
+              }}
+              title={`Last refreshed: ${lastRefresh.toLocaleTimeString("en-US")}`}
+            >
+              {refreshing ? "\u21BB ..." : "\u21BB Refresh"}
+            </button>
+            <button
+              onClick={exportAssetsCSV}
+              style={{
+                padding: "4px 10px",
+                fontSize: "10px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: `1px solid ${DARK_BORDER}`,
+                borderRadius: "12px",
+                background: "#ffffff",
+                color: "#525252",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {"\u2193"} CSV
+            </button>
+          </div>
         </div>
         <div style={{ border: `1px solid ${DARK_BORDER}`, borderRadius: "6px", overflow: "hidden" }}>
           <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -241,7 +365,14 @@ export function AlphaDeskDashboard({
                 </tr>
               </thead>
               <tbody>
-                {assets.map((a) => {
+                {filteredAssets.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "24px", textAlign: "center", color: TEXT_MUTED_DARK, fontFamily: FONT.mono, fontSize: "12px" }}>
+                      No assets match this filter.
+                    </td>
+                  </tr>
+                )}
+                {filteredAssets.map((a) => {
                   const isSelected = a.ticker === selectedTicker;
                   const changeColor = a.latestChange !== null ? (a.latestChange > 0 ? GREEN : a.latestChange < 0 ? RED : TEXT_MUTED_DARK) : TEXT_MUTED_DARK;
                   const sentColor = a.latestSentiment !== null ? (a.latestSentiment > 0.1 ? GREEN : a.latestSentiment < -0.1 ? RED : TEXT_MUTED_DARK) : TEXT_MUTED_DARK;

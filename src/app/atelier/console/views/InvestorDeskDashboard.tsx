@@ -85,71 +85,121 @@ export function InvestorDeskDashboard({
   const [redFlags, setRedFlags] = useState<RedFlag[]>(injectedRedFlags ?? []);
   const [loading, setLoading] = useState(!injectedKpis);
   const [error, setError] = useState(false);
+  const [riskFilter, setRiskFilter] = useState<"all" | "high" | "watch" | "clear">("all");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [sortField, setSortField] = useState<"companyName" | "weight" | "reputationScore" | "highRiskCount">("companyName");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const loadData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(false);
+    try {
+      const [portRes, statsRes] = await Promise.all([
+        fetch("/api/investor/portfolios"),
+        fetch("/api/investor/stats"),
+      ]);
+
+      let fetchedHoldings: InvestorHolding[] = [];
+      let portfoliosManaged = 0;
+
+      if (portRes.ok) {
+        const data = await portRes.json();
+        portfoliosManaged = data.portfolios?.length ?? 0;
+        fetchedHoldings = (data.portfolios ?? []).flatMap((p: { holdings: unknown[] }) =>
+          (p.holdings ?? []).map((hRaw: unknown) => {
+            const h = hRaw as Record<string, unknown>;
+            const company = h.company as Record<string, unknown> | null;
+            return {
+              id: h.id as string,
+              companyName: (company?.name as string) || (h.asset as { name?: string })?.name || "—",
+              sector: (company?.sector as string) || "—",
+              weight: h.weight as number,
+              reputationScore: (company?.reputationScore as number) ?? null,
+              highRiskCount: (company?.highRisks as number) ?? 0,
+              adverseMediaCount: 0,
+              uboFlag: "clear" as const,
+            };
+          })
+        );
+      }
+
+      if (statsRes.ok) {
+        const s = await statsRes.json();
+        setKpis({
+          adverseMediaHits: s.totalHighRisks ?? 0,
+          uboRiskScore: s.avgReputation ? Math.round(100 - s.avgReputation) : 50,
+          maTargetSentiment: 0,
+          portfoliosManaged,
+          totalHoldings: s.holdings ?? fetchedHoldings.length,
+          totalHighRisks: s.totalHighRisks ?? 0,
+          avgReputation: s.avgReputation ?? null,
+        });
+      } else {
+        setKpis({
+          adverseMediaHits: 0,
+          uboRiskScore: 50,
+          maTargetSentiment: 0,
+          portfoliosManaged,
+          totalHoldings: fetchedHoldings.length,
+          totalHighRisks: 0,
+          avgReputation: null,
+        });
+      }
+      setHoldings(fetchedHoldings);
+      setLastRefresh(new Date());
+    } catch {
+      setError(true);
+    }
+    if (isRefresh) setRefreshing(false);
+    else setLoading(false);
+  };
 
   useEffect(() => {
     if (injectedKpis) return;
-    (async () => {
-      try {
-        const [portRes, statsRes] = await Promise.all([
-          fetch("/api/investor/portfolios"),
-          fetch("/api/investor/stats"),
-        ]);
-
-        let fetchedHoldings: InvestorHolding[] = [];
-        let portfoliosManaged = 0;
-
-        if (portRes.ok) {
-          const data = await portRes.json();
-          portfoliosManaged = data.portfolios?.length ?? 0;
-          fetchedHoldings = (data.portfolios ?? []).flatMap((p: { holdings: unknown[] }) =>
-            (p.holdings ?? []).map((hRaw: unknown) => {
-              const h = hRaw as Record<string, unknown>;
-              const company = h.company as Record<string, unknown> | null;
-              return {
-                id: h.id as string,
-                companyName: (company?.name as string) || (h.asset as { name?: string })?.name || "—",
-                sector: (company?.sector as string) || "—",
-                weight: h.weight as number,
-                reputationScore: (company?.reputationScore as number) ?? null,
-                highRiskCount: (company?.highRisks as number) ?? 0,
-                adverseMediaCount: 0,
-                uboFlag: "clear" as const,
-              };
-            })
-          );
-        }
-
-        if (statsRes.ok) {
-          const s = await statsRes.json();
-          setKpis({
-            adverseMediaHits: s.totalHighRisks ?? 0,
-            uboRiskScore: s.avgReputation ? Math.round(100 - s.avgReputation) : 50,
-            maTargetSentiment: 0,
-            portfoliosManaged,
-            totalHoldings: s.holdings ?? fetchedHoldings.length,
-            totalHighRisks: s.totalHighRisks ?? 0,
-            avgReputation: s.avgReputation ?? null,
-          });
-        } else {
-          setKpis({
-            adverseMediaHits: 0,
-            uboRiskScore: 50,
-            maTargetSentiment: 0,
-            portfoliosManaged,
-            totalHoldings: fetchedHoldings.length,
-            totalHighRisks: 0,
-            avgReputation: null,
-          });
-        }
-        setHoldings(fetchedHoldings);
-      } catch {
-        setError(true);
-      }
-      setLoading(false);
-    })();
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectedKpis]);
 
   const firstName = userName.split(" ")[0] || "there";
+
+  // Filter + sort holdings
+  const filteredHoldings = holdings
+    .filter((h) => {
+      if (riskFilter === "all") return true;
+      if (riskFilter === "high") return h.highRiskCount > 0;
+      if (riskFilter === "watch") return h.uboFlag === "watch" || h.adverseMediaCount > 0;
+      if (riskFilter === "clear") return h.highRiskCount === 0 && h.uboFlag === "clear" && h.adverseMediaCount === 0;
+      return true;
+    })
+    .sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "companyName") cmp = a.companyName.localeCompare(b.companyName);
+      else if (sortField === "weight") cmp = a.weight - b.weight;
+      else if (sortField === "reputationScore") cmp = (a.reputationScore ?? 0) - (b.reputationScore ?? 0);
+      else if (sortField === "highRiskCount") cmp = a.highRiskCount - b.highRiskCount;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+  const toggleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  };
+
+  // Export holdings to CSV
+  const exportHoldingsCSV = () => {
+    const headers = ["Company", "Sector", "Weight", "Reputation", "Red Flags", "UBO Status"];
+    const rows = filteredHoldings.map((h) => [ `"${h.companyName}"`, h.sector, `${(h.weight * 100).toFixed(0)}%`, h.reputationScore ?? "—", h.highRiskCount, h.uboFlag]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `portfolio-holdings-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const uboColor = (kpis?.uboRiskScore ?? 50) >= 60 ? RED : (kpis?.uboRiskScore ?? 50) >= 40 ? AMBER : GREEN;
   const maColor = (kpis?.maTargetSentiment ?? 0) > 0.3 ? GREEN : (kpis?.maTargetSentiment ?? 0) < -0.3 ? RED : AMBER;
@@ -225,36 +275,103 @@ export function InvestorDeskDashboard({
 
       {/* ─── Holdings table — dense, tabular, Palantir vibe ─── */}
       <div style={{ marginBottom: "24px" }}>
-        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-          Portfolio holdings — {holdings.length} positions
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            Portfolio holdings — {filteredHoldings.length} of {holdings.length} positions
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Risk filter chips */}
+            {(["all", "high", "watch", "clear"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setRiskFilter(f)}
+                style={{
+                  padding: "4px 10px",
+                  fontSize: "10px",
+                  fontFamily: FONT.mono,
+                  fontWeight: 600,
+                  border: `1px solid ${riskFilter === f ? ACCENT : "#e5e5e5"}`,
+                  borderRadius: "12px",
+                  background: riskFilter === f ? `${ACCENT}15` : "#ffffff",
+                  color: riskFilter === f ? ACCENT : "#737373",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {f === "all" ? "All" : f === "high" ? "High risk" : f === "watch" ? "Watch" : "Clear"}
+              </button>
+            ))}
+            <button
+              onClick={() => loadData(true)}
+              disabled={refreshing}
+              style={{
+                padding: "4px 10px",
+                fontSize: "10px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: "1px solid #e5e5e5",
+                borderRadius: "12px",
+                background: "#ffffff",
+                color: "#525252",
+                cursor: refreshing ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+                opacity: refreshing ? 0.6 : 1,
+              }}
+              title={`Last refreshed: ${lastRefresh.toLocaleTimeString("en-US")}`}
+            >
+              {refreshing ? "\u21BB ..." : "\u21BB Refresh"}
+            </button>
+            <button
+              onClick={exportHoldingsCSV}
+              style={{
+                padding: "4px 10px",
+                fontSize: "10px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: "1px solid #e5e5e5",
+                borderRadius: "12px",
+                background: "#ffffff",
+                color: "#525252",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {"\u2193"} CSV
+            </button>
+          </div>
         </div>
         <div style={{ border: "1px solid #e5e5e5", borderRadius: "6px", overflow: "hidden" }}>
           <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "600px" }}>
               <thead>
                 <tr style={{ background: "#0a0a0a" }}>
-                  <th style={navyThStyle}>Company</th>
+                  <th style={navyThStyle}><button onClick={() => toggleSort("companyName")} style={{ background: "none", border: "none", color: "inherit", font: "inherit", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em", padding: 0 }}>Company {sortField === "companyName" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</button></th>
                   <th style={navyThStyle}>Sector</th>
-                  <th style={{ ...navyThStyle, textAlign: "right" }}>Weight</th>
-                  <th style={{ ...navyThStyle, textAlign: "right" }}>Reputation</th>
-                  <th style={{ ...navyThStyle, textAlign: "right" }}>Red flags</th>
+                  <th style={navyThStyle}><button onClick={() => toggleSort("weight")} style={{ background: "none", border: "none", color: "inherit", font: "inherit", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em", padding: 0 }}>Weight {sortField === "weight" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</button></th>
+                  <th style={navyThStyle}><button onClick={() => toggleSort("reputationScore")} style={{ background: "none", border: "none", color: "inherit", font: "inherit", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em", padding: 0 }}>Reputation {sortField === "reputationScore" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</button></th>
+                  <th style={navyThStyle}><button onClick={() => toggleSort("highRiskCount")} style={{ background: "none", border: "none", color: "inherit", font: "inherit", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em", padding: 0 }}>Red flags {sortField === "highRiskCount" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</button></th>
                   <th style={navyThStyle}>UBO status</th>
                 </tr>
               </thead>
               <tbody>
-                {holdings.length === 0 && (
+                {filteredHoldings.length === 0 && (
                   <tr>
                     <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: "#737373", fontFamily: FONT.mono, fontSize: "12px" }}>
-                      {loading ? "Loading holdings…" : "No holdings. Ask your admin to create a portfolio."}
+                      {loading ? "Loading holdings…" : "No holdings match this filter."}
                     </td>
                   </tr>
                 )}
-                {holdings.map((h) => {
+                {filteredHoldings.map((h) => {
                   const repColor = h.reputationScore === null ? "#737373" : h.reputationScore >= 70 ? GREEN : h.reputationScore >= 50 ? AMBER : RED;
                   const riskColor = h.highRiskCount > 0 ? RED : h.adverseMediaCount > 0 ? AMBER : GREEN;
                   const uboBadge = h.uboFlag === "red" ? { bg: `${RED}15`, color: RED } : h.uboFlag === "watch" ? { bg: `${AMBER}15`, color: AMBER } : { bg: `${GREEN}15`, color: GREEN };
                   return (
-                    <tr key={h.id} style={{ borderTop: "1px solid #e5e5e5" }}>
+                    <tr key={h.id} style={{ borderTop: "1px solid #e5e5e5", transition: "background 0.15s ease" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = `${ACCENT}08`; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    >
                       <td style={{ padding: "10px 16px", fontWeight: 600, color: "#0a0a0a" }}>{h.companyName}</td>
                       <td style={{ padding: "10px 16px", color: "#737373", fontFamily: FONT.mono, fontSize: "12px" }}>{h.sector}</td>
                       <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: FONT.mono, color: "#0a0a0a" }}>{(h.weight * 100).toFixed(0)}%</td>

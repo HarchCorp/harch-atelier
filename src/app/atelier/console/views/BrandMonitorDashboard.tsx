@@ -76,36 +76,86 @@ export function BrandMonitorDashboard({
   const [sources, setSources] = useState<BrandMonitorSource[]>(injectedSources ?? []);
   const [loading, setLoading] = useState(!injectedKpis);
   const [error, setError] = useState(false);
+  const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("24h");
+  const [sentimentFilter, setSentimentFilter] = useState<"all" | "positive" | "negative" | "neutral">("all");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  const loadData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`/api/console/weather?range=${timeRange}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      setKpis({
+        reputationScore: data.score ?? 67,
+        trend: data.trend ?? "stable",
+        trendValue: data.trendValue ?? "",
+        sky: data.sky ?? "Partly cloudy",
+        skyDescription: data.skyDescription ?? "",
+        breakdown: data.breakdown ?? { positive: 58, neutral: 27, negative: 15 },
+        articleCount: data.articleCount ?? 0,
+        aiVisibilityScore: null,
+      });
+      setSignals(data.todaySignals ?? []);
+      setSources(data.mainSources ?? []);
+      setLastRefresh(new Date());
+    } catch {
+      setError(true);
+    }
+    if (isRefresh) setRefreshing(false);
+    else setLoading(false);
+  };
 
   useEffect(() => {
     if (injectedKpis) return;
-    (async () => {
-      try {
-        const res = await fetch("/api/console/weather");
-        if (!res.ok) return;
-        const data = await res.json();
-        setKpis({
-          reputationScore: data.score ?? 67,
-          trend: data.trend ?? "stable",
-          trendValue: data.trendValue ?? "",
-          sky: data.sky ?? "Partly cloudy",
-          skyDescription: data.skyDescription ?? "",
-          breakdown: data.breakdown ?? { positive: 58, neutral: 27, negative: 15 },
-          articleCount: data.articleCount ?? 0,
-          aiVisibilityScore: null,
-        });
-        setSignals(data.todaySignals ?? []);
-        setSources(data.mainSources ?? []);
-      } catch {
-        setError(true);
-      }
-      setLoading(false);
-    })();
-  }, [injectedKpis]);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedKpis, timeRange]);
 
   const firstName = userName.split(" ")[0] || "there";
   const score = kpis?.reputationScore ?? 67;
   const skyColor = score >= 70 ? ACCENT : score >= 50 ? "#f59e0b" : "#ef4444";
+
+  // Filtered signals based on sentiment filter
+  const filteredSignals = signals.filter((s) => {
+    if (sentimentFilter === "all") return true;
+    // Infer sentiment from weight: strong=positive, medium=neutral, low=negative (simplified)
+    if (sentimentFilter === "positive") return s.weight === "strong";
+    if (sentimentFilter === "neutral") return s.weight === "medium";
+    if (sentimentFilter === "negative") return s.weight === "low";
+    return true;
+  });
+
+  // Export signals to CSV
+  const exportSignalsCSV = () => {
+    const headers = ["Time", "Source", "Title", "Weight"];
+    const rows = filteredSignals.map((s) => [s.time, s.source, `"${s.title.replace(/"/g, '""')}"`, s.weight]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `brand-monitor-signals-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export sources to CSV
+  const exportSourcesCSV = () => {
+    const headers = ["Source", "Articles", "Sentiment"];
+    const rows = sources.map((s) => [s.name, s.articles, s.sentiment]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `brand-monitor-sources-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="dash-main" style={{ padding: "24px", background: "#ffffff", overflowX: "hidden" }}>
@@ -128,13 +178,92 @@ export function BrandMonitorDashboard({
       </div>
 
       {/* ─── Page title ─── */}
-      <div style={{ marginBottom: "20px" }}>
-        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
-          {companyName}
+      <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+            {companyName}
+          </div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: "#0a0a0a", margin: 0, letterSpacing: "-0.02em" }}>
+            Reputation Weather
+          </h3>
         </div>
-        <h3 style={{ fontSize: "22px", fontWeight: 700, color: "#0a0a0a", margin: 0, letterSpacing: "-0.02em" }}>
-          Reputation Weather
-        </h3>
+        {/* Toolbar: time-range + refresh + export */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          {/* Time range selector */}
+          <div style={{ display: "flex", border: "1px solid #e5e5e5", borderRadius: "6px", overflow: "hidden" }}>
+            {(["24h", "7d", "30d"] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setTimeRange(r)}
+                style={{
+                  padding: "6px 12px",
+                  fontSize: "11px",
+                  fontFamily: FONT.mono,
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  background: timeRange === r ? ACCENT : "#ffffff",
+                  color: timeRange === r ? "#ffffff" : "#737373",
+                  transition: "all 0.15s ease",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          {/* Refresh button */}
+          <button
+            onClick={() => loadData(true)}
+            disabled={refreshing}
+            style={{
+              padding: "6px 12px",
+              fontSize: "11px",
+              fontFamily: FONT.mono,
+              fontWeight: 600,
+              border: "1px solid #e5e5e5",
+              borderRadius: "6px",
+              background: "#ffffff",
+              color: "#525252",
+              cursor: refreshing ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.15s ease",
+              opacity: refreshing ? 0.6 : 1,
+            }}
+            title={`Last refreshed: ${lastRefresh.toLocaleTimeString("en-US")}`}
+          >
+            <span style={{ display: "inline-block", transform: refreshing ? "rotate(360deg)" : "rotate(0deg)", transition: "transform 0.6s ease" }}>
+              {refreshing ? "\u21BB" : "\u21BB"}
+            </span>
+            <span>{refreshing ? "Refreshing" : "Refresh"}</span>
+          </button>
+          {/* Export button */}
+          <button
+            onClick={exportSourcesCSV}
+            disabled={sources.length === 0}
+            style={{
+              padding: "6px 12px",
+              fontSize: "11px",
+              fontFamily: FONT.mono,
+              fontWeight: 600,
+              border: "1px solid #e5e5e5",
+              borderRadius: "6px",
+              background: "#ffffff",
+              color: "#525252",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.15s ease",
+              opacity: sources.length === 0 ? 0.5 : 1,
+            }}
+          >
+            <span>{"\u2193"}</span>
+            <span>CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* ─── Score widget ─── */}
@@ -220,29 +349,87 @@ export function BrandMonitorDashboard({
       {/* ─── Today's signals ─── */}
       {signals.length > 0 && (
         <div style={{ marginBottom: "24px" }}>
-          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-            Today's signals
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+              Today's signals ({filteredSignals.length})
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {/* Sentiment filter chips */}
+              {(["all", "positive", "neutral", "negative"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setSentimentFilter(f)}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "10px",
+                    fontFamily: FONT.mono,
+                    fontWeight: 600,
+                    border: `1px solid ${sentimentFilter === f ? ACCENT : "#e5e5e5"}`,
+                    borderRadius: "12px",
+                    background: sentimentFilter === f ? `${ACCENT}15` : "#ffffff",
+                    color: sentimentFilter === f ? ACCENT : "#737373",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+              <button
+                onClick={exportSignalsCSV}
+                style={{
+                  padding: "4px 10px",
+                  fontSize: "10px",
+                  fontFamily: FONT.mono,
+                  fontWeight: 600,
+                  border: "1px solid #e5e5e5",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  color: "#525252",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                title="Export signals to CSV"
+              >
+                {"\u2193"} CSV
+              </button>
+            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {signals.map((signal, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "16px",
-                  padding: "12px 16px",
-                  background: "#ffffff",
-                  border: "1px solid #e5e5e5",
-                  borderRadius: "6px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <span style={{ fontFamily: FONT.mono, fontSize: "12px", color: "#737373", minWidth: "48px" }}>{signal.time}</span>
-                <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: ACCENT, minWidth: "80px" }}>{signal.source}</span>
-                <span style={{ fontSize: "14px", color: "#0a0a0a", flex: 1, minWidth: "200px" }}>{signal.title}</span>
+            {filteredSignals.length === 0 ? (
+              <div style={{ padding: "24px", textAlign: "center", color: "#737373", fontFamily: FONT.mono, fontSize: "12px", background: "#ffffff", border: "1px solid #e5e5e5", borderRadius: "6px" }}>
+                No signals match this filter.
               </div>
-            ))}
+            ) : (
+              filteredSignals.map((signal, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "16px",
+                    padding: "12px 16px",
+                    background: "#ffffff",
+                    border: "1px solid #e5e5e5",
+                    borderRadius: "6px",
+                    flexWrap: "wrap",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = `0 2px 8px ${ACCENT}20`; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e5e5"; e.currentTarget.style.boxShadow = "none"; }}
+                >
+                  <span style={{ fontFamily: FONT.mono, fontSize: "12px", color: "#737373", minWidth: "48px" }}>{signal.time}</span>
+                  <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: ACCENT, minWidth: "80px" }}>{signal.source}</span>
+                  <span style={{ fontSize: "14px", color: "#0a0a0a", flex: 1, minWidth: "200px" }}>{signal.title}</span>
+                  <span style={{ fontSize: "10px", fontFamily: FONT.mono, padding: "2px 8px", borderRadius: "2px", background: signal.weight === "strong" ? `${ACCENT}15` : signal.weight === "medium" ? "#73737315" : "#ef444415", color: signal.weight === "strong" ? ACCENT : signal.weight === "medium" ? "#737373" : "#ef4444", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    {signal.weight}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

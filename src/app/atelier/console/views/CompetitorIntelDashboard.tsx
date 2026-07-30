@@ -80,64 +80,97 @@ export function CompetitorIntelDashboard({
   const [moves, setMoves] = useState<CompetitorMove[]>(injectedMoves ?? []);
   const [loading, setLoading] = useState(!injectedKpis);
   const [error, setError] = useState(false);
+  const [rankFilter, setRankFilter] = useState<"all" | "ahead" | "behind">("all");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  const loadData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(false);
+    try {
+      const [weatherRes, neighborsRes] = await Promise.all([
+        fetch("/api/console/weather"),
+        fetch("/api/console/neighbors"),
+      ]);
+
+      let yourScore = 67;
+      if (weatherRes.ok) {
+        const w = await weatherRes.json();
+        yourScore = w.score ?? 67;
+      }
+
+      let neighborList: CompetitorEntry[] = [];
+      let competitorsTracked = 0;
+      if (neighborsRes.ok) {
+        const n = await neighborsRes.json();
+        competitorsTracked = n.neighbors?.length ?? 0;
+        neighborList = (n.neighbors ?? []).map((nb: { name: string; reputationScore: number; yourScore: number; delta: number; rank: number }) => ({
+          name: nb.name,
+          score: nb.reputationScore,
+          delta: nb.delta,
+          trend: "stable" as const,
+        }));
+      }
+
+      const sectorAverage = neighborList.length > 0
+        ? Math.round(neighborList.reduce((s: number, c: CompetitorEntry) => s + c.score, 0) / neighborList.length)
+        : 71;
+
+      const allEntries: CompetitorEntry[] = [
+        ...neighborList,
+        { name: `${companyName} (You)`, score: yourScore, delta: 0, trend: "stable" as const, isYou: true },
+      ].sort((a, b) => b.score - a.score);
+
+      const yourRank = allEntries.findIndex((e) => e.isYou) + 1;
+
+      setKpis({
+        yourScore,
+        sectorAverage,
+        deltaVsSector: yourScore - sectorAverage,
+        competitorsTracked,
+        yourRank,
+        totalInSector: allEntries.length,
+      });
+      setCompetitors(allEntries);
+      setLastRefresh(new Date());
+    } catch {
+      setError(true);
+    }
+    if (isRefresh) setRefreshing(false);
+    else setLoading(false);
+  };
 
   useEffect(() => {
     if (injectedKpis) return;
-    (async () => {
-      try {
-        const [weatherRes, neighborsRes] = await Promise.all([
-          fetch("/api/console/weather"),
-          fetch("/api/console/neighbors"),
-        ]);
-
-        let yourScore = 67;
-        if (weatherRes.ok) {
-          const w = await weatherRes.json();
-          yourScore = w.score ?? 67;
-        }
-
-        let neighborList: CompetitorEntry[] = [];
-        let competitorsTracked = 0;
-        if (neighborsRes.ok) {
-          const n = await neighborsRes.json();
-          competitorsTracked = n.neighbors?.length ?? 0;
-          neighborList = (n.neighbors ?? []).map((nb: { name: string; reputationScore: number; yourScore: number; delta: number; rank: number }) => ({
-            name: nb.name,
-            score: nb.reputationScore,
-            delta: nb.delta,
-            trend: "stable" as const,
-          }));
-        }
-
-        const sectorAverage = neighborList.length > 0
-          ? Math.round(neighborList.reduce((s: number, c: CompetitorEntry) => s + c.score, 0) / neighborList.length)
-          : 71;
-
-        // Insert "you" into the list
-        const allEntries: CompetitorEntry[] = [
-          ...neighborList,
-          { name: `${companyName} (You)`, score: yourScore, delta: 0, trend: "stable" as const, isYou: true },
-        ].sort((a, b) => b.score - a.score);
-
-        const yourRank = allEntries.findIndex((e) => e.isYou) + 1;
-
-        setKpis({
-          yourScore,
-          sectorAverage,
-          deltaVsSector: yourScore - sectorAverage,
-          competitorsTracked,
-          yourRank,
-          totalInSector: allEntries.length,
-        });
-        setCompetitors(allEntries);
-      } catch {
-        setError(true);
-      }
-      setLoading(false);
-    })();
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectedKpis, companyName]);
 
   const firstName = userName.split(" ")[0] || "there";
+
+  // Filter competitors: ahead (higher score than you), behind (lower), all
+  const yourScoreVal = kpis?.yourScore ?? 0;
+  const filteredCompetitors = competitors.filter((c) => {
+    if (rankFilter === "all") return true;
+    if (rankFilter === "ahead") return !c.isYou && c.score > yourScoreVal;
+    if (rankFilter === "behind") return !c.isYou && c.score <= yourScoreVal;
+    return true;
+  });
+
+  // Export competitors to CSV
+  const exportCompetitorsCSV = () => {
+    const headers = ["Rank", "Name", "Score", "Delta", "Type"];
+    const rows = competitors.map((c, i) => [i + 1, `"${c.name}"`, c.score, c.delta, c.isYou ? "You" : "Competitor"]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `competitor-landscape-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="dash-main" style={{ padding: "24px", background: "#ffffff", overflowX: "hidden" }}>
@@ -209,11 +242,77 @@ export function CompetitorIntelDashboard({
 
       {/* ─── Competitive landscape (ranked) ─── */}
       <div style={{ marginBottom: "24px" }}>
-        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-          Competitive landscape — rank #{kpis?.yourRank ?? "—"} of {kpis?.totalInSector ?? "—"}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            Competitive landscape — rank #{kpis?.yourRank ?? "—"} of {kpis?.totalInSector ?? "—"}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Rank filter chips */}
+            {(["all", "ahead", "behind"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setRankFilter(f)}
+                style={{
+                  padding: "4px 10px",
+                  fontSize: "10px",
+                  fontFamily: FONT.mono,
+                  fontWeight: 600,
+                  border: `1px solid ${rankFilter === f ? ACCENT : "#e5e5e5"}`,
+                  borderRadius: "12px",
+                  background: rankFilter === f ? `${ACCENT}15` : "#ffffff",
+                  color: rankFilter === f ? ACCENT : "#737373",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {f === "all" ? "All" : f === "ahead" ? "Ahead of me" : "Behind me"}
+              </button>
+            ))}
+            <button
+              onClick={() => loadData(true)}
+              disabled={refreshing}
+              style={{
+                padding: "4px 10px",
+                fontSize: "10px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: "1px solid #e5e5e5",
+                borderRadius: "12px",
+                background: "#ffffff",
+                color: "#525252",
+                cursor: refreshing ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+                opacity: refreshing ? 0.6 : 1,
+              }}
+              title={`Last refreshed: ${lastRefresh.toLocaleTimeString("en-US")}`}
+            >
+              {refreshing ? "\u21BB" : "\u21BB"} {refreshing ? "..." : "Refresh"}
+            </button>
+            <button
+              onClick={exportCompetitorsCSV}
+              style={{
+                padding: "4px 10px",
+                fontSize: "10px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: "1px solid #e5e5e5",
+                borderRadius: "12px",
+                background: "#ffffff",
+                color: "#525252",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {"\u2193"} CSV
+            </button>
+          </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {competitors.map((comp, i) => (
+          {filteredCompetitors.map((comp, i) => {
+            const originalRank = competitors.findIndex((c) => c === comp) + 1;
+            return (
             <div
               key={i}
               style={{
@@ -225,16 +324,19 @@ export function CompetitorIntelDashboard({
                 border: `1px solid ${comp.isYou ? ACCENT : "#e5e5e5"}`,
                 borderRadius: "6px",
                 flexWrap: "wrap",
+                transition: "border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease",
               }}
+              onMouseEnter={(e) => { if (!comp.isYou) { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = `0 2px 8px ${ACCENT}20`; e.currentTarget.style.transform = "translateX(2px)"; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = comp.isYou ? ACCENT : "#e5e5e5"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateX(0)"; }}
             >
-              <span style={{ fontFamily: FONT.mono, fontSize: "14px", fontWeight: 700, color: "#737373", minWidth: "24px" }}>
-                #{i + 1}
+              <span style={{ fontFamily: FONT.mono, fontSize: "14px", fontWeight: 700, color: comp.isYou ? ACCENT : "#737373", minWidth: "24px" }}>
+                #{originalRank}
               </span>
               <span style={{ fontSize: "14px", fontWeight: comp.isYou ? 700 : 500, color: comp.isYou ? ACCENT : "#0a0a0a", flex: 1, minWidth: "200px" }}>
                 {comp.name}
               </span>
               <div style={{ width: "120px", height: "6px", background: "#f4f4f5", borderRadius: "3px", overflow: "hidden" }}>
-                <div style={{ width: `${comp.score}%`, height: "100%", background: comp.isYou ? ACCENT : "#737373" }} />
+                <div style={{ width: `${comp.score}%`, height: "100%", background: comp.isYou ? ACCENT : "#737373", transition: "width 0.3s ease" }} />
               </div>
               <span style={{ fontFamily: FONT.mono, fontSize: "16px", fontWeight: 700, color: "#0a0a0a", minWidth: "40px", textAlign: "right" }}>
                 {comp.score}
@@ -243,7 +345,13 @@ export function CompetitorIntelDashboard({
                 {comp.delta > 0 ? "+" : ""}{comp.delta}
               </span>
             </div>
-          ))}
+            );
+          })}
+          {filteredCompetitors.length === 0 && (
+            <div style={{ padding: "24px", textAlign: "center", color: "#737373", fontFamily: FONT.mono, fontSize: "12px", background: "#ffffff", border: "1px solid #e5e5e5", borderRadius: "6px" }}>
+              No competitors match this filter.
+            </div>
+          )}
         </div>
       </div>
 
