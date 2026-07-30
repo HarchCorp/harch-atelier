@@ -17,13 +17,12 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
-// Augment NextAuth JWT & Session types so role/plan/accountType are visible to
+// Augment NextAuth JWT & Session types so role/accountType are visible to
 // callers of `getServerSession(authOptions)` and `getToken()`.
 declare module "next-auth" {
   interface User {
     role?: string;
-    plan?: string;
-    accountType?: string;  // trader | enterprise | investor
+    accountType?: string;  // brand-monitor | market-competitor | investment-bank | harch-alpha
   }
   interface Session {
     user: {
@@ -32,7 +31,6 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       role?: string;
-      plan?: string;
       accountType?: string;
     };
   }
@@ -41,7 +39,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     role?: string;
-    plan?: string;
     accountType?: string;
   }
 }
@@ -79,7 +76,6 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          plan: (user as any).plan,
           accountType: user.accountType,
         };
       },
@@ -89,7 +85,6 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as { role?: string }).role;
-        (token as any).plan = (user as { plan?: string }).plan;
         token.accountType = (user as { accountType?: string }).accountType;
       }
       return token;
