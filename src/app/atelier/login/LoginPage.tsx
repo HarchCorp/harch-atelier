@@ -25,13 +25,16 @@ export function LoginPage() {
     setLoading(true);
     setError(null);
 
-    // Use a callback URL that lets the server decide where to send the user
-    // based on their accountType (handled by /atelier/console smart redirect)
+    // Build callback URL from the CURRENT browser origin (not NEXTAUTH_URL)
+    // so it works on localhost (dev), atelier.harchcorp.com (prod), and
+    // cloudflared tunnels without redirecting to the wrong host.
+    const callbackUrl = `${window.location.origin}/atelier/console`;
+
     const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
-      callbackUrl: "/atelier/console",
+      callbackUrl,
     });
 
     setLoading(false);
@@ -41,8 +44,22 @@ export function LoginPage() {
       return;
     }
 
+    // result.url may be absolute (built from NEXTAUTH_URL). If it points
+    // to a different host than the current one, strip it back to a path
+    // so the browser stays on the correct origin.
     if (result?.url) {
-      window.location.href = result.url;
+      try {
+        const targetUrl = new URL(result.url);
+        if (targetUrl.origin !== window.location.origin) {
+          // Different host — use only the pathname to stay on current origin
+          window.location.href = targetUrl.pathname + targetUrl.search;
+        } else {
+          window.location.href = result.url;
+        }
+      } catch {
+        // Not a valid URL — treat as a relative path
+        window.location.href = result.url;
+      }
     }
   };
 
