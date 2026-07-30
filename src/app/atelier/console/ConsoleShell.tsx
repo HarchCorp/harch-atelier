@@ -833,6 +833,7 @@ export function ConsoleShell({ accountType = "enterprise" }: { accountType?: "en
           activeNav={activeNav}
           weather={weather}
           tier={tier}
+          accountType={accountType}
         />
 
         <DashboardRightPanel />
@@ -1220,11 +1221,24 @@ function DashboardMain({
   activeNav,
   weather,
   tier,
+  accountType,
 }: {
   activeNav: NavId;
   weather: WeatherData;
   tier: AccountType;
+  accountType: "enterprise" | "trader" | "investor";
 }) {
+  // Trader console — different content entirely
+  if (accountType === "trader") {
+    return <TraderView activeNav={activeNav} />;
+  }
+
+  // Investor console — portfolio roll-up
+  if (accountType === "investor") {
+    return <InvestorView activeNav={activeNav} />;
+  }
+
+  // Enterprise console (default)
   if (activeNav === "competitors") {
     return <NeighborsView tier={tier} />;
   }
@@ -1454,6 +1468,348 @@ function SentimentView({ weather }: { weather: WeatherData }) {
 }
 
 // ─── Placeholder for Alerts / Reports views ────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  TRADER VIEW — Assets + sentiment-price correlation
+//  Different content from enterprise console. Traders monitor ASSETS
+//  (stocks, crypto, fx, commodities), not company reputation.
+// ═══════════════════════════════════════════════════════════════
+
+interface TraderAsset {
+  id: string;
+  ticker: string;
+  name: string;
+  assetType: string;
+  exchange: string | null;
+  company: { slug: string; name: string; sector: string } | null;
+  latestPrice: number | null;
+  latestChange: number | null;
+  latestSentiment: number | null;
+  sentimentArticleCount: number;
+}
+
+function TraderView({ activeNav }: { activeNav: NavId }) {
+  const [assets, setAssets] = useState<TraderAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  const [correlation, setCorrelation] = useState<{
+    correlation: number;
+    direction: string;
+    interpretation: string;
+    dataPoints: number;
+    window: string;
+  } | null>(null);
+  const [corrLoading, setCorrLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/trader/assets");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.assets) {
+          setAssets(data.assets);
+          if (data.assets.length > 0) {
+            setSelectedTicker(data.assets[0].ticker);
+          }
+        }
+      } catch {
+        // ignore
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTicker) return;
+    setCorrLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/trader/assets/${selectedTicker}/correlation?window=30`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCorrelation(data);
+      } catch {
+        // ignore
+      }
+      setCorrLoading(false);
+    })();
+  }, [selectedTicker]);
+
+  if (loading) {
+    return <div style={{ padding: "48px 32px", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading assets…</div>;
+  }
+
+  const typeColors: Record<string, string> = {
+    stock: C.cta,
+    crypto: C.warning,
+    fx: C.accent,
+    commodity: C.danger,
+    index: C.textMuted,
+  };
+
+  return (
+    <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+            {assets.length} assets tracked
+          </div>
+          <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>
+            Market Monitor
+          </h3>
+        </div>
+      </div>
+
+      {/* Assets table */}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "24px" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
+            <thead>
+              <tr style={{ background: C.bgSubtle }}>
+                <th style={thStyle}>Ticker</th>
+                <th style={thStyle}>Name</th>
+                <th style={thStyle}>Type</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Price</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Change</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Sentiment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assets.map((a) => (
+                <tr
+                  key={a.id}
+                  onClick={() => setSelectedTicker(a.ticker)}
+                  style={{
+                    borderTop: `1px solid ${C.border}`,
+                    cursor: "pointer",
+                    background: selectedTicker === a.ticker ? C.bgSubtle : "transparent",
+                    transition: "background 0.1s",
+                  }}
+                >
+                  <td style={{ padding: "10px 16px", fontFamily: C.fontMono, fontWeight: 700, color: C.text }}>{a.ticker}</td>
+                  <td style={{ padding: "10px 16px", color: C.text }}>{a.name}</td>
+                  <td style={{ padding: "10px 16px" }}>
+                    <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 6px", borderRadius: "2px", background: `${typeColors[a.assetType] || C.textMuted}15`, color: typeColors[a.assetType] || C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                      {a.assetType}
+                    </span>
+                  </td>
+                  <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: C.text }}>
+                    {a.latestPrice ? a.latestPrice.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}
+                  </td>
+                  <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: a.latestChange !== null ? (a.latestChange > 0 ? C.cta : a.latestChange < 0 ? C.danger : C.textMuted) : C.textMuted }}>
+                    {a.latestChange !== null ? `${a.latestChange > 0 ? "+" : ""}${a.latestChange}%` : "—"}
+                  </td>
+                  <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: a.latestSentiment !== null ? (a.latestSentiment > 0.1 ? C.cta : a.latestSentiment < -0.1 ? C.danger : C.textMuted) : C.textMuted }}>
+                    {a.latestSentiment !== null ? a.latestSentiment.toFixed(2) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Correlation card — the KILLER FEATURE */}
+      {selectedTicker && (
+        <div style={{ padding: "24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+            <div>
+              <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+                Sentiment → Price Correlation
+              </div>
+              <div style={{ fontSize: "18px", fontWeight: 700, color: C.text }}>
+                {selectedTicker} · 30-day window
+              </div>
+            </div>
+            {correlation && !corrLoading && (
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "32px", fontWeight: 800, fontFamily: C.fontMono, color: Math.abs(correlation.correlation) > 0.5 ? C.cta : Math.abs(correlation.correlation) > 0.3 ? C.warning : C.textMuted }}>
+                  {correlation.correlation.toFixed(2)}
+                </div>
+                <div style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  Pearson r · {correlation.dataPoints} data points
+                </div>
+              </div>
+            )}
+          </div>
+
+          {corrLoading ? (
+            <div style={{ color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px", padding: "24px 0" }}>Computing correlation…</div>
+          ) : correlation ? (
+            <div>
+              <div style={{ padding: "16px", background: C.bgSubtle, borderRadius: "4px", fontSize: "14px", color: C.textBody, lineHeight: 1.6, marginBottom: "16px" }}>
+                <strong style={{ color: correlation.direction === "positive" ? C.cta : C.danger, fontFamily: C.fontMono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                  {correlation.direction === "positive" ? "Positive correlation" : "Negative correlation"}
+                </strong>
+                <br />
+                {correlation.interpretation}
+              </div>
+              <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, lineHeight: 1.6 }}>
+                This is HarchIQ&apos;s killer feature for traders: no competitor offers sentiment-to-price correlation for Moroccan BVC stocks. The correlation is computed daily between article sentiment scores and price changes over a 30-day rolling window.
+              </div>
+            </div>
+          ) : (
+            <div style={{ color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px", padding: "24px 0" }}>Select an asset to see correlation.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INVESTOR VIEW — Portfolio roll-up + DD dossiers
+// ═══════════════════════════════════════════════════════════════
+
+interface InvestorPortfolio {
+  id: string;
+  name: string;
+  description: string | null;
+  holdingCount: number;
+  avgReputation: number | null;
+  totalHighRisks: number;
+  holdings: {
+    id: string;
+    weight: number;
+    company: { slug: string; name: string; sector: string; reputationScore: number | null; highRisks: number } | null;
+    asset: { ticker: string; name: string; latestPrice: number | null } | null;
+  }[];
+}
+
+function InvestorView({ activeNav }: { activeNav: NavId }) {
+  const [portfolios, setPortfolios] = useState<InvestorPortfolio[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/investor/portfolios");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.portfolios) setPortfolios(data.portfolios);
+      } catch {
+        // ignore
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return <div style={{ padding: "48px 32px", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading portfolios…</div>;
+  }
+
+  return (
+    <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+          {portfolios.length} portfolio{portfolios.length !== 1 ? "s" : ""}
+        </div>
+        <h3 style={{ fontSize: "22px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>
+          Portfolio Overview
+        </h3>
+      </div>
+
+      {portfolios.length === 0 ? (
+        <div style={{ padding: "48px 32px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>
+          No portfolios yet. Ask your admin to create one.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {portfolios.map((p) => (
+            <div key={p.id} style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden" }}>
+              {/* Portfolio header */}
+              <div style={{ padding: "16px 20px", background: C.bgSubtle, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: C.text }}>{p.name}</div>
+                  {p.description && <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "4px" }}>{p.description}</div>}
+                </div>
+                <div style={{ display: "flex", gap: "24px" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: p.avgReputation ? (p.avgReputation >= 70 ? C.cta : p.avgReputation >= 50 ? C.warning : C.danger) : C.textMuted }}>
+                      {p.avgReputation ?? "—"}
+                    </div>
+                    <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>Avg reputation</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: p.totalHighRisks > 0 ? C.danger : C.cta }}>
+                      {p.totalHighRisks}
+                    </div>
+                    <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>High risks</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: C.text }}>
+                      {p.holdingCount}
+                    </div>
+                    <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>Holdings</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Holdings table */}
+              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "400px" }}>
+                  <thead>
+                    <tr style={{ background: C.bg }}>
+                      <th style={thStyle}>Company</th>
+                      <th style={thStyle}>Sector</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Weight</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Reputation</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>High risks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {p.holdings.map((h) => (
+                      <tr key={h.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                        <td style={{ padding: "10px 16px", fontWeight: 600, color: C.text }}>
+                          {h.company?.name || h.asset?.name || "—"}
+                        </td>
+                        <td style={{ padding: "10px 16px", color: C.textMuted, fontFamily: C.fontMono, fontSize: "12px" }}>
+                          {h.company?.sector || "—"}
+                        </td>
+                        <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: C.text }}>
+                          {(h.weight * 100).toFixed(0)}%
+                        </td>
+                        <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: h.company?.reputationScore ? (h.company.reputationScore >= 70 ? C.cta : h.company.reputationScore >= 50 ? C.warning : C.danger) : C.textMuted }}>
+                          {h.company?.reputationScore ?? "—"}
+                        </td>
+                        <td style={{ padding: "10px 16px", textAlign: "right", fontFamily: C.fontMono, color: h.company && h.company.highRisks > 0 ? C.danger : C.textMuted }}>
+                          {h.company?.highRisks ?? 0}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* DD Dossiers placeholder */}
+      <div style={{ marginTop: "32px", padding: "24px", border: `1px dashed ${C.border}`, borderRadius: "8px", textAlign: "center" }}>
+        <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, marginBottom: "8px" }}>Due Diligence Dossiers</div>
+        <div style={{ fontSize: "13px", color: C.textMuted, fontFamily: C.fontMono }}>
+          Generate board-ready PDF dossiers (50-100 pages) for any tracked company.
+          <br />Coming soon — uses the existing dossier-generator pipeline.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const thStyle: React.CSSProperties = {
+  padding: "10px 16px",
+  textAlign: "left" as const,
+  fontFamily: "'Space Mono', monospace",
+  fontSize: "10px",
+  color: "#737373",
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  fontWeight: 600,
+};
+
 function PlaceholderView({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div
