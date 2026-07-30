@@ -719,7 +719,6 @@ export function ConsoleShell({
         onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
         mobileMenuOpen={mobileMenuOpen}
         accountType={accountType}
-        isAdmin={false}
         theme={theme}
         initials={initials}
         displayName={displayName}
@@ -777,7 +776,6 @@ function DashboardTopBar({
   onMobileMenuToggle,
   mobileMenuOpen,
   accountType,
-  isAdmin,
   theme,
   initials,
   displayName,
@@ -787,7 +785,6 @@ function DashboardTopBar({
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
   accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
-  isAdmin: boolean;
   theme: OfferTheme;
   initials: string;
   displayName: string;
