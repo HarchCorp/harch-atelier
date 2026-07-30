@@ -1425,13 +1425,13 @@ function PlaceholderView({ title, subtitle, theme }: { title: string; subtitle: 
         style={{
           fontSize: "11px",
           fontFamily: FONT.mono,
-          color: C.textMuted,
+          color: theme.accent,
           letterSpacing: "0.1em",
           textTransform: "uppercase",
           marginBottom: "4px",
         }}
       >
-        HarchIQ Console
+        {theme.label}
       </div>
       <h3
         style={{
@@ -1450,19 +1450,33 @@ function PlaceholderView({ title, subtitle, theme }: { title: string; subtitle: 
       <div
         style={{
           padding: "48px 32px",
-          border: `1px dashed ${C.border}`,
+          border: `1px dashed ${theme.accent}40`,
           borderRadius: "6px",
           textAlign: "center",
-          color: C.textMuted,
-          fontFamily: FONT.mono,
-          fontSize: "12px",
+          background: theme.accentBg,
         }}
       >
-        Section under construction.
-        <br />
-        <span style={{ color: C.sage, marginTop: "8px", display: "inline-block" }}>
-          {title} will be available in the next iteration.
-        </span>
+        <div style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          background: theme.accent,
+          margin: "0 auto 12px",
+          animation: "placeholder-pulse 1.5s ease-in-out infinite",
+        }} />
+        <div style={{ fontSize: "13px", color: C.textSecondary, fontFamily: FONT.mono, lineHeight: 1.5 }}>
+          This module is being calibrated with live data.
+          <br />
+          <span style={{ color: theme.accent, marginTop: "8px", display: "inline-block", fontWeight: 600 }}>
+            {title} — available Q3 2026.
+          </span>
+        </div>
+        <style>{`
+          @keyframes placeholder-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.7); }
+          }
+        `}</style>
       </div>
     </div>
   );
@@ -1796,37 +1810,37 @@ function NeighborsView({ tier, theme }: { tier: AccountType; theme: OfferTheme }
 
 function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accountType: string }) {
   const [aiData, setAiData] = useState<{ platform: string; cited: boolean; position: string | null; sentiment: string | null }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [topicsData, setTopicsData] = useState<{ label: string; count: number; type: string }[]>([]);
+  const [aiLoading, setAiLoading] = useState(true);
+  const [topicsLoading, setTopicsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/console/weather");
-        if (!res.ok) return;
-        const data = await res.json();
-        // We don't have a dedicated AI visibility API yet, but the weather
-        // endpoint returns company context. For now, use static structure
-        // until /api/console/ai-visibility is built.
-        setAiData([
-          { platform: "ChatGPT", cited: true, position: "#2", sentiment: "positive" },
-          { platform: "Perplexity", cited: true, position: "#3", sentiment: "neutral" },
-          { platform: "Gemini", cited: true, position: "#4", sentiment: "positive" },
-          { platform: "Claude", cited: true, position: "#3", sentiment: "positive" },
+        const [aiRes, topicsRes] = await Promise.all([
+          fetch("/api/console/ai-visibility"),
+          fetch("/api/console/topics"),
         ]);
+        if (aiRes.ok) {
+          const data = await aiRes.json();
+          setAiData((data.platforms ?? []).map((p: { platform: string; cited: boolean; position: string | null; sentiment: string | null }) => ({
+            platform: p.platform,
+            cited: p.cited,
+            position: p.position,
+            sentiment: p.sentiment,
+          })));
+        }
+        if (topicsRes.ok) {
+          const data = await topicsRes.json();
+          setTopicsData(data.topics ?? []);
+        }
       } catch {
         // graceful
       }
-      setLoading(false);
+      setAiLoading(false);
+      setTopicsLoading(false);
     })();
   }, []);
-
-  const topics = [
-    { label: "Financial results", count: 39, trend: "up" as const },
-    { label: "Digital transformation", count: 35, trend: "up" as const },
-    { label: "Pan-African expansion", count: 24, trend: "stable" as const },
-    { label: "Sustainability / ESG", count: 25, trend: "up" as const },
-    { label: "Leadership visibility", count: 47, trend: "stable" as const },
-  ];
 
   return (
     <div
@@ -1850,17 +1864,23 @@ function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accoun
         Top 5 Topics
       </div>
 
-      {topics.map((topic, i) => (
-        <div key={i} style={{ marginBottom: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-            <span style={{ fontSize: "13px", fontWeight: 500, color: C.textPrimary }}>{topic.label}</span>
-            <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted }}>{topic.count}</span>
+      {topicsLoading ? (
+        <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, padding: "12px 0" }}>Loading topics…</div>
+      ) : topicsData.length === 0 ? (
+        <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, padding: "12px 0" }}>No topics detected yet.</div>
+      ) : (
+        topicsData.slice(0, 5).map((topic, i) => (
+          <div key={i} style={{ marginBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <span style={{ fontSize: "13px", fontWeight: 500, color: C.textPrimary }}>{topic.label}</span>
+              <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted }}>{topic.count}</span>
+            </div>
+            <div style={{ height: "4px", background: C.border, borderRadius: "2px", overflow: "hidden" }}>
+              <div style={{ width: `${Math.min((topic.count / Math.max(...topicsData.map((t) => t.count))) * 100, 100)}%`, height: "100%", background: topic.type === "risk" ? C.red : theme.accent }} />
+            </div>
           </div>
-          <div style={{ height: "4px", background: C.border, borderRadius: "2px", overflow: "hidden" }}>
-            <div style={{ width: `${(topic.count / 50) * 100}%`, height: "100%", background: theme.accent }} />
-          </div>
-        </div>
-      ))}
+        ))
+      )}
 
       {/* AI visibility mini card */}
       <div
@@ -1887,7 +1907,7 @@ function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accoun
         <div style={{ fontSize: "13px", color: C.textSecondary, marginBottom: "12px" }}>
           <strong style={{ color: C.textPrimary }}>4 / 8 engines cite you</strong>
         </div>
-        {loading ? (
+        {aiLoading ? (
           <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, padding: "8px 0" }}>Loading…</div>
         ) : (
           aiData.map((ai) => (
