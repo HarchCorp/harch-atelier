@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { SessionProvider } from "next-auth/react";
+import { AtelierSessionProvider } from "./AtelierSessionProvider";
 import "./atelier.css";
 
 // ─── ATELIER LAYOUT ──────────────────────────────────────────────
 // Shared layout for all /atelier/* pages
-// Includes: skip link, metadata, SessionProvider for useSession()
+// Includes: skip link, metadata, SessionProvider (via client wrapper)
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://atelier.harchcorp.com"),
@@ -38,7 +38,7 @@ export default function AtelierLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider>
+    <AtelierSessionProvider>
       <a
         href="#main-content"
         className="atelier-skip-link"
@@ -59,6 +59,6 @@ export default function AtelierLayout({
         Skip to main content
       </a>
       <div id="main-content">{children}</div>
-    </SessionProvider>
+    </AtelierSessionProvider>
   );
 }
