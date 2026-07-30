@@ -6,6 +6,8 @@ import BrandBadge from "@/components/BrandBadge";
 import { C as TOKENS } from "../components/tokens";
 import { BrandMonitorDashboard } from "./views/BrandMonitorDashboard";
 import { CompetitorIntelDashboard } from "./views/CompetitorIntelDashboard";
+import { InvestorDeskDashboard } from "./views/InvestorDeskDashboard";
+import { AlphaDeskDashboard } from "./views/AlphaDeskDashboard";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ CONSOLE — Shell (CONSOLE-V3)
@@ -1409,14 +1411,14 @@ function DashboardMain({
   displayName: string;
   companyName: string;
 }) {
-  // Harch Alpha — trader console
+  // Harch Alpha — trader console (dark terminal vibe)
   if (accountType === "harch-alpha") {
-    return <TraderView activeNav={activeNav} theme={theme} displayName={displayName} />;
+    return <AlphaDeskDashboard userName={displayName} userEmail={null} companyName={companyName} />;
   }
 
-  // Investment Bank — investor console
+  // Investment Bank — investor console (cold, institutional)
   if (accountType === "investment-bank") {
-    return <InvestorView activeNav={activeNav} theme={theme} displayName={displayName} />;
+    return <InvestorDeskDashboard userName={displayName} userEmail={null} companyName={companyName} />;
   }
 
   // Market & Competitor — enterprise + competitor intel
