@@ -148,13 +148,19 @@ export function ConsoleShell() {
   const changeTier = useCallback((tier: AccountType) => {
     setLayout((prev) => {
       const available = NATIVE_SECTIONS.filter((s) => s.tiers.includes(tier));
+      // Keep sections that are still available + custom sections
       const stillVisible = prev.visibleSections.filter((id) =>
         available.some((s) => s.id === id) || prev.customSections.some((c) => c.id === id)
       );
-      if (stillVisible.length > 0 && !stillVisible.includes(activeSection)) {
-        setActiveSection(stillVisible[0]);
+      // Add native sections that are now available but weren't visible before
+      const toAdd = available
+        .filter((s) => !stillVisible.includes(s.id) && !prev.hiddenSections.includes(s.id))
+        .map((s) => s.id);
+      const newVisible = [...stillVisible, ...toAdd];
+      if (newVisible.length > 0 && !newVisible.includes(activeSection)) {
+        setActiveSection(newVisible[0]);
       }
-      return { ...prev, tier, visibleSections: stillVisible };
+      return { ...prev, tier, visibleSections: newVisible };
     });
   }, [activeSection]);
 
@@ -510,6 +516,7 @@ function SideMenu(props: SideMenuProps) {
 
 function Content({ section, tier }: { section: Section; tier: AccountType }) {
   if (section.id === "meteo") return <MeteoSection tier={tier} />;
+  if (section.id === "voisins") return <NeighborsSection tier={tier} />;
   return (
     <main style={{ padding: "32px 24px", maxWidth: "100%", overflowX: "hidden" }}>
       <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
@@ -670,6 +677,398 @@ function MeteoSection({ tier }: { tier: AccountType }) {
             Discovery tier ·
           </strong>{" "}
           Upgrade to Watch tier to track your Neighbors (direct competitors) with the Neighbor Index.
+        </div>
+      )}
+    </main>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NEIGHBORS SECTION — Competitors with Neighbor Index
+//
+//  The Neighbor Index (per founder's Apple/Samsung/Huawei concept):
+//  - Rank 1 neighbor (Samsung for Apple): product launch = level 3 crisis
+//  - Rank 2 neighbor (Huawei): product launch = level 2 crisis
+//  - Rank 3 neighbor (Xiaomi): minor signal only
+//
+//  The closer the neighbor (same industry, same size, same market),
+//  the higher their impact on your reputation when they make a move.
+// ═══════════════════════════════════════════════════════════════
+
+interface Neighbor {
+  id: string;
+  name: string;
+  sector: string;
+  rank: 1 | 2 | 3;           // 1 = closest, 3 = furthest
+  reputationScore: number;    // their reputation (0-100)
+  yourScore: number;          // your reputation (0-100) — for comparison
+  delta: number;              // reputationScore - yourScore (positive = they're ahead)
+  recentMoves: {
+    title: string;
+    date: string;
+    impactLevel: 1 | 2 | 3;   // 3 = high crisis potential
+    impactDescription: string;
+  }[];
+}
+
+const MOCK_NEIGHBORS: Neighbor[] = [
+  {
+    id: "n1",
+    name: "Attijariwafa Bank",
+    sector: "Banking",
+    rank: 1,
+    reputationScore: 84,
+    yourScore: 67,
+    delta: 17,
+    recentMoves: [
+      {
+        title: "Q2 results announcement — record net income",
+        date: "2 days ago",
+        impactLevel: 3,
+        impactDescription: "Rank 1 neighbor. Strong positive coverage may overshadow your Q2 narrative. Consider timing your next announcement around theirs.",
+      },
+      {
+        title: "New mobile banking app launch",
+        date: "1 week ago",
+        impactLevel: 2,
+        impactDescription: "Digital transformation narrative. If you have a similar product, expect comparison articles.",
+      },
+    ],
+  },
+  {
+    id: "n2",
+    name: "Bank of Africa",
+    sector: "Banking",
+    rank: 1,
+    reputationScore: 72,
+    yourScore: 67,
+    delta: 5,
+    recentMoves: [
+      {
+        title: "Nigeria market entry (Prestige Bank acquisition)",
+        date: "3 weeks ago",
+        impactLevel: 3,
+        impactDescription: "Pan-African expansion story. If you don't have a comparable Africa narrative, you'll be perceived as local-only.",
+      },
+    ],
+  },
+  {
+    id: "n3",
+    name: "CIH Bank",
+    sector: "Banking",
+    rank: 2,
+    reputationScore: 68,
+    yourScore: 67,
+    delta: 1,
+    recentMoves: [
+      {
+        title: "Fintech partnership with Chinese operator",
+        date: "5 days ago",
+        impactLevel: 2,
+        impactDescription: "Rank 2 neighbor. Innovation narrative but smaller market share. Watch for analyst comparisons.",
+      },
+    ],
+  },
+  {
+    id: "n4",
+    name: "Société Générale Maroc",
+    sector: "Banking",
+    rank: 2,
+    reputationScore: 58,
+    yourScore: 67,
+    delta: -9,
+    recentMoves: [
+      {
+        title: "Parent company headwinds in France",
+        date: "2 weeks ago",
+        impactLevel: 1,
+        impactDescription: "Rank 2 neighbor in decline. Your positive trajectory stands out by contrast — leverage this in comms.",
+      },
+    ],
+  },
+  {
+    id: "n5",
+    name: "Banque Centrale Populaire",
+    sector: "Banking",
+    rank: 3,
+    reputationScore: 71,
+    yourScore: 67,
+    delta: 4,
+    recentMoves: [
+      {
+        title: "Cooperative model anniversary event",
+        date: "1 month ago",
+        impactLevel: 1,
+        impactDescription: "Rank 3 neighbor. Different business model, low direct comparison risk.",
+      },
+    ],
+  },
+];
+
+function NeighborsSection({ tier }: { tier: AccountType }) {
+  const [selectedNeighbor, setSelectedNeighbor] = useState<string | null>(MOCK_NEIGHBORS[0].id);
+  const [filterRank, setFilterRank] = useState<1 | 2 | 3 | null>(null);
+
+  const filteredNeighbors = filterRank
+    ? MOCK_NEIGHBORS.filter((n) => n.rank === filterRank)
+    : MOCK_NEIGHBORS;
+
+  const selected = MOCK_NEIGHBORS.find((n) => n.id === selectedNeighbor);
+
+  const rankLabel = (rank: 1 | 2 | 3) => {
+    if (rank === 1) return "Rank 1 — Direct";
+    if (rank === 2) return "Rank 2 — Indirect";
+    return "Rank 3 — Peripheral";
+  };
+
+  const rankColor = (rank: 1 | 2 | 3) => {
+    if (rank === 1) return C.danger;
+    if (rank === 2) return C.warning;
+    return C.textMuted;
+  };
+
+  const impactColor = (level: 1 | 2 | 3) => {
+    if (level === 3) return C.danger;
+    if (level === 2) return C.warning;
+    return C.textMuted;
+  };
+
+  const impactLabel = (level: 1 | 2 | 3) => {
+    if (level === 3) return "High impact";
+    if (level === 2) return "Medium impact";
+    return "Low impact";
+  };
+
+  return (
+    <main style={{ padding: "32px 24px", maxWidth: "100%", overflowX: "hidden" }}>
+      <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
+        Section · Neighbors
+      </div>
+      <h1 style={{ fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 8px" }}>
+        Your neighbors
+      </h1>
+      <p style={{ fontSize: "15px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "24px" }}>
+        {MOCK_NEIGHBORS.length} competitors tracked · Neighbor Index active
+      </p>
+
+      {/* Neighbor Index explainer */}
+      <div style={{ padding: "16px 20px", background: C.bgSubtle, border: `1px solid ${C.border}`, borderRadius: "6px", marginBottom: "32px", fontSize: "13px", color: C.textBody, lineHeight: 1.6 }}>
+        <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          How the Neighbor Index works
+        </strong>
+        <br />
+        Each neighbor is ranked by proximity (industry, size, market overlap).
+        Rank 1 moves hit you hardest, Rank 3 moves are background noise.
+        When a rank 1 neighbor launches a product, expect a level 3 reputational impact on your brand.
+      </div>
+
+      {/* Rank filter */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
+        <button
+          onClick={() => setFilterRank(null)}
+          style={{
+            padding: "6px 12px",
+            background: filterRank === null ? C.text : "transparent",
+            color: filterRank === null ? "#ffffff" : C.textBody,
+            border: `1px solid ${filterRank === null ? C.text : C.border}`,
+            borderRadius: "4px",
+            fontFamily: C.fontMono,
+            fontSize: "11px",
+            cursor: "pointer",
+            letterSpacing: "0.05em",
+          }}
+        >
+          All ({MOCK_NEIGHBORS.length})
+        </button>
+        {[1, 2, 3].map((r) => {
+          const count = MOCK_NEIGHBORS.filter((n) => n.rank === r).length;
+          const isActive = filterRank === r;
+          return (
+            <button
+              key={r}
+              onClick={() => setFilterRank(r as 1 | 2 | 3)}
+              style={{
+                padding: "6px 12px",
+                background: isActive ? rankColor(r as 1 | 2 | 3) : "transparent",
+                color: isActive ? "#ffffff" : C.textBody,
+                border: `1px solid ${isActive ? rankColor(r as 1 | 2 | 3) : C.border}`,
+                borderRadius: "4px",
+                fontFamily: C.fontMono,
+                fontSize: "11px",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Rank {r} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "24px" }}>
+        {/* Neighbors list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
+            Tracked neighbors
+          </div>
+          {filteredNeighbors.map((n) => {
+            const isSelected = n.id === selectedNeighbor;
+            return (
+              <button
+                key={n.id}
+                onClick={() => setSelectedNeighbor(n.id)}
+                style={{
+                  padding: "14px 16px",
+                  background: isSelected ? C.bgSubtle : C.bg,
+                  border: `1px solid ${isSelected ? C.accent : C.border}`,
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>
+                    {n.name}
+                  </span>
+                  <span style={{
+                    fontSize: "10px",
+                    fontFamily: C.fontMono,
+                    padding: "2px 6px",
+                    borderRadius: "2px",
+                    background: `${rankColor(n.rank)}15`,
+                    color: rankColor(n.rank),
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    flexShrink: 0,
+                  }}>
+                    R{n.rank}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", fontFamily: C.fontMono }}>
+                  <span style={{ color: C.textMuted }}>Score: <span style={{ color: C.text, fontWeight: 700 }}>{n.reputationScore}</span></span>
+                  <span style={{ color: n.delta > 0 ? C.danger : n.delta < 0 ? C.cta : C.textMuted }}>
+                    {n.delta > 0 ? "+" : ""}{n.delta} vs you
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected neighbor detail */}
+        <div style={{ minWidth: 0 }}>
+          {selected && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {/* Score comparison */}
+              <div style={{ padding: "24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "18px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em" }}>
+                      {selected.name}
+                    </div>
+                    <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "4px" }}>
+                      {selected.sector} · {rankLabel(selected.rank)}
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: "11px",
+                    fontFamily: C.fontMono,
+                    padding: "4px 10px",
+                    borderRadius: "2px",
+                    background: `${rankColor(selected.rank)}15`,
+                    color: rankColor(selected.rank),
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                  }}>
+                    Rank {selected.rank}
+                  </span>
+                </div>
+
+                {/* Score bars */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontFamily: C.fontMono, marginBottom: "4px" }}>
+                      <span style={{ color: C.textMuted }}>Their score</span>
+                      <span style={{ color: C.text, fontWeight: 700 }}>{selected.reputationScore}</span>
+                    </div>
+                    <div style={{ height: "6px", background: C.bgSubtle, borderRadius: "3px", overflow: "hidden" }}>
+                      <div style={{ width: `${selected.reputationScore}%`, height: "100%", background: rankColor(selected.rank) }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontFamily: C.fontMono, marginBottom: "4px" }}>
+                      <span style={{ color: C.textMuted }}>Your score</span>
+                      <span style={{ color: C.text, fontWeight: 700 }}>{selected.yourScore}</span>
+                    </div>
+                    <div style={{ height: "6px", background: C.bgSubtle, borderRadius: "3px", overflow: "hidden" }}>
+                      <div style={{ width: `${selected.yourScore}%`, height: "100%", background: C.accent }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delta */}
+                <div style={{ marginTop: "16px", padding: "12px 14px", background: selected.delta > 0 ? C.dangerBg : selected.delta < 0 ? C.successBg : C.bgSubtle, borderRadius: "4px", fontSize: "13px", lineHeight: 1.5 }}>
+                  <strong style={{ color: selected.delta > 0 ? C.danger : selected.delta < 0 ? C.cta : C.textBody, fontFamily: C.fontMono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    {selected.delta > 0 ? "They're ahead" : selected.delta < 0 ? "You're ahead" : "Tied"}
+                  </strong>
+                  <span style={{ color: C.textBody, marginLeft: "8px" }}>
+                    by {Math.abs(selected.delta)} points
+                  </span>
+                </div>
+              </div>
+
+              {/* Recent moves */}
+              <div>
+                <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
+                  Recent moves ({selected.recentMoves.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {selected.recentMoves.map((move, i) => (
+                    <div key={i} style={{ padding: "16px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "6px", borderLeft: `3px solid ${impactColor(move.impactLevel)}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, flex: 1, minWidth: "200px" }}>
+                          {move.title}
+                        </div>
+                        <span style={{
+                          fontSize: "10px",
+                          fontFamily: C.fontMono,
+                          padding: "3px 8px",
+                          borderRadius: "2px",
+                          background: `${impactColor(move.impactLevel)}15`,
+                          color: impactColor(move.impactLevel),
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          flexShrink: 0,
+                        }}>
+                          {impactLabel(move.impactLevel)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, marginBottom: "8px" }}>
+                        {move.date}
+                      </div>
+                      <div style={{ fontSize: "13px", color: C.textBody, lineHeight: 1.5 }}>
+                        {move.impactDescription}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tier gate */}
+      {tier === "decouverte" && (
+        <div style={{ marginTop: "32px", padding: "16px 20px", background: C.bgSubtle, border: `1px solid ${C.border}`, borderRadius: "6px", fontSize: "13px", color: C.textBody, lineHeight: 1.5 }}>
+          <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            Discovery tier ·
+          </strong>{" "}
+          You're seeing sample data. Upgrade to Watch tier to track your real neighbors with the Neighbor Index.
         </div>
       )}
     </main>
