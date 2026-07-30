@@ -20,9 +20,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   // Admin can access any API (to preview what users see)
-  if (session.user?.accountType !== "trader" && session.user?.role !== "admin") {
+  if (session.user?.accountType !== "harch-alpha" && session.user?.role !== "admin") {
     return NextResponse.json(
-      { error: "Forbidden — trader account required" },
+      { error: "Forbidden — harch-alpha account required" },
       { status: 403 }
     );
   }

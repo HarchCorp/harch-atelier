@@ -22,7 +22,7 @@ export function RequestAccessPage() {
     name: "",
     company: "",
     role: "",
-    accountType: "enterprise" as "trader" | "enterprise" | "investor",
+    accountType: "brand-monitor" as "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha",
     companySize: "" as "" | "startup" | "sme" | "mid-market" | "enterprise",
     useCase: "",
     budget: "",
@@ -102,9 +102,10 @@ export function RequestAccessPage() {
   }
 
   const accountTypes = [
-    { value: "enterprise" as const, label: "Enterprise", desc: "Monitor your company's reputation across media + AI" },
-    { value: "trader" as const, label: "Trader", desc: "Track sentiment-to-price correlation on Moroccan assets" },
-    { value: "investor" as const, label: "Investor", desc: "Due diligence, portfolio roll-up, ESG screening" },
+    { value: "brand-monitor" as const, label: "Brand Monitor", desc: "Monitor your company's reputation across media + AI" },
+    { value: "market-competitor" as const, label: "Market & Competitor", desc: "Brand + up to 10 competitors + sector intelligence" },
+    { value: "investment-bank" as const, label: "Investment Bank", desc: "Due diligence, M&A, portfolio roll-up, ESG screening" },
+    { value: "harch-alpha" as const, label: "Harch Alpha", desc: "Track sentiment-to-price correlation on Moroccan assets" },
   ];
 
   const companySizes = [

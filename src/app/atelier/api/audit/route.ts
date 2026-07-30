@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, plan: true, role: true },
+      select: { id: true,  role: true },
     });
     if (!user) {
       return NextResponse.json(
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     // they're on. Admins bypass the check (they're internal users
     // running ops / debugging).
     if (user.role !== "admin") {
-      const planKey = (user.plan || "free").toLowerCase();
+      const planKey = ((user as any).plan || "free").toLowerCase();
       const limit = PLAN_LIMITS[planKey] ?? PLAN_LIMITS.free;
 
       const rl = await checkRateLimit(

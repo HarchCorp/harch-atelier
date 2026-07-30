@@ -87,7 +87,7 @@ export function AdminDashboard() {
   const [formEmail, setFormEmail] = useState("");
   const [formName, setFormName] = useState("");
   const [formCompany, setFormCompany] = useState("");
-  const [formAccountType, setFormAccountType] = useState("enterprise");
+  const [formAccountType, setFormAccountType] = useState("brand-monitor");
   const [formPlan, setFormPlan] = useState("decouverte");
   const [formPayment, setFormPayment] = useState("auto");
   const [formMessage, setFormMessage] = useState("");
@@ -129,7 +129,7 @@ export function AdminDashboard() {
       setFormEmail(request.email);
       setFormName(request.name);
       setFormCompany(request.company || "");
-      setFormAccountType("enterprise");
+      setFormAccountType("brand-monitor");
       setFormPlan("veille");
       setFormPayment("auto");
       setFormMessage("");
@@ -140,7 +140,7 @@ export function AdminDashboard() {
       setFormEmail("");
       setFormName("");
       setFormCompany("");
-      setFormAccountType("enterprise");
+      setFormAccountType("brand-monitor");
       setFormPlan("decouverte");
       setFormPayment("auto");
       setFormMessage("");
@@ -221,7 +221,7 @@ export function AdminDashboard() {
       {/* KPI strip */}
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "1px", background: C.border, border: `1px solid ${C.border}`, margin: "0 24px", borderRadius: "6px", overflow: "hidden" }}>
-          <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users.enterprise}E · ${stats.users.trader}T · ${stats.users.investor}I`} />
+          <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users["brand-monitor"]}B · ${stats.users["market-competitor"]}M · ${stats.users["investment-bank"]}I · ${stats.users["harch-alpha"]}H`} />
           <KpiCell label="Pending requests" value={stats.requests.pending} color={stats.requests.pending > 0 ? C.warning : undefined} />
           <KpiCell label="Active invites" value={stats.invitations.active} color={stats.invitations.active > 0 ? C.cta : undefined} />
           <KpiCell label="Companies" value={stats.data.companies} />
@@ -318,9 +318,10 @@ export function AdminDashboard() {
                 <label style={labelStyle}>Account type *</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "8px" }}>
                   {[
-                    { value: "enterprise", label: "Enterprise", desc: "Monitor own reputation" },
-                    { value: "trader", label: "Trader", desc: "Monitor assets/markets" },
-                    { value: "investor", label: "Investor", desc: "DD + portfolio" },
+                    { value: "brand-monitor", label: "Brand Monitor", desc: "Monitor own reputation" },
+                    { value: "market-competitor", label: "Market & Competitor", desc: "Brand + competitors + sector" },
+                    { value: "investment-bank", label: "Investment Bank", desc: "DD + M&A + portfolio" },
+                    { value: "harch-alpha", label: "Harch Alpha", desc: "Trader — assets/markets" },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -348,7 +349,7 @@ export function AdminDashboard() {
                 <select value={formPlan} onChange={(e) => setFormPlan(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                   <option value="decouverte">Discovery — 5K MAD/month</option>
                   <option value="veille">Watch — 15K MAD/month</option>
-                  <option value="investor">Investor — 50K+ MAD/month</option>
+                  <option value="investment-bank">Investment Bank — 50K+ MAD/month</option>
                 </select>
               </div>
 

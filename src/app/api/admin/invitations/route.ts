@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate accountType
-    const validAccountTypes = ["enterprise", "trader", "investor"];
+    const validAccountTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
     const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "enterprise";
 
     // Check if user already exists

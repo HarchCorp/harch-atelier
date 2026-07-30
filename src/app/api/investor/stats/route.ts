@@ -13,7 +13,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 //  - Total high-risk items
 //  - Dossiers (by status: draft/ready)
 //
-//  Auth: investor or admin
+//  Auth: investment-bank or admin
 // ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
@@ -23,8 +23,8 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user?.accountType !== "investor" && session.user?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden — investor account required" }, { status: 403 });
+  if (session.user?.accountType !== "investment-bank" && session.user?.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden — investment-bank account required" }, { status: 403 });
   }
 
   try {

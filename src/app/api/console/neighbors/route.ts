@@ -51,11 +51,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ACCOUNT TYPE GATE — competitors data is enterprise + investor only
-  const allowedTypes = ["enterprise", "investor"];
+  // ACCOUNT TYPE GATE — competitors data is brand-monitor + market-competitor + investment-bank only
+  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
   if (!allowedTypes.includes(session.user?.accountType || "")) {
     return NextResponse.json(
-      { error: "Forbidden — competitor data is for enterprise and investor accounts only" },
+      { error: "Forbidden — competitor data is for brand-monitor, market-competitor and investment-bank accounts only" },
       { status: 403 }
     );
   }

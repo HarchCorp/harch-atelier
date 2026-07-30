@@ -20,9 +20,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   // Admin can access any API (to preview what investors see)
-  if (session.user?.accountType !== "investor" && session.user?.role !== "admin") {
+  if (session.user?.accountType !== "investment-bank" && session.user?.role !== "admin") {
     return NextResponse.json(
-      { error: "Forbidden — investor account required" },
+      { error: "Forbidden — investment-bank account required" },
       { status: 403 }
     );
   }

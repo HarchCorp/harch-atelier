@@ -93,14 +93,13 @@ export async function POST(req: NextRequest) {
         name,
         passwordHash,
         role: "admin",
-        plan,
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
-        plan: true,
+        
         createdAt: true,
       },
     });

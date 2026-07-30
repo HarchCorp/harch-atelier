@@ -278,8 +278,7 @@ model User {
   name          String?
   passwordHash  String?
   role          String   @default("user")        // user | admin
-  plan          String   @default("free")        // free | decouverte | veille | investor (subscription tier)
-  accountType   String   @default("enterprise")  // trader | enterprise | investor (ISOLATED — cross-access forbidden)
+  accountType   String   @default("brand-monitor") // brand-monitor | market-competitor | investment-bank | harch-alpha (ISOLATED)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -354,7 +353,7 @@ model AccessRequest {
   name          String
   company       String?
   role          String?
-  accountType   String?  @default("enterprise") // trader | enterprise | investor
+  accountType   String?  @default("brand-monitor") // brand-monitor | market-competitor | investment-bank | harch-alpha
   companySize   String?  // startup | sme | mid-market | enterprise
   useCase       String?  // what they want to monitor
   budget        String?  // monthly budget range
@@ -385,7 +384,7 @@ model Invitation {
   email         String
   name          String
   passwordHash  String    // bcrypt hash of admin-generated password (NEVER plaintext)
-  accountType   String    @default("enterprise")  // trader | enterprise | investor
+  accountType   String    @default("brand-monitor")  // brand-monitor | market-competitor | investment-bank | harch-alpha
   plan          String    @default("decouverte")  // decouverte | veille | investor (subscription)
   role          String    @default("user")        // user | admin
   company       String?

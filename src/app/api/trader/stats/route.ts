@@ -13,7 +13,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 //  - Active alerts count
 //  - Best correlation (strongest sentiment→price)
 //
-//  Auth: trader or admin
+//  Auth: harch-alpha or admin
 // ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
@@ -23,8 +23,8 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user?.accountType !== "trader" && session.user?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden — trader account required" }, { status: 403 });
+  if (session.user?.accountType !== "harch-alpha" && session.user?.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden — harch-alpha account required" }, { status: 403 });
   }
 
   try {

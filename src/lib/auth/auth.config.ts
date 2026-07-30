@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          plan: user.plan,
+          plan: (user as any).plan,
           accountType: user.accountType,
         };
       },
@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as { role?: string }).role;
-        token.plan = (user as { plan?: string }).plan;
+        (token as any).plan = (user as { plan?: string }).plan;
         token.accountType = (user as { accountType?: string }).accountType;
       }
       return token;
@@ -97,7 +97,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as { role?: string }).role = token.role;
-        (session.user as { plan?: string }).plan = token.plan;
         (session.user as { accountType?: string }).accountType = token.accountType;
       }
       return session;
@@ -111,12 +110,15 @@ export const authOptions: NextAuthOptions = {
 export function getConsolePath(accountType?: string, role?: string): string {
   if (role === "admin") return "/atelier/admin";
   switch (accountType) {
-    case "trader":
-      return "/atelier/console/trader";
-    case "investor":
-      return "/atelier/console/investor";
-    case "enterprise":
+    case "brand-monitor":
+      return "/atelier/console/brand-monitor";
+    case "market-competitor":
+      return "/atelier/console/market-competitor";
+    case "investment-bank":
+      return "/atelier/console/investment-bank";
+    case "harch-alpha":
+      return "/atelier/console/harch-alpha";
     default:
-      return "/atelier/console/enterprise";
+      return "/atelier/console/brand-monitor";
   }
 }

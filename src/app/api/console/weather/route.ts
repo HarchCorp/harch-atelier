@@ -28,12 +28,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ACCOUNT TYPE GATE — only enterprise + investor accounts can see
+  // ACCOUNT TYPE GATE — only brand-monitor + market-competitor + investment-bank accounts can see
   // company reputation data. Traders monitor markets, not companies.
-  const allowedTypes = ["enterprise", "investor"];
+  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
   if (!allowedTypes.includes(session.user?.accountType || "")) {
     return NextResponse.json(
-      { error: "Forbidden — this data is for enterprise and investor accounts only" },
+      { error: "Forbidden — this data is for brand-monitor, market-competitor and investment-bank accounts only" },
       { status: 403 }
     );
   }

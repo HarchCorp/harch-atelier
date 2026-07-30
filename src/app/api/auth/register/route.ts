@@ -72,14 +72,13 @@ export async function POST(req: Request) {
       email: normalizedEmail,
       passwordHash,
       role: "user",
-      plan: "free",
     },
     select: {
       id: true,
       email: true,
       name: true,
       role: true,
-      plan: true,
+      
       createdAt: true,
     },
   });

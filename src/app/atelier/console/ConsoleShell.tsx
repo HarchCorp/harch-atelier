@@ -470,10 +470,10 @@ interface NavItem {
   badge?: string;
 }
 
-function buildNavItems(activeId: NavId, accountType: "enterprise" | "trader" | "investor"): NavItem[] {
+function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavItem[] {
   const iconColor = (id: NavId) => activeId === id ? C.sage : C.textMuted;
 
-  if (accountType === "trader") {
+  if (accountType === "harch-alpha") {
     return [
       { id: "watchlist",       label: "Watchlist",       icon: <IconMonitor size={16} color={iconColor("watchlist")} /> },
       { id: "sentiment-price", label: "Sentiment→Price", icon: <IconChart size={16}  color={iconColor("sentiment-price")} /> },
@@ -483,7 +483,7 @@ function buildNavItems(activeId: NavId, accountType: "enterprise" | "trader" | "
     ];
   }
 
-  if (accountType === "investor") {
+  if (accountType === "investment-bank") {
     return [
       { id: "portfolios", label: "Portfolios", icon: <IconMonitor size={16} color={iconColor("portfolios")} /> },
       { id: "dossiers",   label: "DD Dossiers", icon: <IconReport size={16} color={iconColor("dossiers")} /> },
@@ -504,16 +504,16 @@ function buildNavItems(activeId: NavId, accountType: "enterprise" | "trader" | "
 }
 
 // Default nav order per accountType
-function defaultNavOrder(accountType: "enterprise" | "trader" | "investor"): NavId[] {
-  if (accountType === "trader") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
-  if (accountType === "investor") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
+function defaultNavOrder(accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavId[] {
+  if (accountType === "harch-alpha") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
+  if (accountType === "investment-bank") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
   return ["monitoring", "sentiment", "competitors", "alerts", "reports"];
 }
 
 // Default active nav per accountType
-function defaultActiveNav(accountType: "enterprise" | "trader" | "investor"): NavId {
-  if (accountType === "trader") return "watchlist";
-  if (accountType === "investor") return "portfolios";
+function defaultActiveNav(accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavId {
+  if (accountType === "harch-alpha") return "watchlist";
+  if (accountType === "investment-bank") return "portfolios";
   return "monitoring";
 }
 
@@ -749,9 +749,9 @@ const pageStyles = `
 //  MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
-export function ConsoleShell({ accountType = "enterprise" }: { accountType?: "enterprise" | "trader" | "investor" }) {
+export function ConsoleShell({ accountType = "brand-monitor" }: { accountType?: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha" }) {
   // Tier switcher (kept from previous ConsoleShell)
-  const [tier, setTier] = useState<AccountType>(accountType === "investor" ? "investor" : accountType === "trader" ? "veille" : "decouverte");
+  const [tier, setTier] = useState<AccountType>("decouverte");
 
   // Active nav item (drives main-area content) — default depends on accountType
   const [activeNav, setActiveNav] = useState<NavId>(defaultActiveNav(accountType));
@@ -906,7 +906,7 @@ function DashboardTopBar({
   onTierChange: (t: AccountType) => void;
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
-  accountType: "enterprise" | "trader" | "investor";
+  accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
   isAdmin: boolean;
 }) {
   return (
@@ -1309,15 +1309,15 @@ function DashboardMain({
   activeNav: NavId;
   weather: WeatherData;
   tier: AccountType;
-  accountType: "enterprise" | "trader" | "investor";
+  accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
 }) {
   // Trader console — different content entirely
-  if (accountType === "trader") {
+  if (accountType === "harch-alpha") {
     return <TraderView activeNav={activeNav} />;
   }
 
   // Investor console — portfolio roll-up
-  if (accountType === "investor") {
+  if (accountType === "investment-bank") {
     return <InvestorView activeNav={activeNav} />;
   }
 

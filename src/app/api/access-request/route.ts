@@ -17,7 +17,7 @@ const Schema = z.object({
   name: z.string().min(1).max(100),
   company: z.string().max(200).optional(),
   role: z.string().max(100).optional(),
-  accountType: z.enum(["trader", "enterprise", "investor"]).default("enterprise"),
+  accountType: z.enum(["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"]).default("brand-monitor"),
   companySize: z.enum(["startup", "sme", "mid-market", "enterprise"]).optional(),
   useCase: z.string().max(500).optional(),
   budget: z.string().max(50).optional(),

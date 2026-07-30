@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         name: invitation.name,
         passwordHash,
         role: invitation.role,
-        plan: invitation.plan,
+        
         accountType: invitation.accountType,
       },
       select: {
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         email: true,
         name: true,
         role: true,
-        plan: true,
+        
         accountType: true,
       },
     });
@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
         id: true,
         email: true,
         name: true,
-        plan: true,
+        
         role: true,
         accountType: true,
         company: true,
