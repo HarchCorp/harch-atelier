@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { ATELIER_NAV_LINKS, NavItem } from "./tokens";
 
@@ -28,6 +29,10 @@ const C = {
 };
 
 export function AtelierNav() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session;
+  const navCtaHref = isLoggedIn ? "/atelier/console" : "/atelier/login";
+  const navCtaLabel = isLoggedIn ? "Console" : "Sign in";
   const [scrolled, setScrolled] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -164,7 +169,7 @@ export function AtelierNav() {
           </div>
 
           <a
-            href="/atelier/audit"
+            href={navCtaHref}
             style={{
               fontSize: "14px",
               fontWeight: 600,
@@ -192,7 +197,7 @@ export function AtelierNav() {
               e.currentTarget.style.boxShadow = "none";
             }}
           >
-            Request a demo
+            {navCtaLabel}
           </a>
 
           {/* Mobile burger */}
@@ -272,7 +277,7 @@ export function AtelierNav() {
               marginTop: "8px",
             }}
           >
-            Request a demo
+            {navCtaLabel}
           </a>
         </div>
       )}

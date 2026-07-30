@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSession } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { AtelierNav } from "./components/AtelierNav";
 import { AtelierFooter } from "./components/AtelierFooter";
@@ -390,7 +391,12 @@ function IconWhatsapp({ size = 20, color = C.textOnDark }: { size?: number; colo
 // SECTION 01 — HERO
 // ═══════════════════════════════════════════════════════════════════════
 
-function Hero() {
+function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
+  ctaHref: string;
+  ctaLabel: string;
+  secondaryCtaHref: string;
+  secondaryCtaLabel: string;
+}) {
   return (
     <section
       style={{
@@ -493,7 +499,7 @@ function Hero() {
               style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}
             >
               <a
-                href="/atelier/audit"
+                href={ctaHref}
                 className="btn-primary"
                 style={{
                   display: "inline-flex",
@@ -518,11 +524,11 @@ function Hero() {
                   e.currentTarget.style.background = C.cta;
                 }}
               >
-                Request a demo
+                {ctaLabel}
                 <IconArrow dir="right" size={16} color={C.textOnDark} />
               </a>
               <a
-                href="/atelier/dashboard"
+                href={secondaryCtaHref}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -546,7 +552,7 @@ function Hero() {
                   e.currentTarget.style.background = "transparent";
                 }}
               >
-                See live dashboard
+                {secondaryCtaLabel}
               </a>
             </div>
 
@@ -4727,6 +4733,16 @@ const pageStyles = `
 // ═══════════════════════════════════════════════════════════════════════
 
 export default function AtelierHome() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session;
+  const consoleUrl = session?.user?.role === "admin"
+    ? "/atelier/admin"
+    : "/atelier/console";
+  const ctaHref = isLoggedIn ? consoleUrl : "/atelier/login";
+  const ctaLabel = isLoggedIn ? "Go to Console" : "Sign in";
+  const secondaryCtaHref = isLoggedIn ? "/atelier/request-access" : "/atelier/audit";
+  const secondaryCtaLabel = isLoggedIn ? "Invite your team" : "Request a demo";
+
   return (
     <>
       <style>{pageStyles}</style>
@@ -4737,7 +4753,12 @@ export default function AtelierHome() {
           global. Affiché sur toutes les pages Atelier. */}
       <PhaseDisclaimer />
       <main style={{ position: "relative", zIndex: 1 }}>
-        <Hero />
+        <Hero
+          ctaHref={ctaHref}
+          ctaLabel={ctaLabel}
+          secondaryCtaHref={secondaryCtaHref}
+          secondaryCtaLabel={secondaryCtaLabel}
+        />
         <LogoWall />
         <WhatWeDo />
         <WhatsAppPreview />
