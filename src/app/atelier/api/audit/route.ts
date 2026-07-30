@@ -121,12 +121,10 @@ export async function POST(request: NextRequest) {
 
     // ─── RATE LIMIT (V4.1 STEP 5.2) ───────────────────────────
     // The counter is namespaced by user ID so each principal gets
-    // their own daily quota, independent of which device or browser
-    // they're on. Admins bypass the check (they're internal users
-    // running ops / debugging).
+    // their own daily quota. Admins bypass the check.
     if (user.role !== "admin") {
-      const planKey = ((user as any).plan || "free").toLowerCase();
-      const limit = PLAN_LIMITS[planKey] ?? PLAN_LIMITS.free;
+      const accountType = user.accountType || "brand-monitor";
+      const limit = ACCOUNT_LIMITS[accountType] ?? 10;
 
       const rl = await checkRateLimit(
         `audit:${user.id}`,
