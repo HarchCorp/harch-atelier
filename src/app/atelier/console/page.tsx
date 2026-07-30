@@ -7,13 +7,13 @@ import { redirect } from "next/navigation";
 //
 //  Does NOT render anything. Reads the session and redirects to the
 //  correct console based on accountType:
-//    - trader      → /atelier/console/trader
-//    - investor    → /atelier/console/investor
-//    - enterprise  → /atelier/console/enterprise (default)
+//    - brand-monitor      → /atelier/console/brand-monitor
+//    - market-competitor  → /atelier/console/market-competitor
+//    - investment-bank    → /atelier/console/investment-bank
+//    - harch-alpha        → /atelier/console/harch-alpha
 //
-//  Admins are NOT redirected to /atelier/admin here (they can visit
-//  any console). Instead they go to the enterprise console by default.
-//  The admin dashboard is accessible directly at /atelier/admin.
+//  Admins go to brand-monitor console by default (they can navigate
+//  to others manually). Admin dashboard is at /atelier/admin.
 //
 //  If no session → /atelier/login
 // ═══════════════════════════════════════════════════════════════
@@ -27,10 +27,9 @@ export default async function ConsoleRedirect() {
     redirect("/atelier/login?callbackUrl=/atelier/console");
   }
 
-  // For admin: go to enterprise console (they can navigate to others manually)
-  // Admin dashboard is at /atelier/admin (separate URL)
+  // For admin: go to brand-monitor console (they can navigate to others manually)
   if (session.user?.role === "admin") {
-    redirect("/atelier/console/enterprise");
+    redirect("/atelier/console/brand-monitor");
   }
 
   // For regular users: go to their own console
