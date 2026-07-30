@@ -54,12 +54,12 @@ export interface AlphaDeskDashboardProps {
 
 const ACCENT = "#0891b2";
 const ACCENT_BG = "rgba(8,145,178,0.10)";
-const DARK_BG = "#0a0a0a";
-const DARK_SURFACE = "#171717";
-const DARK_BORDER = "#262626";
+const DARK_BG = "#ffffff";
+const DARK_SURFACE = "#ffffff";
+const DARK_BORDER = "#e5e5e5";
 const GREEN = "#10b981";
 const RED = "#ef4444";
-const TEXT_ON_DARK = "#ffffff";
+const TEXT_ON_DARK = "#0a0a0a";
 const TEXT_MUTED_DARK = "#737373";
 
 // ─── Component ──────────────────────────────────────────────────
@@ -156,7 +156,7 @@ export function AlphaDeskDashboard({
   };
 
   return (
-    <div className="dash-main" style={{ padding: "24px", background: "#0a0a0a", overflowX: "hidden", color: "#ffffff", fontFamily: FONT.sans, minHeight: "calc(100vh - 57px)", forcedColorAdjust: "none" as const }}>
+    <div className="dash-main" style={{ padding: "24px", background: "#ffffff", overflowX: "hidden", color: "#0a0a0a", fontFamily: FONT.sans }}>
       {/* ─── Pre-market brief banner ─── */}
       <div
         style={{
@@ -188,12 +188,12 @@ export function AlphaDeskDashboard({
       {/* ─── KPI cards: latency / spike / ticker ─── */}
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: "16px", marginBottom: "24px" }}>
-          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #262626", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} dark /></div>
-          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #262626", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} dark /></div>
-          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #262626", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} dark /></div>
+          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #e5e5e5", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} /></div>
+          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #e5e5e5", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} /></div>
+          <div style={{ padding: "20px", background: DARK_SURFACE, border: "1px solid #e5e5e5", borderRadius: "8px" }}><SkeletonLoader accent={ACCENT} lines={1} height={36} /></div>
         </div>
       ) : error ? (
-        <div style={{ marginBottom: "24px" }}><ErrorState accent={ACCENT} message="Signal lost — reconnecting to market feed…" dark /></div>
+        <div style={{ marginBottom: "24px" }}><ErrorState accent={ACCENT} message="Signal lost — reconnecting to market feed…" /></div>
       ) : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: "16px", marginBottom: "24px" }}>
         <div style={{ padding: "20px", background: DARK_SURFACE, border: `1px solid ${DARK_BORDER}`, borderRadius: "8px", textAlign: "center" }}>
