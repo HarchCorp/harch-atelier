@@ -34,7 +34,7 @@ function pearsonCorrelation(x: number[], y: number[]): number {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { ticker: string } }
+  { params }: { params: Promise<{ ticker: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -48,7 +48,8 @@ export async function GET(
   }
 
   try {
-    const ticker = params.ticker.toUpperCase();
+    const { ticker: tickerParam } = await params;
+    const ticker = tickerParam.toUpperCase();
     const url = new URL(req.url);
     const windowDays = parseInt(url.searchParams.get("window") || "30", 10);
     const days = Math.min(Math.max(windowDays, 7), 90);
