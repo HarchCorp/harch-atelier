@@ -33,15 +33,21 @@ export async function GET() {
   }
 
   // Task: domain-matching-demo-isolation — demo investors see demo
-  // portfolios only, real investors see real portfolios only. The
-  // userId filter alone is not enough because the same demo user
-  // could theoretically have real-data portfolios if the schema
-  // were ever relaxed; this filter is defense-in-depth.
+  // portfolios only, real investors see real portfolios only.
   const demoFilter = demoFilterFromSession(session);
+  const isDemo = demoFilter.isDemo;
+
+  // For demo users: show ALL demo portfolios in the same company
+  // (not just their own userId — demo data is shared across demo users
+  // of the same company so test accounts see the seeded data).
+  // For real users: strict userId filter (each user sees only their own).
+  const portfolioFilter = isDemo
+    ? { ...demoFilter }
+    : { userId, ...demoFilter };
 
   try {
     const portfolios = await prisma.portfolio.findMany({
-      where: { userId, ...demoFilter },
+      where: portfolioFilter,
       orderBy: { createdAt: "asc" },
       include: {
         holdings: {

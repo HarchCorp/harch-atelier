@@ -35,10 +35,17 @@ export async function GET(req: NextRequest) {
   // Task: domain-matching-demo-isolation — demo investors see demo
   // dossiers only, real investors see real dossiers only.
   const demoFilter = demoFilterFromSession(session);
+  const isDemo = demoFilter.isDemo;
+
+  // For demo users: show ALL demo dossiers (shared across demo users).
+  // For real users: strict userId filter.
+  const dossierFilter = isDemo
+    ? { ...demoFilter }
+    : { userId, ...demoFilter };
 
   try {
     const dossiers = await prisma.dossier.findMany({
-      where: { userId, ...demoFilter },
+      where: dossierFilter,
       orderBy: { updatedAt: "desc" },
       include: {
         company: {
