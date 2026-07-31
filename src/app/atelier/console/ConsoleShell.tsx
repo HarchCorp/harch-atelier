@@ -8,10 +8,15 @@ import { BrandMonitorDashboard } from "./views/BrandMonitorDashboard";
 import { CompetitorIntelDashboard } from "./views/CompetitorIntelDashboard";
 import { InvestorDeskDashboard } from "./views/InvestorDeskDashboard";
 import { AlphaDeskDashboard } from "./views/AlphaDeskDashboard";
+import { NarrativePanel } from "./views/NarrativePanel";
+import { InfluencerPanel } from "./views/InfluencerPanel";
 import { CommandPalette, type CommandItem } from "./CommandPalette";
 import { GlobalSearch, type SearchResult } from "./GlobalSearch";
 import { NotificationBell } from "./NotificationBell";
 import { WhatsAppSettingsModal } from "./WhatsAppSettingsModal";
+import { CommandCenter } from "./CommandCenter";
+import { DailyBriefing } from "./DailyBriefing";
+import { HarchIQAssistant } from "./HarchIQAssistant";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ CONSOLE — Shell (CONSOLE-V3)
@@ -149,6 +154,31 @@ function IconSearch({ size = 16, color = C.textMuted }: { size?: number; color?:
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+// Narrative icon — three connected nodes (storyline graph)
+function IconNarrative({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="18" cy="6" r="2.5" />
+      <circle cx="12" cy="18" r="2.5" />
+      <line x1="7.8" y1="7.8" x2="10.5" y2="15.5" />
+      <line x1="16.2" y1="7.8" x2="13.5" y2="15.5" />
+      <line x1="8.5" y1="6" x2="15.5" y2="6" />
+    </svg>
+  );
+}
+
+// Influencer icon — concentric broadcast waves (megaphone-style)
+function IconInfluencer({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z" />
+      <path d="M14 8a4 4 0 0 1 0 8" />
+      <path d="M17 5a8 8 0 0 1 0 14" />
     </svg>
   );
 }
@@ -361,7 +391,8 @@ function DashMiniStat({
 //   investor:   Portfolios / DD Dossiers / ESG / Risks / Reports
 type NavId = "monitoring" | "sentiment" | "competitors" | "alerts" | "reports"
   | "watchlist" | "sentiment-price" | "ai-alpha" | "pre-market"
-  | "portfolios" | "dossiers" | "esg" | "risks";
+  | "portfolios" | "dossiers" | "esg" | "risks"
+  | "narratives" | "influencers";
 
 interface NavItem {
   id: NavId;
@@ -395,11 +426,13 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
 
   // enterprise (default)
   return [
-    { id: "monitoring",  label: "Monitoring",  icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
-    { id: "sentiment",   label: "Sentiment",   icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
-    { id: "competitors", label: "Competitors", icon: <IconUsers size={16}  color={iconColor("competitors")} /> },
-    { id: "alerts",      label: "Alerts",      icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
-    { id: "reports",     label: "Reports",     icon: <IconReport size={16} color={iconColor("reports")} /> },
+    { id: "monitoring",   label: "Monitoring",   icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
+    { id: "sentiment",    label: "Sentiment",    icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
+    { id: "competitors",  label: "Competitors",  icon: <IconUsers size={16}  color={iconColor("competitors")} /> },
+    { id: "narratives",   label: "Narratives",   icon: <IconNarrative size={16} color={iconColor("narratives")} /> },
+    { id: "influencers",  label: "Influencers",  icon: <IconInfluencer size={16} color={iconColor("influencers")} /> },
+    { id: "alerts",       label: "Alerts",       icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
+    { id: "reports",      label: "Reports",      icon: <IconReport size={16} color={iconColor("reports")} /> },
   ];
 }
 
@@ -407,7 +440,7 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
 function defaultNavOrder(accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavId[] {
   if (accountType === "harch-alpha") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
   if (accountType === "investment-bank") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
-  return ["monitoring", "sentiment", "competitors", "alerts", "reports"];
+  return ["monitoring", "sentiment", "competitors", "narratives", "influencers", "alerts", "reports"];
 }
 
 // Default active nav per accountType
@@ -664,18 +697,61 @@ export function ConsoleShell({
   // notification bell). Renders the WhatsAppSettingsModal component.
   const [whatsappOpen, setWhatsappOpen] = useState(false);
 
+  // ─── COMMAND CENTER (fullscreen war-room mode) ──────────────────
+  // Toggled by the top-bar monitor button, Cmd+Shift+C / Ctrl+Shift+C,
+  // or the "Enter Command Center" command in the Cmd+K palette. When
+  // open, the regular console shell is hidden and the Command Center
+  // overlay takes over the full viewport (zIndex 200).
+  const [commandCenterOpen, setCommandCenterOpen] = useState(false);
+
+  const openCommandCenter = useCallback(() => {
+    // Close any open modals so they don't linger behind the overlay
+    setPaletteOpen(false);
+    setSearchOpen(false);
+    setWhatsappOpen(false);
+    setCommandCenterOpen(true);
+  }, []);
+  const closeCommandCenter = useCallback(() => setCommandCenterOpen(false), []);
+
+  // ─── HARCHIQ ASSISTANT (Cmd+J) ───────────────────────────────────
+  // Floating GenAI chat panel — Brandwatch "Search Intelligence GenAI"
+  // + Dataminr "LLM briefings" equivalent. Toggled via Cmd+J / Ctrl+J
+  // or the "Ask HarchIQ" button in the top bar. Rendered at the shell
+  // root so it overlays everything (zIndex 150).
+  const [assistantOpen, setAssistantOpen] = useState(false);
+
   // Last-refresh label shown in the palette footer. Updated whenever
   // the weather data refreshes (proxy for "data freshness").
   const [lastRefreshTime, setLastRefreshTime] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Cmd+Shift+C (mac) / Ctrl+Shift+C (win/linux) → toggle Command
+      // Center fullscreen war-room mode. Registered first so it works
+      // in both directions (open from the shell, close from inside the
+      // Command Center) — mirrors the handler inside CommandCenter.
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "c" || e.key === "C")) {
+        e.preventDefault();
+        setCommandCenterOpen((v) => !v);
+        return;
+      }
+      // While Command Center is open it owns all other shortcuts
+      // (Esc, etc.) — bail here so we don't toggle palettes behind it.
+      if (commandCenterOpen) return;
       // Cmd+K (mac) / Ctrl+K (win/linux) → toggle command palette.
       // The `!e.shiftKey` guard keeps Cmd+Shift+K free for future
       // use and avoids hijacking browser dev-tools shortcuts.
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
         setPaletteOpen((v) => !v);
+        return;
+      }
+      // Cmd+J (mac) / Ctrl+J (win/linux) → toggle HarchIQ Assistant.
+      // J is the natural neighbour of K on the home row and is not
+      // hijacked by any browser shortcut.
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "j" || e.key === "J")) {
+        e.preventDefault();
+        setAssistantOpen((v) => !v);
         return;
       }
       // Cmd+Shift+F (mac) / Ctrl+Shift+F (win/linux) → toggle global search
@@ -685,10 +761,10 @@ export function ConsoleShell({
         return;
       }
       // Single-key shortcuts (only when not typing in an input and
-      // both modals are closed)
+      // all modals are closed)
       const target = e.target as HTMLElement;
       const isTyping = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
-      if (isTyping || paletteOpen || searchOpen) return;
+      if (isTyping || paletteOpen || searchOpen || assistantOpen) return;
 
       if (e.key === "r" || e.key === "R") {
         e.preventDefault();
@@ -711,7 +787,7 @@ export function ConsoleShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paletteOpen, searchOpen]);
+  }, [paletteOpen, searchOpen, assistantOpen, commandCenterOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -817,7 +893,7 @@ export function ConsoleShell({
         action: () => {
           // Open the docs hint in a new tab — Harch Atelier trust center
           if (typeof window !== "undefined") {
-            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close command palette\n  Cmd+Shift+F / Ctrl+Shift+F — global search (alerts, topics, reports)\n  / — global search (no modifier)\n  ? — open command palette\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n  R — refresh data\n  E — export CSV\n  F — cycle filter\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
+            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close command palette\n  Cmd+J / Ctrl+J — open HarchIQ Assistant (GenAI chat)\n  Cmd+Shift+F / Ctrl+Shift+F — global search (alerts, topics, reports)\n  / — global search (no modifier)\n  ? — open command palette\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n  R — refresh data\n  E — export CSV\n  F — cycle filter\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
           }
         },
       },
@@ -838,6 +914,28 @@ export function ConsoleShell({
           setSearchOpen(true);
         },
       },
+      {
+        id: "action-ask-harchiq",
+        label: "Ask HarchIQ…",
+        hint: "⌘J",
+        icon: "✦",
+        group: "actions",
+        keywords: "ask ai harchiq assistant chat question genai llm brief query",
+        action: () => {
+          setAssistantOpen(true);
+        },
+      },
+      {
+        id: "action-command-center",
+        label: "Enter Command Center",
+        hint: "⌘⇧C",
+        icon: "▣",
+        group: "actions",
+        keywords: "command center war room fullscreen tv projector presentation display vizia brandwatch monitor",
+        action: () => {
+          setCommandCenterOpen(true);
+        },
+      },
     ];
 
     // Per-dashboard quick actions passed by the active dashboard view
@@ -854,6 +952,9 @@ export function ConsoleShell({
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
+  const openAssistant = useCallback(() => setAssistantOpen(true), []);
+  const closeAssistant = useCallback(() => setAssistantOpen(false), []);
+  const toggleAssistant = useCallback(() => setAssistantOpen((v) => !v), []);
 
   // ─── GLOBAL SEARCH → CONSOLE NAVIGATION ──────────────────────────
   // When a user picks a result from the Global Search, we either
@@ -890,54 +991,70 @@ export function ConsoleShell({
         />
       )}
 
-      <DashboardTopBar
-        onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
-        mobileMenuOpen={mobileMenuOpen}
-        accountType={accountType}
-        theme={theme}
-        initials={initials}
-        displayName={displayName}
-        userEmail={userEmail}
-        companyName={companyName}
-        onOpenPalette={openPalette}
-        onOpenSearch={openSearch}
-        onOpenWhatsapp={() => setWhatsappOpen(true)}
-      />
-
-      {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
-      <div
-        className="dash-layout"
-        style={{
-          display: "grid",
-          minHeight: "calc(100vh - 56px)",
-        }}
-      >
-        <DashboardSidebar
-          items={orderedNavItems}
-          activeId={activeNav}
-          onSelect={(id) => {
-            setActiveNav(id);
-            setMobileMenuOpen(false);
-          }}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          draggedId={draggedId}
-          mobileOpen={mobileMenuOpen}
-          theme={theme}
-        />
-
-        <DashboardMain
-          activeNav={activeNav}
-          weather={weather}
+      {/* COMMAND CENTER — when open, hide the regular shell (top bar +
+          3-column layout). The Command Center overlay takes over the
+          full viewport with its own top bar, exit button, and Esc /
+          Cmd+Shift+C handlers (zIndex 200). */}
+      {commandCenterOpen ? (
+        <CommandCenter
           accountType={accountType}
-          theme={theme}
-          displayName={displayName}
-          companyName={companyName}
+          userName={userName}
+          onExit={closeCommandCenter}
         />
+      ) : (
+        <>
+          <DashboardTopBar
+            onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
+            mobileMenuOpen={mobileMenuOpen}
+            accountType={accountType}
+            theme={theme}
+            initials={initials}
+            displayName={displayName}
+            userEmail={userEmail}
+            companyName={companyName}
+            onOpenPalette={openPalette}
+            onOpenSearch={openSearch}
+            onOpenWhatsapp={() => setWhatsappOpen(true)}
+            onToggleAssistant={toggleAssistant}
+            onOpenCommandCenter={openCommandCenter}
+          />
 
-        <DashboardRightPanel theme={theme} accountType={accountType} />
-      </div>
+          {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
+          <div
+            className="dash-layout"
+            style={{
+              display: "grid",
+              minHeight: "calc(100vh - 56px)",
+            }}
+          >
+            <DashboardSidebar
+              items={orderedNavItems}
+              activeId={activeNav}
+              onSelect={(id) => {
+                setActiveNav(id);
+                setMobileMenuOpen(false);
+              }}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              draggedId={draggedId}
+              mobileOpen={mobileMenuOpen}
+              theme={theme}
+            />
+
+            <DashboardMain
+              activeNav={activeNav}
+              weather={weather}
+              accountType={accountType}
+              theme={theme}
+              displayName={displayName}
+              companyName={companyName}
+            />
+
+            <DashboardRightPanel theme={theme} accountType={accountType} />
+          </div>
+        </>
+      )}
 
       {/* COMMAND PALETTE — rendered at shell root so it overlays everything */}
       <CommandPalette
@@ -965,6 +1082,12 @@ export function ConsoleShell({
         onClose={() => setWhatsappOpen(false)}
       />
 
+      {/* HARCHIQ ASSISTANT — floating GenAI panel (Cmd+J). Rendered at
+          the shell root so it overlays the dashboard. zIndex 150 keeps
+          it above the top bar (40) but below the command palette (100)
+          and global search (200). */}
+      <HarchIQAssistant open={assistantOpen} onOpenChange={closeAssistant} />
+
       <style>{pageStyles}</style>
     </div>
   );
@@ -988,6 +1111,8 @@ function DashboardTopBar({
   onOpenPalette,
   onOpenSearch,
   onOpenWhatsapp,
+  onToggleAssistant,
+  onOpenCommandCenter,
 }: {
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
@@ -1000,6 +1125,8 @@ function DashboardTopBar({
   onOpenPalette: () => void;
   onOpenSearch: () => void;
   onOpenWhatsapp: () => void;
+  onToggleAssistant: () => void;
+  onOpenCommandCenter: () => void;
 }) {
   return (
     <header
@@ -1186,6 +1313,49 @@ function DashboardTopBar({
         </span>
       </div>
 
+      {/* Command Center — fullscreen war-room mode (Brandwatch Vizia
+          equivalent). Monitor icon opens a 100vw × 100vh dark overlay
+          designed for TV/projector display in a war room. Also
+          triggerable via Cmd+Shift+C / Ctrl+Shift+C and from the
+          Cmd+K palette. Hidden on narrow screens via the same
+          media-query approach as the other top-bar elements. */}
+      <button
+        onClick={onOpenCommandCenter}
+        className="console-command-center"
+        aria-label="Enter Command Center"
+        title="Enter Command Center (Cmd+Shift+C)"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          border: `1px solid ${C.border}`,
+          borderRadius: "4px",
+          background: C.surfaceAlt,
+          fontFamily: FONT.mono,
+          fontSize: "10px",
+          fontWeight: 700,
+          color: C.textSecondary,
+          cursor: "pointer",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          transition: "border-color 0.15s, color 0.15s, background 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = theme.accent;
+          e.currentTarget.style.color = theme.accent;
+          e.currentTarget.style.background = C.surface;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = C.border;
+          e.currentTarget.style.color = C.textSecondary;
+          e.currentTarget.style.background = C.surfaceAlt;
+        }}
+      >
+        <IconMonitor size={14} color="currentColor" />
+        <span>Command Center</span>
+      </button>
+
       {/* Notification bell — real dropdown fed by
           /api/console/notifications. Polls every 60s, shows unread
           count badge, marks read on click, and links to the
@@ -1221,6 +1391,60 @@ function DashboardTopBar({
         >
           <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.13c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.82c0 4.55-3.7 8.24-8.24 8.24Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43-.14-.01-.31-.01-.48-.01-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29Z" />
         </svg>
+      </button>
+
+      {/* HarchIQ Assistant button — opens the GenAI chat panel (Cmd+J).
+          A pill-shaped "AI" badge with a sparkle icon, distinct from
+          the other icon-only buttons so it reads as the GenAI entrypoint. */}
+      <button
+        onClick={onToggleAssistant}
+        aria-label="Open HarchIQ Assistant"
+        title="Ask HarchIQ (Cmd+J / Ctrl+J)"
+        className="console-harchiq-btn"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          height: "28px",
+          padding: "0 10px",
+          background: C.cta,
+          border: `1px solid ${C.cta}`,
+          borderRadius: "4px",
+          color: "#ffffff",
+          fontFamily: FONT.mono,
+          fontSize: "11px",
+          fontWeight: 700,
+          cursor: "pointer",
+          transition: "background 0.15s, border-color 0.15s, transform 0.1s",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = C.ctaHover;
+          e.currentTarget.style.borderColor = C.ctaHover;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = C.cta;
+          e.currentTarget.style.borderColor = C.cta;
+        }}
+        onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }}
+        onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+      >
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 3l1.6 4.6L18 9.2l-4.4 1.6L12 15l-1.6-4.2L6 9.2l4.4-1.6z" />
+          <path d="M19 14l.7 2 .3 1.3-1.3.3-.7.4-.4-.4-.3-1.3.7-2z" />
+        </svg>
+        <span>Ask HarchIQ</span>
       </button>
 
       {/* Logout button */}
@@ -1317,10 +1541,15 @@ function DashboardTopBar({
           .console-search { display: none !important; }
           .console-search-icon { display: flex !important; }
           .console-logout-label { display: none !important; }
+          .console-harchiq-btn span { display: none !important; }
+          .console-harchiq-btn { padding: 0 8px !important; }
+          .console-command-center span { display: none !important; }
+          .console-command-center { padding: 4px 8px !important; }
         }
         @media (max-width: 480px) {
           .console-cmdk-badge .console-cmdk-k { display: none !important; }
           .console-search-kbd { display: none !important; }
+          .console-command-center { display: none !important; }
         }
       `}</style>
     </header>
@@ -1543,6 +1772,12 @@ function DashboardMain({
     if (activeNav === "reports") {
       return <ReportsView theme={theme} companyName={companyName} />;
     }
+    if (activeNav === "narratives") {
+      return <NarrativePanel companyName={companyName} />;
+    }
+    if (activeNav === "influencers") {
+      return <InfluencerPanel companyName={companyName} />;
+    }
     return <CompetitorIntelDashboard userName={displayName} userEmail={null} companyName={companyName} sector="Mining & Phosphates" />;
   }
 
@@ -1555,6 +1790,12 @@ function DashboardMain({
   }
   if (activeNav === "reports") {
     return <ReportsView theme={theme} companyName={companyName} />;
+  }
+  if (activeNav === "narratives") {
+    return <NarrativePanel companyName={companyName} />;
+  }
+  if (activeNav === "influencers") {
+    return <InfluencerPanel companyName={companyName} />;
   }
   return <BrandMonitorDashboard userName={displayName} userEmail={null} companyName={companyName} />;
 }
