@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { C as TOKENS } from "../components/tokens";
@@ -8,6 +8,7 @@ import { BrandMonitorDashboard } from "./views/BrandMonitorDashboard";
 import { CompetitorIntelDashboard } from "./views/CompetitorIntelDashboard";
 import { InvestorDeskDashboard } from "./views/InvestorDeskDashboard";
 import { AlphaDeskDashboard } from "./views/AlphaDeskDashboard";
+import { CommandPalette, type CommandItem } from "./CommandPalette";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ CONSOLE — Shell (CONSOLE-V3)
@@ -615,10 +616,12 @@ export function ConsoleShell({
   accountType = "brand-monitor",
   userName,
   userEmail,
+  commands,
 }: {
   accountType?: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha";
   userName?: string | null;
   userEmail?: string | null;
+  commands?: CommandItem[];
 }) {
   const theme = getOfferTheme(accountType);
   const initials = getInitials(userName);
@@ -639,6 +642,31 @@ export function ConsoleShell({
 
   // Weather data (live from /api/console/weather)
   const [weather, setWeather] = useState<WeatherData>(DEFAULT_WEATHER);
+
+  // ─── COMMAND PALETTE (Cmd+K / Ctrl+K) ────────────────────────────
+  // Global keyboard shortcut + state. The palette itself lives in
+  // CommandPalette.tsx and is rendered at the root of the shell so it
+  // overlays everything (top bar + 3-column layout).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Last-refresh label shown in the palette footer. Updated whenever
+  // the weather data refreshes (proxy for "data freshness").
+  const [lastRefreshTime, setLastRefreshTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Cmd+K (mac) / Ctrl+K (win/linux) → toggle palette
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
+      // Plain "/" focuses nothing here but we leave the door open —
+      // cmdk's input auto-focuses when the palette opens.
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -670,6 +698,7 @@ export function ConsoleShell({
           companyName: data.company?.name,
           loading: false,
         });
+        setLastRefreshTime(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
       } catch {
         if (!cancelled) setWeather((prev) => ({ ...prev, loading: false }));
       }
@@ -698,6 +727,70 @@ export function ConsoleShell({
     .map((id) => buildNavItems(activeNav, accountType).find((n) => n.id === id))
     .filter((n): n is NavItem => n !== null);
 
+  // ─── COMMAND PALETTE ITEMS ───────────────────────────────────────
+  // Build the palette command list from:
+  //   1. The current dashboard's sidebar navigation items (→ navigation group)
+  //   2. The optional `commands` prop passed by the active dashboard
+  //      (→ actions group: refresh, export CSV, cycle filters, time range…)
+  //   3. Account-level actions (sign out, switch console hint)
+  //
+  // Memoised so the palette doesn't recompute on every shell render —
+  // its identity only changes when nav items, account type, or the
+  // dashboard-supplied commands change.
+  const paletteItems: CommandItem[] = useMemo(() => {
+    const nav: CommandItem[] = orderedNavItems.map((item) => ({
+      id: `nav-${item.id}`,
+      label: item.label,
+      hint: item.id === activeNav ? "current" : undefined,
+      icon: "→",
+      group: "navigation",
+      keywords: `${accountType} ${item.id} go to open`,
+      action: () => {
+        setActiveNav(item.id);
+        setMobileMenuOpen(false);
+      },
+    }));
+
+    // Account-level commands — always present
+    const account: CommandItem[] = [
+      {
+        id: "account-signout",
+        label: "Sign out",
+        hint: "exit",
+        icon: "↗",
+        group: "account",
+        keywords: "logout exit signout quit leave",
+        action: () => signOut({ callbackUrl: "/atelier/login", redirect: true }),
+      },
+      {
+        id: "account-open-palette",
+        label: "What is the command palette?",
+        hint: "help",
+        icon: "?",
+        group: "account",
+        keywords: "help shortcuts keyboard cmdk cmd k",
+        action: () => {
+          // Open the docs hint in a new tab — Harch Atelier trust center
+          if (typeof window !== "undefined") {
+            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
+          }
+        },
+      },
+    ];
+
+    // Per-dashboard quick actions passed by the active dashboard view
+    const actions: CommandItem[] = (commands ?? []).map((c) => ({
+      ...c,
+      // Force group = "actions" so they land in the right section
+      group: "actions" as const,
+    }));
+
+    return [...nav, ...actions, ...account];
+  }, [orderedNavItems, activeNav, accountType, commands]);
+
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+
   return (
     <div style={{ minHeight: "100vh", background: C.surfaceAlt, fontFamily: FONT.sans }}>
       {/* Mobile overlay for drawer */}
@@ -724,6 +817,7 @@ export function ConsoleShell({
         displayName={displayName}
         userEmail={userEmail}
         companyName={companyName}
+        onOpenPalette={openPalette}
       />
 
       {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
@@ -761,6 +855,17 @@ export function ConsoleShell({
         <DashboardRightPanel theme={theme} accountType={accountType} />
       </div>
 
+      {/* COMMAND PALETTE — rendered at shell root so it overlays everything */}
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={closePalette}
+        accent={theme.accent}
+        userName={displayName}
+        accountType={theme.label}
+        items={paletteItems}
+        lastRefresh={lastRefreshTime}
+      />
+
       <style>{pageStyles}</style>
     </div>
   );
@@ -781,6 +886,7 @@ function DashboardTopBar({
   displayName,
   userEmail,
   companyName,
+  onOpenPalette,
 }: {
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
@@ -790,6 +896,7 @@ function DashboardTopBar({
   displayName: string;
   userEmail?: string | null;
   companyName: string;
+  onOpenPalette: () => void;
 }) {
   return (
     <header
@@ -929,6 +1036,43 @@ function DashboardTopBar({
         <span className="console-logout-label">Sign out</span>
       </button>
 
+      {/* Command palette trigger — ⌘K / Ctrl+K hint badge.
+          Clicking it opens the palette. Hidden on narrow screens via
+          the same media-query approach as the other top-bar elements. */}
+      <button
+        onClick={onOpenPalette}
+        className="console-cmdk-badge"
+        title="Open command palette (Cmd+K / Ctrl+K)"
+        aria-label="Open command palette"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          height: "28px",
+          padding: "0 8px",
+          background: C.surfaceAlt,
+          border: `1px solid ${C.border}`,
+          borderRadius: "4px",
+          fontFamily: FONT.mono,
+          fontSize: "11px",
+          color: C.textSecondary,
+          cursor: "pointer",
+          transition: "all 0.15s",
+          letterSpacing: "0.04em",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = theme.accent;
+          e.currentTarget.style.color = theme.accent;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = C.border;
+          e.currentTarget.style.color = C.textSecondary;
+        }}
+      >
+        <span aria-hidden style={{ fontSize: "12px" }}>⌘</span>
+        <span aria-hidden className="console-cmdk-k" style={{ fontSize: "11px" }}>K</span>
+      </button>
+
       {/* User avatar — dynamic initials from real name */}
       <div
         style={{
@@ -955,6 +1099,9 @@ function DashboardTopBar({
           .console-iq-label { display: none !important; }
           .console-search { display: none !important; }
           .console-logout-label { display: none !important; }
+        }
+        @media (max-width: 480px) {
+          .console-cmdk-badge .console-cmdk-k { display: none !important; }
         }
       `}</style>
     </header>
