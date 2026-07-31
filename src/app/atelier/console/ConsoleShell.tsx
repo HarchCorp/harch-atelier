@@ -861,6 +861,83 @@ export function ConsoleShell({
   // the weather data refreshes (proxy for "data freshness").
   const [lastRefreshTime, setLastRefreshTime] = useState<string | null>(null);
 
+  // ─── EXECUTIVE DEMO MODE ────────────────────────────────────────
+  // The demo page (/atelier/demo) sets localStorage["harchiq.demo"]
+  // to "true" BEFORE calling signIn(). The console shell picks it
+  // up on mount and:
+  //   1. Shows a sticky amber banner at the top ("EXECUTIVE DEMO ...")
+  //   2. Triggers /api/auth/demo-seed to pre-populate the dashboard
+  //   3. Hides WhatsApp settings (not configured for demo)
+  //   4. Replaces "Sign out" with "Exit Demo"
+  //   5. Intercepts the "harchiq:refresh" event so demo data stays
+  //      static (no spinner delays during a Comex presentation)
+  //   6. Adds a small "Demo" badge next to the user avatar
+  //
+  // SSR-safe: starts false (server render shows the regular shell),
+  // then flips to true on mount if localStorage says so. This avoids
+  // hydration mismatches.
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const flag = window.localStorage.getItem("harchiq.demo");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount-time read of localStorage; intentional (mirrors the briefing lastViewed pattern below).
+      setIsDemoMode(flag === "true");
+    } catch {
+      // localStorage may be unavailable (private mode)
+    }
+  }, []);
+
+  // ─── DEMO SEED (one-shot, idempotent) ──────────────────────────
+  // When demo mode is active, fire the seed route so the dashboard
+  // has data to render. The route is idempotent (per-asset / per-
+  // portfolio checks), so re-mounts are cheap no-ops.
+  useEffect(() => {
+    if (!isDemoMode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await fetch("/api/auth/demo-seed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountType }),
+        });
+      } catch {
+        // Seed failure is non-fatal - the dashboard will render
+        // its empty state and the demo can still proceed.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isDemoMode, accountType]);
+
+  // ─── DEMO MODE REFRESH INTERCEPTOR ─────────────────────────────
+  // In demo mode, "Refresh" is disabled (data is static - avoids
+  // spinner delays mid-pitch). We intercept the `harchiq:refresh`
+  // CustomEvent at the capture phase so dashboards never see it.
+  useEffect(() => {
+    if (!isDemoMode) return;
+    const interceptor = (e: Event) => {
+      e.stopImmediatePropagation();
+    };
+    window.addEventListener("harchiq:refresh", interceptor, true);
+    return () => window.removeEventListener("harchiq:refresh", interceptor, true);
+  }, [isDemoMode]);
+
+  // ─── EXIT DEMO ──────────────────────────────────────────────────
+  // Clears the localStorage flags and signs the user out. Lands
+  // them on the marketing site (not the login page) so the demo
+  // context fully resets.
+  const handleExitDemo = useCallback(() => {
+    try {
+      window.localStorage.removeItem("harchiq.demo");
+      window.localStorage.removeItem("harchiq.demo.accountType");
+    } catch {
+      /* noop */
+    }
+    signOut({ callbackUrl: "/atelier", redirect: true });
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Cmd+Shift+C (mac) / Ctrl+Shift+C (win/linux) → toggle Command
@@ -911,6 +988,11 @@ export function ConsoleShell({
       if (isTyping || paletteOpen || searchOpen || assistantOpen || briefingOpen) return;
 
       if (e.key === "r" || e.key === "R") {
+        // In demo mode, refresh is disabled (data is static).
+        if (isDemoMode) {
+          e.preventDefault();
+          return;
+        }
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("harchiq:refresh"));
       } else if (e.key === "e" || e.key === "E") {
@@ -931,7 +1013,7 @@ export function ConsoleShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paletteOpen, searchOpen, assistantOpen, commandCenterOpen, briefingOpen]);
+  }, [paletteOpen, searchOpen, assistantOpen, commandCenterOpen, briefingOpen, isDemoMode]);
 
   // ─── AUTO-SHOW BRIEFING ON FIRST LOGIN OF THE DAY ──────────────
   // Check localStorage `harchiq.briefing.lastViewed`. If it's not
@@ -1047,16 +1129,22 @@ export function ConsoleShell({
       },
     }));
 
-    // Account-level commands — always present
+    // Account-level commands — always present. In demo mode the
+    // "Sign out" command is relabeled "Exit Demo" and triggers the
+    // demo exit handler (clears localStorage + signs out to /atelier).
     const account: CommandItem[] = [
       {
         id: "account-signout",
-        label: "Sign out",
+        label: isDemoMode ? "Exit Demo" : "Sign out",
         hint: "exit",
         icon: "↗",
         group: "account",
-        keywords: "logout exit signout quit leave",
-        action: () => signOut({ callbackUrl: "/atelier/login", redirect: true }),
+        keywords: isDemoMode
+          ? "exit demo end leave quit presentation"
+          : "logout exit signout quit leave",
+        action: isDemoMode
+          ? handleExitDemo
+          : () => signOut({ callbackUrl: "/atelier/login", redirect: true }),
       },
       {
         id: "account-open-palette",
@@ -1153,7 +1241,7 @@ export function ConsoleShell({
     }));
 
     return [...nav, ...globalSearch, ...actions, ...templateCmds, ...account];
-  }, [orderedNavItems, activeNav, accountType, commands, templateCommands]);
+  }, [orderedNavItems, activeNav, accountType, commands, templateCommands, isDemoMode, handleExitDemo]);
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
@@ -1231,6 +1319,12 @@ export function ConsoleShell({
         />
       ) : (
         <>
+          {/* EXECUTIVE DEMO BANNER - sticky amber strip above the top
+              bar. Rendered only when localStorage["harchiq.demo"] === "true".
+              The banner is the visual cue that this is a presentation
+              environment - data is illustrative, settings are locked. */}
+          {isDemoMode && <DemoBanner onExitDemo={handleExitDemo} />}
+
           <DashboardTopBar
             onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
             mobileMenuOpen={mobileMenuOpen}
@@ -1246,6 +1340,8 @@ export function ConsoleShell({
             onToggleAssistant={toggleAssistant}
             onOpenCommandCenter={openCommandCenter}
             onOpenBriefing={openBriefing}
+            isDemoMode={isDemoMode}
+            onExitDemo={handleExitDemo}
           />
 
           {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
@@ -1419,6 +1515,123 @@ export function ConsoleShell({
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  EXECUTIVE DEMO BANNER
+//
+//  Sticky amber strip rendered ABOVE the top bar when demo mode is
+//  active. Sits at zIndex 60 (above the top bar's 40) so it stays
+//  visible while scrolling. The "Exit Demo" button on the right
+//  gives the presenter a one-click escape hatch.
+//
+//  Visual design:
+//    - amber bg (warningBg / amber-50)
+//    - dark amber text (warningText / amber-700)
+//    - mono font (matches the rest of the console's labels)
+//    - 1px amber border on the bottom (warningBorder / amber-300)
+//    - 36px tall - tall enough to read at a glance, short enough
+//      not to eat into the dashboard viewport
+// ═══════════════════════════════════════════════════════════════
+
+function DemoBanner({ onExitDemo }: { onExitDemo: () => void }) {
+  return (
+    <div
+      role="status"
+      aria-label="Executive demo mode active"
+      style={{
+        // NOT sticky on its own - the top bar below it IS sticky
+        // (position: sticky, top: 0, zIndex: 40), so when the user
+        // scrolls, the banner scrolls away and the top bar (which
+        // carries the DEMO badge + Exit Demo button) takes over as
+        // the persistent demo indicator. This avoids double-sticky
+        // overlap weirdness.
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "16px",
+        padding: "8px 20px",
+        background: C.warningBg,
+        borderBottom: `1px solid ${C.warningBorder}`,
+        fontFamily: FONT.mono,
+        fontSize: "11px",
+        fontWeight: 700,
+        color: C.warningText,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+        <span
+          aria-hidden
+          style={{
+            width: "7px",
+            height: "7px",
+            borderRadius: "50%",
+            background: C.warning,
+            display: "inline-block",
+            flexShrink: 0,
+            animation: "live-pulse 1.5s ease-in-out infinite",
+          }}
+        />
+        <span style={{ flexShrink: 0 }}>Executive Demo</span>
+        <span
+          aria-hidden
+          style={{
+            color: C.warningBorder,
+            fontWeight: 400,
+          }}
+        >
+          |
+        </span>
+        <span
+          style={{
+            fontWeight: 400,
+            textTransform: "none",
+            letterSpacing: "0.02em",
+            color: C.warningText,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
+          }}
+        >
+          Pre-populated environment for presentation. Data is illustrative.
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={onExitDemo}
+        title="Exit demo and return to Harch Atelier"
+        style={{
+          flexShrink: 0,
+          padding: "4px 10px",
+          background: "transparent",
+          border: `1px solid ${C.warningBorder}`,
+          borderRadius: "3px",
+          color: C.warningText,
+          fontFamily: FONT.mono,
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          cursor: "pointer",
+          transition: "background 0.15s, color 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = C.warningText;
+          e.currentTarget.style.color = "#ffffff";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = C.warningText;
+        }}
+      >
+        Exit Demo
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  TOP BAR
 //  Reproduces the DashboardMockup top bar verbatim, plus the offer
 //  switcher and mobile hamburger from the previous ConsoleShell.
@@ -1439,6 +1652,8 @@ function DashboardTopBar({
   onToggleAssistant,
   onOpenCommandCenter,
   onOpenBriefing,
+  isDemoMode,
+  onExitDemo,
 }: {
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
@@ -1454,6 +1669,8 @@ function DashboardTopBar({
   onToggleAssistant: () => void;
   onOpenCommandCenter: () => void;
   onOpenBriefing: () => void;
+  isDemoMode: boolean;
+  onExitDemo: () => void;
 }) {
   return (
     <header
@@ -1742,35 +1959,40 @@ function DashboardTopBar({
       <NotificationBell />
 
       {/* WhatsApp alerts button — opens the WhatsApp settings modal.
-          Styled to match the bell: same 20px icon, clickable surface. */}
-      <button
-        onClick={onOpenWhatsapp}
-        aria-label="WhatsApp alert settings"
-        title="WhatsApp alert settings"
-        style={{
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          padding: "0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: C.textSecondary,
-          transition: "color 0.15s",
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = "#059669"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = C.textSecondary; }}
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
+          Styled to match the bell: same 20px icon, clickable surface.
+          HIDDEN in demo mode (WhatsApp is not configured for demo
+          accounts - showing a broken button during a Comex pitch
+          would be embarrassing). */}
+      {!isDemoMode && (
+        <button
+          onClick={onOpenWhatsapp}
+          aria-label="WhatsApp alert settings"
+          title="WhatsApp alert settings"
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: "0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: C.textSecondary,
+            transition: "color 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#059669"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = C.textSecondary; }}
         >
-          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.13c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.82c0 4.55-3.7 8.24-8.24 8.24Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43-.14-.01-.31-.01-.48-.01-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29Z" />
-        </svg>
-      </button>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.13c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.82c0 4.55-3.7 8.24-8.24 8.24Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43-.14-.01-.31-.01-.48-.01-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29Z" />
+          </svg>
+        </button>
+      )}
 
       {/* HarchIQ Assistant button — opens the GenAI chat panel (Cmd+J).
           A pill-shaped "AI" badge with a sparkle icon, distinct from
@@ -1826,15 +2048,17 @@ function DashboardTopBar({
         <span>Ask HarchIQ</span>
       </button>
 
-      {/* Logout button */}
+      {/* Logout button - in demo mode, replaced by "Exit Demo"
+          (clears the demo flag + signs out, lands on /atelier so
+          the next launch starts clean). */}
       <button
-        onClick={() => signOut({ callbackUrl: "/atelier/login", redirect: true })}
+        onClick={isDemoMode ? onExitDemo : () => signOut({ callbackUrl: "/atelier/login", redirect: true })}
         style={{
           padding: "6px 12px",
-          background: "transparent",
-          border: `1px solid ${C.border}`,
+          background: isDemoMode ? C.warningBg : "transparent",
+          border: `1px solid ${isDemoMode ? C.warningBorder : C.border}`,
           borderRadius: "4px",
-          color: C.textSecondary,
+          color: isDemoMode ? C.warningText : C.textSecondary,
           fontFamily: FONT.sans,
           fontSize: "11px",
           fontWeight: 600,
@@ -1844,16 +2068,19 @@ function DashboardTopBar({
           alignItems: "center",
           gap: "6px",
         }}
-        title="Sign out"
+        title={isDemoMode ? "Exit demo and return to Harch Atelier" : "Sign out"}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary; }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = isDemoMode ? C.warningBorder : C.border;
+          e.currentTarget.style.color = isDemoMode ? C.warningText : C.textSecondary;
+        }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
           <polyline points="16 17 21 12 16 7" />
           <line x1="21" y1="12" x2="9" y2="12" />
         </svg>
-        <span className="console-logout-label">Sign out</span>
+        <span className="console-logout-label">{isDemoMode ? "Exit Demo" : "Sign out"}</span>
       </button>
 
       {/* Command palette trigger — ⌘K / Ctrl+K hint badge.
@@ -1893,24 +2120,50 @@ function DashboardTopBar({
         <span aria-hidden className="console-cmdk-k" style={{ fontSize: "11px" }}>K</span>
       </button>
 
-      {/* User avatar — dynamic initials from real name */}
-      <div
-        style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "50%",
-          background: theme.accent,
-          color: "#ffffff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "12px",
-          fontWeight: 600,
-          fontFamily: FONT.sans,
-        }}
-        title={userEmail ? `${displayName} · ${userEmail}` : displayName}
-      >
-        {initials}
+      {/* User avatar — dynamic initials from real name. In demo mode,
+          a small amber "DEMO" badge sits to the left of the avatar
+          so it's clear (without reading the banner) that the session
+          is a presentation environment. */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        {isDemoMode && (
+          <span
+            aria-label="Demo mode"
+            title="Executive demo session"
+            style={{
+              fontFamily: FONT.mono,
+              fontSize: "9px",
+              fontWeight: 700,
+              color: C.warningText,
+              background: C.warningBg,
+              border: `1px solid ${C.warningBorder}`,
+              padding: "2px 6px",
+              borderRadius: "3px",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              lineHeight: 1,
+            }}
+          >
+            Demo
+          </span>
+        )}
+        <div
+          style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: theme.accent,
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "12px",
+            fontWeight: 600,
+            fontFamily: FONT.sans,
+          }}
+          title={userEmail ? `${displayName} · ${userEmail}` : displayName}
+        >
+          {initials}
+        </div>
       </div>
 
       {/* Responsive hide for narrow screens */}

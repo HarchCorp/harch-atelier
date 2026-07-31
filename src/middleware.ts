@@ -41,7 +41,17 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 // ─── ROUTE GATES ──────────────────────────────────────────────────
 // Public API paths that bypass the zero-trust session check.
+// `/api/auth` covers the NextAuth handlers AND the demo auth bypass
+// (`/api/auth/demo`, `/api/auth/demo-seed`) - the demo routes do
+// their own SETUP_TOKEN / session validation internally.
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/cron", "/api/health"];
+
+// ─── PUBLIC PAGE PATHS ───────────────────────────────────────────
+// Pages that bypass the zero-trust session check entirely. The
+// Executive Demo landing page (`/atelier/demo`) MUST be public so
+// Amine can launch a Comex presentation without an existing
+// session - the demo auth bypass happens via /api/auth/demo.
+const PUBLIC_PAGE_PATHS = ["/atelier/demo", "/atelier/login", "/atelier/access"];
 
 function withSecurityHeaders(res: NextResponse): NextResponse {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {

@@ -1,0 +1,170 @@
+// ═══════════════════════════════════════════════════════════════
+//  EXECUTIVE DEMO GATEWAY — Auth bypass for Comex presentations
+//
+//  POST /api/auth/demo
+//  Body: { accountType: string, setupToken: string }
+//
+//  When Amine opens his laptop in a client's office (Attijariwafa,
+//  Al Mada, OCP, etc.), he can't afford login friction or an empty
+//  dashboard. This route validates a shared demo secret and either
+//  creates or reuses a per-offer demo user, then returns the
+//  credentials the client-side signIn() call needs.
+//
+//  Security:
+//    - SETUP_TOKEN must match process.env.SETUP_TOKEN
+//    - accountType is validated against the 4 known offers
+//    - Demo users are clearly marked (email pattern demo-<type>@harch.atelier)
+//    - Password is a fixed, non-secret string - the demo user has no
+//      real account value, and the email pattern lets any admin
+//      audit / revoke demo access at any time.
+//
+//  Auth flow:
+//    1. Client POSTs { accountType, setupToken }
+//    2. This route validates + upserts the demo user
+//    3. Returns { ok, email, password, redirect }
+//    4. Client calls signIn("credentials", { email, password,
+//       redirect: true, callbackUrl: "/atelier/console" })
+//    5. NextAuth issues a JWT and redirects to the console
+//
+//  Why client-side signIn? NextAuth v4 doesn't expose a server-side
+//  signIn() for the Credentials provider (it would require the
+//  HTTP request context that only the [...nextauth] route owns).
+//  Returning credentials to the client is safe here because the
+//  demo user has no password-gated value - the SETUP_TOKEN is the
+//  only real gate, and it's already validated server-side.
+// ═══════════════════════════════════════════════════════════════
+
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db";
+import { logInfo, logWarn } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
+
+const VALID_ACCOUNT_TYPES = [
+  "brand-monitor",
+  "market-competitor",
+  "investment-bank",
+  "harch-alpha",
+] as const;
+type DemoAccountType = (typeof VALID_ACCOUNT_TYPES)[number];
+
+const DEMO_PASSWORD = "demo-no-password-needed";
+
+interface DemoRequestBody {
+  accountType?: unknown;
+  setupToken?: unknown;
+}
+
+export async function POST(req: NextRequest) {
+  // ─── Parse + validate body ────────────────────────────────────
+  let body: DemoRequestBody;
+  try {
+    body = (await req.json()) as DemoRequestBody;
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Invalid JSON body" },
+      { status: 400 },
+    );
+  }
+
+  const { accountType, setupToken } = body;
+
+  // ─── Validate setup token ─────────────────────────────────────
+  // SETUP_TOKEN is the only real gate. The demo user it provisions
+  // has no password-gated value (it's an empty shell until the seed
+  // route populates data), so plain string equality is acceptable
+  // here - the value is documented as a low-security demo secret.
+  const expected = process.env.SETUP_TOKEN;
+  if (!expected || typeof setupToken !== "string" || setupToken !== expected) {
+    logWarn("auth.demo", "Demo access rejected - invalid SETUP_TOKEN");
+    return NextResponse.json(
+      { ok: false, error: "Invalid token" },
+      { status: 401 },
+    );
+  }
+
+  // ─── Validate accountType ─────────────────────────────────────
+  if (
+    typeof accountType !== "string" ||
+    !VALID_ACCOUNT_TYPES.includes(accountType as DemoAccountType)
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Invalid account type - must be one of: " +
+          VALID_ACCOUNT_TYPES.join(", "),
+      },
+      { status: 400 },
+    );
+  }
+
+  const typedAccountType = accountType as DemoAccountType;
+
+  // ─── Upsert demo user ─────────────────────────────────────────
+  // Email pattern `demo-<type>@harch.atelier` makes demo accounts
+  // trivially auditable (admin can list/filter by this prefix).
+  const demoEmail = `demo-${typedAccountType}@harch.atelier`;
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+
+  try {
+    const user = await prisma.user.upsert({
+      where: { email: demoEmail },
+      update: {
+        // Refresh the password hash + accountType on each demo
+        // request so a previously-revoked demo user is re-enabled
+        // cleanly without manual DB surgery.
+        accountType: typedAccountType,
+        role: "user",
+        passwordHash,
+        // Demo user is opted-out of WhatsApp alerts by default -
+        // the demo console hides the WhatsApp button entirely.
+        whatsappAlerts: false,
+        alertSeverityThreshold: "critical",
+      },
+      create: {
+        email: demoEmail,
+        name: "Executive Demo",
+        accountType: typedAccountType,
+        role: "user",
+        passwordHash,
+        whatsappAlerts: false,
+        alertSeverityThreshold: "critical",
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        accountType: true,
+        role: true,
+      },
+    });
+
+    logInfo(
+      "auth.demo",
+      `Demo user ready: ${user.email} (accountType=${user.accountType})`,
+    );
+
+    // ─── Return credentials for client-side signIn ──────────────
+    // The client (DemoPage.tsx) calls signIn("credentials", ...)
+    // with these values. The redirect target is /atelier/console,
+    // which auto-routes to the correct per-offer dashboard.
+    return NextResponse.json({
+      ok: true,
+      email: demoEmail,
+      password: DEMO_PASSWORD,
+      redirect: "/atelier/console",
+      accountType: typedAccountType,
+    });
+  } catch (err) {
+    logWarn(
+      "auth.demo",
+      `Demo user upsert failed: ${err instanceof Error ? err.message : "unknown"}`,
+    );
+    return NextResponse.json(
+      { ok: false, error: "Failed to provision demo user" },
+      { status: 500 },
+    );
+  }
+}

@@ -109,6 +109,29 @@ export function LoginPage() {
             <a href="/atelier/request-access" style={{ fontSize: "12px", color: C.accent, fontFamily: C.fontMono, textDecoration: "underline" }}>Request access</a>
           </div>
 
+          {/* Executive Demo link - intentionally discrete (small, muted,
+              below the regular "Request access" link). We don't want
+              regular users clicking it during normal sign-in, but it
+              needs to be reachable for Comex presentations. The demo
+              page (/atelier/demo) bypasses auth via a shared token. */}
+          <div style={{ marginTop: "16px", textAlign: "center" }}>
+            <a
+              href="/atelier/demo"
+              style={{
+                fontSize: "11px",
+                color: C.textMuted,
+                fontFamily: C.fontMono,
+                textDecoration: "none",
+                letterSpacing: "0.04em",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = C.accent; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; }}
+            >
+              Executive Demo →
+            </a>
+          </div>
+
           <div style={{ marginTop: "12px", textAlign: "center" }}>
             <a href="/atelier" style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textDecoration: "none" }}>← Back to Harch Atelier</a>
           </div>
