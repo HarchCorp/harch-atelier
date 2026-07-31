@@ -20,10 +20,17 @@ export async function GET(request: NextRequest) {
     // Support ?q= free-text search on name + aliases. Used by the
     // onboarding wizard's "pick existing company" step. Case-insensitive
     // contains matching on the name column.
+    //
+    // Task: domain-matching-demo-isolation — exclude demo companies
+    // (created by the executive demo seed) from the public directory
+    // and the onboarding picker. Real users should only see real
+    // companies. Demo users bypass onboarding entirely (their JWT
+    // has onboardingCompleted=true set by /api/auth/demo).
     const where: {
+      isDemo: boolean;
       sector?: string;
       OR?: Array<{ name?: { contains: string; mode: "insensitive" }; aliases?: { has: string } }>;
-    } = {};
+    } = { isDemo: false };
     if (sector) where.sector = sector;
     if (q && q.trim()) {
       const term = q.trim();

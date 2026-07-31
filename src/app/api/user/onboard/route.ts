@@ -198,13 +198,22 @@ export async function POST(req: NextRequest) {
     if (!skip) {
       if (body.companyId && typeof body.companyId === "string") {
         // Existing company pick — verify it exists.
+        // Task: domain-matching-demo-isolation — reject demo companies
+        // so a real user can't accidentally attach to a demo-created
+        // company row (e.g. the demo BCP created by the demo seed).
         const existing = await prisma.company.findUnique({
           where: { id: body.companyId },
-          select: { id: true, name: true },
+          select: { id: true, name: true, isDemo: true },
         });
         if (!existing) {
           return NextResponse.json(
             { error: "Selected company not found" },
+            { status: 400 },
+          );
+        }
+        if (existing.isDemo) {
+          return NextResponse.json(
+            { error: "Cannot attach to a demo company. Pick a real company or create a new one." },
             { status: 400 },
           );
         }
