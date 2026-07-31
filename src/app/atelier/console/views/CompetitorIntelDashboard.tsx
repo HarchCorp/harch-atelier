@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactECharts from "echarts-for-react";
 import {
@@ -164,6 +164,7 @@ function seriesColor(index: number): string {
 
 interface NeighborExtended {
   name: string;
+  sector: string;
   reputationScore: number;
   yourScore: number;
   delta: number;
@@ -1083,6 +1084,417 @@ function VirtualizedScorecard({ rows }: { rows: ScorecardRow[] }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  EXECUTIVE MODULES — Radar Prédateur d'Offensive
+//
+//  Module 1: Multi-Entity Competitor Tracking (25-50 competitors)
+//  Module 2: Sentiment Migration Sankey (SOV displacement)
+//  Module 3: Tactical Alert Terminal (virtualized, 500+ capacity)
+//
+//  All real data — zero mock. Virtualized feeds > 50 items.
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Module 1 types ─────────────────────────────────────────────
+
+type SortColumn = "name" | "sector" | "reputation" | "delta" | "threat" | "share" | "mentions" | "sentiment";
+type SortDir = "asc" | "desc";
+
+interface BasketCompetitor {
+  name: string;
+  sector: string;
+  reputationScore: number;
+  delta: number;
+  marketShare: number;
+  mentionCount: number;
+  sentimentScore: number;
+  threatLevel: ThreatLevel;
+  isYou?: boolean;
+  isCustom?: boolean;
+}
+
+interface ComparisonMatrixRow {
+  id: string;
+  name: string;
+  sector: string;
+  reputation: number;
+  delta: number;
+  threat: ThreatLevel;
+  share: number;
+  mentions: number;
+  sentiment: number;
+  isYou?: boolean;
+  isCustom?: boolean;
+}
+
+// ─── Module 2 types ─────────────────────────────────────────────
+
+interface SankeyMigrationLink {
+  source: string;
+  target: string;
+  value: number;
+  sentimentScore: number;
+  involvesYou: boolean;
+}
+
+interface SankeyMigrationData {
+  nodes: Array<{ name: string }>;
+  links: SankeyMigrationLink[];
+}
+
+// ─── Module 3 types ─────────────────────────────────────────────
+
+type TacticalEventType = "stock_rupture" | "bad_buzz" | "leadership_change" | "product_launch" | "regulatory" | "ma_rumor";
+type TacticalImpact = "Commercial" | "Funding" | "Reputation";
+
+interface TacticalAlertRow {
+  id: string;
+  time: string;
+  competitor: string;
+  eventType: TacticalEventType;
+  impact: TacticalImpact;
+  title: string;
+  source: string;
+  severity: "critical" | "high" | "medium" | "low";
+  sentimentScore: number | null;
+  url?: string | null;
+  details?: string;
+  detectedAt: string | null;
+}
+
+const EVENT_TYPE_LABELS: Record<TacticalEventType, string> = {
+  stock_rupture: "Stock rupture",
+  bad_buzz: "Bad buzz",
+  leadership_change: "Leadership change",
+  product_launch: "Product launch",
+  regulatory: "Regulatory",
+  ma_rumor: "M&A rumor",
+};
+
+const EVENT_TYPE_KEYWORDS: Record<TacticalEventType, string[]> = {
+  stock_rupture: ["stock", "rupture", "shortage"],
+  bad_buzz: ["scandal", "crisis", "backlash", "probe"],
+  leadership_change: ["ceo", "appoints", "resigns", "leadership"],
+  product_launch: ["launch", "unveils", "releases"],
+  regulatory: ["regulator", "ammc", "compliance", "fine"],
+  ma_rumor: ["acquisition", "merger", "buyout", "stake"],
+};
+
+function classifyEventType(title: string): TacticalEventType {
+  const lower = title.toLowerCase();
+  for (const key of Object.keys(EVENT_TYPE_KEYWORDS) as TacticalEventType[]) {
+    if (EVENT_TYPE_KEYWORDS[key].some((k) => lower.includes(k))) return key;
+  }
+  return "bad_buzz";
+}
+
+function deriveTacticalImpact(severity: TacticalAlertRow["severity"]): TacticalImpact {
+  if (severity === "critical" || severity === "high") return "Commercial";
+  if (severity === "medium") return "Funding";
+  return "Reputation";
+}
+
+const SEVERITY_BORDER: Record<TacticalAlertRow["severity"], string> = {
+  critical: "#ef4444",
+  high: "#d97706",
+  medium: "#737373",
+  low: "#a3a3a3",
+};
+
+// ─── Module 1: Virtualized Comparison Matrix (50-row, 28px rows) ─
+
+interface VirtualizedMatrixProps {
+  rows: ComparisonMatrixRow[];
+  sortColumn: SortColumn;
+  sortDir: SortDir;
+  onSort: (col: SortColumn) => void;
+}
+
+function VirtualizedComparisonMatrix({ rows, sortColumn, sortDir, onSort }: VirtualizedMatrixProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 28,
+    overscan: 12,
+  });
+
+  const sortArrow = (col: SortColumn): string => {
+    if (sortColumn !== col) return "";
+    return sortDir === "asc" ? " \u25B2" : " \u25BC";
+  };
+
+  const headerCellBase: CSSProperties = {
+    padding: "6px 6px",
+    fontSize: "9px",
+    fontFamily: C.fontMono,
+    color: C.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    fontWeight: 700,
+    cursor: "pointer",
+    userSelect: "none",
+    background: C.bgSubtle,
+    borderBottom: `1px solid ${C.border}`,
+    whiteSpace: "nowrap",
+  };
+
+  const cellBase: CSSProperties = {
+    padding: "0 6px",
+    fontSize: "10px",
+    fontFamily: C.fontMono,
+    color: C.text,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    display: "flex",
+    alignItems: "center",
+  };
+
+  return (
+    <div
+      ref={parentRef}
+      style={{ height: 380, overflow: "auto", position: "relative", borderTop: `1px solid ${C.bgHover}` }}
+    >
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 2,
+          display: "grid",
+          gridTemplateColumns: "1.4fr 1fr 56px 56px 72px 56px 64px 64px",
+          gap: "2px",
+          background: C.bgSubtle,
+          borderBottom: `1px solid ${C.border}`,
+        }}
+      >
+        <div style={headerCellBase} onClick={() => onSort("name")}>Competitor{sortArrow("name")}</div>
+        <div style={headerCellBase} onClick={() => onSort("sector")}>Sector{sortArrow("sector")}</div>
+        <div style={{ ...headerCellBase, justifyContent: "flex-end" }} onClick={() => onSort("reputation")}>Rep{sortArrow("reputation")}</div>
+        <div style={{ ...headerCellBase, justifyContent: "flex-end" }} onClick={() => onSort("delta")}>Delta{sortArrow("delta")}</div>
+        <div style={{ ...headerCellBase, justifyContent: "flex-end" }} onClick={() => onSort("threat")}>Threat{sortArrow("threat")}</div>
+        <div style={{ ...headerCellBase, justifyContent: "flex-end" }} onClick={() => onSort("share")}>Share{sortArrow("share")}</div>
+        <div style={{ ...headerCellBase, justifyContent: "flex-end" }} onClick={() => onSort("mentions")}>Mentions{sortArrow("mentions")}</div>
+        <div style={{ ...headerCellBase, justifyContent: "flex-end" }} onClick={() => onSort("sentiment")}>Senti{sortArrow("sentiment")}</div>
+      </div>
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          return (
+            <div
+              key={row.id}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+                display: "grid",
+                gridTemplateColumns: "1.4fr 1fr 56px 56px 72px 56px 64px 64px",
+                gap: "2px",
+                alignItems: "center",
+                borderBottom: `1px solid ${C.bgHover}`,
+                background: row.isYou ? ACCENT_BG : C.bg,
+              }}
+            >
+              <div style={{ ...cellBase, fontWeight: row.isYou ? 700 : 500, color: row.isYou ? ACCENT : C.text }}>
+                {row.isCustom && <span style={{ color: C.textMuted, marginRight: 4 }}>*</span>}
+                {row.name}
+              </div>
+              <div style={{ ...cellBase, color: C.textBody }}>{row.sector}</div>
+              <div style={{ ...cellBase, justifyContent: "flex-end", fontWeight: 700 }}>{row.reputation || "\u2014"}</div>
+              <div style={{ ...cellBase, justifyContent: "flex-end", color: row.delta > 0 ? "#ef4444" : row.delta < 0 ? ACCENT : C.textMuted }}>
+                {row.delta > 0 ? "+" : ""}{row.delta || 0}
+              </div>
+              <div style={{ ...cellBase, justifyContent: "flex-end", color: THREAT_COLORS[row.threat], fontWeight: 700, fontSize: "9px", textTransform: "uppercase" }}>
+                {THREAT_LABEL[row.threat]}
+              </div>
+              <div style={{ ...cellBase, justifyContent: "flex-end", color: C.textBody }}>{row.share}%</div>
+              <div style={{ ...cellBase, justifyContent: "flex-end", color: C.textMuted }}>{row.mentions}</div>
+              <div style={{ ...cellBase, justifyContent: "flex-end", color: row.sentiment > 0.1 ? C.success : row.sentiment < -0.1 ? C.danger : C.textMuted }}>
+                {row.sentiment !== 0 ? row.sentiment.toFixed(2) : "\u2014"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Module 3: Virtualized Tactical Alert Terminal ───────────────
+// 28px collapsed rows, ~140px expanded. Dynamic measurement via
+// measureElement (ResizeObserver). 500+ row capacity. Auto-scroll.
+
+interface VirtualizedTacticalFeedProps {
+  rows: TacticalAlertRow[];
+  expandedId: string | null;
+  onToggleExpand: (id: string) => void;
+  autoScroll: boolean;
+  dataVersion: number;
+}
+
+function VirtualizedTacticalFeed({ rows, expandedId, onToggleExpand, autoScroll, dataVersion }: VirtualizedTacticalFeedProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index: number) => (rows[index]?.id === expandedId ? 140 : 28),
+    overscan: 8,
+  });
+
+  // Auto-scroll to top when new data arrives (if autoScroll enabled)
+  useEffect(() => {
+    if (autoScroll && parentRef.current) {
+      parentRef.current.scrollTop = 0;
+    }
+  }, [autoScroll, dataVersion]);
+
+  const headerStyle: CSSProperties = {
+    padding: "6px 6px",
+    fontSize: "9px",
+    fontFamily: C.fontMono,
+    color: C.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    fontWeight: 700,
+    background: C.bgSubtle,
+    borderBottom: `1px solid ${C.border}`,
+    whiteSpace: "nowrap",
+  };
+
+  return (
+    <div
+      ref={parentRef}
+      style={{ height: 480, overflow: "auto", position: "relative", borderTop: `1px solid ${C.bgHover}` }}
+    >
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 2,
+          display: "grid",
+          gridTemplateColumns: "108px 1fr 108px 90px 1fr 118px",
+          gap: "2px",
+          background: C.bgSubtle,
+          borderBottom: `1px solid ${C.border}`,
+        }}
+      >
+        <div style={headerStyle}>Time</div>
+        <div style={headerStyle}>Competitor</div>
+        <div style={headerStyle}>Event Type</div>
+        <div style={headerStyle}>Impact</div>
+        <div style={headerStyle}>Title</div>
+        <div style={headerStyle}>Source</div>
+      </div>
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          const isExpanded = row.id === expandedId;
+          const borderColor = SEVERITY_BORDER[row.severity];
+          return (
+            <div
+              key={row.id}
+              data-index={virtualRow.index}
+              ref={rowVirtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+                borderBottom: `1px solid ${C.bgHover}`,
+                borderLeft: `3px solid ${borderColor}`,
+                background: row.severity === "critical" ? "rgba(239,68,68,0.04)" : isExpanded ? C.bgSubtle : C.bg,
+                cursor: "pointer",
+              }}
+              onClick={() => onToggleExpand(row.id)}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "108px 1fr 108px 90px 1fr 118px",
+                  gap: "2px",
+                  padding: "0 6px",
+                  alignItems: "center",
+                  height: 28,
+                  fontSize: "10px",
+                  fontFamily: C.fontMono,
+                  color: C.text,
+                }}
+              >
+                <span style={{ color: C.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.time}</span>
+                <span style={{ color: C.textBody, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 600 }}>{row.competitor}</span>
+                <span style={{ color: borderColor, fontWeight: 700, fontSize: "9px", textTransform: "uppercase" }}>{EVENT_TYPE_LABELS[row.eventType]}</span>
+                <span style={{ color: C.textMuted, fontSize: "9px", textTransform: "uppercase" }}>{row.impact}</span>
+                <span style={{ color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</span>
+                <span style={{ color: C.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.source}</span>
+              </div>
+              {isExpanded && (
+                <div
+                  style={{
+                    padding: "8px 12px 8px 16px",
+                    borderTop: `1px dashed ${C.border}`,
+                    fontSize: "11px",
+                    fontFamily: C.fontMono,
+                    color: C.textBody,
+                    lineHeight: 1.5,
+                    overflow: "auto",
+                  }}
+                >
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ color: C.textMuted }}>SEVERITY:</span>{" "}
+                    <span style={{ color: borderColor, fontWeight: 700 }}>{row.severity.toUpperCase()}</span>
+                    {row.sentimentScore != null && (
+                      <>
+                        {" \u00B7 "}
+                        <span style={{ color: C.textMuted }}>SENTIMENT:</span>{" "}
+                        <span style={{ color: row.sentimentScore < -0.3 ? C.danger : C.textBody, fontWeight: 700 }}>{row.sentimentScore.toFixed(3)}</span>
+                      </>
+                    )}
+                    {" \u00B7 "}
+                    <span style={{ color: C.textMuted }}>DETECTED:</span>{" "}
+                    <span style={{ color: C.text, fontWeight: 700 }}>{row.detectedAt ? new Date(row.detectedAt).toLocaleString("en-US") : "recent"}</span>
+                  </div>
+                  <div style={{ marginBottom: 6 }}>{row.details || "Signal detected by HarchIQ risk engine. No additional details available."}</div>
+                  {row.url && (
+                    <a
+                      href={row.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        color: ACCENT,
+                        textDecoration: "underline",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {"\u2197"} Open source
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────
 
 export function CompetitorIntelDashboard({
@@ -1109,6 +1521,21 @@ export function CompetitorIntelDashboard({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
   const [sparkHistory, setSparkHistory] = useState<number[]>([]);
+
+  // ─── Executive module state ────────────────────────────────────
+  // Module 1: Multi-entity tracking (25-50 competitors)
+  const [trackedCompetitors, setTrackedCompetitors] = useState<string[]>([]);
+  const [selectedCompetitors, setSelectedCompetitors] = useState<Set<string>>(new Set());
+  const [sectorFilter, setSectorFilter] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("reputation");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [newCompetitorName, setNewCompetitorName] = useState("");
+  const [basketInitialized, setBasketInitialized] = useState(false);
+
+  // Module 3: Tactical alert terminal
+  const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [eventTypeFilter, setEventTypeFilter] = useState<Set<TacticalEventType>>(new Set());
 
   const loadData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -1170,6 +1597,7 @@ export function CompetitorIntelDashboard({
           const sentimentScore = deriveSentimentScore(nb.name, rawAlerts);
           return {
             name: nb.name,
+            sector: nb.sector,
             reputationScore: nb.reputationScore,
             yourScore,
             delta,
@@ -1200,6 +1628,7 @@ export function CompetitorIntelDashboard({
       // Add "you" entry to extended list
       const yourExtEntry: NeighborExtended = {
         name: `${companyName} (You)`,
+        sector,
         reputationScore: yourScore,
         yourScore,
         delta: 0,
@@ -1285,6 +1714,49 @@ export function CompetitorIntelDashboard({
     // loadData is a closure over many state setters; we intentionally
     // only re-run when the injected KPIs or company name change.
   }, [injectedKpis, companyName]);
+
+  // ─── Executive Module 1: localStorage persistence ──────────────
+  // Load basket from localStorage on mount (key: harchiq.competitor-basket)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("harchiq.competitor-basket");
+      if (stored) {
+        const parsed = JSON.parse(stored) as { tracked?: string[]; selected?: string[] };
+        if (Array.isArray(parsed.tracked) && parsed.tracked.length > 0) {
+          setTrackedCompetitors(parsed.tracked.slice(0, 50));
+          setBasketInitialized(true);
+        }
+        if (Array.isArray(parsed.selected)) {
+          setSelectedCompetitors(new Set(parsed.selected));
+        }
+      }
+    } catch {
+      // ignore parse errors — fall back to API-derived basket
+    }
+  }, []);
+
+  // Persist basket to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("harchiq.competitor-basket", JSON.stringify({
+        tracked: trackedCompetitors,
+        selected: Array.from(selectedCompetitors),
+      }));
+    } catch {
+      // ignore quota / serialization errors
+    }
+  }, [trackedCompetitors, selectedCompetitors]);
+
+  // Initialize basket from neighbors API on first load (if localStorage empty)
+  useEffect(() => {
+    if (basketInitialized) return;
+    if (extNeighbors.length === 0) return;
+    const names = extNeighbors.filter((n) => !n.isYou).map((n) => n.name);
+    if (names.length === 0) return;
+    setTrackedCompetitors(names);
+    setSelectedCompetitors(new Set(names));
+    setBasketInitialized(true);
+  }, [extNeighbors, basketInitialized]);
 
   const firstName = userName.split(" ")[0] || "there";
 
@@ -2174,6 +2646,320 @@ export function CompetitorIntelDashboard({
     return { level: "watch" as ThreatLevel, counts };
   }, [rivalsOnly]);
 
+  // ═══════════════════════════════════════════════════════════════
+  //  EXECUTIVE MODULES — Derived data (Radar Prédateur d'Offensive)
+  // ═══════════════════════════════════════════════════════════════
+
+  // ─── Module 1: Basket competitors (merge tracked + API data) ────
+  const basketCompetitors = useMemo<BasketCompetitor[]>(() => {
+    return trackedCompetitors.map((name) => {
+      const ext = extNeighbors.find((n) => n.name === name);
+      if (ext) {
+        return {
+          name: ext.name,
+          sector: ext.sector,
+          reputationScore: ext.reputationScore,
+          delta: ext.delta,
+          marketShare: ext.marketShare,
+          mentionCount: ext.mentionCount,
+          sentimentScore: ext.sentimentScore,
+          threatLevel: ext.threatLevel,
+          isYou: ext.isYou,
+          isCustom: false,
+        };
+      }
+      // Custom competitor (user-added, not in API) — derive from alerts
+      return {
+        name,
+        sector: "Custom",
+        reputationScore: 0,
+        delta: 0,
+        marketShare: 0,
+        mentionCount: deriveMentionCount(name, alerts),
+        sentimentScore: deriveSentimentScore(name, alerts),
+        threatLevel: "watch" as ThreatLevel,
+        isCustom: true,
+      };
+    });
+  }, [trackedCompetitors, extNeighbors, alerts]);
+
+  const availableSectors = useMemo(() => {
+    const sectors = new Set(basketCompetitors.map((c) => c.sector));
+    return Array.from(sectors).sort();
+  }, [basketCompetitors]);
+
+  // Comparison matrix rows — filtered by sector + selected, then sorted
+  const comparisonMatrixRows = useMemo<ComparisonMatrixRow[]>(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return basketCompetitors
+      .filter((c) => selectedCompetitors.has(c.name))
+      .filter((c) => sectorFilter === "all" || c.sector === sectorFilter)
+      .map((c, i) => ({
+        id: `mtx-${i}-${c.name}`,
+        name: c.name,
+        sector: c.sector,
+        reputation: c.reputationScore,
+        delta: c.delta,
+        threat: c.threatLevel,
+        share: c.marketShare,
+        mentions: c.mentionCount,
+        sentiment: c.sentimentScore,
+        isYou: c.isYou,
+        isCustom: c.isCustom,
+      }))
+      .sort((a, b) => {
+        let cmp = 0;
+        switch (sortColumn) {
+          case "name": cmp = a.name.localeCompare(b.name); break;
+          case "sector": cmp = a.sector.localeCompare(b.sector); break;
+          case "reputation": cmp = a.reputation - b.reputation; break;
+          case "delta": cmp = a.delta - b.delta; break;
+          case "threat": cmp = a.threat.localeCompare(b.threat); break;
+          case "share": cmp = a.share - b.share; break;
+          case "mentions": cmp = a.mentions - b.mentions; break;
+          case "sentiment": cmp = a.sentiment - b.sentiment; break;
+        }
+        return cmp * dir;
+      });
+  }, [basketCompetitors, selectedCompetitors, sectorFilter, sortColumn, sortDir]);
+
+  const onSortMatrix = (col: SortColumn) => {
+    if (sortColumn === col) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(col);
+      setSortDir("desc");
+    }
+  };
+
+  const addCompetitor = () => {
+    const name = newCompetitorName.trim();
+    if (!name) return;
+    if (trackedCompetitors.includes(name)) return;
+    if (trackedCompetitors.length >= 50) return;
+    setTrackedCompetitors([...trackedCompetitors, name]);
+    setSelectedCompetitors(new Set([...selectedCompetitors, name]));
+    setNewCompetitorName("");
+  };
+
+  const removeCompetitor = (name: string) => {
+    setTrackedCompetitors(trackedCompetitors.filter((n) => n !== name));
+    const next = new Set(selectedCompetitors);
+    next.delete(name);
+    setSelectedCompetitors(next);
+  };
+
+  const toggleSelected = (name: string) => {
+    const next = new Set(selectedCompetitors);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    setSelectedCompetitors(next);
+  };
+
+  // ─── Module 2: Sentiment Migration Sankey ───────────────────────
+  // Build co-mention flows between selected competitors from alerts.
+  // Direction: lower-sentiment competitor → higher-sentiment (displacement).
+  // Color: green if flow targets "you", red if flow sources from "you".
+  const sankeyMigrationData = useMemo<SankeyMigrationData | null>(() => {
+    const selectedRivals = basketCompetitors.filter((c) => selectedCompetitors.has(c.name));
+    if (selectedRivals.length < 2 || alerts.length === 0) return null;
+
+    const pairCount: Map<string, number> = new Map();
+    const pairSentiments: Map<string, number[]> = new Map();
+
+    alerts.forEach((a) => {
+      const text = `${a.title} ${a.source}`.toLowerCase();
+      const mentioned = selectedRivals.filter((c) => text.includes(c.name.toLowerCase()));
+      if (mentioned.length >= 2) {
+        for (let i = 0; i < mentioned.length; i++) {
+          for (let j = i + 1; j < mentioned.length; j++) {
+            const [a1, a2] = [mentioned[i], mentioned[j]].sort((x, y) => x.name.localeCompare(y.name));
+            const key = `${a1.name}|${a2.name}`;
+            pairCount.set(key, (pairCount.get(key) ?? 0) + 1);
+            const arr = pairSentiments.get(key) ?? [];
+            if (a.sentimentScore != null) arr.push(a.sentimentScore);
+            pairSentiments.set(key, arr);
+          }
+        }
+      }
+    });
+
+    const links: SankeyMigrationLink[] = [];
+    pairCount.forEach((value, key) => {
+      const [nameA, nameB] = key.split("|");
+      const compA = selectedRivals.find((c) => c.name === nameA);
+      const compB = selectedRivals.find((c) => c.name === nameB);
+      if (!compA || !compB) return;
+      const sentiments = pairSentiments.get(key) ?? [];
+      const avgSentiment = sentiments.length > 0
+        ? sentiments.reduce((s, x) => s + x, 0) / sentiments.length
+        : 0;
+      // Direction: lower sentiment → higher sentiment
+      const [source, target] = compA.sentimentScore <= compB.sentimentScore
+        ? [compA, compB]
+        : [compB, compA];
+      links.push({
+        source: source.name,
+        target: target.name,
+        value,
+        sentimentScore: avgSentiment,
+        involvesYou: Boolean(source.isYou || target.isYou),
+      });
+    });
+
+    if (links.length === 0) return null;
+
+    const nodeNames = new Set<string>();
+    links.forEach((l) => { nodeNames.add(l.source); nodeNames.add(l.target); });
+    const nodes = Array.from(nodeNames).map((name) => ({ name }));
+    return { nodes, links };
+  }, [basketCompetitors, selectedCompetitors, alerts]);
+
+  const sankeyMigrationOption = useMemo(() => {
+    if (!sankeyMigrationData) return null;
+    const yourName = `${companyName} (You)`;
+    return {
+      ...ECHARTS_BASE,
+      tooltip: {
+        ...ECHARTS_TOOLTIP,
+        formatter: (params: { name?: string; data?: { source?: string; target?: string; value?: number; sentimentScore?: number } }) => {
+          const d = params.data;
+          if (d && d.source && d.target) {
+            return `<b>${d.source} → ${d.target}</b><br/>Co-mentions: ${d.value}<br/>Avg sentiment: ${(d.sentimentScore ?? 0).toFixed(2)}`;
+          }
+          return params.name ?? "";
+        },
+      },
+      series: [{
+        type: "sankey" as const,
+        data: sankeyMigrationData.nodes.map((n) => ({
+          name: n.name,
+          itemStyle: { color: n.name === yourName ? ACCENT : C.textMuted },
+        })),
+        links: sankeyMigrationData.links.map((l) => ({
+          source: l.source,
+          target: l.target,
+          value: l.value,
+          lineStyle: {
+            color: l.involvesYou
+              ? (l.target === yourName ? C.success : C.danger)
+              : "rgba(217,119,6,0.45)",
+            opacity: 0.7,
+            curveness: 0.5,
+          },
+        })),
+        nodeWidth: 14,
+        nodeGap: 10,
+        layoutIterations: 32,
+        label: { fontFamily: C.fontMono, color: C.text, fontSize: 10 },
+        itemStyle: { borderWidth: 0 },
+        lineStyle: { opacity: 0.5, curveness: 0.5 },
+        emphasis: { focus: "adjacency" as const },
+      }],
+    };
+  }, [sankeyMigrationData, companyName]);
+
+  // SOV mention counts per selected competitor
+  const sovMentionCounts = useMemo(() => {
+    const selectedRivals = basketCompetitors.filter((c) => selectedCompetitors.has(c.name));
+    if (selectedRivals.length === 0 || alerts.length === 0) return [];
+    return selectedRivals.map((c) => {
+      const lower = c.name.toLowerCase();
+      const mentions = alerts.filter((a) =>
+        a.source.toLowerCase().includes(lower) || a.title.toLowerCase().includes(lower)
+      ).length;
+      return { name: c.name, mentions, isYou: c.isYou, threat: c.threatLevel };
+    });
+  }, [basketCompetitors, selectedCompetitors, alerts]);
+
+  // SOV % bars (horizontal)
+  const sovPercentBars = useMemo(() => {
+    if (sovMentionCounts.length === 0) return [];
+    const total = sovMentionCounts.reduce((s, x) => s + x.mentions, 0);
+    if (total === 0) return [];
+    return [...sovMentionCounts]
+      .map((x) => ({
+        name: x.name.length > 16 ? x.name.slice(0, 15) + "\u2026" : x.name,
+        sov: Math.round((x.mentions / total) * 1000) / 10,
+        mentions: x.mentions,
+        fill: x.isYou ? ACCENT : THREAT_COLORS[x.threat],
+      }))
+      .sort((a, b) => b.sov - a.sov);
+  }, [sovMentionCounts]);
+
+  // SOV trend — top 5 by mentions, 7-day multi-line
+  const sovTrendLines = useMemo(() => {
+    if (sovMentionCounts.length === 0 || alerts.length === 0) {
+      return { data: [] as Array<Record<string, number | string>>, lines: [] as Array<{ key: string; color: string }> };
+    }
+    const top5 = [...sovMentionCounts].sort((a, b) => b.mentions - a.mentions).slice(0, 5);
+    if (top5.every((t) => t.mentions === 0)) {
+      return { data: [] as Array<Record<string, number | string>>, lines: [] as Array<{ key: string; color: string }> };
+    }
+    const today = new Date();
+    const data: Array<Record<string, number | string>> = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      const dayKey = d.toISOString().split("T")[0];
+      const dayAlerts = alerts.filter((a) => a.detectedAt && new Date(a.detectedAt).toISOString().split("T")[0] === dayKey);
+      const totalDay = dayAlerts.length || 1;
+      const entry: Record<string, number | string> = { date: dayKey };
+      top5.forEach((c) => {
+        const lower = c.name.toLowerCase();
+        const dayMentions = dayAlerts.filter((a) =>
+          a.source.toLowerCase().includes(lower) || a.title.toLowerCase().includes(lower)
+        ).length;
+        const shortKey = c.name.length > 12 ? c.name.slice(0, 11) + "\u2026" : c.name;
+        entry[shortKey] = Math.round((dayMentions / totalDay) * 1000) / 10;
+      });
+      return entry;
+    });
+    const lines = top5.map((c, i) => ({
+      key: c.name.length > 12 ? c.name.slice(0, 11) + "\u2026" : c.name,
+      color: c.isYou ? ACCENT : seriesColor(i),
+    }));
+    return { data, lines };
+  }, [sovMentionCounts, alerts]);
+
+  // ─── Module 3: Tactical alert rows ──────────────────────────────
+  const tacticalAlertRows = useMemo<TacticalAlertRow[]>(() => {
+    if (alerts.length === 0) return [];
+    return alerts.map((a, i) => {
+      const lower = a.title.toLowerCase();
+      const matching = basketCompetitors.find((c) => lower.includes(c.name.toLowerCase()));
+      const eventType = classifyEventType(a.title);
+      const severity: TacticalAlertRow["severity"] = a.severity === "critical" ? "critical" : "high";
+      return {
+        id: a.id || `tac-${i}`,
+        time: a.detectedAt
+          ? new Date(a.detectedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+          : "recent",
+        competitor: matching?.name ?? a.source ?? "Unknown",
+        eventType,
+        impact: deriveTacticalImpact(severity),
+        title: a.title,
+        source: a.source,
+        severity,
+        sentimentScore: a.sentimentScore,
+        url: a.url,
+        details: a.details,
+        detectedAt: a.detectedAt,
+      };
+    });
+  }, [alerts, basketCompetitors]);
+
+  const filteredTacticalRows = useMemo(() => {
+    if (eventTypeFilter.size === 0) return tacticalAlertRows;
+    return tacticalAlertRows.filter((r) => eventTypeFilter.has(r.eventType));
+  }, [tacticalAlertRows, eventTypeFilter]);
+
+  const toggleEventType = (type: TacticalEventType) => {
+    const next = new Set(eventTypeFilter);
+    if (next.has(type)) next.delete(type);
+    else next.add(type);
+    setEventTypeFilter(next);
+  };
+
   return (
     <div className="dash-main" style={{ padding: "16px", background: "#ffffff", overflowX: "hidden" }}>
       {/* ─── Welcome banner — aggressive tone ─── */}
@@ -3025,6 +3811,412 @@ export function CompetitorIntelDashboard({
         </WarRoomCard>
       </div>
 
+      {/* ═══════════════════════════════════════════════════════════
+          EXECUTIVE MODULES — Radar Prédateur d'Offensive
+          Module 1: Multi-Entity Competitor Tracking (25-50)
+          Module 2: Sentiment Migration Sankey (SOV displacement)
+          Module 3: Tactical Alert Terminal (virtualized, 500+)
+          ═══════════════════════════════════════════════════════════ */}
+
+      {/* ─── Module 1: Multi-Entity Competitor Tracking ─── */}
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{
+          fontSize: "10px",
+          fontFamily: FONT.mono,
+          color: ACCENT,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "8px",
+          padding: "0 4px",
+        }}>
+          {"\u25A0"} Executive Module 1 {"\u2014"} Multi-Entity Competitor Tracking ({trackedCompetitors.length}/50)
+        </div>
+
+        {/* Configuration panel + basket selector (2-col on desktop) */}
+        <div className="exec-module-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "8px", marginBottom: "8px" }}>
+          <WarRoomCard
+            title="Competitor Configuration"
+            subtitle="Add custom competitors or remove tracked ones · persisted to localStorage (harchiq.competitor-basket)"
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <input
+                  type="text"
+                  value={newCompetitorName}
+                  onChange={(e) => setNewCompetitorName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addCompetitor(); }}
+                  placeholder="Competitor name (e.g. Attijariwafa Bank)"
+                  style={{
+                    flex: 1,
+                    minWidth: 180,
+                    padding: "5px 8px",
+                    fontSize: "11px",
+                    fontFamily: FONT.mono,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "2px",
+                    background: C.bg,
+                    color: C.text,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={addCompetitor}
+                  disabled={trackedCompetitors.length >= 50 || !newCompetitorName.trim()}
+                  style={{
+                    padding: "5px 12px",
+                    fontSize: "10px",
+                    fontFamily: FONT.mono,
+                    fontWeight: 700,
+                    border: `1px solid ${ACCENT}`,
+                    borderRadius: "2px",
+                    background: ACCENT,
+                    color: "#ffffff",
+                    cursor: trackedCompetitors.length >= 50 || !newCompetitorName.trim() ? "not-allowed" : "pointer",
+                    opacity: trackedCompetitors.length >= 50 || !newCompetitorName.trim() ? 0.5 : 1,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {"+"} Add
+                </button>
+                <button
+                  onClick={() => setSelectedCompetitors(new Set(trackedCompetitors))}
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: "10px",
+                    fontFamily: FONT.mono,
+                    fontWeight: 600,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "2px",
+                    background: C.bg,
+                    color: C.textBody,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Select all
+                </button>
+                <button
+                  onClick={() => setSelectedCompetitors(new Set())}
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: "10px",
+                    fontFamily: FONT.mono,
+                    fontWeight: 600,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "2px",
+                    background: C.bg,
+                    color: C.textBody,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+              {/* Sector filter */}
+              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Sector:
+                </span>
+                <button
+                  onClick={() => setSectorFilter("all")}
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "9px",
+                    fontFamily: FONT.mono,
+                    fontWeight: 600,
+                    border: `1px solid ${sectorFilter === "all" ? ACCENT : C.border}`,
+                    borderRadius: "10px",
+                    background: sectorFilter === "all" ? `${ACCENT}15` : C.bg,
+                    color: sectorFilter === "all" ? ACCENT : C.textMuted,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  All
+                </button>
+                {availableSectors.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSectorFilter(s)}
+                    style={{
+                      padding: "3px 8px",
+                      fontSize: "9px",
+                      fontFamily: FONT.mono,
+                      fontWeight: 600,
+                      border: `1px solid ${sectorFilter === s ? ACCENT : C.border}`,
+                      borderRadius: "10px",
+                      background: sectorFilter === s ? `${ACCENT}15` : C.bg,
+                      color: sectorFilter === s ? ACCENT : C.textMuted,
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </WarRoomCard>
+
+          {/* Basket selector chips */}
+          <WarRoomCard
+            title={`Competitor Basket — ${selectedCompetitors.size}/${trackedCompetitors.length} selected`}
+            subtitle="Click chips to toggle inclusion in comparative views · max 50 tracked · * = custom"
+            right={
+              <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: trackedCompetitors.length >= 50 ? C.danger : C.textMuted, fontWeight: 700 }}>
+                {trackedCompetitors.length}/50
+              </span>
+            }
+          >
+            <WidgetState loading={loading} error={error} hasData={trackedCompetitors.length > 0} label="Competitor Basket">
+              <div style={{ maxHeight: 180, overflow: "auto", display: "flex", flexWrap: "wrap", gap: "4px", padding: "2px" }}>
+                {basketCompetitors.map((c) => {
+                  const isSelected = selectedCompetitors.has(c.name);
+                  const chipColor = c.isYou ? ACCENT : THREAT_COLORS[c.threatLevel];
+                  return (
+                    <div
+                      key={c.name}
+                      onClick={() => toggleSelected(c.name)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "3px 8px",
+                        fontSize: "10px",
+                        fontFamily: FONT.mono,
+                        fontWeight: 600,
+                        border: `1px solid ${isSelected ? chipColor : C.border}`,
+                        borderRadius: "12px",
+                        background: isSelected ? `${chipColor}15` : C.bg,
+                        color: isSelected ? chipColor : C.textMuted,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.03em",
+                      }}
+                    >
+                      {c.name}
+                      {c.isCustom && <span style={{ color: C.textMuted }}>*</span>}
+                      <span
+                        onClick={(e) => { e.stopPropagation(); removeCompetitor(c.name); }}
+                        style={{
+                          color: "#a3a3a3",
+                          cursor: "pointer",
+                          padding: "0 2px",
+                          fontSize: "11px",
+                          lineHeight: 1,
+                        }}
+                        title="Remove from basket"
+                      >
+                        {"\u00D7"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </WidgetState>
+          </WarRoomCard>
+        </div>
+
+        {/* Comparison matrix — virtualized, sortable, 50-row capacity */}
+        <WarRoomCard
+          title="Comparison Matrix — 50-Entity Capacity"
+          subtitle={`${comparisonMatrixRows.length} competitors in view · virtualized · 28px rows · click headers to sort`}
+          right={
+            <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted, fontWeight: 700 }}>
+              {sectorFilter !== "all" ? `Sector: ${sectorFilter}` : "All sectors"}
+            </span>
+          }
+        >
+          <WidgetState loading={loading} error={error} hasData={comparisonMatrixRows.length > 0} label="Comparison Matrix">
+            <VirtualizedComparisonMatrix
+              rows={comparisonMatrixRows}
+              sortColumn={sortColumn}
+              sortDir={sortDir}
+              onSort={onSortMatrix}
+            />
+          </WidgetState>
+        </WarRoomCard>
+      </div>
+
+      {/* ─── Module 2: Sentiment Migration Sankey ─── */}
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{
+          fontSize: "10px",
+          fontFamily: FONT.mono,
+          color: ACCENT,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "8px",
+          padding: "0 4px",
+        }}>
+          {"\u25A0"} Executive Module 2 {"\u2014"} Sentiment Migration Sankey (SOV Displacement)
+        </div>
+
+        {/* Sankey migration diagram — full width */}
+        <WarRoomCard
+          title="SOV Migration Sankey"
+          subtitle="Flows = co-mention volume between competitors · green = migration to you · red = leaving you · amber = neutral"
+        >
+          <WidgetState loading={loading} error={error} hasData={sankeyMigrationOption !== null} label="Migration Sankey">
+            <div style={{ height: 320 }}>
+              <ReactECharts option={sankeyMigrationOption} style={{ height: "100%", width: "100%" }} opts={{ renderer: "svg" }} />
+            </div>
+          </WidgetState>
+        </WarRoomCard>
+
+        {/* SOV bars + SOV trend (2-col on desktop) */}
+        <div className="exec-module-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "8px", marginTop: "8px" }}>
+          <WarRoomCard
+            title="Share of Voice — Current %"
+            subtitle={`${sovPercentBars.length} competitors · horizontal bars · SOV = mentions / total`}
+          >
+            <WidgetState loading={loading} error={error} hasData={sovPercentBars.length > 0} label="SOV Bars">
+              <div style={{ height: Math.max(160, sovPercentBars.length * 24) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart layout="vertical" data={sovPercentBars} margin={{ top: 4, right: 32, bottom: 4, left: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={{ stroke: "#e5e5e5" }} unit="%" />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#525252", fontFamily: FONT.mono }} tickLine={false} axisLine={false} width={130} />
+                    <Tooltip content={<MonoTooltip />} cursor={{ fill: "#fafafa" }} />
+                    <Bar dataKey="sov" radius={[0, 3, 3, 0]}>
+                      {sovPercentBars.map((entry, i) => (
+                        <Cell key={i} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </WidgetState>
+          </WarRoomCard>
+
+          <WarRoomCard
+            title="SOV Trend — 7d (Top 5)"
+            subtitle="Daily share of voice % evolution per competitor"
+          >
+            <WidgetState loading={loading} error={error} hasData={sovTrendLines.data.length > 0} label="SOV Trend">
+              <div style={{ height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={sovTrendLines.data} margin={{ top: 8, right: 8, bottom: 24, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={{ stroke: "#e5e5e5" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={false} width={32} unit="%" />
+                    <Tooltip content={<MonoTooltip />} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 9, fontFamily: FONT.mono, color: "#737373" }} />
+                    {sovTrendLines.lines.map((l, i) => (
+                      <Line key={i} type="monotone" dataKey={l.key} stroke={l.color} strokeWidth={1.5} dot={false} />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </WidgetState>
+          </WarRoomCard>
+        </div>
+      </div>
+
+      {/* ─── Module 3: Tactical Alert Terminal ─── */}
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{
+          fontSize: "10px",
+          fontFamily: FONT.mono,
+          color: ACCENT,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "8px",
+          padding: "0 4px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
+        }}>
+          <span>{"\u25A0"} Executive Module 3 {"\u2014"} Tactical Alert Terminal ({filteredTacticalRows.length} signals)</span>
+          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "9px", color: C.textMuted, textTransform: "uppercase", fontWeight: 600 }}>
+            <input
+              type="checkbox"
+              checked={autoScroll}
+              onChange={(e) => setAutoScroll(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            Auto-scroll
+          </label>
+        </div>
+
+        <WarRoomCard
+          title="Tactical Alert Terminal — Live"
+          subtitle={`${filteredTacticalRows.length} alerts · virtualized · 28px rows · 500+ capacity · click row to expand`}
+          right={
+            <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: filteredTacticalRows.filter((r) => r.severity === "critical").length > 0 ? C.danger : C.textMuted, fontWeight: 700 }}>
+              {filteredTacticalRows.filter((r) => r.severity === "critical").length} critical
+            </span>
+          }
+        >
+          {/* Event type filter chips */}
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "8px", padding: "0 2px", alignItems: "center" }}>
+            <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Filter:
+            </span>
+            <button
+              onClick={() => setEventTypeFilter(new Set())}
+              style={{
+                padding: "3px 8px",
+                fontSize: "9px",
+                fontFamily: FONT.mono,
+                fontWeight: 600,
+                border: `1px solid ${eventTypeFilter.size === 0 ? ACCENT : C.border}`,
+                borderRadius: "10px",
+                background: eventTypeFilter.size === 0 ? `${ACCENT}15` : C.bg,
+                color: eventTypeFilter.size === 0 ? ACCENT : C.textMuted,
+                cursor: "pointer",
+                textTransform: "uppercase",
+              }}
+            >
+              All
+            </button>
+            {(Object.keys(EVENT_TYPE_LABELS) as TacticalEventType[]).map((t) => {
+              const isActive = eventTypeFilter.has(t);
+              return (
+                <button
+                  key={t}
+                  onClick={() => toggleEventType(t)}
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "9px",
+                    fontFamily: FONT.mono,
+                    fontWeight: 600,
+                    border: `1px solid ${isActive ? ACCENT : C.border}`,
+                    borderRadius: "10px",
+                    background: isActive ? `${ACCENT}15` : C.bg,
+                    color: isActive ? ACCENT : C.textMuted,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {EVENT_TYPE_LABELS[t]}
+                </button>
+              );
+            })}
+          </div>
+
+          <WidgetState loading={loading} error={error} hasData={filteredTacticalRows.length > 0} label="Tactical Alert Terminal">
+            <VirtualizedTacticalFeed
+              rows={filteredTacticalRows}
+              expandedId={expandedAlertId}
+              onToggleExpand={(id) => setExpandedAlertId(expandedAlertId === id ? null : id)}
+              autoScroll={autoScroll}
+              dataVersion={lastRefresh.getTime()}
+            />
+          </WidgetState>
+        </WarRoomCard>
+      </div>
+
       {/* ─── Competitive landscape (ranked, preserved V1) ─── */}
       <div style={{ marginBottom: "16px" }}>
         <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
@@ -3141,16 +4333,22 @@ export function CompetitorIntelDashboard({
           .war-room-split {
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
           }
+          .exec-module-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+          }
         }
-        .war-room-split > div > div::-webkit-scrollbar {
+        .war-room-split > div > div::-webkit-scrollbar,
+        .exec-module-grid > div > div::-webkit-scrollbar {
           width: 6px;
           height: 6px;
         }
-        .war-room-split > div > div::-webkit-scrollbar-thumb {
+        .war-room-split > div > div::-webkit-scrollbar-thumb,
+        .exec-module-grid > div > div::-webkit-scrollbar-thumb {
           background: #d4d4d4;
           border-radius: 3px;
         }
-        .war-room-split > div > div::-webkit-scrollbar-track {
+        .war-room-split > div > div::-webkit-scrollbar-track,
+        .exec-module-grid > div > div::-webkit-scrollbar-track {
           background: transparent;
         }
       `}</style>
