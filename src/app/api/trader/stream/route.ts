@@ -2,119 +2,46 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { fetchBVCQuote } from "@/lib/scrapers/bvc-prices";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/trader/stream?tickers=OCP,IAM,ATW
 //
-//  Real-time price ticker snapshot (simulated via random walk).
-//  Designed to be polled every 2-3 seconds by the Alpha Desk
-//  ticker tape. Returns a single snapshot of all requested tickers
-//  with: current price (random walk ±0.5%/call), change since
-//  last call, timestamp, mini sentiment score (random walk ±0.05),
-//  and a synthetic volume.
+//  Real-time price ticker snapshot — HONEST data layer (V12).
+//
+//  Previous versions used a random-walk simulation. We removed
+//  that — fabricating prices was dishonest. The new flow:
+//
+//    1. For each ticker, try to fetch a REAL price via
+//       `fetchBVCQuote` (Yahoo → Investing → null).
+//    2. If a real price is found → return it with
+//       `source: "live"` and write a fresh AssetPrice row so
+//       the chart history picks it up.
+//    3. If no live source (market closed, Yahoo 404, Investing
+//       403) → return the latest cached AssetPrice row with
+//       `source: "cached"`.
+//    4. If no live AND no cached history → return `price: null`
+//       with `source: "unavailable"` and `change: null`. The
+//       UI shows an "UNAVAILABLE" badge.
+//
+//  Sentiment is read from the latest AssetSentiment row (or
+//   `null` if there is none). Volume is read from the live or
+//  cached row (or `null`).
 //
 //  Auth: requires session + accountType === "harch-alpha"
 //  (admins can preview).
-//
-//  State is held in a module-level Map so successive polls of the
-//  same ticker continue the random walk from the last known price.
-//  This is a deliberate simulation — when we move to a real
-//  WebSocket gateway (socket.io) the same response shape will be
-//  pushed to subscribers and this Map will be replaced by the
-//  exchange feed.
 // ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
 
-// ─── Per-ticker walk state ─────────────────────────────────────
-interface TickerState {
-  price: number;
-  prevPrice: number;       // price at the previous poll (for `change`)
-  sentiment: number;       // current sentiment score in [-1, 1]
-  volume: number;          // rolling synthetic volume
-}
+// In-memory dedupe: only write one AssetPrice row per ticker per
+// UTC day per server process. Yahoo returns the same last close
+// for the whole trading day, so without this we would write a
+// duplicate row every 3 s when the dashboard polls.
+const writtenToday = new Map<string, string>(); // ticker → YYYY-MM-DD
 
-const streamState = new Map<string, TickerState>();
-
-// Seed prices for tickers we have never seen before. In a real
-// system these would come from the exchange; here we use a
-// deterministic-ish fallback table for the most common BVC tickers
-// and a generic baseline for the rest. The first poll always
-// resolves the seed against the database (latestPrice) when
-// available, so the walk starts from a real anchor.
-const SEED_PRICES: Record<string, number> = {
-  OCP: 850,
-  IAM: 92,
-  ATW: 540,
-  BCP: 180,
-  BMCE: 190,
-  CIMAR: 1700,
-  COSUMAR: 200,
-  INVOC: 9,
-  LBANK: 1100,
-  MAGH: 110,
-  MASI: 13000,
-  RISAM: 30,
-  SFA: 1000,
-  SNG: 220,
-  SOCHA: 6000,
-  TQM: 70,
-  WAUL: 200,
-};
-
-function seedPriceFor(ticker: string): number {
-  if (SEED_PRICES[ticker]) return SEED_PRICES[ticker];
-  // Hash the ticker to a stable baseline between 50 and 500 so
-  // each unknown ticker starts at a reproducible price.
-  let h = 0;
-  for (let i = 0; i < ticker.length; i++) h = (h * 31 + ticker.charCodeAt(i)) | 0;
-  const base = 50 + (Math.abs(h) % 450);
-  return base;
-}
-
-function seedSentimentFor(ticker: string): number {
-  // Stable starting sentiment in [-0.2, 0.2]
-  let h = 0;
-  for (let i = 0; i < ticker.length; i++) h = (h * 17 + ticker.charCodeAt(i)) | 0;
-  return (Math.abs(h) % 400) / 1000 - 0.2;
-}
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
-// Advance the random walk for a single ticker. Called on every
-// poll. Returns the new state.
-function advanceTicker(ticker: string, dbAnchor: number | null): TickerState {
-  const prev = streamState.get(ticker);
-  if (!prev) {
-    const seed = dbAnchor ?? seedPriceFor(ticker);
-    const initial: TickerState = {
-      price: seed,
-      prevPrice: seed,
-      sentiment: seedSentimentFor(ticker),
-      volume: 50_000 + Math.floor(Math.random() * 100_000),
-    };
-    streamState.set(ticker, initial);
-    return initial;
-  }
-  // ±0.5% random walk on price
-  const drift = (Math.random() - 0.5) * 0.01; // -0.5% .. +0.5%
-  const nextPrice = Math.max(0.01, prev.price * (1 + drift));
-  // ±0.05 random walk on sentiment, clamped to [-1, 1]
-  const sentDrift = (Math.random() - 0.5) * 0.1;
-  const nextSent = clamp(prev.sentiment + sentDrift, -1, 1);
-  // Volume: random walk up/down a few %, floored at 1k
-  const volDrift = (Math.random() - 0.45) * 0.05;
-  const nextVol = Math.max(1000, Math.round(prev.volume * (1 + volDrift)));
-  const next: TickerState = {
-    price: nextPrice,
-    prevPrice: prev.price,
-    sentiment: nextSent,
-    volume: nextVol,
-  };
-  streamState.set(ticker, next);
-  return next;
+function utcDayKey(d: Date = new Date()): string {
+  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
 
 export async function GET(req: Request) {
@@ -138,8 +65,8 @@ export async function GET(req: Request) {
     .split(",")
     .map((t) => t.trim().toUpperCase())
     .filter((t) => t.length > 0 && t.length <= 12)
-    // Cap to 50 tickers to keep the response small + the random
-    // walk bounded under a worst-case flood of polls.
+    // Cap to 50 tickers per request — keeps Yahoo rate-limit
+    // breathing room (50 sequential calls ≈ 25 s worst case).
     .slice(0, 50);
 
   if (tickers.length === 0) {
@@ -149,42 +76,139 @@ export async function GET(req: Request) {
     );
   }
 
-  // Resolve DB anchors in a single round-trip so tickers we have
-  // never seen start their walk from a real latestPrice. Only the
-  // tickers not yet in streamState need a DB lookup; the rest
-  // continue their walk from memory.
-  const needLookup = tickers.filter((t) => !streamState.has(t));
-  const dbAnchors: Record<string, number | null> = {};
-  if (needLookup.length > 0) {
-    try {
-      const rows = await prisma.asset.findMany({
-        where: { ticker: { in: needLookup } },
-        select: {
-          ticker: true,
-          prices: { orderBy: { tradedAt: "desc" }, take: 1, select: { price: true } },
-        },
-      });
-      for (const r of rows) {
-        dbAnchors[r.ticker] = r.prices[0]?.price ?? null;
-      }
-    } catch {
-      // DB is optional for the simulation — fall back to seed prices.
-    }
-  }
+  // ─── Resolve assets + latest cached price + sentiment ────
+  // We do this in a single round-trip per ticker (one query with
+  // relations) so a 50-ticker poll is 50 small selects, not 150.
+  type AssetWithCache = {
+    id: string;
+    ticker: string;
+    exchange: string | null;
+    prices: Array<{ price: number; changePct: number | null; volume: number | null; tradedAt: Date }>;
+    sentiments: Array<{ score: number; articleCount: number }>;
+  };
 
-  const out = tickers.map((t) => {
-    const st = advanceTicker(t, dbAnchors[t] ?? null);
-    const change = st.prevPrice === 0
-      ? 0
-      : ((st.price - st.prevPrice) / st.prevPrice) * 100;
-    return {
-      ticker: t,
-      price: Number(st.price.toFixed(2)),
-      change: Number(change.toFixed(2)),
-      sentiment: Number(st.sentiment.toFixed(2)),
-      volume: st.volume,
-    };
+  const assets = await prisma.asset.findMany({
+    where: { ticker: { in: tickers } },
+    select: {
+      id: true,
+      ticker: true,
+      exchange: true,
+      prices: {
+        orderBy: { tradedAt: "desc" },
+        take: 1,
+        select: {
+          price: true,
+          changePct: true,
+          volume: true,
+          tradedAt: true,
+        },
+      },
+      sentiments: {
+        orderBy: { calculatedAt: "desc" },
+        take: 1,
+        select: { score: true, articleCount: true },
+      },
+    },
   });
+
+  const assetByTicker = new Map<string, AssetWithCache>();
+  for (const a of assets) assetByTicker.set(a.ticker, a as AssetWithCache);
+
+  // ─── Per-ticker resolution ───────────────────────────────
+  const out = await Promise.all(
+    tickers.map(async (ticker) => {
+      const asset = assetByTicker.get(ticker) ?? null;
+      const cached = asset?.prices[0] ?? null;
+      const sentiment = asset?.sentiments[0]?.score ?? null;
+      const sentimentArticleCount = asset?.sentiments[0]?.articleCount ?? 0;
+
+      // Try a live fetch. Yahoo has no BVC coverage for most
+      // tickers, so this returns null for ~95% of BVC assets —
+      // in which case we fall through to the cached row.
+      const quote = await fetchBVCQuote(ticker);
+
+      if (quote) {
+        // ─── LIVE ───────────────────────────────────────
+        // Persist the live price so the chart history grows,
+        // but only once per UTC day per ticker per process to
+        // avoid duplicate-every-3-s rows when the dashboard
+        // polls.
+        const dayKey = utcDayKey(quote.fetchedAt);
+        if (
+          asset &&
+          (writtenToday.get(ticker) !== dayKey ||
+            cached === null ||
+            Math.abs(quote.price - cached.price) >= 0.001)
+        ) {
+          try {
+            await prisma.assetPrice.create({
+              data: {
+                assetId: asset.id,
+                price: Number(quote.price.toFixed(4)),
+                changePct: Number(quote.changePct.toFixed(4)),
+                volume: quote.volume ?? null,
+                tradedAt: quote.fetchedAt,
+              },
+            });
+            writtenToday.set(ticker, dayKey);
+          } catch {
+            // Insert is best-effort — the response still
+            // carries the live price even if persistence fails.
+          }
+        }
+
+        return {
+          ticker,
+          price: Number(quote.price.toFixed(4)),
+          change: Number(quote.changePct.toFixed(2)),
+          sentiment,
+          sentimentArticleCount,
+          volume: quote.volume ?? null,
+          source: "live" as const,
+          sourceEngine: quote.source, // "yahoo" | "investing"
+          exchange: quote.exchange,
+          currency: quote.currency,
+          fetchedAt: quote.fetchedAt.toISOString(),
+        };
+      }
+
+      // ─── CACHED (last known good) ──────────────────────
+      if (cached) {
+        return {
+          ticker,
+          price: Number(cached.price.toFixed(4)),
+          change: cached.changePct !== null
+            ? Number(cached.changePct.toFixed(2))
+            : null,
+          sentiment,
+          sentimentArticleCount,
+          volume: cached.volume ?? null,
+          source: "cached" as const,
+          sourceEngine: null,
+          exchange: asset?.exchange ?? null,
+          currency: "MAD",
+          fetchedAt: cached.tradedAt.toISOString(),
+        };
+      }
+
+      // ─── UNAVAILABLE ───────────────────────────────────
+      // No live source AND no cached history. Be honest:
+      // return nulls, the UI shows an UNAVAILABLE badge.
+      return {
+        ticker,
+        price: null,
+        change: null,
+        sentiment: null,
+        sentimentArticleCount: 0,
+        volume: null,
+        source: "unavailable" as const,
+        sourceEngine: null,
+        exchange: asset?.exchange ?? null,
+        currency: "MAD",
+        fetchedAt: null,
+      };
+    }),
+  );
 
   return NextResponse.json({
     timestamp: new Date().toISOString(),

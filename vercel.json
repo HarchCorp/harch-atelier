@@ -15,6 +15,18 @@
     {
       "path": "/api/cron/generate-briefings",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-rss",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-bvc-prices",
+      "schedule": "*/15 9-16 * * 1-5"
+    },
+    {
+      "path": "/api/cron/refresh-sanctions",
+      "schedule": "0 3 * * *"
     }
   ]
 }

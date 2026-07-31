@@ -1661,12 +1661,19 @@ function buildSentimentGaugeOption(netSentiment: number): EChartsOption {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  Real-time ticker tape (V11 — polling-based simulated stream)
+//  Real-time ticker tape (V12 — honest real-data stream)
 //
 //  Horizontal scrolling strip of all asset tickers with live
 //  prices. Updates from the usePriceStream hook (3s polling of
 //  /api/trader/stream). Pause/Play button toggles streaming.
 //  Clicking a ticker selects it for the main chart.
+//
+//  V12: each item now shows a tiny data-source pip:
+//    • green dot  = LIVE   (real price from Yahoo/Investing)
+//    • amber dot  = CACHED (last known DB price)
+//    • slate dot  = UNAVAILABLE (no live + no history)
+//  This is the honest transparency layer — the trader always
+//  knows whether the number they're seeing is real or stale.
 //
 //  Memoized so it only re-renders when its props change. The
 //  parent (AlphaDeskDashboard) re-renders every poll (every 3s
@@ -1676,6 +1683,26 @@ function buildSentimentGaugeOption(netSentiment: number): EChartsOption {
 //  when the `ticks` object identity actually changes — which is
 //  exactly what we want.
 // ═══════════════════════════════════════════════════════════════
+
+// Color pip for the data-source badge. Returns {dot, label}
+// so the TickerTapeItem + AssetRow + Candlestick header all
+// share the exact same colour mapping.
+function sourceVisual(source: PriceTick["source"]): {
+  dot: string;
+  label: string;
+  title: string;
+} {
+  switch (source) {
+    case "live":
+      return { dot: GREEN, label: "LIVE", title: "Real-time price (Yahoo / Investing)" };
+    case "cached":
+      return { dot: AMBER, label: "CACHED", title: "Last known price (DB cache) — no live source" };
+    case "unavailable":
+      return { dot: SLATE, label: "N/A", title: "No live source and no cached history" };
+    default:
+      return { dot: SLATE, label: "—", title: "No data" };
+  }
+}
 
 interface TickerTapeProps {
   tickers: string[];
@@ -1689,23 +1716,26 @@ interface TickerTapeProps {
 
 function TickerTapeItem({
   ticker,
-  price,
-  change,
+  tick,
   isSelected,
   onSelect,
 }: {
   ticker: string;
-  price: number | undefined;
-  change: number | undefined;
+  tick: PriceTick | undefined;
   isSelected: boolean;
   onSelect: (t: string) => void;
 }) {
-  const color = change === undefined
+  const price = tick?.price ?? undefined;
+  const change = tick?.change ?? undefined;
+  const source = tick?.source ?? "unavailable";
+  const sv = sourceVisual(source);
+  const color = change === undefined || change === null
     ? TEXT_MUTED
     : change > 0 ? GREEN : change < 0 ? RED : TEXT_MUTED;
   return (
     <button
       onClick={() => onSelect(ticker)}
+      title={sv.title}
       style={{
         display: "flex",
         alignItems: "baseline",
@@ -1721,6 +1751,20 @@ function TickerTapeItem({
         whiteSpace: "nowrap",
       }}
     >
+      {/* Data-source pip (V12 transparency) */}
+      <span
+        style={{
+          width: "5px",
+          height: "5px",
+          borderRadius: "50%",
+          background: sv.dot,
+          display: "inline-block",
+          marginRight: "2px",
+          boxShadow: source === "live" ? `0 0 4px ${sv.dot}` : "none",
+          flexShrink: 0,
+          alignSelf: "center",
+        }}
+      />
       <span style={{ fontWeight: 700, color: isSelected ? ACCENT : TEXT }}>
         {ticker}
       </span>
@@ -1751,7 +1795,7 @@ const TickerTape = memo(function TickerTape({
 }: TickerTapeProps) {
   const items = tickers.map((t) => {
     const tick = ticks[t];
-    return { ticker: t, price: tick?.price, change: tick?.change };
+    return { ticker: t, tick };
   });
 
   const renderRow = (keySuffix: string) => (
@@ -1767,8 +1811,7 @@ const TickerTape = memo(function TickerTape({
         <MemoTickerTapeItem
           key={`${keySuffix}-${it.ticker}`}
           ticker={it.ticker}
-          price={it.price}
-          change={it.change}
+          tick={it.tick}
           isSelected={it.ticker === selectedTicker}
           onSelect={onSelect}
         />
@@ -1928,11 +1971,20 @@ const AssetRow = memo(function AssetRow({
   start,
   size,
 }: AssetRowProps) {
-  const livePrice = tick?.price ?? asset.latestPrice;
-  const liveChange = tick?.change ?? asset.latestChange;
+  // V12: prefer the live tick, fall back to the asset's cached
+  // row, then null. `tick` may have `price: null` itself
+  // (source === "unavailable"), in which case we honour that
+  // rather than showing a stale DB price — the dashboard must
+  // be honest about what is real.
+  const livePrice =
+    tick?.source === "unavailable" ? null : (tick?.price ?? asset.latestPrice);
+  const liveChange =
+    tick?.source === "unavailable" ? null : (tick?.change ?? asset.latestChange);
   const liveSent = tick?.sentiment ?? asset.latestSentiment;
+  const source = tick?.source ?? (asset.latestPrice !== null ? "cached" : "unavailable");
+  const sv = sourceVisual(source);
 
-  const changeColor = liveChange !== null
+  const changeColor = liveChange !== null && liveChange !== undefined
     ? liveChange > 0 ? GREEN : liveChange < 0 ? RED : TEXT_MUTED
     : TEXT_MUTED;
   const sentColor = liveSent !== null
@@ -1999,7 +2051,29 @@ const AssetRow = memo(function AssetRow({
         transition: "background-color 80ms linear",
       }}
     >
-      <span style={{ fontWeight: 700, color: isSelected ? ACCENT : TEXT, fontSize: "10px" }}>
+      <span
+        style={{
+          fontWeight: 700,
+          color: isSelected ? ACCENT : TEXT,
+          fontSize: "10px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+        }}
+        title={sv.title}
+      >
+        {/* Data-source pip (V12 transparency) */}
+        <span
+          style={{
+            width: "5px",
+            height: "5px",
+            borderRadius: "50%",
+            background: sv.dot,
+            display: "inline-block",
+            flexShrink: 0,
+            boxShadow: source === "live" ? `0 0 4px ${sv.dot}` : "none",
+          }}
+        />
         {asset.ticker}
       </span>
       <span
@@ -2391,7 +2465,7 @@ export function AlphaDeskDashboard({
   const [expandedMiniCandle, setExpandedMiniCandle] = useState<string | null>(null);
 
   // ═══════════════════════════════════════════════════════════════
-  //  V11 — Real-time price stream (simulated via 3s polling)
+  //  V12 — Real-time price stream (honest 3s polling)
   //
   //  The hook is called ONCE here at the top of the dashboard. Its
   //  `ticks` map is passed down to the TickerTape and the
@@ -2399,6 +2473,11 @@ export function AlphaDeskDashboard({
   //  React.memo so only the rows whose tick actually changed
   //  re-render — not the whole table — even though the parent
   //  re-renders on every 3s poll.
+  //
+  //  V12: the random-walk simulation is GONE. Each tick now
+  //  carries an HONEST `source` field (live | cached |
+  //  unavailable). The UI shows a colour pip so the trader knows
+  //  whether the number they're seeing is real or stale.
   // ═══════════════════════════════════════════════════════════════
   const allTickerSymbols = useMemo(
     () => assets.map((a) => a.ticker),
@@ -3396,7 +3475,7 @@ export function AlphaDeskDashboard({
         }
       `}</style>
 
-      {/* ─── Real-time ticker tape (V11) ─── */}
+      {/* ─── Real-time ticker tape (V12 — honest stream) ─── */}
       <TickerTape
         tickers={allTickerSymbols}
         ticks={ticks}
@@ -3622,48 +3701,83 @@ export function AlphaDeskDashboard({
               height={400}
               right={
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  {/* LIVE badge + live price (V11 streaming) */}
+                  {/* V12 — DATA SOURCE badge + live price */}
+                  {/* Shows the HONEST provenance of the price the
+                      trader is looking at:
+                        green  LIVE   = real Yahoo/Investing price
+                        amber  CACHED = last DB price (no live source)
+                        slate  N/A    = no live source, no history
+                      The badge replaces the old always-ON "LIVE"
+                      pill — it could previously lie when the stream
+                      returned a cached price. */}
                   {isLive && selectedTick ? (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "2px 6px",
-                        border: `1px solid ${ACCENT}`,
-                        borderRadius: "2px",
-                        background: `${ACCENT}12`,
-                        fontSize: "9px",
-                        fontFamily: FONT.mono,
-                        fontWeight: 700,
-                        color: ACCENT,
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "5px",
-                          height: "5px",
-                          borderRadius: "50%",
-                          background: ACCENT,
-                          animation: "ticker-pulse 1.4s ease-in-out infinite",
-                          boxShadow: `0 0 4px ${ACCENT}`,
-                        }}
-                      />
-                      LIVE
-                      <span style={{ color: TEXT_BODY, marginLeft: "2px", fontWeight: 600 }}>
-                        {selectedTick.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                      <span
-                        style={{
-                          color: selectedTick.change > 0 ? GREEN : selectedTick.change < 0 ? RED : TEXT_MUTED,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {selectedTick.change > 0 ? "+" : ""}{selectedTick.change.toFixed(2)}%
-                      </span>
-                    </span>
+                    (() => {
+                      const sv = sourceVisual(selectedTick.source);
+                      const accentColor =
+                        selectedTick.source === "live" ? GREEN :
+                        selectedTick.source === "cached" ? AMBER : SLATE;
+                      const hasPrice =
+                        selectedTick.price !== null && selectedTick.price !== undefined;
+                      const hasChange =
+                        selectedTick.change !== null && selectedTick.change !== undefined;
+                      return (
+                        <span
+                          title={sv.title}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "2px 6px",
+                            border: `1px solid ${accentColor}`,
+                            borderRadius: "2px",
+                            background: `${accentColor}12`,
+                            fontSize: "9px",
+                            fontFamily: FONT.mono,
+                            fontWeight: 700,
+                            color: accentColor,
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "5px",
+                              height: "5px",
+                              borderRadius: "50%",
+                              background: accentColor,
+                              animation:
+                                selectedTick.source === "live"
+                                  ? "ticker-pulse 1.4s ease-in-out infinite"
+                                  : "none",
+                              boxShadow:
+                                selectedTick.source === "live"
+                                  ? `0 0 4px ${accentColor}`
+                                  : "none",
+                            }}
+                          />
+                          {sv.label}
+                          {hasPrice ? (
+                            <span style={{ color: TEXT_BODY, marginLeft: "2px", fontWeight: 600 }}>
+                              {selectedTick.price!.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {selectedTick.currency && selectedTick.currency !== "MAD"
+                                ? ` ${selectedTick.currency}` : ""}
+                            </span>
+                          ) : null}
+                          {hasChange ? (
+                            <span
+                              style={{
+                                color:
+                                  selectedTick.change! > 0 ? GREEN :
+                                  selectedTick.change! < 0 ? RED : TEXT_MUTED,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {selectedTick.change! > 0 ? "+" : ""}{selectedTick.change!.toFixed(2)}%
+                            </span>
+                          ) : null}
+                        </span>
+                      );
+                    })()
                   ) : null}
                   {correlation && !corrLoading ? (
                     <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: correlationColor(correlation.correlation), fontWeight: 700 }}>

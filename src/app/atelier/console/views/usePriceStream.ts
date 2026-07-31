@@ -10,6 +10,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 //  Record<ticker, PriceTick>. Designed for the Alpha Desk ticker
 //  tape and the virtualized asset table.
 //
+//  V12 (real-bvc-prices): the stream API now returns an HONEST
+//  data-source tag per ticker. We surface it as `source`:
+//    • "live"        — a real price came back from Yahoo / Investing
+//    • "cached"      — no live source, last DB price shown
+//    • "unavailable" — no live source AND no DB history
+//  The UI renders a small DATA SOURCE badge next to each price so
+//  the trader knows whether they're seeing a real or a cached
+//  number. This replaces the old random-walk simulation.
+//
 //  Smart polling details:
 //   • `start()` is stable — it does not re-fire when `tickers`
 //     changes. The current `tickers` array is read from a ref
@@ -25,22 +34,34 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 export interface PriceTick {
   ticker: string;
-  price: number;
-  change: number;
-  sentiment: number;
-  volume: number;
+  price: number | null;
+  change: number | null;
+  sentiment: number | null;
+  volume: number | null;
+  source: "live" | "cached" | "unavailable";
+  sourceEngine: "yahoo" | "investing" | null;
+  exchange: string | null;
+  currency: string;
+  fetchedAt: string | null;
   timestamp: string;
+}
+
+interface StreamTicker {
+  ticker: string;
+  price: number | null;
+  change: number | null;
+  sentiment: number | null;
+  volume: number | null;
+  source: "live" | "cached" | "unavailable";
+  sourceEngine: "yahoo" | "investing" | null;
+  exchange: string | null;
+  currency: string;
+  fetchedAt: string | null;
 }
 
 interface StreamResponse {
   timestamp: string;
-  tickers: Array<{
-    ticker: string;
-    price: number;
-    change: number;
-    sentiment: number;
-    volume: number;
-  }>;
+  tickers: StreamTicker[];
 }
 
 export function usePriceStream(tickers: string[], intervalMs = 3000) {
