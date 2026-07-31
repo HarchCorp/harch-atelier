@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
     const alerts: AlertContext[] = [
       ...negativeArticles.map<AlertContext>((a) => ({
         id: a.id,
-        type: "negative_article",
+        type: "negative_article" as const,
         title: a.title,
         source: a.source,
         severity: severityFor(a.sentimentScore ?? null),
@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
       })),
       ...highRisks.map<AlertContext>((r) => ({
         id: r.id,
-        type: "risk_assessment",
+        type: "risk_assessment" as const,
         title: `${r.category} risk — ${r.riskLevel}`,
         source: "HarchIQ Risk Engine",
         severity: r.riskLevel === "critical" ? "critical" : "high",
