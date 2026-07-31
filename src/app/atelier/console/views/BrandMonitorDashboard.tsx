@@ -405,48 +405,52 @@ const AwaitingTelemetry = memo(function AwaitingTelemetry({ label }: { label: st
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-        minHeight: 180,
-        gap: 8,
+        minHeight: 140,
+        gap: 6,
         background: C.bgSubtle,
         borderRadius: "4px",
+        border: `1px dashed ${C.border}`,
       }}
     >
       <div
         style={{
-          width: 8,
-          height: 8,
+          width: 24,
+          height: 24,
           borderRadius: "50%",
-          background: C.textMuted,
-          animation: "bm-pulse 1.5s infinite",
+          border: `1.5px solid ${C.border}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: C.textMuted,
+          fontSize: 12,
         }}
-      />
+      >
+        —
+      </div>
       <div
         style={{
           fontFamily: FONT.mono,
           fontSize: 10,
           color: C.textMuted,
-          letterSpacing: "0.14em",
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
+          fontWeight: 600,
         }}
       >
         {label}
       </div>
       <div
         style={{
-          fontFamily: FONT.mono,
-          fontSize: 9,
+          fontFamily: FONT.sans,
+          fontSize: 11,
           color: C.border,
-          letterSpacing: "0.1em",
+          maxWidth: 200,
+          textAlign: "center" as const,
+          lineHeight: 1.4,
         }}
       >
-        NO SIGNAL
+        Data will populate as sources are ingested.
       </div>
-      <style>{`
-        @keyframes bm-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.2; }
-        }
-      `}</style>
     </div>
   );
 });
