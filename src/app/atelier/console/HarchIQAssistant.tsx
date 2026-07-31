@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { C as TOKENS } from "../../components/tokens";
+import { C as TOKENS } from "../components/tokens";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ ASSISTANT — Floating GenAI Chat Panel
