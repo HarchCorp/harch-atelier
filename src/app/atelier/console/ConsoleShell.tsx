@@ -661,12 +661,28 @@ export function ConsoleShell({
         setPaletteOpen((v) => !v);
         return;
       }
-      // Plain "/" focuses nothing here but we leave the door open —
-      // cmdk's input auto-focuses when the palette opens.
+      // Single-key shortcuts (only when not typing in an input and palette is closed)
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+      if (isTyping || paletteOpen) return;
+
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("harchiq:refresh"));
+      } else if (e.key === "e" || e.key === "E") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("harchiq:export"));
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("harchiq:filter"));
+      } else if (e.key === "?" || e.key === "/") {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [paletteOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -772,7 +788,7 @@ export function ConsoleShell({
         action: () => {
           // Open the docs hint in a new tab — Harch Atelier trust center
           if (typeof window !== "undefined") {
-            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
+            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close palette\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n  R — refresh data\n  E — export CSV\n  F — cycle filter\n  ? or / — open palette\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
           }
         },
       },
