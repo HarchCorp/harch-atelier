@@ -17,6 +17,7 @@ import ReactECharts from "echarts-for-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
+import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 
@@ -257,6 +258,64 @@ function gridCols(spans: number[], gap = "12px"): React.CSSProperties {
 
 const colSpan = (n: number): React.CSSProperties => ({ gridColumn: `span ${n} / span ${n}`, minWidth: 0 });
 
+// ─── PerformanceMonitor (dev-only FPS badge) ───────────────────
+//
+//  requestAnimationFrame loop measures FPS once per second. If FPS
+//  stays below 30 for more than 2 seconds, the badge turns red and
+//  shows "PERF WARN". Only rendered in development — gated at the
+//  call site by process.env.NODE_ENV.
+
+function PerformanceMonitor({ accent }: { accent: string }) {
+  const [fps, setFps] = useState<number>(60);
+  const [warn, setWarn] = useState<boolean>(false);
+  const frameCount = useRef(0);
+  const lastTick = useRef<number>(typeof performance !== "undefined" ? performance.now() : Date.now());
+  const lowFpsStart = useRef<number | null>(null);
+
+  useEffect(() => {
+    let rafId = 0;
+    const tick = () => {
+      frameCount.current += 1;
+      const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      const elapsed = now - lastTick.current;
+      if (elapsed >= 1000) {
+        const measuredFps = Math.round((frameCount.current * 1000) / elapsed);
+        setFps(measuredFps);
+        if (measuredFps < 30) {
+          if (lowFpsStart.current === null) lowFpsStart.current = now;
+          else if (now - lowFpsStart.current > 2000) {
+            setWarn(true);
+          }
+        } else {
+          lowFpsStart.current = null;
+          setWarn(false);
+        }
+        frameCount.current = 0;
+        lastTick.current = now;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed", bottom: 12, right: 12, zIndex: 9999,
+        padding: "4px 8px", fontSize: 10, fontFamily: FONT.mono, fontWeight: 700,
+        background: warn ? `${RED}15` : `${accent}10`,
+        color: warn ? RED : accent,
+        border: `1px solid ${warn ? RED : accent}40`,
+        borderRadius: "3px", letterSpacing: "0.05em", pointerEvents: "none",
+      }}
+    >
+      {fps} FPS{warn ? " · PERF WARN" : ""}
+    </div>
+  );
+}
+
 // ─── KPI Tile (Risk Strip) ─────────────────────────────────────
 
 function KpiTile({
@@ -355,12 +414,12 @@ function EntityGraph({
   portfoliosCount: number;
   loading: boolean;
 }) {
-  const { nodes, edges } = useMemo(() => {
+  const { nodes, edges, totalNodeCount, capped } = useMemo(() => {
     const nodes: Node<EntityNodeData>[] = [];
     const edges: Edge[] = [];
 
     if (holdings.length === 0 && portfoliosCount === 0) {
-      return { nodes, edges };
+      return { nodes, edges, totalNodeCount: 0, capped: false };
     }
 
     // Portfolio nodes (top row). We don't have portfolio-level data here (holdings
@@ -410,7 +469,24 @@ function EntityGraph({
       });
     });
 
-    return { nodes, edges };
+    // React Flow hardening — cap visible nodes at 2000 (React Flow cannot
+    // realistically render more than that) and edges at 1000. Keep all
+    // portfolio (book) nodes first, then fill with holdings.
+    const NODE_CAP = 2000;
+    const EDGE_CAP = 1000;
+    const totalNodeCount = nodes.length;
+    const capped = totalNodeCount > NODE_CAP;
+    const bookNodes = nodes.filter((n) => n.type === "portfolio");
+    const holdingNodes = nodes.filter((n) => n.type !== "portfolio");
+    const keptNodes = capped
+      ? [...bookNodes, ...holdingNodes.slice(0, Math.max(0, NODE_CAP - bookNodes.length))]
+      : nodes;
+    const keptIds = new Set(keptNodes.map((n) => n.id));
+    const keptEdges = edges
+      .filter((e) => keptIds.has(e.source) && keptIds.has(e.target))
+      .slice(0, EDGE_CAP);
+
+    return { nodes: keptNodes, edges: keptEdges, totalNodeCount, capped };
   }, [holdings, portfoliosCount]);
 
   if (loading) {
@@ -426,15 +502,29 @@ function EntityGraph({
   }
 
   return (
-    <div style={{ height: 500, background: C.bgSubtle, borderRadius: "4px", overflow: "hidden" }}>
+    <div style={{ height: 500, background: C.bgSubtle, borderRadius: "4px", overflow: "hidden", position: "relative" }}>
+      {capped && (
+        <div style={{
+          position: "absolute", top: 8, left: 8, zIndex: 10,
+          padding: "4px 10px", fontSize: 9, fontFamily: FONT.mono, fontWeight: 700,
+          background: `${AMBER}10`, color: AMBER, border: `1px solid ${AMBER}40`,
+          borderRadius: "3px", letterSpacing: "0.05em", textTransform: "uppercase",
+        }}>
+          Graph capped at 2000 visible nodes ({totalNodeCount} total). Use search to focus.
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={entityNodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.18 }}
-        minZoom={0.3}
+        onlyRenderVisibleElements
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={true}
+        minZoom={0.1}
         maxZoom={2}
+        defaultViewport={{ zoom: 0.5, x: 0, y: 0 }}
+        translateExtent={[[-20000, -2000], [20000, 2000]]}
         proOptions={{ hideAttribution: true }}
         style={{ background: C.bgSubtle, fontFamily: FONT.mono }}
       >
@@ -514,7 +604,7 @@ function DdChecklist({ holdings, loading }: { holdings: InvestorHolding[]; loadi
     count: checks.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 36,
-    overscan: 12,
+    overscan: 8,
   });
 
   if (loading) {
@@ -647,7 +737,7 @@ function RedFlagsFeed({
     count: flags.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 44,
-    overscan: 10,
+    overscan: 8,
   });
 
   if (loading) {
@@ -925,7 +1015,7 @@ function AdverseMediaTimeline({
         splitLine: { lineStyle: { color: C.bgHover } },
       },
       dataZoom: [
-        { type: "inside", start: 70, end: 100 },
+        { type: "inside", start: 70, end: 100, throttle: 100 },
         { type: "slider", start: 70, end: 100, height: 18, bottom: 12, borderColor: C.border, fillerColor: `${ACCENT}15`, handleStyle: { color: ACCENT }, textStyle: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 } },
       ],
       series: [
@@ -933,6 +1023,10 @@ function AdverseMediaTimeline({
           type: "scatter",
           symbolSize: 12,
           data,
+          large: true,
+          largeThreshold: 2000,
+          progressive: 5000,
+          progressiveThreshold: 3000,
           emphasis: { focus: "self", itemStyle: { borderColor: ACCENT, borderWidth: 2 } },
         },
       ],
@@ -1764,6 +1858,24 @@ function UboGraphModule({ holdings, dossiers, loading }: {
   const [depth, setDepth] = useState<number>(2);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Debounced selection — prevents setSelectedId storms when the user
+  // rapidly clicks across a 2000-node graph. Fires 100ms after the last
+  // selection change.
+  const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSelectionChange = useCallback((params: { nodes: Node<UboNodeData>[] }) => {
+    if (selectionTimer.current) clearTimeout(selectionTimer.current);
+    selectionTimer.current = setTimeout(() => {
+      setSelectedId(params.nodes[0]?.id ?? null);
+    }, 100);
+  }, []);
+  // Clear pending selection timer on unmount — also serves as the
+  // "clear React Flow selection on unmount" guarantee.
+  useEffect(() => {
+    return () => {
+      if (selectionTimer.current) clearTimeout(selectionTimer.current);
+    };
+  }, []);
+
   const graph = useMemo(() => buildUboGraph(holdings, dossiers), [holdings, dossiers]);
 
   const visibleIds = useMemo(() => {
@@ -1772,7 +1884,7 @@ function UboGraphModule({ holdings, dossiers, loading }: {
     return bfsDepth(graph.adj, roots, depth);
   }, [graph, depth]);
 
-  const { nodes, edges, selected } = useMemo(() => {
+  const { nodes, edges, selected, totalNodeCount, capped } = useMemo(() => {
     const rfNodes: Node<UboNodeData>[] = [];
     const rfEdges: Edge[] = [];
 
@@ -1832,8 +1944,21 @@ function UboGraphModule({ holdings, dossiers, loading }: {
       }
     }
 
+    // React Flow hardening — cap visible nodes at 2000 and edges at 1000.
+    // React Flow cannot realistically render 10k+ nodes; the cap is the
+    // honest upper bound and the user is told to use search to focus.
+    const NODE_CAP = 2000;
+    const EDGE_CAP = 1000;
+    const totalNodeCount = rfNodes.length;
+    const capped = totalNodeCount > NODE_CAP;
+    const cappedNodes = capped ? rfNodes.slice(0, NODE_CAP) : rfNodes;
+    const cappedNodeIds = new Set(cappedNodes.map((n) => n.id));
+    const cappedEdges = rfEdges
+      .filter((e) => cappedNodeIds.has(e.source) && cappedNodeIds.has(e.target))
+      .slice(0, EDGE_CAP);
+
     const selectedData = selectedId ? graph.nodes.get(selectedId) ?? null : null;
-    return { nodes: rfNodes, edges: rfEdges, selected: selectedData };
+    return { nodes: cappedNodes, edges: cappedEdges, selected: selectedData, totalNodeCount, capped };
   }, [graph, visibleIds, filterType, search, selectedId]);
 
   if (loading) {
@@ -1896,7 +2021,8 @@ function UboGraphModule({ holdings, dossiers, loading }: {
           <span>{nodes.length} rendered</span>
           <span>{edges.length} edges</span>
           <span>depth: {depth}</span>
-          {graph.nodes.size >= 10000 && <span style={{ color: ACCENT, fontWeight: 700 }}>10K+ MODE</span>}
+          {capped && <span style={{ color: AMBER, fontWeight: 700 }}>CAPPED AT 2000 (OF {totalNodeCount}) — USE SEARCH</span>}
+          {!capped && graph.nodes.size >= 10000 && <span style={{ color: ACCENT, fontWeight: 700 }}>10K+ MODE</span>}
         </div>
         {/* React Flow canvas */}
         <div style={{ flex: 1, background: C.bgSubtle, borderRadius: "4px", overflow: "hidden", minHeight: 0 }}>
@@ -1905,13 +2031,17 @@ function UboGraphModule({ holdings, dossiers, loading }: {
             edges={edges}
             nodeTypes={uboNodeTypes}
             onNodeClick={(_event, node) => setSelectedId(node.id)}
-            fitView
-            fitViewOptions={{ padding: 0.15 }}
-            minZoom={0.08}
-            maxZoom={2.5}
+            onSelectionChange={handleSelectionChange}
+            onlyRenderVisibleElements
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
+            minZoom={0.1}
+            maxZoom={2}
+            defaultViewport={{ zoom: 0.5, x: 0, y: 0 }}
+            translateExtent={[[-20000, -2000], [20000, 2000]]}
             proOptions={{ hideAttribution: true }}
             style={{ background: C.bgSubtle, fontFamily: FONT.mono }}
-            onlyRenderVisibleElements
             elevateNodesOnSelect={false}
           >
             <Background color={C.border} gap={16} size={1} />
@@ -2108,7 +2238,7 @@ function SanctionsColumn({ title, subtitle, rows, field }: {
     return c;
   }, [rows, field]);
 
-  const virt = useVirtualizer({ count: rows.length, getScrollElement: () => parentRef.current, estimateSize: () => 24, overscan: 12 });
+  const virt = useVirtualizer({ count: rows.length, getScrollElement: () => parentRef.current, estimateSize: () => 24, overscan: 8 });
 
   return (
     <div style={{ ...chartCardStyle, padding: "10px 12px" }}>
@@ -2174,7 +2304,7 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
     count: filtered.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 32,
-    overscan: 16,
+    overscan: 8,
   });
 
   const scorecard = useMemo(() => {
@@ -2504,7 +2634,7 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
         splitLine: { show: true, lineStyle: { color: C.bgHover } },
       },
       dataZoom: [
-        { type: "inside", start: 0, end: 100 },
+        { type: "inside", start: 0, end: 100, throttle: 100 },
         { type: "slider", start: 0, end: 100, height: 18, bottom: 12, borderColor: C.border, fillerColor: `${ACCENT}15`, handleStyle: { color: ACCENT }, textStyle: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 } },
       ],
       series: ADVERSE_CATEGORY_LIST.map((cat) => ({
@@ -2512,6 +2642,10 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
         type: "scatter",
         symbolSize: 10,
         data: seriesData[cat],
+        large: true,
+        largeThreshold: 2000,
+        progressive: 5000,
+        progressiveThreshold: 3000,
         emphasis: { focus: "self", itemStyle: { borderColor: ACCENT, borderWidth: 2 } },
       })),
     } as Record<string, unknown>;
@@ -2575,7 +2709,7 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
     count: events.length,
     getScrollElement: () => listRef.current,
     estimateSize: () => 28,
-    overscan: 16,
+    overscan: 8,
   });
 
   if (loading) {
@@ -2731,16 +2865,16 @@ export function InvestorDeskDashboard({
   const [sortField, setSortField] = useState<"companyName" | "weight" | "reputationScore" | "highRiskCount">("companyName");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  const loadData = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async (isRefresh = false, signal?: AbortSignal) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(false);
     try {
       const [portRes, statsRes, dossierRes, alertsRes] = await Promise.all([
-        fetch("/api/investor/portfolios"),
-        fetch("/api/investor/stats"),
-        fetch("/api/investor/dossiers"),
-        fetch("/api/console/alerts"),
+        fetch("/api/investor/portfolios", { signal }),
+        fetch("/api/investor/stats", { signal }),
+        fetch("/api/investor/dossiers", { signal }),
+        fetch("/api/console/alerts", { signal }),
       ]);
 
       let fetchedHoldings: InvestorHolding[] = [];
@@ -2811,7 +2945,10 @@ export function InvestorDeskDashboard({
       setDossiers(fetchedDossiers);
       setAlerts(fetchedAlerts);
       setLastRefresh(new Date());
-    } catch {
+    } catch (err) {
+      // AbortError is the expected path when the controller aborts on
+      // unmount or re-fetch — do not flag it as a real failure.
+      if ((err as Error).name === "AbortError") return;
       setError(true);
     }
     if (isRefresh) setRefreshing(false);
@@ -2820,23 +2957,24 @@ export function InvestorDeskDashboard({
 
   useEffect(() => {
     if (injectedKpis) return;
-    // Initial data fetch on mount. loadData is async — setState calls inside
-    // happen after the first await, but the linter conservatively flags any
-    // setState triggered by an effect's call site. This is the canonical
-    // data-load-on-mount pattern and is safe here.
+    // Abort pending fetches on unmount or when deps re-fire. Stops
+    // setState-after-unmount warnings and prevents orphaned fetches
+    // when the user navigates away mid-load.
+    const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadData();
+    loadData(false, controller.signal);
+    return () => controller.abort();
   }, [injectedKpis, loadData]);
 
   const firstName = userName.split(" ")[0] || "there";
 
-  const toggleSort = (field: typeof sortField) => {
+  const toggleSort = useCallback((field: typeof sortField) => {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("asc"); }
-  };
+  }, [sortField, sortDir]);
 
   // Export holdings to CSV — preserves existing format
-  const exportHoldingsCSV = () => {
+  const exportHoldingsCSV = useCallback(() => {
     const filtered = holdings.filter((h) => {
       if (riskFilter === "all") return true;
       if (riskFilter === "high") return h.highRiskCount > 0;
@@ -2854,7 +2992,7 @@ export function InvestorDeskDashboard({
     link.download = `portfolio-holdings-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [holdings, riskFilter]);
 
   // ─── Chart data derivation (preserved from 548024a) ──────────
 
@@ -2945,6 +3083,8 @@ export function InvestorDeskDashboard({
 
   return (
     <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+      {/* Dev-only FPS overlay — hidden in production builds. */}
+      {process.env.NODE_ENV === "development" && <PerformanceMonitor accent={ACCENT} />}
       {/* ─── Welcome banner — cold, institutional ─── */}
       <div style={{ padding: "16px 20px", background: ACCENT_BG, borderRadius: "4px", marginBottom: "20px", borderLeft: `3px solid ${ACCENT}` }}>
         <div style={{ fontSize: "15px", fontWeight: 600, color: C.text, lineHeight: 1.5 }}>
@@ -3018,7 +3158,9 @@ export function InvestorDeskDashboard({
                 <span><span style={{ display: "inline-block", width: 8, height: 8, background: C.borderStrong, marginRight: 4, verticalAlign: "middle" }} />Asset</span>
               </div>
             </div>
-            <EntityGraph holdings={holdings} portfoliosCount={kpis?.portfoliosManaged ?? 0} loading={loading} />
+            <DashboardErrorBoundary label="06 — Entity Resolution Graph" accent={ACCENT}>
+              <EntityGraph holdings={holdings} portfoliosCount={kpis?.portfoliosManaged ?? 0} loading={loading} />
+            </DashboardErrorBoundary>
           </div>
         </div>
 
@@ -3053,7 +3195,9 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Drag to zoom</div>
             </div>
-            <AdverseMediaTimeline alerts={alerts} holdings={holdings} loading={loading} />
+            <DashboardErrorBoundary label="15 — Adverse Media Timeline" accent={ACCENT}>
+              <AdverseMediaTimeline alerts={alerts} holdings={holdings} loading={loading} />
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -3068,7 +3212,9 @@ export function InvestorDeskDashboard({
                 <div style={chartSubtitleStyle}>ECharts · sector × risk-type matrix</div>
               </div>
             </div>
-            <CrossBorderHeatmap holdings={holdings} dossiers={dossiers} />
+            <DashboardErrorBoundary label="16 — Cross-Border Risk Heatmap" accent={ACCENT}>
+              <CrossBorderHeatmap holdings={holdings} dossiers={dossiers} />
+            </DashboardErrorBoundary>
           </div>
         </div>
         <div style={colSpan(12)}>
@@ -3079,7 +3225,9 @@ export function InvestorDeskDashboard({
                 <div style={chartSubtitleStyle}>ECharts · funnel · {dossierTotal} dossiers</div>
               </div>
             </div>
-            <DossierPipelineFunnel dossiers={dossiers} />
+            <DashboardErrorBoundary label="17 — Dossier Status Pipeline" accent={ACCENT}>
+              <DossierPipelineFunnel dossiers={dossiers} />
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -3275,7 +3423,9 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Drag nodes to reposition</div>
             </div>
-            <ThreatNetworkGraph holdings={holdings} dossiers={dossiers} />
+            <DashboardErrorBoundary label="24 — Threat Network Graph" accent={ACCENT}>
+              <ThreatNetworkGraph holdings={holdings} dossiers={dossiers} />
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -3291,7 +3441,9 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Company · UBO · Subsidiary · Director · Shell</div>
             </div>
-            <UboGraphModule holdings={holdings} dossiers={dossiers} loading={loading} />
+            <DashboardErrorBoundary label="25 — Moteur de Due Diligence UBO" accent={ACCENT}>
+              <UboGraphModule holdings={holdings} dossiers={dossiers} loading={loading} />
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -3307,7 +3459,9 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Risk-derived · deterministic</div>
             </div>
-            <ComplianceRegistry holdings={holdings} dossiers={dossiers} loading={loading} />
+            <DashboardErrorBoundary label="26 — Registre de Conformité Globale" accent={ACCENT}>
+              <ComplianceRegistry holdings={holdings} dossiers={dossiers} loading={loading} />
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -3323,7 +3477,9 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Legal · Ecological · Fiscal · Reputational · Regulatory</div>
             </div>
-            <AdverseMedia15yr alerts={alerts} holdings={holdings} dossiers={dossiers} loading={loading} />
+            <DashboardErrorBoundary label="27 — Timeline Adverse Media 15 Ans" accent={ACCENT}>
+              <AdverseMedia15yr alerts={alerts} holdings={holdings} dossiers={dossiers} loading={loading} />
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -3340,7 +3496,12 @@ export function InvestorDeskDashboard({
             toggleSort={toggleSort}
             refreshing={refreshing}
             lastRefresh={lastRefresh}
-            onRefresh={() => loadData(true)}
+            onRefresh={() => {
+              // Fresh controller per manual refresh — the mount effect's
+              // controller is unaffected (different signal).
+              const controller = new AbortController();
+              loadData(true, controller.signal);
+            }}
             onExport={exportHoldingsCSV}
             loading={loading}
           />
