@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
         type: "risk_assessment" as const,
         title: `${r.category} risk — ${r.riskLevel}`,
         source: "HarchIQ Risk Engine",
-        severity: r.riskLevel === "critical" ? "critical" : "high",
+        severity: (r.riskLevel === "critical" ? "critical" : "high") as "critical" | "high",
         sentimentScore: null,
         publishedAt: null,
       })),
