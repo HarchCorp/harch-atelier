@@ -2221,6 +2221,7 @@ export function AlphaDeskDashboard({
   // Feeds heatmap, sparklines, distribution. A single master controller
   // cancels all per-asset sub-fetches if the asset set changes (e.g.
   // after a refresh). Aborts propagate to each fetch via Promise.all.
+  const tickerSignature = assets.map((a) => a.ticker).join(",");
   useEffect(() => {
     if (assets.length === 0) return;
     const controller = new AbortController();
