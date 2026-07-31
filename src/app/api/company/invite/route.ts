@@ -75,8 +75,8 @@ export async function POST(req: NextRequest) {
       "investment-bank",
       "harch-alpha",
     ];
-    const finalAccountType = validAccountTypes.includes(accountType)
-      ? accountType
+    const finalAccountType = validAccountTypes.includes(accountType ?? "")
+      ? (accountType as string)
       : "brand-monitor";
 
     // Validate role: company-admin can invite as "user" or "company-admin".
