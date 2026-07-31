@@ -214,7 +214,7 @@ function CommandPaletteInner({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.3)",
-        zIndex: 100,
+        zIndex: 300, // above DailyBriefing modal (200/201) so Cmd+K can be invoked over the briefing
         display: "flex",
         justifyContent: "center",
         alignItems: "flex-start",

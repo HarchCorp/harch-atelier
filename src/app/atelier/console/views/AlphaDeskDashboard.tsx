@@ -786,7 +786,7 @@ function buildCandlestickOption(
     ...ECHART_PERF,
     legend: {
       data: [ticker, "Sentiment Z"],
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       top: 0,
       right: 0,
       itemWidth: 10,
@@ -875,7 +875,7 @@ function buildDualAxisOption(
     ...ECHART_PERF,
     legend: {
       data: ["Price", "Sentiment"],
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       top: 0,
       right: 0,
       itemWidth: 10,
@@ -970,7 +970,7 @@ function buildDepthOption(
     ...ECHART_PERF,
     legend: {
       data: ["Bids (+)", "Asks (−)"],
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       top: 0,
       right: 0,
       itemWidth: 10,
@@ -1077,7 +1077,7 @@ function buildCorrHeatmapOption(
       bottom: 0,
       itemWidth: 10,
       itemHeight: 60,
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 8 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       inRange: { color: [RED, "#f5f5f5", GREEN] },
     },
     series: [
@@ -1240,7 +1240,7 @@ function buildSentimentHeatmapOption(
       bottom: 0,
       itemWidth: 10,
       itemHeight: 40,
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 8 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       inRange: { color: [RED, "#f5f5f5", GREEN] },
     },
     series: [
@@ -1348,7 +1348,7 @@ function buildExposureDonutOption(
     },
     legend: {
       bottom: 0,
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       itemWidth: 8,
       itemHeight: 8,
     },
@@ -1451,7 +1451,7 @@ function buildOrderBookDepthOption(
     ...ECHART_PERF,
     legend: {
       data: ["Bids", "Asks", "Mid"],
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       top: 0,
       right: 0,
       itemWidth: 10,
@@ -1569,7 +1569,7 @@ function buildZScoreMatrixOption(
       bottom: 0,
       itemWidth: 10,
       itemHeight: 40,
-      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 8 },
+      textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 10 },
       inRange: { color: [GREEN, "#f5f5f5", RED] },
     },
     series: [
@@ -3467,9 +3467,13 @@ export function AlphaDeskDashboard({
           0%, 100% { opacity: 1;   transform: scale(1); }
           50%      { opacity: 0.5; transform: scale(1.5); }
         }
-        /* Mobile responsive — collapse 24-col grid to 1-col stack */
+        /* Mobile responsive — collapse 24-col grid to 1-col stack.
+           .alpha-row is on <section style="display: contents">, so the
+           actual grid wrappers are nested descendants. Target them
+           explicitly via their inline repeat(24, 1fr) signature. */
         @media (max-width: 768px) {
-          [data-template-account="harch-alpha"] .alpha-row {
+          [data-template-account="harch-alpha"] .alpha-row div[style*="repeat(24"],
+          [data-template-account="harch-alpha"] .alpha-row div[style*="gridTemplateColumns"] {
             grid-template-columns: 1fr !important;
           }
         }
@@ -4310,8 +4314,8 @@ export function AlphaDeskDashboard({
               cols={6}
               height={280}
             >
-              {pieData.length === 0 ? (
-                <AwaitingTelemetry label="sentiment distribution" />
+              {pieData.length <= 1 ? (
+                <AwaitingTelemetry label="insufficient data for breakdown" />
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
@@ -4337,7 +4341,7 @@ export function AlphaDeskDashboard({
                       labelStyle={tooltipLabelStyle}
                       formatter={(value: number | string, name: string) => [`${value} assets`, name]}
                     />
-                    <Legend wrapperStyle={{ fontSize: "9px", fontFamily: FONT.mono, paddingTop: "4px" }} />
+                    <Legend wrapperStyle={{ fontSize: "10px", fontFamily: FONT.mono, paddingTop: "4px" }} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -4818,7 +4822,7 @@ export function AlphaDeskDashboard({
                             }}
                           >
                             <span style={{ fontWeight: 700, color: isSel ? ACCENT : TEXT }}>{a.ticker}</span>
-                            <span style={{ fontSize: "9px", color: TEXT_BODY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: FONT.sans }}>
+                            <span style={{ fontSize: "9px", color: TEXT_BODY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: FONT.sans }} title={a.name}>
                               {a.name}
                             </span>
                             <span style={{ textAlign: "right", color: TEXT_BODY }}>

@@ -1083,7 +1083,7 @@ function AdverseMediaTimeline({
         min: twentyYearsAgo.getTime(),
         max: now,
         axisLine: { lineStyle: { color: C.border } },
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10, hideOverlap: true },
         splitLine: { show: true, lineStyle: { color: C.bgHover, type: "dashed" } },
       },
       yAxis: {
@@ -1091,7 +1091,7 @@ function AdverseMediaTimeline({
         min: 0,
         max: 3,
         axisLabel: {
-          color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10,
+          color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10, hideOverlap: true,
           formatter: (v: number) => v === 1 ? "Alert" : v === 2 ? "Risk" : v === 3 ? "UBO" : "",
         },
         splitLine: { lineStyle: { color: C.bgHover } },
@@ -1169,14 +1169,14 @@ function CrossBorderHeatmap({ holdings, dossiers }: { holdings: InvestorHolding[
       xAxis: {
         type: "category",
         data: riskTypes,
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9, rotate: 0 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9, rotate: 0, hideOverlap: true },
         axisLine: { lineStyle: { color: C.border } },
         splitLine: { show: true, lineStyle: { color: C.bgHover } },
       },
       yAxis: {
         type: "category",
         data: sectors,
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9, hideOverlap: true },
         axisLine: { lineStyle: { color: C.border } },
         splitLine: { show: true, lineStyle: { color: C.bgHover } },
       },
@@ -1536,8 +1536,8 @@ function VirtualizedHoldingsTable({
                     onMouseEnter={(e) => { e.currentTarget.style.background = `${ACCENT}08`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    <div style={{ padding: "10px 16px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.companyName}</div>
-                    <div style={{ padding: "10px 16px", color: SLATE_MID, fontFamily: FONT.mono, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.sector}</div>
+                    <div style={{ padding: "10px 16px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.companyName}>{h.companyName}</div>
+                    <div style={{ padding: "10px 16px", color: SLATE_MID, fontFamily: FONT.mono, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.sector}>{h.sector}</div>
                     <div style={{ padding: "10px 16px", textAlign: "right", fontFamily: FONT.mono, color: C.text }}>{(h.weight * 100).toFixed(0)}%</div>
                     <div style={{ padding: "10px 16px", textAlign: "right", fontFamily: FONT.mono, color: repColor, fontWeight: 700 }}>{h.reputationScore ?? "—"}</div>
                     <div style={{ padding: "10px 16px", textAlign: "right", fontFamily: FONT.mono, color: riskColor, fontWeight: 700 }}>{h.highRiskCount > 0 ? h.highRiskCount : "0"}</div>
@@ -2729,13 +2729,13 @@ function ComplianceRegistry({
                     onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = `${ACCENT}06`; }}
                     onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = "transparent"; }}
                   >
-                    <div style={{ padding: "6px 12px", color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ padding: "6px 12px", color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }} title={r.companyName}>
                       {hasMatches && (
                         <span style={{ fontSize: 8, color: SLATE_MID }}>{isExpanded ? "▼" : "▶"}</span>
                       )}
                       {r.companyName}
                     </div>
-                    <div style={{ padding: "6px 12px", color: SLATE_MID, fontSize: 10 }}>{r.sector}</div>
+                    <div style={{ padding: "6px 12px", color: SLATE_MID, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.sector}>{r.sector}</div>
                     <ComplianceCell status={statusFromMatches(r.ofacMatches)} />
                     <ComplianceCell status={statusFromMatches(r.euMatches)} />
                     <ComplianceCell status={statusFromMatches(r.unMatches)} />
@@ -2983,13 +2983,13 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
         min: new Date("2010-01-01").getTime(),
         max: Date.now(),
         axisLine: { lineStyle: { color: C.border } },
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10, hideOverlap: true },
         splitLine: { show: true, lineStyle: { color: C.bgHover, type: "dashed" } },
       },
       yAxis: {
         type: "category",
         data: ADVERSE_CATEGORY_LIST,
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10, hideOverlap: true },
         axisLine: { lineStyle: { color: C.border } },
         splitLine: { show: true, lineStyle: { color: C.bgHover } },
       },
@@ -3036,14 +3036,14 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
       xAxis: {
         type: "category",
         data: years.map(String),
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9, hideOverlap: true },
         axisLine: { lineStyle: { color: C.border } },
         splitLine: { show: true, lineStyle: { color: C.bgHover } },
       },
       yAxis: {
         type: "category",
         data: ADVERSE_CATEGORY_LIST,
-        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 },
+        axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9, hideOverlap: true },
         axisLine: { lineStyle: { color: C.border } },
         splitLine: { show: true, lineStyle: { color: C.bgHover } },
       },
@@ -3550,10 +3550,12 @@ export function InvestorDeskDashboard({
           based on the active template. */}
       <TemplateVisibilityStyle accountType="investment-bank" />
 
-      {/* Mobile responsive — collapse multi-column grids to 1-col stack */}
+      {/* Mobile responsive — collapse multi-column grids to 1-col stack.
+           Use descendant selector (not `>`) because grid wrappers are
+           nested inside <section style="display: contents"> elements. */}
       <style>{`
         @media (max-width: 768px) {
-          [data-template-account="investment-bank"] > div[style*="gridTemplateColumns"],
+          [data-template-account="investment-bank"] div[style*="gridTemplateColumns"],
           [data-template-account="investment-bank"] .investor-row {
             grid-template-columns: 1fr !important;
           }

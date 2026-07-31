@@ -647,7 +647,10 @@ const ECHARTS_TOOLTIP = {
 const ECHARTS_AXIS = {
   axisLine: { lineStyle: { color: "#e5e5e5" } },
   axisTick: { show: false },
-  axisLabel: { fontFamily: C.fontMono, color: "#737373", fontSize: 10 },
+  // hideOverlap auto-hides labels that would collide — fixes the
+  // "X-axis labels crammed" issue on category axes with many items
+  // (scatter plots, bar charts, heatmaps) without forcing rotate.
+  axisLabel: { fontFamily: C.fontMono, color: "#737373", fontSize: 10, hideOverlap: true },
   splitLine: { lineStyle: { color: "#f4f4f5", type: "dashed" as const } },
 };
 
@@ -1978,7 +1981,7 @@ export function CompetitorIntelDashboard({
     legend: {
       type: "scroll" as const,
       bottom: 0,
-      textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 9 },
+      textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 10 },
       itemWidth: 8,
       itemHeight: 8,
     },
@@ -2334,7 +2337,7 @@ export function CompetitorIntelDashboard({
       legend: {
         type: "scroll" as const,
         bottom: 0,
-        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 9 },
+        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 10 },
         itemWidth: 8,
         itemHeight: 8,
       },
@@ -2453,7 +2456,7 @@ export function CompetitorIntelDashboard({
       tooltip: { ...ECHARTS_TOOLTIP },
       legend: {
         bottom: 0,
-        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 9 },
+        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 10 },
         itemWidth: 8,
         itemHeight: 8,
       },
@@ -2591,7 +2594,7 @@ export function CompetitorIntelDashboard({
         orient: "horizontal" as const,
         left: "center" as const,
         bottom: 0,
-        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 9 },
+        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 10 },
         inRange: { color: ["#fafafa", ACCENT, "#ef4444"] },
       },
       series: [{
@@ -2674,7 +2677,7 @@ export function CompetitorIntelDashboard({
       tooltip: { ...ECHARTS_TOOLTIP },
       legend: {
         bottom: 0,
-        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 9 },
+        textStyle: { fontFamily: C.fontMono, color: C.textMuted, fontSize: 10 },
         data: ["You", "Rank 1", "Rank 2", "Rank 3"],
         itemWidth: 8,
         itemHeight: 8,
@@ -3068,11 +3071,14 @@ export function CompetitorIntelDashboard({
           based on the active template. */}
       <TemplateVisibilityStyle accountType="market-competitor" />
 
-      {/* Mobile responsive — collapse multi-column grids to 1-col stack */}
+      {/* Mobile responsive — collapse multi-column grids to 1-col stack.
+           Also collapse the auto-fit exec strip + bottom strip so tiles
+           don't squeeze to <100px on phones. */}
       <style>{`
         @media (max-width: 768px) {
           [data-template-account="market-competitor"] .war-room-split,
-          [data-template-account="market-competitor"] .exec-module-grid {
+          [data-template-account="market-competitor"] .exec-module-grid,
+          [data-template-account="market-competitor"] section[data-template-row] > div[style*="gridTemplateColumns"] {
             grid-template-columns: 1fr !important;
           }
         }
@@ -3295,7 +3301,7 @@ export function CompetitorIntelDashboard({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr)",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           gap: "8px",
           marginBottom: "16px",
         }}
@@ -3489,7 +3495,7 @@ export function CompetitorIntelDashboard({
                     <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={{ stroke: "#e5e5e5" }} />
                     <YAxis tick={{ fontSize: 10, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
                     <Tooltip content={<MonoTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 9, fontFamily: FONT.mono, color: "#737373" }} iconType="circle" />
+                    <Legend wrapperStyle={{ fontSize: 10, fontFamily: FONT.mono, color: "#737373" }} iconType="circle" />
                     {rivalsOnly.slice(0, 6).map((r, i) => (
                       <Line
                         key={i}
@@ -3654,11 +3660,11 @@ export function CompetitorIntelDashboard({
             <WidgetState loading={loading} error={error} hasData={selectedRadarData !== null} label="Per-Competitor Radar">
               <div style={{ height: 240 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={selectedRadarData!.radar} outerRadius="72%">
+                  <RadarChart data={selectedRadarData?.radar ?? []} outerRadius="72%">
                     <PolarGrid stroke="#e5e5e5" />
                     <PolarAngleAxis dataKey="axis" tick={{ fontSize: 9, fill: "#525252", fontFamily: FONT.mono }} />
                     <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "#a3a3a3", fontFamily: FONT.mono }} axisLine={false} />
-                    <Radar name={selectedRadarData!.competitor.name} dataKey="value" stroke={ACCENT} fill={ACCENT} fillOpacity={0.4} />
+                    <Radar name={selectedRadarData?.competitor.name ?? ""} dataKey="value" stroke={ACCENT} fill={ACCENT} fillOpacity={0.4} />
                     <Tooltip content={<MonoTooltip />} />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -3845,7 +3851,7 @@ export function CompetitorIntelDashboard({
                   <XAxis dataKey="month" tick={{ fontSize: 9, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={{ stroke: "#e5e5e5" }} />
                   <YAxis tick={{ fontSize: 10, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
                   <Tooltip content={<MonoTooltip />} cursor={{ fill: "#fafafa" }} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 9, fontFamily: FONT.mono, color: "#737373" }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 10, fontFamily: FONT.mono, color: "#737373" }} />
                   <Bar dataKey="critical" stackId="a" name="Critical" fill="#ef4444" />
                   <Bar dataKey="high" stackId="a" name="High" fill="#ea580c" radius={[3, 3, 0, 0]} />
                 </BarChart>
@@ -3889,7 +3895,7 @@ export function CompetitorIntelDashboard({
                   <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={{ stroke: "#e5e5e5" }} />
                   <YAxis tick={{ fontSize: 10, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={false} width={28} />
                   <Tooltip content={<MonoTooltip />} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 9, fontFamily: FONT.mono, color: "#737373" }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 10, fontFamily: FONT.mono, color: "#737373" }} />
                   {rivalsOnly.slice(0, 5).map((r, i) => {
                     const key = r.name.length > 12 ? r.name.slice(0, 11) + "\u2026" : r.name;
                     return (
@@ -3961,7 +3967,7 @@ export function CompetitorIntelDashboard({
         </div>
 
         {/* Configuration panel + basket selector (2-col on desktop) */}
-        <div className="exec-module-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "8px", marginBottom: "8px" }}>
+        <div className="exec-module-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginBottom: "8px" }}>
           <WarRoomCard
             title="Competitor Configuration"
             subtitle="Add custom competitors or remove tracked ones · persisted to localStorage (harchiq.competitor-basket)"
@@ -4203,7 +4209,7 @@ export function CompetitorIntelDashboard({
         </WarRoomCard>
 
         {/* SOV bars + SOV trend (2-col on desktop) */}
-        <div className="exec-module-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "8px", marginTop: "8px" }}>
+        <div className="exec-module-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginTop: "8px" }}>
           <WarRoomCard
             title="Share of Voice — Current %"
             subtitle={`${sovPercentBars.length} competitors · horizontal bars · SOV = mentions / total`}
@@ -4239,7 +4245,7 @@ export function CompetitorIntelDashboard({
                     <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={{ stroke: "#e5e5e5" }} />
                     <YAxis tick={{ fontSize: 10, fill: "#737373", fontFamily: FONT.mono }} tickLine={false} axisLine={false} width={32} unit="%" />
                     <Tooltip content={<MonoTooltip />} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 9, fontFamily: FONT.mono, color: "#737373" }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 10, fontFamily: FONT.mono, color: "#737373" }} />
                     {sovTrendLines.lines.map((l, i) => (
                       <Line key={i} type="monotone" dataKey={l.key} stroke={l.color} strokeWidth={1.5} dot={false} />
                     ))}

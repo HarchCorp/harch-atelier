@@ -312,7 +312,7 @@ export function AIVisibilityDashboard({
       ...echartsBase(),
       legend: {
         bottom: 0,
-        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 9 },
+        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 10 },
         icon: "circle",
         itemWidth: 6,
         itemHeight: 6,
@@ -429,7 +429,7 @@ export function AIVisibilityDashboard({
         bottom: 0,
         itemWidth: 10,
         itemHeight: 80,
-        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 9 },
+        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 10 },
         inRange: { color: [C.neutralBg, COL_NEG, COL_WARN, COL_POS] },
         categories: ["Absent", "Negative", "Neutral", "Positive"],
       },

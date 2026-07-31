@@ -1844,7 +1844,7 @@ export function BrandMonitorDashboard({
       },
       legend: {
         bottom: 0,
-        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 9 },
+        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 10 },
         icon: "circle",
         itemWidth: 8,
         itemHeight: 8,
@@ -1981,7 +1981,7 @@ export function BrandMonitorDashboard({
         orient: "horizontal",
         left: "center",
         bottom: 0,
-        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 8 },
+        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 10 },
         inRange: { color: [C.bgSubtle, ACCENT] },
         show: false,
       },
@@ -2301,7 +2301,7 @@ export function BrandMonitorDashboard({
                       header: "Source",
                       width: "120px",
                       render: (a) => (
-                        <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.source}>
                           {a.source.length > 16 ? a.source.slice(0, 14) + "\u2026" : a.source}
                         </span>
                       ),
@@ -2410,8 +2410,8 @@ export function BrandMonitorDashboard({
             {/* Widget 9: Sentiment Distribution Donut */}
             <div style={{ gridColumn: "span 8" }}>
               <Widget title="Sentiment Distribution" subtitle="DONUT">
-                {sentimentPieData.length === 0 || sentimentPieData.every((s) => s.value === 0) ? (
-                  <AwaitingTelemetry label="AWAITING SENTIMENT TELEMETRY" />
+                {sentimentPieData.length === 0 || sentimentPieData.filter((s) => s.value > 0).length <= 1 ? (
+                  <AwaitingTelemetry label="INSUFFICIENT DATA FOR BREAKDOWN" />
                 ) : (
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>

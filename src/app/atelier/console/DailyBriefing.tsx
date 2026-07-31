@@ -608,9 +608,9 @@ export function DailyBriefing({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(10,10,10,0.55)",
-        backdropFilter: "blur(2px)",
-        zIndex: 150, // above command palette (100) + global search (200)? Global search wins; we sit between
+        background: "rgba(0,0,0,0.7)",
+        backdropFilter: "blur(4px)",
+        zIndex: 200, // above shell (zIndex 40-70) + command palette (100). Below Cmd+K palette (300) so the palette can be invoked over the modal.
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
@@ -630,6 +630,7 @@ export function DailyBriefing({
           boxShadow: "0 16px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)",
           fontFamily: FONT.sans,
           position: "relative",
+          zIndex: 201, // above the overlay (200) so the white panel sits on top of the dimmed backdrop
         }}
       >
         {/* ─── Header ─── */}
