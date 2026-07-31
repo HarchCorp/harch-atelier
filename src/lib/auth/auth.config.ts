@@ -212,12 +212,42 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // Initial sign-in — populate all claims from the user object
         token.id = (user as { id?: string }).id;
         token.role = (user as { role?: string }).role;
         token.accountType = (user as { accountType?: string }).accountType;
         token.companyId = (user as { companyId?: string | null }).companyId;
         token.status = (user as { status?: string }).status;
         token.isDemo = (user as { isDemo?: boolean }).isDemo;
+      }
+      // Fallback for old JWTs (created before token.id was added):
+      // if token.id is missing but we have an email, look up the user
+      // from the DB to backfill the missing claims. This prevents
+      // redirect loops where session.user.id is undefined.
+      if (!token.id && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: {
+              id: true,
+              role: true,
+              accountType: true,
+              companyId: true,
+              status: true,
+              isDemo: true,
+            },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.accountType = dbUser.accountType;
+            token.companyId = dbUser.companyId;
+            token.status = dbUser.status;
+            token.isDemo = dbUser.isDemo;
+          }
+        } catch {
+          // DB error — leave token as-is (will fail at the route level with 401)
+        }
       }
       return token;
     },
