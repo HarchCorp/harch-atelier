@@ -1016,12 +1016,13 @@ export function ConsoleShell({
   }, [paletteOpen, searchOpen, assistantOpen, commandCenterOpen, briefingOpen, isDemoMode]);
 
   // ─── AUTO-SHOW BRIEFING ON FIRST LOGIN OF THE DAY ──────────────
-  // Check localStorage `harchiq.briefing.lastViewed`. If it's not
-  // today's YYYY-MM-DD (Africa/Casablanca), open the briefing modal
-  // automatically on first console mount — mirrors how Dataminr
-  // surfaces the morning brief the first time you log in.
+  // Auto-show the Daily Briefing modal on first login of the day.
+  // DISABLED — the modal was blocking the dashboard on every first visit,
+  // making the platform look broken. Users can open it manually via the
+  // sun icon in the top bar or Cmd+Shift+B.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Just mark today as viewed so the briefing doesn't auto-open.
     try {
       const fmt = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Africa/Casablanca",
@@ -1030,17 +1031,7 @@ export function ConsoleShell({
         day: "2-digit",
       });
       const todayKey = fmt.format(new Date());
-      const lastViewed = window.localStorage.getItem("harchiq.briefing.lastViewed");
-      if (lastViewed !== todayKey) {
-        // Don't auto-open if a modal is already in the user's way.
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount-time open, intentional
-        setBriefingOpen(true);
-        // Mark as viewed so a same-day reload doesn't re-trigger it.
-        // The actual "viewed" timestamp is also bumped when the
-        // briefing closes (see onClose below) — this write just
-        // suppresses the auto-open during rapid HMR reloads in dev.
-        window.localStorage.setItem("harchiq.briefing.lastViewed", todayKey);
-      }
+      window.localStorage.setItem("harchiq.briefing.lastViewed", todayKey);
     } catch {
       // localStorage may be unavailable (private mode) — skip silently.
     }
