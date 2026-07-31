@@ -3,6 +3,7 @@
 import {
   type CSSProperties,
   type ReactNode,
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -14,6 +15,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import type { HexagonLayer as HexagonLayerType } from "@deck.gl/aggregation-layers";
+import type { ScatterplotLayer as ScatterplotLayerType } from "@deck.gl/layers";
 import {
   ResponsiveContainer,
   LineChart,
@@ -126,6 +128,202 @@ interface EntityRow {
   name: string;
   mentions: number;
   avgSentiment: number | null;
+}
+
+// ─── Executive module types (Modules 1-3) ───────────────────────
+
+type LangCode = "ar" | "darija" | "fr" | "en";
+type SourceType = "media" | "social" | "financial" | "ai";
+type VelocityBand = "Slow" | "Medium" | "Fast" | "Viral";
+type AuthorityBand = "Low" | "Medium" | "High" | "Elite";
+type EscalationLevel = "Green" | "Amber" | "Red" | "Crimson";
+
+interface MultiSourceRow {
+  id: string;
+  time: string;
+  source: string;
+  sourceType: SourceType;
+  language: LangCode;
+  title: string;
+  sentimentScore: number | null;
+  severity: "critical" | "high";
+}
+
+interface GeoAggregate {
+  city: string;
+  region: string;
+  lng: number;
+  lat: number;
+  alertCount: number;
+  avgSentiment: number | null;
+  trend: "up" | "down" | "stable";
+  alerts: BrandMonitorAlert[];
+}
+
+interface EscalationCell {
+  velocity: VelocityBand;
+  authority: AuthorityBand;
+  count: number;
+  alerts: BrandMonitorAlert[];
+}
+
+interface SourceIntel {
+  type: SourceType;
+  authority: number;
+  city: string;
+  region: string;
+  lat: number;
+  lng: number;
+}
+
+// ─── Source intelligence table (derived from source name) ────────
+// The alerts API carries no sourceType / authority / geo fields yet.
+// We derive them deterministically from the source string so every
+// alert is positioned on the 3D map and slotted into the matrix.
+
+const SOURCE_INTEL_TABLE: Array<{ match: string; intel: SourceIntel }> = [
+  // Elite Moroccan media (authority 4)
+  { match: "hespress", intel: { type: "media", authority: 4, city: "Rabat", region: "Morocco", lat: 34.0209, lng: -6.8416 } },
+  { match: "le360", intel: { type: "media", authority: 4, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "telquel", intel: { type: "media", authority: 4, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "today.ma", intel: { type: "media", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "aujourdhui", intel: { type: "media", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "yabiladi", intel: { type: "media", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "morpho", intel: { type: "media", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  // International elite
+  { match: "reuters", intel: { type: "media", authority: 4, city: "London", region: "United Kingdom", lat: 51.5074, lng: -0.1278 } },
+  { match: "bbc", intel: { type: "media", authority: 4, city: "London", region: "United Kingdom", lat: 51.5074, lng: -0.1278 } },
+  { match: "al jazeera", intel: { type: "media", authority: 4, city: "Doha", region: "Qatar", lat: 25.2854, lng: 51.5310 } },
+  { match: "aljazeera", intel: { type: "media", authority: 4, city: "Doha", region: "Qatar", lat: 25.2854, lng: 51.5310 } },
+  { match: "sky news", intel: { type: "media", authority: 4, city: "London", region: "United Kingdom", lat: 51.5074, lng: -0.1278 } },
+  { match: "cnn", intel: { type: "media", authority: 4, city: "Atlanta", region: "United States", lat: 33.749, lng: -84.388 } },
+  { match: "forbes", intel: { type: "media", authority: 4, city: "New York", region: "United States", lat: 40.7128, lng: -74.006 } },
+  { match: "le monde", intel: { type: "media", authority: 4, city: "Paris", region: "France", lat: 48.8566, lng: 2.3522 } },
+  // High-tier Moroccan financial
+  { match: "medias24", intel: { type: "media", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "médias24", intel: { type: "media", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "economiste", intel: { type: "financial", authority: 3, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  // High-tier international
+  { match: "jeune afrique", intel: { type: "media", authority: 3, city: "Paris", region: "France", lat: 48.8566, lng: 2.3522 } },
+  { match: "jeuneafrique", intel: { type: "media", authority: 3, city: "Paris", region: "France", lat: 48.8566, lng: 2.3522 } },
+  { match: "les echos", intel: { type: "financial", authority: 3, city: "Paris", region: "France", lat: 48.8566, lng: 2.3522 } },
+  { match: "financial times", intel: { type: "financial", authority: 4, city: "London", region: "United Kingdom", lat: 51.5074, lng: -0.1278 } },
+  { match: "bloomberg", intel: { type: "financial", authority: 4, city: "New York", region: "United States", lat: 40.7128, lng: -74.006 } },
+  { match: "wall street", intel: { type: "financial", authority: 4, city: "New York", region: "United States", lat: 40.7128, lng: -74.006 } },
+  // AI-derived
+  { match: "harchiq", intel: { type: "ai", authority: 2, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "risk engine", intel: { type: "ai", authority: 2, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "openai", intel: { type: "ai", authority: 3, city: "San Francisco", region: "United States", lat: 37.7749, lng: -122.4194 } },
+  { match: "chatgpt", intel: { type: "ai", authority: 3, city: "San Francisco", region: "United States", lat: 37.7749, lng: -122.4194 } },
+  { match: "gemini", intel: { type: "ai", authority: 3, city: "Mountain View", region: "United States", lat: 37.3861, lng: -122.0839 } },
+  { match: "perplexity", intel: { type: "ai", authority: 3, city: "San Francisco", region: "United States", lat: 37.7749, lng: -122.4194 } },
+  { match: "claude", intel: { type: "ai", authority: 3, city: "San Francisco", region: "United States", lat: 37.7749, lng: -122.4194 } },
+  { match: "anthropic", intel: { type: "ai", authority: 3, city: "San Francisco", region: "United States", lat: 37.7749, lng: -122.4194 } },
+  // Social
+  { match: "twitter", intel: { type: "social", authority: 1, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "x.com", intel: { type: "social", authority: 1, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "facebook", intel: { type: "social", authority: 1, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "instagram", intel: { type: "social", authority: 1, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "linkedin", intel: { type: "social", authority: 2, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "tiktok", intel: { type: "social", authority: 1, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "youtube", intel: { type: "social", authority: 2, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+  { match: "reddit", intel: { type: "social", authority: 1, city: "Casablanca", region: "Morocco", lat: 33.5731, lng: -7.5898 } },
+];
+
+const DEFAULT_SOURCE_INTEL: SourceIntel = {
+  type: "media",
+  authority: 2,
+  city: "Casablanca",
+  region: "Morocco",
+  lat: 33.5731,
+  lng: -7.5898,
+};
+
+function sourceIntelOf(source: string): SourceIntel {
+  const key = (source || "").trim().toLowerCase();
+  if (!key) return DEFAULT_SOURCE_INTEL;
+  for (const entry of SOURCE_INTEL_TABLE) {
+    if (key.includes(entry.match)) return entry.intel;
+  }
+  // Heuristic fallbacks for unknown sources
+  if (/(economist|bourse|finance|bloomberg|ft|financial|wall street|trading|markets?)/i.test(source)) {
+    return { ...DEFAULT_SOURCE_INTEL, type: "financial", authority: 3 };
+  }
+  if (/(twitter|facebook|instagram|linkedin|tiktok|^x$|social|reddit|youtube|telegram|snapchat)/i.test(source)) {
+    return { ...DEFAULT_SOURCE_INTEL, type: "social", authority: 1 };
+  }
+  if (/(gpt|openai|gemini|claude|perplexity|engine|ai[\s_-]|model|llm|anthropic|copilot|mistral)/i.test(source)) {
+    return { ...DEFAULT_SOURCE_INTEL, type: "ai", authority: 2 };
+  }
+  return DEFAULT_SOURCE_INTEL;
+}
+
+// ─── Language detection (heuristic, zero-NLP) ───────────────────
+// Arabic Unicode range → AR. Moroccan Darija markers (Latin + Arabic)
+// → Darija. French keyword density → FR. Default English.
+
+const DARIJA_MARKERS = [
+  "واخا", "بغيت", "شحال", "كيداير", "زوين", "بزاف", "دابا", "واش", "علاش",
+  "walou", "daba", "wakha", "bghit", "ch7al", "kidayer", "zwin", "bzaf", "yallah", "safi", "nood",
+];
+
+function detectLanguage(text: string): LangCode {
+  if (!text) return "en";
+  const hasArabic = /[\u0600-\u06FF]/.test(text);
+  if (hasArabic) {
+    const lower = text.toLowerCase();
+    for (const marker of DARIJA_MARKERS) {
+      if (lower.includes(marker.toLowerCase())) return "darija";
+    }
+    return "ar";
+  }
+  const lower = " " + text.toLowerCase() + " ";
+  const frenchHits = (lower.match(/\b(le|la|les|du|de|des|et|est|une|un|pour|avec|dans|sur|que|qui|au|aux|ce|cette|comme|plus|tres|très|sans|sous|entre|après|avant|toujours|jamais|aussi|encore|fait|selon|mais|donc|car|puisqu|quoiqu|maroc|marocain|harch)\b/g) || []).length;
+  const englishHits = (lower.match(/\b(the|and|of|to|in|for|on|with|as|is|are|was|were|be|been|that|this|which|who|whom|whose|from|at|by|an|it|its|has|have|had|will|would|can|could|should|may|might|according|but|so|because|while|when|where|what|how|why)\b/g) || []).length;
+  if (frenchHits > englishHits && frenchHits >= 2) return "fr";
+  if (frenchHits >= 2 && englishHits < 2) return "fr";
+  return "en";
+}
+
+// ─── Velocity / authority bands ─────────────────────────────────
+
+function velocityBand(count: number): VelocityBand {
+  if (count > 15) return "Viral";
+  if (count >= 6) return "Fast";
+  if (count >= 2) return "Medium";
+  return "Slow";
+}
+
+function authorityBand(auth: number): AuthorityBand {
+  if (auth >= 4) return "Elite";
+  if (auth >= 3) return "High";
+  if (auth >= 2) return "Medium";
+  return "Low";
+}
+
+const VELOCITY_SCORE: Record<VelocityBand, number> = { Slow: 1, Medium: 2, Fast: 3, Viral: 4 };
+const AUTHORITY_SCORE: Record<AuthorityBand, number> = { Low: 1, Medium: 2, High: 3, Elite: 4 };
+
+function escalationLevel(velocity: VelocityBand, authority: AuthorityBand): EscalationLevel {
+  const product = VELOCITY_SCORE[velocity] * AUTHORITY_SCORE[authority];
+  if (product > 12) return "Crimson";
+  if (product > 8) return "Red";
+  if (product > 4) return "Amber";
+  return "Green";
+}
+
+function escalationColors(level: EscalationLevel): { bg: string; fg: string; border: string } {
+  switch (level) {
+    case "Crimson":
+      return { bg: "rgba(220,38,38,0.85)", fg: "#ffffff", border: "rgba(220,38,38,1)" };
+    case "Red":
+      return { bg: "rgba(239,68,68,0.45)", fg: C.text, border: "rgba(239,68,68,0.7)" };
+    case "Amber":
+      return { bg: "rgba(245,158,11,0.35)", fg: C.text, border: "rgba(245,158,11,0.6)" };
+    case "Green":
+    default:
+      return { bg: "rgba(16,185,129,0.20)", fg: C.text, border: "rgba(16,185,129,0.5)" };
+  }
 }
 
 // ─── Accent (emerald = calm, reassuring) ────────────────────────
@@ -613,6 +811,240 @@ function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
   return <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 360, position: "relative" }} />;
 }
 
+// ─── 3D Geographic Cartography (deck.gl + maplibre, interactive) ─
+// Module 2 — interactive hexagon + scatterplot layer. Maplibre base
+// map is non-interactive (renders tiles only); deck.gl handles pan,
+// zoom, pitch, and click picking on city markers. Click a marker →
+// parent state opens the region drill-down panel.
+
+function GeoCartography3D({
+  geoAggregates,
+  onSelectCity,
+}: {
+  geoAggregates: GeoAggregate[];
+  onSelectCity: (city: string) => void;
+}) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const instancesRef = useRef<{ deck: DeckGL | null; map: MaplibreMap | null }>({ deck: null, map: null });
+  const onSelectRef = useRef(onSelectCity);
+  onSelectRef.current = onSelectCity;
+  const [zoomLevel, setZoomLevel] = useState(4);
+  const [viewMode, setViewMode] = useState<"World" | "MENA" | "Morocco" | "Cities">("MENA");
+
+  useEffect(() => {
+    if (geoAggregates.length === 0 || !mapContainerRef.current || !canvasRef.current) return;
+    let cancelled = false;
+
+    (async () => {
+      const [{ Deck }, aggregationMod, layersMod, maplibreMod] = await Promise.all([
+        import("@deck.gl/core"),
+        import("@deck.gl/aggregation-layers"),
+        import("@deck.gl/layers"),
+        import("maplibre-gl"),
+      ]);
+      if (cancelled || !mapContainerRef.current || !canvasRef.current) return;
+
+      const HexagonLayer = aggregationMod.HexagonLayer as typeof HexagonLayerType;
+      const ScatterplotLayer = layersMod.ScatterplotLayer as typeof ScatterplotLayerType;
+      const Map = maplibreMod.Map;
+
+      const initialLng = -6.8416;
+      const initialLat = 27;
+      const initialZoom = 4;
+      const initialPitch = 35;
+
+      const map = new Map({
+        container: mapContainerRef.current,
+        style: "https://demotiles.maplibre.org/style.json",
+        center: [initialLng, initialLat],
+        zoom: initialZoom,
+        pitch: initialPitch,
+        interactive: false,
+        attributionControl: false,
+      });
+
+      // Hexagon data: one point per alert, jittered within city for spread
+      const points: Array<{ position: [number, number] }> = [];
+      for (const g of geoAggregates) {
+        for (let i = 0; i < g.alertCount; i++) {
+          const jitterLng = (Math.random() - 0.5) * 0.12;
+          const jitterLat = (Math.random() - 0.5) * 0.12;
+          points.push({ position: [g.lng + jitterLng, g.lat + jitterLat] });
+        }
+      }
+
+      const hexLayer = new HexagonLayer({
+        id: "geo-cartography-hex",
+        data: points,
+        getPosition: (d: { position: [number, number] }) => d.position,
+        getElevationWeight: () => 1,
+        radius: 18000,
+        elevationScale: 90,
+        extruded: true,
+        colorRange: [
+          [5, 150, 105],
+          [16, 185, 129],
+          [52, 211, 153],
+          [110, 231, 183],
+          [167, 243, 208],
+          [209, 250, 229],
+        ],
+        pickable: false,
+        opacity: 0.85,
+        coverage: 0.92,
+      });
+
+      const scatterLayer = new ScatterplotLayer({
+        id: "geo-cartography-markers",
+        data: geoAggregates,
+        getPosition: (d: GeoAggregate) => [d.lng, d.lat],
+        getRadius: (d: GeoAggregate) => 8000 + d.alertCount * 14000,
+        radiusMinPixels: 8,
+        radiusMaxPixels: 64,
+        getFillColor: (d: GeoAggregate) => {
+          if (d.avgSentiment != null && d.avgSentiment < -0.3) return [239, 68, 68, 210];
+          if (d.avgSentiment != null && d.avgSentiment > 0.1) return [16, 185, 129, 190];
+          return [120, 113, 108, 180];
+        },
+        getLineColor: [255, 255, 255, 220],
+        getLineWidthPixels: 2,
+        stroked: true,
+        pickable: true,
+        onClick: (info: { object?: GeoAggregate }) => {
+          if (info.object) onSelectRef.current(info.object.city);
+        },
+      });
+
+      const deck = new Deck({
+        canvas: canvasRef.current,
+        width: "100%",
+        height: "100%",
+        initialViewState: { longitude: initialLng, latitude: initialLat, zoom: initialZoom, pitch: initialPitch, bearing: 0 },
+        controller: true,
+        layers: [hexLayer, scatterLayer],
+        getTooltip: ((info: { object?: GeoAggregate }) => {
+          if (!info || !info.object) return null;
+          const d = info.object;
+          return {
+            html: `<div style="font-family:'Space Mono',monospace;font-size:11px;background:#ffffff;border:1px solid #e5e5e5;padding:6px 10px;border-radius:2px;"><div style="font-weight:700;color:#0a0a0a;">${d.city}</div><div style="color:#737373;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;">${d.region} · ${d.alertCount} alerts</div></div>`,
+            style: { background: "transparent", border: "none", padding: 0 },
+          };
+        }) as never,
+        onViewStateChange: ((params: { viewState: { longitude: number; latitude: number; zoom: number; bearing: number; pitch: number } }) => {
+          const vs = params.viewState;
+          map.jumpTo({
+            center: [vs.longitude, vs.latitude],
+            zoom: vs.zoom,
+            bearing: vs.bearing,
+            pitch: vs.pitch,
+          });
+          setZoomLevel(vs.zoom);
+          if (vs.zoom < 2) setViewMode("World");
+          else if (vs.zoom < 5) setViewMode("MENA");
+          else if (vs.zoom < 8) setViewMode("Morocco");
+          else setViewMode("Cities");
+        }) as never,
+      });
+
+      instancesRef.current = { deck, map };
+    })().catch(() => {
+      // silent — telemetry state already shown
+    });
+
+    return () => {
+      cancelled = true;
+      const { deck, map } = instancesRef.current;
+      if (deck) deck.finalize();
+      if (map) map.remove();
+      instancesRef.current = { deck: null, map: null };
+    };
+  }, [geoAggregates]);
+
+  if (geoAggregates.length === 0) {
+    return <AwaitingTelemetry label="AWAITING GEO TELEMETRY" />;
+  }
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 420, background: C.bgSubtle }}>
+      <div ref={mapContainerRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          left: 8,
+          padding: "4px 8px",
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: "2px",
+          fontFamily: FONT.mono,
+          fontSize: 9,
+          color: C.textMuted,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          pointerEvents: "none",
+          zIndex: 10,
+        }}
+      >
+        ZOOM: {viewMode} · {zoomLevel.toFixed(1)}x
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: 8,
+          left: 8,
+          padding: "6px 8px",
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: "2px",
+          fontFamily: FONT.mono,
+          fontSize: 8,
+          color: C.textMuted,
+          letterSpacing: "0.08em",
+          pointerEvents: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+          zIndex: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 8, height: 8, background: C.danger, borderRadius: "50%", display: "inline-block" }} />
+          NEGATIVE
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 8, height: 8, background: ACCENT, borderRadius: "50%", display: "inline-block" }} />
+          POSITIVE
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 8, height: 8, background: C.textMuted, borderRadius: "50%", display: "inline-block" }} />
+          NEUTRAL
+        </div>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          padding: "4px 8px",
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: "2px",
+          fontFamily: FONT.mono,
+          fontSize: 8,
+          color: C.textMuted,
+          letterSpacing: "0.1em",
+          pointerEvents: "none",
+          zIndex: 10,
+        }}
+      >
+        DRAG TO PAN · SCROLL TO ZOOM · CLICK MARKER
+      </div>
+    </div>
+  );
+}
+
 // ─── ECharts base option helper ─────────────────────────────────
 
 function echartsBase(): Record<string, unknown> {
@@ -644,6 +1076,12 @@ export function BrandMonitorDashboard({
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "positive" | "negative" | "neutral">("all");
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  // ─── Executive module state (Modules 1-3) ─────────────────────
+  const [languageFilter, setLanguageFilter] = useState<"all" | LangCode>("all");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<"all" | SourceType>("all");
+  const [escalationFilter, setEscalationFilter] = useState<{ velocity: VelocityBand; authority: AuthorityBand } | null>(null);
+  const [geoDrillDownCity, setGeoDrillDownCity] = useState<string | null>(null);
 
   const loadData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -1057,6 +1495,252 @@ export function BrandMonitorDashboard({
     return dims;
   }, [kpis, sentimentIndex, aiVisibilityScore, sources.length, alerts.length, aiEngines, severityData]);
 
+  // ═══ EXECUTIVE MODULE DATA (Modules 1-3) ═══
+
+  // Module 1 · Multi-source feed — augment each alert with detected
+  // language and derived sourceType.
+  const multiSourceRows = useMemo<MultiSourceRow[]>(
+    () =>
+      alerts.map((a) => {
+        const intel = sourceIntelOf(a.source);
+        return {
+          id: a.id,
+          time: a.detectedAt
+            ? new Date(a.detectedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
+            : "--:--",
+          source: a.source,
+          sourceType: intel.type,
+          language: detectLanguage(`${a.title} ${a.details ?? ""}`),
+          title: a.title,
+          sentimentScore: a.sentimentScore,
+          severity: a.severity,
+        };
+      }),
+    [alerts],
+  );
+
+  const filteredMultiSourceRows = useMemo(
+    () =>
+      multiSourceRows.filter((r) => {
+        if (languageFilter !== "all" && r.language !== languageFilter) return false;
+        if (sourceTypeFilter !== "all" && r.sourceType !== sourceTypeFilter) return false;
+        return true;
+      }),
+    [multiSourceRows, languageFilter, sourceTypeFilter],
+  );
+
+  const sourceTypeCounts = useMemo(() => {
+    const counts: Record<SourceType, number> = { media: 0, social: 0, financial: 0, ai: 0 };
+    for (const r of multiSourceRows) counts[r.sourceType] += 1;
+    return counts;
+  }, [multiSourceRows]);
+
+  const languageDistribution = useMemo(() => {
+    const counts: Record<LangCode, number> = { ar: 0, darija: 0, fr: 0, en: 0 };
+    for (const r of multiSourceRows) counts[r.language] += 1;
+    const colors: Record<LangCode, string> = {
+      ar: COL_NEG,
+      darija: COL_WARN,
+      fr: C.textBody,
+      en: ACCENT,
+    };
+    const labels: Record<LangCode, string> = {
+      ar: "Arabic",
+      darija: "Darija",
+      fr: "Francais",
+      en: "English",
+    };
+    const total = counts.ar + counts.darija + counts.fr + counts.en;
+    return { counts, colors, labels, total };
+  }, [multiSourceRows]);
+
+  const sourceTypeBreakdownData = useMemo(() => {
+    const byDay = new Map<string, { media: number; social: number; financial: number; ai: number; ts: number }>();
+    for (const a of alerts) {
+      if (!a.detectedAt) continue;
+      const d = new Date(a.detectedAt);
+      if (Number.isNaN(d.getTime())) continue;
+      const key = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const ts = d.getTime();
+      const st = sourceIntelOf(a.source).type;
+      const existing = byDay.get(key);
+      if (existing) {
+        existing[st] += 1;
+      } else {
+        const init: { media: number; social: number; financial: number; ai: number; ts: number } = {
+          media: 0,
+          social: 0,
+          financial: 0,
+          ai: 0,
+          ts,
+        };
+        init[st] = 1;
+        byDay.set(key, init);
+      }
+    }
+    return Array.from(byDay.entries())
+      .map(([date, v]) => ({ date, media: v.media, social: v.social, financial: v.financial, ai: v.ai, ts: v.ts }))
+      .sort((a, b) => a.ts - b.ts)
+      .map(({ date, media, social, financial, ai }) => ({ date, media, social, financial, ai }));
+  }, [alerts]);
+
+  // Module 2 · Geo aggregates — group alerts by city (derived from source)
+  const geoAggregates = useMemo<GeoAggregate[]>(() => {
+    const byCity = new Map<string, GeoAggregate>();
+    for (const a of alerts) {
+      const intel = sourceIntelOf(a.source);
+      const key = `${intel.city}|||${intel.region}`;
+      const existing = byCity.get(key);
+      if (existing) {
+        existing.alerts.push(a);
+        existing.alertCount += 1;
+        if (a.sentimentScore != null) {
+          const prevSum = (existing.avgSentiment ?? 0) * (existing.alertCount - 1);
+          existing.avgSentiment = (prevSum + a.sentimentScore) / existing.alertCount;
+        }
+      } else {
+        byCity.set(key, {
+          city: intel.city,
+          region: intel.region,
+          lng: intel.lng,
+          lat: intel.lat,
+          alertCount: 1,
+          avgSentiment: a.sentimentScore,
+          trend: "stable",
+          alerts: [a],
+        });
+      }
+    }
+    return Array.from(byCity.values()).sort((a, b) => b.alertCount - a.alertCount);
+  }, [alerts]);
+
+  const geoDrillDownAlerts = useMemo(() => {
+    if (!geoDrillDownCity) return [];
+    return geoAggregates.find((g) => g.city === geoDrillDownCity)?.alerts ?? [];
+  }, [geoDrillDownCity, geoAggregates]);
+
+  // Module 3 · Escalation matrix — 4x4 (velocity × authority) with
+  // per-source velocity (alerts from same source in last 1h) and
+  // per-source authority (predefined source reputation scores).
+  const escalationMatrix = useMemo<{
+    matrix: EscalationCell[][];
+    maxLevel: EscalationLevel;
+    globalVelocityBand: VelocityBand;
+    maxAuthority: AuthorityBand;
+    globalVelocityCount: number;
+  }>(() => {
+    const velocities: VelocityBand[] = ["Slow", "Medium", "Fast", "Viral"];
+    const authorities: AuthorityBand[] = ["Low", "Medium", "High", "Elite"];
+    const matrix: EscalationCell[][] = velocities.map((v) =>
+      authorities.map((a) => ({ velocity: v, authority: a, count: 0, alerts: [] as BrandMonitorAlert[] })),
+    );
+
+    const now = Date.now();
+    const sourceVelocity = new Map<string, number>();
+    for (const a of alerts) {
+      if (!a.detectedAt) continue;
+      const d = new Date(a.detectedAt).getTime();
+      if (Number.isNaN(d)) continue;
+      if (now - d < 3600000) {
+        const key = a.source || "Unknown";
+        sourceVelocity.set(key, (sourceVelocity.get(key) ?? 0) + 1);
+      }
+    }
+
+    const globalVelocityCount = Array.from(sourceVelocity.values()).reduce((s, v) => s + v, 0);
+    const globalVB = velocityBand(globalVelocityCount);
+
+    let maxAuth = 1;
+    for (const a of alerts) {
+      const auth = sourceIntelOf(a.source).authority;
+      if (auth > maxAuth) maxAuth = auth;
+    }
+    const maxAB = authorityBand(maxAuth);
+
+    for (const a of alerts) {
+      const auth = sourceIntelOf(a.source).authority;
+      const ab = authorityBand(auth);
+      const sv = sourceVelocity.get(a.source || "Unknown") ?? 0;
+      const vb = velocityBand(sv);
+      const row = velocities.indexOf(vb);
+      const col = authorities.indexOf(ab);
+      if (row >= 0 && col >= 0) {
+        matrix[row][col].count += 1;
+        matrix[row][col].alerts.push(a);
+      }
+    }
+
+    const order: EscalationLevel[] = ["Green", "Amber", "Red", "Crimson"];
+    let maxLevel: EscalationLevel = "Green";
+    for (const row of matrix) {
+      for (const cell of row) {
+        if (cell.count > 0) {
+          const level = escalationLevel(cell.velocity, cell.authority);
+          if (order.indexOf(level) > order.indexOf(maxLevel)) maxLevel = level;
+        }
+      }
+    }
+    const globalLevel = escalationLevel(globalVB, maxAB);
+    if (order.indexOf(globalLevel) > order.indexOf(maxLevel)) maxLevel = globalLevel;
+
+    return { matrix, maxLevel, globalVelocityBand: globalVB, maxAuthority: maxAB, globalVelocityCount };
+  }, [alerts]);
+
+  const escalationDrillDownAlerts = useMemo(() => {
+    if (!escalationFilter) return [];
+    const cell = escalationMatrix.matrix
+      .find((r) => r[0].velocity === escalationFilter.velocity)
+      ?.find((c) => c.authority === escalationFilter.authority);
+    return cell?.alerts ?? [];
+  }, [escalationFilter, escalationMatrix]);
+
+  // ECharts option for language distribution donut (Module 1)
+  const languageDonutOption: EChartsOption | null = useMemo(() => {
+    if (languageDistribution.total === 0) return null;
+    const data = (["ar", "darija", "fr", "en"] as LangCode[]).map((code) => ({
+      name: languageDistribution.labels[code],
+      value: languageDistribution.counts[code],
+      itemStyle: { color: languageDistribution.colors[code] },
+    }));
+    return {
+      ...echartsBase(),
+      title: {
+        text: String(languageDistribution.total),
+        subtext: "ALERTS",
+        left: "center",
+        top: "38%",
+        textStyle: { fontFamily: FONT.mono, fontSize: 22, fontWeight: 700, color: C.text },
+        subtextStyle: { fontFamily: FONT.mono, fontSize: 9, color: C.textMuted },
+      },
+      tooltip: {
+        trigger: "item",
+        formatter: "{b}: {c} ({d}%)",
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.textBody, fontFamily: FONT.mono, fontSize: 11 },
+      },
+      legend: {
+        bottom: 0,
+        textStyle: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 9 },
+        icon: "circle",
+        itemWidth: 8,
+        itemHeight: 8,
+      },
+      series: [
+        {
+          type: "pie",
+          radius: ["42%", "70%"],
+          center: ["50%", "45%"],
+          avoidLabelOverlap: true,
+          label: { show: false },
+          labelLine: { show: false },
+          emphasis: { scale: true, scaleSize: 6 },
+          data,
+        },
+      ],
+    };
+  }, [languageDistribution]);
+
   // ═══ ECHARTS OPTIONS ═══
 
   const sentimentGaugeOption: EChartsOption = useMemo(() => ({
@@ -1239,6 +1923,14 @@ export function BrandMonitorDashboard({
       }],
     };
   }, [topicNetwork]);
+
+  // Active alert-level badge for Module 3 (3 badges: Green / Amber / Crimson)
+  const activeBadge: "Green" | "Amber" | "Crimson" =
+    escalationMatrix.maxLevel === "Green"
+      ? "Green"
+      : escalationMatrix.maxLevel === "Amber"
+        ? "Amber"
+        : "Crimson";
 
   // ═══ RENDER ═══
 
@@ -1901,6 +2593,810 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════
+              EXECUTIVE MODULES (3) — added below V8 command grid
+              · Module 1: Multi-Source & Multi-Language (native)
+              · Module 2: 3D Geographic Cartography (deck.gl interactive)
+              · Module 3: Predictive Escalation Matrix (4×4)
+              All data from /api/console/alerts. Zero mock. Virtualized.
+          ═══════════════════════════════════════════════════════════ */}
+
+          {/* ═══ MODULE 1 · Multi-Source & Multi-Language ═══ */}
+          <div style={{ marginTop: "20px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
+              <div style={{ ...titleLabelStyle, marginBottom: 0, fontSize: 11, color: ACCENT }}>
+                MODULE 1 · MULTI-SOURCE &amp; MULTI-LANGUAGE
+              </div>
+              <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted }}>
+                Native language detection across media, social, financial, and AI sources
+              </div>
+            </div>
+
+            {/* Toolbar: language switcher + source-type chips */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "12px",
+                flexWrap: "wrap",
+                padding: "10px 12px",
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: "4px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>LANG:</span>
+                {(["all", "ar", "darija", "fr", "en"] as const).map((l) => {
+                  const label = l === "all" ? "ALL" : l === "ar" ? "\u0627\u0644\u0639\u0631\u0628\u064A\u0629" : l === "darija" ? "\u0627\u0644\u062F\u0627\u0631\u062C\u0629" : l === "fr" ? "Francais" : "English";
+                  const active = languageFilter === l;
+                  return (
+                    <button
+                      key={l}
+                      onClick={() => setLanguageFilter(l)}
+                      style={{
+                        padding: "5px 11px",
+                        fontSize: "11px",
+                        fontFamily: FONT.mono,
+                        fontWeight: 600,
+                        border: `1px solid ${active ? ACCENT : C.border}`,
+                        borderBottomWidth: active ? 2 : 1,
+                        borderRadius: "2px",
+                        background: active ? `${ACCENT}12` : C.bg,
+                        color: active ? ACCENT : C.textMuted,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>SRC:</span>
+                {(["all", "media", "social", "financial", "ai"] as const).map((t) => {
+                  const count = t === "all" ? multiSourceRows.length : sourceTypeCounts[t];
+                  const active = sourceTypeFilter === t;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setSourceTypeFilter(t)}
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: "9px",
+                        fontFamily: FONT.mono,
+                        fontWeight: 600,
+                        border: `1px solid ${active ? ACCENT : C.border}`,
+                        borderRadius: "12px",
+                        background: active ? `${ACCENT}12` : C.bg,
+                        color: active ? ACCENT : C.textMuted,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      {t === "all" ? "ALL" : t}
+                      <span style={{ fontSize: 8, color: active ? ACCENT : C.border, fontWeight: 700 }}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bm-grid" style={gridWrapStyle}>
+              {/* Multi-source feed (virtualized) */}
+              <div style={{ gridColumn: "span 16" }}>
+                <Widget
+                  title="Multi-Source Feed"
+                  subtitle={`${filteredMultiSourceRows.length} / ${multiSourceRows.length} SIGNALS · VIRTUALIZED`}
+                  style={{ minHeight: 400 }}
+                >
+                  <VirtualTable<MultiSourceRow>
+                    rows={filteredMultiSourceRows}
+                    height={360}
+                    rowHeight={32}
+                    emptyLabel="AWAITING MULTI-SOURCE FEED"
+                    columns={[
+                      {
+                        key: "time",
+                        header: "Time",
+                        width: "60px",
+                        render: (r) => (
+                          <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: C.textMuted }}>{r.time}</span>
+                        ),
+                      },
+                      {
+                        key: "source",
+                        header: "Source",
+                        width: "110px",
+                        render: (r) => (
+                          <span
+                            style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                            title={r.source}
+                          >
+                            {r.source.length > 16 ? r.source.slice(0, 14) + "\u2026" : r.source}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "sourceType",
+                        header: "Type",
+                        width: "75px",
+                        render: (r) => {
+                          const colors: Record<SourceType, string> = {
+                            media: ACCENT,
+                            social: COL_WARN,
+                            financial: C.textBody,
+                            ai: COL_NEG,
+                          };
+                          return (
+                            <span
+                              style={{
+                                fontFamily: FONT.mono,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                padding: "2px 6px",
+                                borderRadius: "2px",
+                                background: `${colors[r.sourceType]}15`,
+                                color: colors[r.sourceType],
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                              }}
+                            >
+                              {r.sourceType}
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "language",
+                        header: "Lang",
+                        width: "55px",
+                        align: "center",
+                        render: (r) => {
+                          const langColors: Record<LangCode, string> = {
+                            ar: COL_NEG,
+                            darija: COL_WARN,
+                            fr: C.textBody,
+                            en: ACCENT,
+                          };
+                          const langLabels: Record<LangCode, string> = { ar: "AR", darija: "DAR", fr: "FR", en: "EN" };
+                          return (
+                            <span
+                              style={{
+                                fontFamily: FONT.mono,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: langColors[r.language],
+                                letterSpacing: "0.05em",
+                              }}
+                            >
+                              {langLabels[r.language]}
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "title",
+                        header: "Title",
+                        width: "calc(100% - 425px)",
+                        render: (r) => (
+                          <span
+                            style={{ fontSize: "11px", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                            title={r.title}
+                          >
+                            {r.title}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "sentiment",
+                        header: "Sent",
+                        width: "65px",
+                        render: (r) => <SentimentBadge sentiment="negative" score={r.sentimentScore} />,
+                      },
+                      {
+                        key: "severity",
+                        header: "Sev",
+                        width: "60px",
+                        align: "right",
+                        render: (r) => (
+                          <span
+                            style={{
+                              fontFamily: FONT.mono,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              borderRadius: "2px",
+                              background: r.severity === "critical" ? "rgba(239,68,68,0.10)" : "rgba(245,158,11,0.10)",
+                              color: r.severity === "critical" ? COL_NEG : COL_WARN,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.08em",
+                            }}
+                          >
+                            {r.severity}
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                </Widget>
+              </div>
+
+              {/* Language distribution donut */}
+              <div style={{ gridColumn: "span 8" }}>
+                <Widget title="Language Distribution" subtitle="DETECTED · DONUT">
+                  {!languageDonutOption ? (
+                    <AwaitingTelemetry label="AWAITING LANGUAGE TELEMETRY" />
+                  ) : (
+                    <ReactECharts option={languageDonutOption} style={{ height: 360 }} opts={{ renderer: "svg" }} />
+                  )}
+                </Widget>
+              </div>
+
+              {/* Source-type breakdown stacked bar */}
+              <div style={{ gridColumn: "span 24" }}>
+                <Widget title="Source Type Breakdown" subtitle="STACKED · PER DAY">
+                  {sourceTypeBreakdownData.length === 0 ? (
+                    <AwaitingTelemetry label="AWAITING SOURCE-TYPE TELEMETRY" />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={sourceTypeBreakdownData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={C.bgSubtle} vertical={false} />
+                        <XAxis dataKey="date" tick={axisTick} tickLine={false} axisLine={{ stroke: C.border }} />
+                        <YAxis tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} width={32} />
+                        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: `${ACCENT}08` }} />
+                        <Legend wrapperStyle={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted }} iconType="circle" />
+                        <Bar dataKey="media" stackId="a" fill={ACCENT} maxBarSize={36} />
+                        <Bar dataKey="social" stackId="a" fill={COL_WARN} maxBarSize={36} />
+                        <Bar dataKey="financial" stackId="a" fill={C.textBody} maxBarSize={36} />
+                        <Bar dataKey="ai" stackId="a" fill={COL_NEG} maxBarSize={36} radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Widget>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ MODULE 2 · 3D Geographic Cartography ═══ */}
+          <div style={{ marginTop: "20px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
+              <div style={{ ...titleLabelStyle, marginBottom: 0, fontSize: 11, color: ACCENT }}>
+                MODULE 2 · 3D GEOGRAPHIC CARTOGRAPHY
+              </div>
+              <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted }}>
+                Deck.gl hexagon layer · zoom: World → MENA → Morocco → City hubs
+              </div>
+            </div>
+
+            <div className="bm-grid" style={gridWrapStyle}>
+              {/* 3D interactive map */}
+              <div style={{ gridColumn: "span 16" }}>
+                <Widget title="Influence Cartography" subtitle="DECK.GL · HEXAGON + SCATTERPLOT" style={{ minHeight: 460 }}>
+                  <div style={{ height: 420 }}>
+                    <GeoCartography3D
+                      geoAggregates={geoAggregates}
+                      onSelectCity={(c) => setGeoDrillDownCity((prev) => (prev === c ? null : c))}
+                    />
+                  </div>
+                </Widget>
+              </div>
+
+              {/* Region drill-down panel */}
+              <div style={{ gridColumn: "span 8" }}>
+                <Widget
+                  title="Region Drill-down"
+                  subtitle={
+                    geoDrillDownCity
+                      ? `${geoDrillDownCity.toUpperCase()} · ${geoDrillDownAlerts.length} ALERTS`
+                      : "NO REGION SELECTED"
+                  }
+                  style={{ minHeight: 460 }}
+                >
+                  {!geoDrillDownCity ? (
+                    <AwaitingTelemetry label="SELECT A CITY MARKER" />
+                  ) : (
+                    <VirtualTable<BrandMonitorAlert>
+                      rows={geoDrillDownAlerts}
+                      height={420}
+                      rowHeight={32}
+                      emptyLabel="NO ALERTS IN REGION"
+                      columns={[
+                        {
+                          key: "time",
+                          header: "Time",
+                          width: "55px",
+                          render: (a) => (
+                            <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: C.textMuted }}>
+                              {a.detectedAt
+                                ? new Date(a.detectedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
+                                : "--:--"}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "source",
+                          header: "Source",
+                          width: "calc(100% - 180px)",
+                          render: (a) => (
+                            <span
+                              style={{ fontSize: "11px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                              title={a.source}
+                            >
+                              {a.source.length > 18 ? a.source.slice(0, 16) + "\u2026" : a.source}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "sentiment",
+                          header: "Sent",
+                          width: "65px",
+                          render: (a) => <SentimentBadge sentiment="negative" score={a.sentimentScore} />,
+                        },
+                        {
+                          key: "severity",
+                          header: "Sev",
+                          width: "60px",
+                          align: "right",
+                          render: (a) => (
+                            <span
+                              style={{
+                                fontFamily: FONT.mono,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                padding: "2px 6px",
+                                borderRadius: "2px",
+                                background: a.severity === "critical" ? "rgba(239,68,68,0.10)" : "rgba(245,158,11,0.10)",
+                                color: a.severity === "critical" ? COL_NEG : COL_WARN,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.08em",
+                              }}
+                            >
+                              {a.severity}
+                            </span>
+                          ),
+                        },
+                      ]}
+                    />
+                  )}
+                </Widget>
+              </div>
+
+              {/* Geographic distribution table (virtualized) */}
+              <div style={{ gridColumn: "span 24" }}>
+                <Widget title="Geographic Distribution" subtitle="VIRTUALIZED · BY CITY">
+                  <VirtualTable<GeoAggregate>
+                    rows={geoAggregates}
+                    height={260}
+                    rowHeight={32}
+                    emptyLabel="AWAITING GEO TELEMETRY"
+                    columns={[
+                      {
+                        key: "city",
+                        header: "City",
+                        width: "180px",
+                        render: (r) => (
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "11px", color: C.text }}>
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                background:
+                                  r.avgSentiment != null && r.avgSentiment < -0.3
+                                    ? COL_NEG
+                                    : r.avgSentiment != null && r.avgSentiment > 0.1
+                                      ? ACCENT
+                                      : C.textMuted,
+                              }}
+                            />
+                            {r.city}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "region",
+                        header: "Region",
+                        width: "180px",
+                        render: (r) => (
+                          <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: C.textMuted }}>{r.region}</span>
+                        ),
+                      },
+                      {
+                        key: "count",
+                        header: "Alerts",
+                        width: "100px",
+                        align: "right",
+                        render: (r) => (
+                          <span style={{ fontFamily: FONT.mono, fontSize: "11px", color: C.text, fontWeight: 700 }}>{r.alertCount}</span>
+                        ),
+                      },
+                      {
+                        key: "sentiment",
+                        header: "Avg Sent",
+                        width: "120px",
+                        align: "right",
+                        render: (r) =>
+                          r.avgSentiment == null ? (
+                            <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: C.border }}>{"\u2014"}</span>
+                          ) : (
+                            <SentimentBadge sentiment={null} score={r.avgSentiment} />
+                          ),
+                      },
+                      {
+                        key: "trend",
+                        header: "Trend",
+                        width: "calc(100% - 580px)",
+                        align: "right",
+                        render: (r) => {
+                          const trendColor = r.trend === "up" ? COL_NEG : r.trend === "down" ? ACCENT : C.textMuted;
+                          const arrow = r.trend === "up" ? "\u2191" : r.trend === "down" ? "\u2193" : "\u2192";
+                          return (
+                            <span
+                              style={{
+                                fontFamily: FONT.mono,
+                                fontSize: "10px",
+                                color: trendColor,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.08em",
+                              }}
+                            >
+                              {arrow} {r.trend}
+                            </span>
+                          );
+                        },
+                      },
+                    ]}
+                  />
+                </Widget>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ MODULE 3 · Predictive Escalation Matrix ═══ */}
+          <div style={{ marginTop: "20px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
+              <div style={{ ...titleLabelStyle, marginBottom: 0, fontSize: 11, color: ACCENT }}>
+                MODULE 3 · PREDICTIVE ESCALATION MATRIX
+              </div>
+              <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted }}>
+                Propagation velocity × source authority · 4×4 grid with drill-down
+              </div>
+            </div>
+
+            {/* Alert level badges */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+              {([
+                { level: "Green" as const, label: "Normal", desc: "nominal" },
+                { level: "Amber" as const, label: "Vigilance", desc: "watch" },
+                { level: "Crimson" as const, label: "Critical", desc: "act now" },
+              ]).map((badge) => {
+                const colors = escalationColors(badge.level);
+                const isActive = activeBadge === badge.level;
+                return (
+                  <div
+                    key={badge.level}
+                    style={{
+                      flex: "1 1 0",
+                      minWidth: 140,
+                      padding: "10px 14px",
+                      background: isActive ? colors.bg : C.bg,
+                      border: `1px solid ${isActive ? colors.border : C.border}`,
+                      borderBottomWidth: isActive ? 3 : 1,
+                      borderRadius: "4px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 3,
+                      transition: "all 0.2s ease",
+                      opacity: isActive ? 1 : 0.55,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: colors.border,
+                          display: "inline-block",
+                          boxShadow: isActive ? `0 0 0 3px ${colors.bg}` : "none",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontFamily: FONT.mono,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: isActive ? colors.fg : C.text,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {badge.label}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT.mono,
+                        fontSize: 9,
+                        color: isActive ? colors.fg : C.textMuted,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        opacity: 0.85,
+                      }}
+                    >
+                      {badge.desc} · {isActive ? "ACTIVE" : "standby"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="bm-grid" style={gridWrapStyle}>
+              {/* 4×4 matrix grid */}
+              <div style={{ gridColumn: "span 12" }}>
+                <Widget title="Escalation Matrix" subtitle="VELOCITY × AUTHORITY · CLICK CELL" style={{ minHeight: 380 }}>
+                  {alerts.length === 0 ? (
+                    <AwaitingTelemetry label="AWAITING ESCALATION TELEMETRY" />
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "70px repeat(4, 1fr)", gap: 3, flex: 1, minHeight: 240 }}>
+                        {/* Header row */}
+                        <div
+                          style={{
+                            fontFamily: FONT.mono,
+                            fontSize: 8,
+                            color: C.textMuted,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          Vel \ Auth
+                        </div>
+                        {(["Low", "Medium", "High", "Elite"] as AuthorityBand[]).map((a) => (
+                          <div
+                            key={a}
+                            style={{
+                              fontFamily: FONT.mono,
+                              fontSize: 10,
+                              color: C.textMuted,
+                              fontWeight: 700,
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "4px",
+                            }}
+                          >
+                            {a}
+                          </div>
+                        ))}
+                        {/* Matrix rows */}
+                        {(["Slow", "Medium", "Fast", "Viral"] as VelocityBand[]).map((v) => (
+                          <Fragment key={v}>
+                            <div
+                              style={{
+                                fontFamily: FONT.mono,
+                                fontSize: 10,
+                                color: C.textMuted,
+                                fontWeight: 700,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "4px",
+                              }}
+                            >
+                              {v}
+                            </div>
+                            {(["Low", "Medium", "High", "Elite"] as AuthorityBand[]).map((a) => {
+                              const cell = escalationMatrix.matrix
+                                .find((r) => r[0].velocity === v)
+                                ?.find((c) => c.authority === a);
+                              const level = escalationLevel(v, a);
+                              const colors = escalationColors(level);
+                              const isSelected =
+                                escalationFilter?.velocity === v && escalationFilter?.authority === a;
+                              const hasAlerts = (cell?.count ?? 0) > 0;
+                              return (
+                                <button
+                                  key={`${v}-${a}`}
+                                  onClick={() => {
+                                    if (hasAlerts) {
+                                      setEscalationFilter((prev) =>
+                                        prev?.velocity === v && prev?.authority === a
+                                          ? null
+                                          : { velocity: v, authority: a },
+                                      );
+                                    }
+                                  }}
+                                  disabled={!hasAlerts}
+                                  style={{
+                                    background: colors.bg,
+                                    border: `1px solid ${isSelected ? ACCENT : colors.border}`,
+                                    borderBottomWidth: isSelected ? 3 : 1,
+                                    borderRadius: "2px",
+                                    padding: "8px 4px",
+                                    cursor: hasAlerts ? "pointer" : "default",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 2,
+                                    transition: "all 0.15s ease",
+                                    opacity: hasAlerts ? 1 : 0.35,
+                                    fontFamily: FONT.mono,
+                                    color: colors.fg,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{cell?.count ?? 0}</span>
+                                  <span
+                                    style={{
+                                      fontSize: 7,
+                                      letterSpacing: "0.1em",
+                                      textTransform: "uppercase",
+                                      opacity: 0.85,
+                                    }}
+                                  >
+                                    {level}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </Fragment>
+                        ))}
+                      </div>
+                      {/* Legend + global indicator */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginTop: 10,
+                          paddingTop: 10,
+                          borderTop: `1px solid ${C.border}`,
+                          fontSize: 8,
+                          fontFamily: FONT.mono,
+                          color: C.textMuted,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          flexWrap: "wrap",
+                          gap: 6,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ width: 8, height: 8, background: "rgba(16,185,129,0.20)", border: "1px solid rgba(16,185,129,0.5)", display: "inline-block" }} />
+                          Green (≤4)
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ width: 8, height: 8, background: "rgba(245,158,11,0.35)", border: "1px solid rgba(245,158,11,0.6)", display: "inline-block" }} />
+                          Amber (&gt;4)
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ width: 8, height: 8, background: "rgba(239,68,68,0.45)", border: "1px solid rgba(239,68,68,0.7)", display: "inline-block" }} />
+                          Red (&gt;8)
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ width: 8, height: 8, background: "rgba(220,38,38,0.85)", border: "1px solid rgba(220,38,38,1)", display: "inline-block" }} />
+                          Crimson (&gt;12)
+                        </div>
+                        <div style={{ color: ACCENT, fontWeight: 700 }}>
+                          GLOBAL: {escalationMatrix.globalVelocityBand} × {escalationMatrix.maxAuthority} · {escalationMatrix.globalVelocityCount}/h
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Widget>
+              </div>
+
+              {/* Escalation drill-down feed */}
+              <div style={{ gridColumn: "span 12" }}>
+                <Widget
+                  title="Escalation Drill-down"
+                  subtitle={
+                    escalationFilter
+                      ? `${escalationFilter.velocity.toUpperCase()} × ${escalationFilter.authority.toUpperCase()} · ${escalationDrillDownAlerts.length} ALERTS`
+                      : "SELECT A CELL"
+                  }
+                  style={{ minHeight: 380 }}
+                >
+                  {!escalationFilter ? (
+                    <AwaitingTelemetry label="SELECT A MATRIX CELL" />
+                  ) : (
+                    <VirtualTable<BrandMonitorAlert>
+                      rows={escalationDrillDownAlerts}
+                      height={340}
+                      rowHeight={32}
+                      emptyLabel="NO ALERTS IN THIS CELL"
+                      columns={[
+                        {
+                          key: "time",
+                          header: "Time",
+                          width: "55px",
+                          render: (a) => (
+                            <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: C.textMuted }}>
+                              {a.detectedAt
+                                ? new Date(a.detectedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
+                                : "--:--"}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "source",
+                          header: "Source",
+                          width: "120px",
+                          render: (a) => (
+                            <span
+                              style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                              title={a.source}
+                            >
+                              {a.source.length > 16 ? a.source.slice(0, 14) + "\u2026" : a.source}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "title",
+                          header: "Title",
+                          width: "calc(100% - 280px)",
+                          render: (a) => (
+                            <span
+                              style={{ fontSize: "11px", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                              title={a.title}
+                            >
+                              {a.title}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "sentiment",
+                          header: "Sent",
+                          width: "60px",
+                          render: (a) => <SentimentBadge sentiment="negative" score={a.sentimentScore} />,
+                        },
+                        {
+                          key: "severity",
+                          header: "Sev",
+                          width: "45px",
+                          align: "right",
+                          render: (a) => (
+                            <span
+                              style={{
+                                fontFamily: FONT.mono,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: a.severity === "critical" ? COL_NEG : COL_WARN,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.08em",
+                              }}
+                            >
+                              {a.severity === "critical" ? "C" : "H"}
+                            </span>
+                          ),
+                        },
+                      ]}
+                    />
+                  )}
+                </Widget>
+              </div>
+            </div>
           </div>
 
           {/* ═══ PRESERVED: Sentiment breakdown bar ═══ */}
