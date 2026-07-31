@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { requireUserCompany } from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/weather
@@ -24,14 +25,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   // Auth check — STRICT (no anonymous access)
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // ACCOUNT TYPE GATE — only brand-monitor + market-competitor + investment-bank accounts can see
   // company reputation data. Traders monitor markets, not companies.
   const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user?.accountType || "")) {
+  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
     return NextResponse.json(
       { error: "Forbidden — this data is for brand-monitor, market-competitor and investment-bank accounts only" },
       { status: 403 }
@@ -42,10 +43,27 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
 
-    // Get company (specified or first)
-    const company = companySlug
-      ? await prisma.company.findUnique({ where: { slug: companySlug } })
-      : await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+    // ─── Company resolution ───────────────────────────────────────
+    // The Console used to do `findFirst({ orderBy: { createdAt: "asc" } })`
+    // which leaked OCP data to every user. We now resolve the company
+    // from the logged-in user's companyId — only fallback to slug
+    // lookup when an admin explicitly passes ?company= (preview mode).
+    let company;
+    if (companySlug) {
+      if (session.user.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only view your own company" },
+          { status: 403 },
+        );
+      }
+      company = await prisma.company.findUnique({ where: { slug: companySlug } });
+    } else {
+      const result = await requireUserCompany();
+      if (!result.ok) return result.response;
+      company = await prisma.company.findUnique({
+        where: { id: result.data.company.id },
+      });
+    }
 
     if (!company) {
       return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { requireUserCompany } from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/neighbors
@@ -47,13 +48,13 @@ function impactLevel(rank: 1 | 2 | 3, sentimentScore: number | null): 1 | 2 | 3 
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // ACCOUNT TYPE GATE — competitors data is brand-monitor + market-competitor + investment-bank only
   const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user?.accountType || "")) {
+  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
     return NextResponse.json(
       { error: "Forbidden — competitor data is for brand-monitor, market-competitor and investment-bank accounts only" },
       { status: 403 }
@@ -65,9 +66,20 @@ export async function GET(req: Request) {
     const companySlug = url.searchParams.get("company");
 
     // Get the primary company (the "you")
-    const primaryCompany = companySlug
-      ? await prisma.company.findUnique({ where: { slug: companySlug } })
-      : await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+    let primaryCompany;
+    if (companySlug) {
+      if (session.user.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only view your own company" },
+          { status: 403 },
+        );
+      }
+      primaryCompany = await prisma.company.findUnique({ where: { slug: companySlug } });
+    } else {
+      const result = await requireUserCompany();
+      if (!result.ok) return result.response;
+      primaryCompany = await prisma.company.findUnique({ where: { id: result.data.company.id } });
+    }
 
     if (!primaryCompany) {
       return NextResponse.json(

@@ -50,6 +50,7 @@ export async function GET() {
         accountType: true,
         role: true,
         company: true,
+        companyId: true,
         message: true,
         createdAt: true,
         expiresAt: true,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, name, role, company, message, requestId, accountType } = body;
+    const { email, name, role, company, message, requestId, accountType, companyId } = body;
 
     if (!email || !name) {
       return NextResponse.json({ error: "Email and name are required" }, { status: 400 });
@@ -85,6 +86,26 @@ export async function POST(req: NextRequest) {
     // Validate accountType
     const validAccountTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
     const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "brand-monitor";
+
+    // Validate role — super-admin can create any role.
+    // (company-admin role implies the new user will be attached to the
+    // specified companyId on activation.)
+    const validRoles = ["user", "admin", "company-admin"];
+    const finalRole = validRoles.includes(role) ? role : "user";
+
+    // If companyId is provided, verify it exists
+    if (companyId) {
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { id: true, name: true },
+      });
+      if (!company) {
+        return NextResponse.json(
+          { error: "Specified companyId does not exist" },
+          { status: 400 },
+        );
+      }
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -118,11 +139,12 @@ export async function POST(req: NextRequest) {
         name,
         passwordHash: placeholderHash,  // placeholder — replaced on activation
         accountType: finalAccountType,
-        role: role || "user",
+        role: finalRole,
         company,
         message,
         createdById: session.user?.id,
         expiresAt,
+        companyId: companyId || null,
       },
     });
 
@@ -151,6 +173,7 @@ export async function POST(req: NextRequest) {
         name,
         accountType: finalAccountType,
         role: invitation.role,
+        companyId: invitation.companyId,
         expiresAt: invitation.expiresAt,
       },
     });

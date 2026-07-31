@@ -108,6 +108,25 @@ export async function POST(req: NextRequest) {
   const demoEmail = `demo-${typedAccountType}@harch.atelier`;
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
+  // ─── Task: user-company-onboarding ─────────────────────────────
+  // Demo users skip the onboarding wizard — they share the FIRST
+  // company in the DB as their company scope (the demo-seed route
+  // populates data for that same company). Traders (harch-alpha)
+  // don't actually call the company-scoped console APIs, so the
+  // fallback company is harmless for them.
+  // We resolve the fallback company once, before the upsert, so the
+  // update + create branches can both reference it.
+  const fallbackCompany = await prisma.company.findFirst({
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
+  const demoCompanyId = fallbackCompany?.id ?? null;
+  if (!demoCompanyId) {
+    logWarn("auth.demo", "No companies in DB — demo user will not have a companyId");
+  } else {
+    logInfo("auth.demo", `Demo user attached to company: ${fallbackCompany?.name}`);
+  }
+
   try {
     const user = await prisma.user.upsert({
       where: { email: demoEmail },
@@ -122,6 +141,13 @@ export async function POST(req: NextRequest) {
         // the demo console hides the WhatsApp button entirely.
         whatsappAlerts: false,
         alertSeverityThreshold: "critical",
+        // ─── Task: user-company-onboarding ────────────────────────
+        // Demo users skip the wizard (onboardingCompleted = true) and
+        // are auto-attached to the first company in the DB so the
+        // company-scoped console APIs (/weather, /alerts, etc.) work
+        // without forcing the user through onboarding first.
+        companyId: demoCompanyId,
+        onboardingCompleted: true,
       },
       create: {
         email: demoEmail,
@@ -131,6 +157,8 @@ export async function POST(req: NextRequest) {
         passwordHash,
         whatsappAlerts: false,
         alertSeverityThreshold: "critical",
+        companyId: demoCompanyId,
+        onboardingCompleted: true,
       },
       select: {
         id: true,

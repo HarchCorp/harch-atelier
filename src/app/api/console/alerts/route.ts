@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { requireUserCompany } from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/alerts
@@ -18,19 +19,31 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user?.accountType || "") && session.user?.role !== "admin") {
+  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
-    const company = companySlug
-      ? await prisma.company.findUnique({ where: { slug: companySlug } })
-      : await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+
+    let company;
+    if (companySlug) {
+      if (session.user.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only view your own company" },
+          { status: 403 },
+        );
+      }
+      company = await prisma.company.findUnique({ where: { slug: companySlug } });
+    } else {
+      const result = await requireUserCompany();
+      if (!result.ok) return result.response;
+      company = await prisma.company.findUnique({ where: { id: result.data.company.id } });
+    }
 
     if (!company) return NextResponse.json({ error: "No company found" }, { status: 404 });
 

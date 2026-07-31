@@ -47,6 +47,7 @@ interface Invitation {
   accountType: string;
   role: string;
   company: string | null;
+  companyId: string | null;
   message: string | null;
   createdAt: string;
   expiresAt: string;
@@ -61,7 +62,40 @@ interface CreatedInvitation {
   name: string;
   accountType: string;
   role: string;
+  companyId?: string | null;
   expiresAt: string;
+}
+
+// ─── Company selector (Task: company-dedup-enterprise-admin) ───────
+interface CompanyListItem {
+  id: string;
+  name: string;
+  slug: string;
+  sector: string;
+  iceNumber: string | null;
+  rcNumber: string | null;
+  website: string | null;
+  parentId: string | null;
+}
+
+interface CreateCompanyResult {
+  company: CompanyListItem;
+  created: boolean;
+  duplicates: {
+    exactMatch: {
+      id: string;
+      name: string;
+      slug: string;
+      iceNumber: string | null;
+    } | null;
+    fuzzyMatches: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      iceNumber: string | null;
+      similarity: number;
+    }>;
+  } | null;
 }
 
 interface AdminStats {
@@ -144,11 +178,34 @@ export function AdminDashboard() {
   const [formName, setFormName] = useState("");
   const [formCompany, setFormCompany] = useState("");
   const [formAccountType, setFormAccountType] = useState("brand-monitor");
+  const [formRole, setFormRole] = useState<"user" | "admin" | "company-admin">("user");
 
   const [formPayment, setFormPayment] = useState("auto");
   const [formMessage, setFormMessage] = useState("");
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // ─── Company selector state (Task: company-dedup-enterprise-admin) ──
+  // The admin can either pick an existing company from a dropdown
+  // (searchable), or click "Create new" to fill an inline form with
+  // ICE/RC. The selected companyId is sent to /api/admin/invitations
+  // so the new user is attached to the company on activation.
+  const [companies, setCompanies] = useState<CompanyListItem[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [newCompany, setNewCompany] = useState({
+    name: "",
+    sector: "",
+    iceNumber: "",
+    rcNumber: "",
+    website: "",
+    headquarters: "",
+  });
+  const [creatingCompany, setCreatingCompany] = useState(false);
+  const [companyCreateError, setCompanyCreateError] = useState<string | null>(null);
+  const [companyCreateInfo, setCompanyCreateInfo] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -230,6 +287,7 @@ export function AdminDashboard() {
       setFormName(request.name);
       setFormCompany(request.company || "");
       setFormAccountType("brand-monitor");
+      setFormRole("user");
 
       setFormPayment("auto");
       setFormMessage("");
@@ -241,13 +299,93 @@ export function AdminDashboard() {
       setFormName("");
       setFormCompany("");
       setFormAccountType("brand-monitor");
+      setFormRole("user");
 
       setFormPayment("auto");
       setFormMessage("");
       setFormError(null);
       (openCreateModal as unknown as { _requestId?: string })._requestId = undefined;
     }
+    // Reset company selector state on each open
+    setSelectedCompanyId("");
+    setCompanySearch("");
+    setShowCreateCompany(false);
+    setNewCompany({ name: "", sector: "", iceNumber: "", rcNumber: "", website: "", headquarters: "" });
+    setCompanyCreateError(null);
+    setCompanyCreateInfo(null);
     setShowCreateModal(true);
+    // Pre-load companies for the dropdown
+    fetchCompanies("");
+  };
+
+  // ─── Company dropdown loader (Task: company-dedup-enterprise-admin) ──
+  const fetchCompanies = useCallback(async (search: string) => {
+    setCompaniesLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: "50", sortBy: "name" });
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/company/list?${params.toString()}`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setCompanies(data.companies || []);
+      } else {
+        setCompanies([]);
+      }
+    } catch {
+      setCompanies([]);
+    }
+    setCompaniesLoading(false);
+  }, []);
+
+  // ─── Inline "create new company" handler ──────────────────────
+  const handleCreateCompany = async () => {
+    setCompanyCreateError(null);
+    setCompanyCreateInfo(null);
+    if (!newCompany.name.trim()) {
+      setCompanyCreateError("Company name is required.");
+      return;
+    }
+    setCreatingCompany(true);
+    try {
+      const res = await fetch("/api/company/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newCompany.name.trim(),
+          sector: newCompany.sector.trim() || undefined,
+          iceNumber: newCompany.iceNumber.trim() || undefined,
+          rcNumber: newCompany.rcNumber.trim() || undefined,
+          website: newCompany.website.trim() || undefined,
+          headquarters: newCompany.headquarters.trim() || undefined,
+        }),
+      });
+      const data: CreateCompanyResult = await res.json();
+      if (res.ok) {
+        setSelectedCompanyId(data.company.id);
+        setFormCompany(data.company.name);
+        setShowCreateCompany(false);
+        if (data.created) {
+          setCompanyCreateInfo(`Created "${data.company.name}".`);
+        } else if (data.duplicates?.exactMatch) {
+          setCompanyCreateInfo(
+            `Linked existing company "${data.duplicates.exactMatch.name}" (matched by ICE/slug).`
+          );
+        } else if (data.duplicates && data.duplicates.fuzzyMatches.length > 0) {
+          setCompanyCreateInfo(
+            `Linked similar company "${data.duplicates.fuzzyMatches[0].name}" (${(data.duplicates.fuzzyMatches[0].similarity * 100).toFixed(0)}% name match).`
+          );
+        } else {
+          setCompanyCreateInfo(`Linked existing company "${data.company.name}".`);
+        }
+        setNewCompany({ name: "", sector: "", iceNumber: "", rcNumber: "", website: "", headquarters: "" });
+        fetchCompanies("");
+      } else {
+        setCompanyCreateError((data as { error?: string }).error || "Failed to create company");
+      }
+    } catch {
+      setCompanyCreateError("Network error");
+    }
+    setCreatingCompany(false);
   };
 
   const handleCreate = async () => {
@@ -267,6 +405,8 @@ export function AdminDashboard() {
           email: formEmail,
           name: formName,
           company: formCompany || undefined,
+          companyId: selectedCompanyId || undefined,
+          role: formRole,
           accountType: formAccountType,
           message: formMessage || undefined,
           requestId: requestId,
@@ -418,10 +558,177 @@ export function AdminDashboard() {
                 <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Jane Doe" style={inputStyle} />
               </div>
 
-              {/* Company */}
+              {/* Role selector (Task: company-dedup-enterprise-admin) */}
               <div>
-                <label style={labelStyle}>Company</label>
-                <input type="text" value={formCompany} onChange={(e) => setFormCompany(e.target.value)} placeholder="Bank of Africa" style={inputStyle} />
+                <label style={labelStyle}>Role *</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: "8px" }}>
+                  {([
+                    { value: "user", label: "User", desc: "Standard access" },
+                    { value: "company-admin", label: "Team Admin", desc: "Invite teammates, manage company" },
+                    { value: "admin", label: "Super-Admin", desc: "Full platform access" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFormRole(opt.value)}
+                      style={{
+                        padding: "10px",
+                        background: formRole === opt.value ? C.bgSubtle : "transparent",
+                        border: `1px solid ${formRole === opt.value ? C.accent : C.border}`,
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div style={{ fontSize: "12px", fontWeight: 600, color: formRole === opt.value ? C.accent : C.text }}>{opt.label}</div>
+                      <div style={{ fontSize: "10px", color: C.textMuted, marginTop: "3px" }}>{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Company selector (Task: company-dedup-enterprise-admin) */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Company</label>
+                  <button
+                    onClick={() => setShowCreateCompany(!showCreateCompany)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: C.accent,
+                      fontFamily: C.fontMono,
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {showCreateCompany ? "← Pick existing" : "+ Create new"}
+                  </button>
+                </div>
+
+                {showCreateCompany ? (
+                  <div style={{ padding: "14px", background: C.bgSubtle, border: `1px solid ${C.border}`, borderRadius: "6px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div>
+                      <label style={{ ...labelStyle, fontSize: "10px" }}>Company name *</label>
+                      <input type="text" value={newCompany.name} onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })} placeholder="Bank of Africa" style={inputStyle} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                      <div>
+                        <label style={{ ...labelStyle, fontSize: "10px" }}>ICE (Morocco tax id)</label>
+                        <input type="text" value={newCompany.iceNumber} onChange={(e) => setNewCompany({ ...newCompany, iceNumber: e.target.value })} placeholder="001234567000045" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={{ ...labelStyle, fontSize: "10px" }}>RC (Registre de Commerce)</label>
+                        <input type="text" value={newCompany.rcNumber} onChange={(e) => setNewCompany({ ...newCompany, rcNumber: e.target.value })} placeholder="12345" style={inputStyle} />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                      <div>
+                        <label style={{ ...labelStyle, fontSize: "10px" }}>Sector</label>
+                        <input type="text" value={newCompany.sector} onChange={(e) => setNewCompany({ ...newCompany, sector: e.target.value })} placeholder="Banking" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={{ ...labelStyle, fontSize: "10px" }}>Website</label>
+                        <input type="text" value={newCompany.website} onChange={(e) => setNewCompany({ ...newCompany, website: e.target.value })} placeholder="https://..." style={inputStyle} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ ...labelStyle, fontSize: "10px" }}>Headquarters</label>
+                      <input type="text" value={newCompany.headquarters} onChange={(e) => setNewCompany({ ...newCompany, headquarters: e.target.value })} placeholder="Casablanca" style={inputStyle} />
+                    </div>
+                    {companyCreateError && (
+                      <div style={{ padding: "8px 10px", background: C.dangerBg, border: `1px solid ${C.danger}30`, borderRadius: "4px", fontSize: "12px", color: C.danger }}>
+                        {companyCreateError}
+                      </div>
+                    )}
+                    {companyCreateInfo && (
+                      <div style={{ padding: "8px 10px", background: C.successBg, border: `1px solid ${C.cta}30`, borderRadius: "4px", fontSize: "12px", color: C.success }}>
+                        {companyCreateInfo}
+                      </div>
+                    )}
+                    <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono, lineHeight: 1.5 }}>
+                      Dedup runs first (ICE then slug then fuzzy name above 0.92). If a match is found, the existing company is linked instead of creating a duplicate.
+                    </div>
+                    <button
+                      onClick={handleCreateCompany}
+                      disabled={creatingCompany}
+                      style={{
+                        padding: "8px 14px",
+                        background: creatingCompany ? C.border : C.accent,
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: creatingCompany ? "not-allowed" : "pointer",
+                        fontFamily: C.fontSans,
+                      }}
+                    >
+                      {creatingCompany ? "Creating..." : "Create + link"}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={companySearch}
+                      onChange={(e) => {
+                        setCompanySearch(e.target.value);
+                        fetchCompanies(e.target.value);
+                      }}
+                      placeholder="Search companies by name, ICE, RC..."
+                      style={inputStyle}
+                    />
+                    {companiesLoading && (
+                      <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "4px" }}>
+                        Loading...
+                      </div>
+                    )}
+                    {!companiesLoading && companies.length > 0 && (
+                      <div style={{ marginTop: "6px", maxHeight: "180px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "4px", background: C.bg }}>
+                        {companies.map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setSelectedCompanyId(c.id);
+                              setFormCompany(c.name);
+                              setCompanySearch(c.name);
+                            }}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              padding: "10px 12px",
+                              background: selectedCompanyId === c.id ? `${C.cta}10` : "transparent",
+                              border: "none",
+                              borderBottom: `1px solid ${C.border}`,
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontFamily: C.fontSans,
+                            }}
+                          >
+                            <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{c.name}</div>
+                            <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono }}>
+                              {c.sector}
+                              {c.iceNumber ? " · ICE " + c.iceNumber : ""}
+                              {c.rcNumber ? " · RC " + c.rcNumber : ""}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {selectedCompanyId && (
+                      <div style={{ marginTop: "6px", padding: "8px 10px", background: C.successBg, border: `1px solid ${C.cta}30`, borderRadius: "4px", fontSize: "12px", color: C.success }}>
+                        Selected: {formCompany} (id {selectedCompanyId.slice(-8)})
+                      </div>
+                    )}
+                    <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "4px", lineHeight: 1.5 }}>
+                      Optional — leave empty for a standalone user. Selecting a company attaches the new user to it on activation. Required for the Team Admin role.
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Account type */}
@@ -667,6 +974,12 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
   const isExpired = new Date(invitation.expiresAt) < new Date();
   const isUsed = !!invitation.usedAt;
 
+  const roleLabel: Record<string, string> = {
+    user: "User",
+    admin: "Super-Admin",
+    "company-admin": "Team Admin",
+  };
+
   return (
     <div style={{ padding: "16px 20px", background: "#fff", border: `1px solid ${C.border}`, borderRadius: "6px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
@@ -674,8 +987,13 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
           <div style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>{invitation.name}</div>
           <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono }}>{invitation.email}</div>
           <div style={{ fontSize: "11px", color: C.textBody, fontFamily: C.fontMono, marginTop: "4px" }}>
-            Type: {invitation.accountType} · Created: {new Date(invitation.createdAt).toLocaleDateString("en-US")}
+            Type: {invitation.accountType} · Role: {roleLabel[invitation.role] || invitation.role} · Created: {new Date(invitation.createdAt).toLocaleDateString("en-US")}
           </div>
+          {(invitation.company || invitation.companyId) && (
+            <div style={{ fontSize: "11px", color: C.accent, fontFamily: C.fontMono, marginTop: "4px" }}>
+              Company: {invitation.company || "—"}{invitation.companyId ? ` (id ${invitation.companyId.slice(-8)})` : ""}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
           <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "3px 8px", borderRadius: "2px", background: isUsed ? `${C.cta}15` : isExpired ? `${C.danger}15` : `${C.warning}15`, color: isUsed ? C.cta : isExpired ? C.danger : C.warning, textTransform: "uppercase", letterSpacing: "0.1em" }}>

@@ -30,6 +30,17 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // ─── Task: company-dedup-enterprise-admin ─────────────────────────
+  // ICE = Identifiant Commun de l'Entreprise (Morocco tax id, 15 digits).
+  // RC  = Registre de Commerce (Morocco trade register number).
+  // Both are optional but ICE is unique when provided (primary dedup key).
+  // parentId links a subsidiary to its parent company (self-referential).
+  iceNumber      String?  // Identifiant Commun de l'Entreprise (Morocco)
+  rcNumber       String?  // Registre de Commerce number
+  parentId       String?  // for subsidiaries (parent company)
+  parent         Company? @relation("CompanyHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subsidiaries   Company[] @relation("CompanyHierarchy")
+
   articles         Article[]
   sentimentScores  SentimentScore[]
   riskAssessments  RiskAssessment[]
@@ -41,6 +52,13 @@ model Company {
   dossiers         Dossier[]
   reports          Report[]
   briefings        Briefing[]
+  users            User[]
+  invitations      Invitation[]
+  settings         CompanySettings?
+
+  @@unique([iceNumber]) // ICE must be unique if provided
+  @@index([sector])
+  @@index([parentId])
 }
 
 model Article {
@@ -293,10 +311,38 @@ model User {
   email         String   @unique
   name          String?
   passwordHash  String?
-  role          String   @default("user")        // user | admin
+  role          String   @default("user")        // user | admin | company-admin
   accountType   String   @default("brand-monitor") // brand-monitor | market-competitor | investment-bank | harch-alpha (ISOLATED)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  // ─── Task: company-dedup-enterprise-admin ───────────────────────────
+  // companyId: the company this user belongs to (null for super-admins
+  // and users not yet linked to a company). company-admin role implies
+  // companyId is non-null — enforced at the API layer, not the DB.
+  // status: active | suspended (a company-admin can suspend a member).
+  // lastLoginAt: best-effort timestamp updated on each successful
+  // credentials sign-in (used by the enterprise team list).
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  status        String   @default("active") // active | suspended
+  lastLoginAt   DateTime?
+
+  // ─── Task: user-company-onboarding ─────────────────────────────────
+  // jobTitle: free-form role at the company (Dircom, CRO, Analyst, ...).
+  // onboardingCompleted: false until the user finishes the 4-step wizard
+  // at /atelier/onboarding. Console APIs hard-403 if this is false and
+  // the user has no companyId — preventing the "every user sees OCP"
+  // leak that the old findFirst() fallback caused.
+  // topics / competitors / trackedAssets: lightweight JSON prefs captured
+  // during onboarding step 3 (per accountType). Stored on the user row
+  // so the dashboards can pre-filter without an extra join.
+  jobTitle              String?
+  onboardingCompleted   Boolean  @default(false)
+  topics                String[]  @default([])
+  competitors           String[]  @default([])
+  trackedAssets         String[]  @default([])
+  useCaseNote           String?
 
   // ─── WhatsApp alerts (Twilio) ────────────────────────────────────
   // whatsappNumber: E.164 format phone (e.g. +212600000000). NULL = unset.
@@ -313,6 +359,10 @@ model User {
   dossiers      Dossier[]
   reports       Report[]
   briefings     Briefing[]
+  invitations   Invitation[] @relation("InvitationCreator")
+
+  @@index([companyId])
+  @@index([status])
 }
 
 model Account {
@@ -411,20 +461,30 @@ model Invitation {
   name          String
   passwordHash  String    // bcrypt hash of admin-generated password (NEVER plaintext)
   accountType   String    @default("brand-monitor")  // brand-monitor | market-competitor | investment-bank | harch-alpha
-  role          String    @default("user")        // user | admin
+  role          String    @default("user")        // user | admin | company-admin
   company       String?
   message       String?   // optional personal message from admin
   createdById   String?
+  createdBy     User?     @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
   expiresAt     DateTime
   usedAt        DateTime?  // null until user accepts
   acceptedById  String?  // the User.id created from this invitation
+
+  // ─── Task: company-dedup-enterprise-admin ─────────────────────────
+  // companyId: the company this invitation is scoped to. When a
+  // company-admin invites a teammate, this is set to their own
+  // companyId so the new user is automatically attached to the same
+  // company on activation. Super-admins can leave it null.
+  companyId     String?
+  companyRef    Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   accessRequests AccessRequest[]
 
   @@index([token])
   @@index([email])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 // ─── TRADER MODELS (Asset, AssetPrice, AssetSentiment) ──────────
@@ -691,4 +751,30 @@ model SanctionsCache {
   updatedAt     DateTime @updatedAt
 
   @@index([list, downloadedAt])
+}
+
+// ─── COMPANY SETTINGS (Task: company-dedup-enterprise-admin) ────────
+// Per-company configuration managed by the company-admin role.
+// One row per Company (1:1). The `topics`, `competitors` and
+// `alertThresholds` fields are JSON-encoded arrays/objects so they
+// can evolve without a schema migration:
+//   - topics:           ["OCP", "phosphate prices", "ESG"]
+//   - competitors:      ["Competitor A", "Competitor B"]
+//   - alertThresholds:  { sentimentDrop: -0.3, riskLevel: "high", minMentions: 5 }
+//   - monitoredSources: ["lematin.ma", "hespress.com", ...]
+// A row is lazily created the first time a company-admin saves any
+// setting. GET returns sensible defaults if no row exists yet.
+
+model CompanySettings {
+  id                String   @id @default(cuid())
+  companyId         String   @unique
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  topics            String   @default("[]")  // JSON array of topic labels
+  competitors       String   @default("[]")  // JSON array of competitor names/slugs
+  monitoredSources  String   @default("[]")  // JSON array of source URLs/domains
+  alertThresholds   String   @default("{}")  // JSON object { sentimentDrop, riskLevel, minMentions }
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([companyId])
 }

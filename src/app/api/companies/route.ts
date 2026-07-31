@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20")));
     const sector = searchParams.get("sector") || undefined;
+    const q = searchParams.get("q") || undefined;
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
 
@@ -15,7 +16,22 @@ export async function GET(request: NextRequest) {
       ? (sortBy as typeof validSortFields[number])
       : "createdAt";
 
-    const where = sector ? { sector } : {};
+    // ─── Task: user-company-onboarding ─────────────────────────────
+    // Support ?q= free-text search on name + aliases. Used by the
+    // onboarding wizard's "pick existing company" step. Case-insensitive
+    // contains matching on the name column.
+    const where: {
+      sector?: string;
+      OR?: Array<{ name?: { contains: string; mode: "insensitive" }; aliases?: { has: string } }>;
+    } = {};
+    if (sector) where.sector = sector;
+    if (q && q.trim()) {
+      const term = q.trim();
+      where.OR = [
+        { name: { contains: term, mode: "insensitive" } },
+        { aliases: { has: term } },
+      ];
+    }
     const skip = (page - 1) * limit;
 
     const [companies, total] = await Promise.all([
@@ -36,6 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data,
+      companies: data,
       pagination: {
         page,
         limit,

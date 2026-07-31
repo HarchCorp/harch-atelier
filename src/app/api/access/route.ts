@@ -81,16 +81,18 @@ export async function POST(req: NextRequest) {
         name: invitation.name,
         passwordHash,
         role: invitation.role,
-        
         accountType: invitation.accountType,
+        // Attach the new user to the company the invitation was scoped to
+        // (null for super-admin-created invitations without a companyId).
+        companyId: invitation.companyId,
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
-        
         accountType: true,
+        companyId: true,
       },
     });
 
@@ -137,10 +139,11 @@ export async function GET(req: NextRequest) {
         id: true,
         email: true,
         name: true,
-        
+
         role: true,
         accountType: true,
         company: true,
+        companyId: true,
         message: true,
         createdAt: true,
         expiresAt: true,

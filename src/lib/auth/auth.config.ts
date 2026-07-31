@@ -24,6 +24,8 @@ declare module "next-auth" {
     id?: string;
     role?: string;
     accountType?: string;  // brand-monitor | market-competitor | investment-bank | harch-alpha
+    companyId?: string | null;
+    status?: string;
   }
   interface Session {
     user: {
@@ -33,6 +35,8 @@ declare module "next-auth" {
       image?: string | null;
       role?: string;
       accountType?: string;
+      companyId?: string | null;
+      status?: string;
     };
   }
 }
@@ -42,6 +46,8 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: string;
     accountType?: string;
+    companyId?: string | null;
+    status?: string;
   }
 }
 
@@ -98,11 +104,25 @@ export const authOptions: NextAuthOptions = {
         });
         if (!user || !user.passwordHash) return null;
 
+        // Suspended users cannot sign in (company-admin can deactivate).
+        if (user.status === "suspended") return null;
+
         const valid = await bcrypt.compare(
           credentials.password,
           user.passwordHash,
         );
         if (!valid) return null;
+
+        // Best-effort update of lastLoginAt (fire-and-forget — do not
+        // block the sign-in flow on this write).
+        prisma.user
+          .update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          })
+          .catch(() => {
+            /* swallow — best-effort */
+          });
 
         return {
           id: user.id,
@@ -110,6 +130,8 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           accountType: user.accountType,
+          companyId: user.companyId,
+          status: user.status,
         };
       },
     }),
@@ -120,6 +142,8 @@ export const authOptions: NextAuthOptions = {
         token.id = (user as { id?: string }).id;
         token.role = (user as { role?: string }).role;
         token.accountType = (user as { accountType?: string }).accountType;
+        token.companyId = (user as { companyId?: string | null }).companyId;
+        token.status = (user as { status?: string }).status;
       }
       return token;
     },
@@ -128,6 +152,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as { id?: string }).id = token.id;
         (session.user as { role?: string }).role = token.role;
         (session.user as { accountType?: string }).accountType = token.accountType;
+        (session.user as { companyId?: string | null }).companyId = token.companyId;
+        (session.user as { status?: string }).status = token.status;
       }
       return session;
     },
@@ -136,9 +162,12 @@ export const authOptions: NextAuthOptions = {
 
 // ─── Helper: route a user to the correct console based on accountType ──
 // Admins always go to /atelier/admin.
+// company-admin goes to /atelier/console/enterprise-admin (self-service
+// panel for inviting teammates + configuring their company).
 // Other users go to /atelier/console/<accountType>.
 export function getConsolePath(accountType?: string, role?: string): string {
   if (role === "admin") return "/atelier/admin";
+  if (role === "company-admin") return "/atelier/console/enterprise-admin";
   switch (accountType) {
     case "brand-monitor":
       return "/atelier/console/brand-monitor";
