@@ -71,10 +71,10 @@ export async function logAudit(params: LogAuditParams): Promise<void> {
         result: params.result,
         ipAddress: params.ipAddress ?? null,
         userAgent: params.userAgent ?? null,
-        // Prisma treats `undefined` as "skip this field" — fine for an
-        // optional Json column. We pass an actual value when metadata
-        // is provided so the row is queryable.
-        metadata: params.metadata ?? undefined,
+        // Prisma Json fields need a cast — Record<string, unknown> isn't
+        // directly assignable to InputJsonValue. Use JSON.stringify + parse
+        // round-trip, or just cast. Cast is safe here since we control the input.
+        ...(params.metadata ? { metadata: params.metadata as any } : {}),
       },
     });
   } catch (err) {
