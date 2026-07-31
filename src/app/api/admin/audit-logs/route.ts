@@ -135,18 +135,23 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
-        },
       }),
       prisma.auditLog.count({ where }),
     ]);
+
+    // Fetch user info separately (AuditLog.userId is a plain string, not a relation)
+    const userIds = [...new Set(logs.map((l) => l.userId).filter(Boolean))] as string[];
+    const users = userIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, email: true, name: true },
+        })
+      : [];
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const logsWithUsers = logs.map((l) => ({
+      ...l,
+      user: l.userId ? userMap.get(l.userId) ?? null : null,
+    }));
 
     // ─── Stats: today's count + top actions + top users ─────────
     // Run in parallel. "Today" is computed against UTC midnight so
@@ -200,7 +205,7 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
-      logs,
+      logs: logsWithUsers,
       total,
       page,
       limit,
