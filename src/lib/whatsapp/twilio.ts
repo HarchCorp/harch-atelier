@@ -14,7 +14,9 @@
 //  secrets.
 // ═══════════════════════════════════════════════════════════════
 
-import type Twilio from "twilio";
+import Twilio from "twilio";
+
+type TwilioClient = InstanceType<typeof Twilio>;
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -67,13 +69,13 @@ export function isTwilioConfigured(): boolean {
 }
 
 // ─── Lazy Twilio client (only created when configured) ─────────────
-let _client: Twilio | null = null;
+let _client: TwilioClient | null = null;
 
-async function getTwilioClient(): Promise<Twilio> {
+async function getTwilioClient(): Promise<TwilioClient> {
   if (_client) return _client;
   // Dynamic import keeps twilio out of bundles that never send.
   const mod = (await import("twilio")) as unknown as {
-    default: (sid: string, token: string) => Twilio;
+    default: (sid: string, token: string) => TwilioClient;
   };
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
