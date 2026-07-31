@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ScatterChart, Scatter, ZAxis,
+  LineChart, Line, Area, AreaChart,
+  RadialBarChart, RadialBar, Legend,
+} from "recharts";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 
@@ -53,6 +60,22 @@ export interface RedFlag {
   source: string;
 }
 
+export interface InvestorDossier {
+  id: string;
+  title: string;
+  status: string;                 // draft | generating | ready | archived
+  target: string;
+  targetType: "company";
+  summary: string;
+  riskScore: number;              // 0-100 (higher = riskier)
+  riskBand: "low" | "medium" | "high" | "critical";
+  threats: number;
+  opportunities: number;
+  createdAt: string;
+  updatedAt: string;
+  company: { slug: string; name: string; sector: string; reputationScore: number | null } | null;
+}
+
 export interface InvestorDeskDashboardProps {
   userName: string;
   userEmail: string | null;
@@ -69,6 +92,83 @@ const ACCENT_BG = "rgba(30,58,95,0.06)";
 const RED = "#dc2626";
 const AMBER = "#d97706";
 const GREEN = "#059669";
+const CRITICAL = "#7f1d1d";          // dark red for critical risk band
+const SLATE_LIGHT = "#94a3b8";       // slate for empty/secondary slices
+
+// ─── Chart palettes (navy / slate / amber / red shades) ────────
+
+const SECTOR_PALETTE = [
+  "#1e3a5f", "#2c5282", "#3b6ea5", "#5a89b8",
+  "#7d9cc4", "#a8c0d8", "#94a3b8", "#cbd5e1",
+  "#d97706", "#dc2626", "#7f1d1d",
+];
+
+const RISK_BAND_COLORS: Record<string, string> = {
+  low: GREEN,
+  medium: AMBER,
+  high: RED,
+  critical: CRITICAL,
+};
+
+const UBO_COLORS: Record<string, string> = {
+  clear: GREEN,
+  watch: AMBER,
+  red: RED,
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: "#5a89b8",
+  generating: "#d97706",
+  ready: "#1e3a5f",
+  archived: "#94a3b8",
+  review: "#3b6ea5",
+  published: "#1e3a5f",
+};
+
+// Shared tooltip style — institutional terminal vibe
+const chartTooltipStyle: React.CSSProperties = {
+  background: "#0a0a0a",
+  border: "1px solid #1e3a5f",
+  borderRadius: "4px",
+  padding: "8px 12px",
+  fontSize: "11px",
+  fontFamily: "'Space Mono', monospace",
+  color: "#ffffff",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+};
+
+const chartAxisStyle = {
+  fontSize: 10,
+  fontFamily: "'Space Mono', monospace",
+  fill: "#737373",
+};
+
+// ─── Chart card wrapper ────────────────────────────────────────
+
+const chartCardStyle: React.CSSProperties = {
+  border: "1px solid #e5e5e5",
+  borderRadius: "8px",
+  padding: "20px",
+  marginBottom: "24px",
+  background: "#ffffff",
+};
+
+const chartTitleStyle: React.CSSProperties = {
+  fontSize: "10px",
+  fontFamily: "'Space Mono', monospace",
+  color: "#737373",
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  marginBottom: "4px",
+  fontWeight: 600,
+};
+
+const chartSubtitleStyle: React.CSSProperties = {
+  fontSize: "12px",
+  color: "#0a0a0a",
+  fontWeight: 600,
+  marginBottom: "16px",
+};
 
 // ─── Component ──────────────────────────────────────────────────
 
@@ -83,6 +183,7 @@ export function InvestorDeskDashboard({
   const [kpis, setKpis] = useState<InvestorKPI | null>(injectedKpis ?? null);
   const [holdings, setHoldings] = useState<InvestorHolding[]>(injectedHoldings ?? []);
   const [redFlags, setRedFlags] = useState<RedFlag[]>(injectedRedFlags ?? []);
+  const [dossiers, setDossiers] = useState<InvestorDossier[]>([]);
   const [loading, setLoading] = useState(!injectedKpis);
   const [error, setError] = useState(false);
   const [riskFilter, setRiskFilter] = useState<"all" | "high" | "watch" | "clear">("all");
@@ -96,9 +197,10 @@ export function InvestorDeskDashboard({
     else setLoading(true);
     setError(false);
     try {
-      const [portRes, statsRes] = await Promise.all([
+      const [portRes, statsRes, dossierRes] = await Promise.all([
         fetch("/api/investor/portfolios"),
         fetch("/api/investor/stats"),
+        fetch("/api/investor/dossiers"),
       ]);
 
       let fetchedHoldings: InvestorHolding[] = [];
@@ -111,18 +213,30 @@ export function InvestorDeskDashboard({
           (p.holdings ?? []).map((hRaw: unknown) => {
             const h = hRaw as Record<string, unknown>;
             const company = h.company as Record<string, unknown> | null;
+            const highRisks = (company?.highRisks as number) ?? 0;
+            const repScore = (company?.reputationScore as number) ?? null;
+            // UBO flag derived: red if high risks >= 3, watch if > 0, clear otherwise
+            const uboFlag: InvestorHolding["uboFlag"] =
+              highRisks >= 3 ? "red" : highRisks > 0 ? "watch" : "clear";
             return {
               id: h.id as string,
-              companyName: (company?.name as string) || (h.asset as { name?: string })?.name || "—",
-              sector: (company?.sector as string) || "—",
+              companyName: (company?.name as string) || (h.asset as { name?: string })?.name || "\u2014",
+              sector: (company?.sector as string) || "\u2014",
               weight: h.weight as number,
-              reputationScore: (company?.reputationScore as number) ?? null,
-              highRiskCount: (company?.highRisks as number) ?? 0,
+              reputationScore: repScore,
+              highRiskCount: highRisks,
               adverseMediaCount: 0,
-              uboFlag: "clear" as const,
+              uboFlag,
             };
           })
         );
+      }
+
+      // Fetch dossiers (real data from Neon)
+      let fetchedDossiers: InvestorDossier[] = [];
+      if (dossierRes.ok) {
+        const d = await dossierRes.json();
+        fetchedDossiers = (d.dossiers ?? []) as InvestorDossier[];
       }
 
       if (statsRes.ok) {
@@ -148,6 +262,7 @@ export function InvestorDeskDashboard({
         });
       }
       setHoldings(fetchedHoldings);
+      setDossiers(fetchedDossiers);
       setLastRefresh(new Date());
     } catch {
       setError(true);
@@ -204,6 +319,95 @@ export function InvestorDeskDashboard({
   const uboColor = (kpis?.uboRiskScore ?? 50) >= 60 ? RED : (kpis?.uboRiskScore ?? 50) >= 40 ? AMBER : GREEN;
   const maColor = (kpis?.maTargetSentiment ?? 0) > 0.3 ? GREEN : (kpis?.maTargetSentiment ?? 0) < -0.3 ? RED : AMBER;
   const adverseColor = (kpis?.adverseMediaHits ?? 0) > 5 ? RED : (kpis?.adverseMediaHits ?? 0) > 0 ? AMBER : GREEN;
+
+  // ─── Chart data derivation (all from real API data) ────────
+
+  // 1. Sector exposure — aggregate holdings by sector, sum weights
+  const sectorData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const h of holdings) {
+      const sec = h.sector === "\u2014" ? "Unspecified" : h.sector;
+      map.set(sec, (map.get(sec) ?? 0) + (h.weight || 0));
+    }
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value: Math.round(value * 1000) / 10 }))  // weight %
+      .sort((a, b) => b.value - a.value);
+  }, [holdings]);
+
+  // 2. Risk band distribution — count dossiers per riskBand
+  const riskBandData = useMemo(() => {
+    const bands: Array<{ band: string; label: string; count: number }> = [
+      { band: "low", label: "Low", count: 0 },
+      { band: "medium", label: "Medium", count: 0 },
+      { band: "high", label: "High", count: 0 },
+      { band: "critical", label: "Critical", count: 0 },
+    ];
+    for (const d of dossiers) {
+      const row = bands.find((b) => b.band === d.riskBand);
+      if (row) row.count += 1;
+    }
+    return bands;
+  }, [dossiers]);
+
+  // 3. Reputation vs risk scatter — each holding plotted
+  const scatterData = useMemo(() => {
+    const groups: Record<string, Array<{ x: number; y: number; z: number; company: string }>> = {
+      clear: [], watch: [], red: [],
+    };
+    for (const h of holdings) {
+      const rep = h.reputationScore ?? 0;
+      const bucket = groups[h.uboFlag] ?? groups.clear;
+      bucket.push({
+        x: rep,
+        y: h.highRiskCount,
+        z: Math.max(20, Math.round((h.weight || 0) * 400)),  // bubble size from weight
+        company: h.companyName,
+      });
+    }
+    return groups;
+  }, [holdings]);
+
+  // 4. Exposure by company — top 10 holdings by weight, descending
+  const exposureData = useMemo(() => {
+    return [...holdings]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 10)
+      .map((h) => ({
+        company: h.companyName.length > 22 ? h.companyName.slice(0, 20) + "\u2026" : h.companyName,
+        exposure: Math.round((h.weight || 0) * 1000) / 10,  // %
+        fullName: h.companyName,
+      }));
+  }, [holdings]);
+
+  // 5. Risk score trend — dossiers sorted by updatedAt asc
+  const riskTrendData = useMemo(() => {
+    return [...dossiers]
+      .filter((d) => d.updatedAt)
+      .sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())
+      .slice(-12)  // last 12 updates
+      .map((d) => ({
+        date: new Date(d.updatedAt).toLocaleDateString("en-US", { month: "short", day: "2-digit" }),
+        riskScore: d.riskScore,
+        target: d.target,
+      }));
+  }, [dossiers]);
+
+  // 6. Dossier status breakdown — group by status for radial
+  const dossierStatusData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of dossiers) {
+      map.set(d.status, (map.get(d.status) ?? 0) + 1);
+    }
+    const maxCount = Math.max(1, ...Array.from(map.values()));
+    return Array.from(map.entries()).map(([status, count]) => ({
+      status,
+      count,
+      pct: Math.round((count / maxCount) * 100),
+      fill: STATUS_COLORS[status] ?? SLATE_LIGHT,
+    }));
+  }, [dossiers]);
+
+  const dossierTotal = dossiers.length;
 
   return (
     <div className="dash-main" style={{ padding: "24px", background: "#ffffff", overflowX: "hidden" }}>
@@ -269,6 +473,273 @@ export function InvestorDeskDashboard({
           <div style={{ fontSize: "10px", color: "#737373", fontFamily: FONT.mono, marginTop: "8px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
             M&A target sentiment
           </div>
+        </div>
+      </div>
+      )}
+
+      {/* ─── Risk Analytics — 6 charts (recharts + real API data) ─── */}
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "24px", marginBottom: "24px" }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} style={chartCardStyle}><SkeletonLoader accent={ACCENT} lines={1} height={250} /></div>
+          ))}
+        </div>
+      ) : error ? (
+        <div style={{ marginBottom: "24px" }}><ErrorState accent={ACCENT} message="Risk analytics feed unavailable. Retrying on next refresh." /></div>
+      ) : (
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
+          <div>
+            <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: ACCENT, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+              Risk Analytics
+            </div>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#0a0a0a" }}>
+              Six-lens diligence breakdown
+            </div>
+          </div>
+          <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: "#737373", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            {dossierTotal} dossiers &middot; {holdings.length} holdings
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "24px" }}>
+
+          {/* ── 1. Portfolio Exposure by Sector (Donut PieChart) ── */}
+          <div style={chartCardStyle}>
+            <div style={chartTitleStyle}>01 {"\u2014"} Sector Allocation</div>
+            <div style={chartSubtitleStyle}>Portfolio exposure by sector</div>
+            {sectorData.length === 0 ? (
+              <div style={{ height: 250, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: FONT.mono, color: "#737373" }}>No holdings to aggregate</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={sectorData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    isAnimationActive={false}
+                  >
+                    {sectorData.map((entry, index) => (
+                      <Cell
+                        key={`sector-${index}`}
+                        fill={SECTOR_PALETTE[index % SECTOR_PALETTE.length]}
+                        stroke="#ffffff"
+                        strokeWidth={1}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            {sectorData.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", marginTop: "8px" }}>
+                {sectorData.slice(0, 6).map((s, i) => (
+                  <div key={s.name} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10px", fontFamily: FONT.mono, color: "#525252" }}>
+                    <span style={{ width: "8px", height: "8px", background: SECTOR_PALETTE[i % SECTOR_PALETTE.length], borderRadius: "1px" }} />
+                    {s.name} <span style={{ color: "#0a0a0a", fontWeight: 600 }}>{s.value.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── 2. Risk Score Distribution (BarChart) ── */}
+          <div style={chartCardStyle}>
+            <div style={chartTitleStyle}>02 {"\u2014"} Risk Band Distribution</div>
+            <div style={chartSubtitleStyle}>Dossiers grouped by severity</div>
+            {dossierTotal === 0 ? (
+              <div style={{ height: 250, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: FONT.mono, color: "#737373" }}>No dossiers published</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={riskBandData} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                  <XAxis dataKey="label" tick={chartAxisStyle} axisLine={{ stroke: "#e5e5e5" }} tickLine={false} />
+                  <YAxis tick={chartAxisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={chartTooltipStyle} cursor={{ fill: "rgba(30,58,95,0.04)" }} formatter={(v: number) => [`${v} dossier${v === 1 ? "" : "s"}`, "Count"]} />
+                  <Bar dataKey="count" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                    {riskBandData.map((entry) => (
+                      <Cell key={`rb-${entry.band}`} fill={RISK_BAND_COLORS[entry.band] ?? SLATE_LIGHT} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* ── 3. Reputation vs Risk (ScatterChart) ── */}
+          <div style={chartCardStyle}>
+            <div style={chartTitleStyle}>03 {"\u2014"} Reputation / Risk Map</div>
+            <div style={chartSubtitleStyle}>Holdings plotted by reputation vs high-risk count</div>
+            {holdings.length === 0 ? (
+              <div style={{ height: 250, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: FONT.mono, color: "#737373" }}>No holdings to plot</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <ScatterChart margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    type="number"
+                    dataKey="x"
+                    name="Reputation"
+                    domain={[0, 100]}
+                    tick={chartAxisStyle}
+                    axisLine={{ stroke: "#e5e5e5" }}
+                    tickLine={false}
+                    label={{ value: "Reputation", position: "insideBottom", offset: -2, style: { fontSize: 9, fontFamily: "'Space Mono', monospace", fill: "#737373" } }}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="y"
+                    name="High risks"
+                    tick={chartAxisStyle}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <ZAxis type="number" dataKey="z" range={[20, 400]} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    cursor={{ strokeDasharray: "3 3", stroke: "#94a3b8" }}
+                    formatter={(v: number, name: string) => {
+                      if (name === "Reputation") return [v, "Reputation"];
+                      if (name === "High risks") return [v, "High risks"];
+                      return [v, name];
+                    }}
+                  />
+                  <Scatter name="Clear" data={scatterData.clear} fill={UBO_COLORS.clear} fillOpacity={0.7} isAnimationActive={false} />
+                  <Scatter name="Watch" data={scatterData.watch} fill={UBO_COLORS.watch} fillOpacity={0.75} isAnimationActive={false} />
+                  <Scatter name="Red" data={scatterData.red} fill={UBO_COLORS.red} fillOpacity={0.8} isAnimationActive={false} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            )}
+            {holdings.length > 0 && (
+              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+                {(["clear", "watch", "red"] as const).map((f) => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10px", fontFamily: FONT.mono, color: "#525252" }}>
+                    <span style={{ width: "8px", height: "8px", background: UBO_COLORS[f], borderRadius: "50%" }} />
+                    {f === "clear" ? "Clear" : f === "watch" ? "Watch" : "Red flag"}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── 4. Exposure by Company (Horizontal BarChart) ── */}
+          <div style={chartCardStyle}>
+            <div style={chartTitleStyle}>04 {"\u2014"} Top Concentrations</div>
+            <div style={chartSubtitleStyle}>Exposure by holding (top 10, %)</div>
+            {exposureData.length === 0 ? (
+              <div style={{ height: 250, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: FONT.mono, color: "#737373" }}>No positions to display</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={exposureData} layout="vertical" margin={{ top: 0, right: 12, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                  <XAxis type="number" tick={chartAxisStyle} axisLine={{ stroke: "#e5e5e5" }} tickLine={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="company"
+                    tick={{ ...chartAxisStyle, fontSize: 9 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={110}
+                  />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    cursor={{ fill: "rgba(30,58,95,0.04)" }}
+                    formatter={(v: number, _name: string, props) => [`${v.toFixed(1)}%`, (props.payload as { fullName?: string })?.fullName ?? "Exposure"]}
+                  />
+                  <Bar dataKey="exposure" fill={ACCENT} radius={[0, 3, 3, 0]} isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* ── 5. Risk Score Trend (LineChart with area fill) ── */}
+          <div style={chartCardStyle}>
+            <div style={chartTitleStyle}>05 {"\u2014"} Risk Score Trend</div>
+            <div style={chartSubtitleStyle}>Dossier risk score evolution (last 12 updates)</div>
+            {riskTrendData.length === 0 ? (
+              <div style={{ height: 250, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: FONT.mono, color: "#737373" }}>No dossier history yet</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={riskTrendData} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="riskTrendFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={ACCENT} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={ACCENT} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                  <XAxis dataKey="date" tick={chartAxisStyle} axisLine={{ stroke: "#e5e5e5" }} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={chartAxisStyle} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(v: number, _n: string, props) => [`${v}`, `Risk: ${(props.payload as { target?: string })?.target ?? ""}`]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="riskScore"
+                    stroke={ACCENT}
+                    strokeWidth={2}
+                    fill="url(#riskTrendFill)"
+                    isAnimationActive={false}
+                    dot={{ r: 3, fill: ACCENT, strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: ACCENT, stroke: "#ffffff", strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* ── 6. Dossier Status Breakdown (RadialBarChart) ── */}
+          <div style={chartCardStyle}>
+            <div style={chartTitleStyle}>06 {"\u2014"} Dossier Pipeline</div>
+            <div style={chartSubtitleStyle}>Status breakdown of {dossierTotal} dossiers</div>
+            {dossierStatusData.length === 0 ? (
+              <div style={{ height: 250, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: FONT.mono, color: "#737373" }}>No dossiers to break down</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <RadialBarChart
+                  innerRadius="25%"
+                  outerRadius="100%"
+                  data={dossierStatusData}
+                  startAngle={90}
+                  endAngle={-270}
+                  cx="50%"
+                  cy="50%"
+                >
+                  <RadialBar background={{ fill: "#f4f4f5" }} dataKey="pct" cornerRadius={3} isAnimationActive={false} />
+                  <Legend
+                    iconSize={8}
+                    layout="vertical"
+                    verticalAlign="middle"
+                    align="right"
+                    wrapperStyle={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", color: "#525252", lineHeight: "18px" }}
+                    formatter={(value: string) => {
+                      const row = dossierStatusData.find((d) => d.status === value);
+                      return `${value} (${row?.count ?? 0})`;
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(_v: number, _name: string, props) => {
+                      const row = props.payload as { status: string; count: number };
+                      return [`${row.count} dossier${row.count === 1 ? "" : "s"}`, row.status];
+                    }}
+                  />
+                </RadialBarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
         </div>
       </div>
       )}

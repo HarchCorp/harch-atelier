@@ -36,12 +36,50 @@ export async function GET() {
             slug: true,
             name: true,
             sector: true,
+            reputationScores: { orderBy: { calculatedAt: "desc" }, take: 1 },
+            riskAssessments: { where: { riskLevel: "high" } },
           },
         },
       },
     });
 
-    return NextResponse.json({ dossiers });
+    // Derive riskScore + riskBand from the linked company's latest
+    // reputation score (repScore 0-100 -> riskScore = 100 - repScore).
+    const formatted = dossiers.map((d) => {
+      const repScore = d.company?.reputationScores?.[0]?.overall ?? null;
+      const riskScore = repScore !== null ? Math.round(100 - repScore) : 50;
+      const riskBand: "low" | "medium" | "high" | "critical" =
+        riskScore >= 70 ? "critical" :
+        riskScore >= 50 ? "high" :
+        riskScore >= 30 ? "medium" : "low";
+      const highRiskCount = d.company?.riskAssessments?.length ?? 0;
+      return {
+        id: d.id,
+        title: d.title,
+        status: d.status,                   // draft | generating | ready | archived
+        target: d.company?.name ?? d.title,
+        targetType: "company" as const,
+        summary: d.company
+          ? `${d.company.name} \u2014 ${d.company.sector}`
+          : d.title,
+        riskScore,
+        riskBand,
+        threats: highRiskCount,
+        opportunities: repScore !== null && repScore >= 60 ? 1 : 0,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+        company: d.company
+          ? {
+              slug: d.company.slug,
+              name: d.company.name,
+              sector: d.company.sector,
+              reputationScore: repScore,
+            }
+          : null,
+      };
+    });
+
+    return NextResponse.json({ dossiers: formatted });
   } catch (err) {
     console.error("Investor dossiers error:", err);
     return NextResponse.json(
