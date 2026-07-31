@@ -19,13 +19,22 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Look up user by email (session.user.id may be undefined in JWT sessions)
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
   try {
     const notifications = await prisma.notification.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {
@@ -58,8 +67,17 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Look up user by email (session.user.id may be undefined in JWT sessions)
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
   try {
@@ -72,7 +90,7 @@ export async function PATCH(req: Request) {
 
     if (id === "all") {
       const result = await prisma.notification.updateMany({
-        where: { userId: session.user.id, read: false },
+        where: { userId: user.id, read: false },
         data: { read: true },
       });
       return NextResponse.json({ marked: result.count, scope: "all" });
@@ -80,7 +98,7 @@ export async function PATCH(req: Request) {
 
     // Single notification — verify ownership before updating
     const updated = await prisma.notification.updateMany({
-      where: { id, userId: session.user.id },
+      where: { id, userId: user.id },
       data: { read: true },
     });
 
