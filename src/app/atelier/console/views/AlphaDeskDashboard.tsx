@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
+import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 
 // ═══════════════════════════════════════════════════════════════
 //  Alpha Desk — V8 QUANT TERMINAL
@@ -238,6 +239,48 @@ function formatTime(iso: string | null): string {
     return "—";
   }
 }
+
+// Debounce helper — used to coalesce rapid ticker selections when the
+// user scrolls the virtualized asset list with arrow keys. Without this,
+// each keypress fires a new correlation fetch and cancels the previous
+// one, producing a thrash of aborted requests. A 50ms debounce is well
+// below human perception but long enough to coalesce a key-repeat burst.
+function debounce<A extends unknown[]>(
+  fn: (...args: A) => void,
+  wait: number,
+): (...args: A) => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return (...args: A) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, wait);
+  };
+}
+
+// Hardened ECharts performance config. Applied to every option builder
+// so that even a 50k-tick stress-test load (see scripts/stress-test-alpha-desk.ts)
+// does not trigger per-frame animations or unbatched series rendering.
+//   - animation: false      → no easing, no requestAnimationFrame loop
+//   - animationThreshold    → belt-and-braces: auto-disable if a series somehow exceeds 1k points
+//   - large + progressive   → batch geometry into chunks of 3000 points
+//   - hoverLayerThreshold   → use the dedicated hover layer (1+ points)
+// We pick Canvas (default renderer) and keep it for all financial charts.
+const ECHART_PERF = {
+  large: true,
+  progressive: 3000,
+  progressiveThreshold: 2000,
+  animationThreshold: 1000,
+  hoverLayerThreshold: 1,
+} as const;
+
+const ECHART_SERIES_PERF = {
+  large: true,
+  largeThreshold: 500,
+  progressive: 3000,
+  progressiveThreshold: 2000,
+} as const;
 
 // Client-side Pearson — used for asset × asset matrix from alignedData
 function pearson(x: number[], y: number[]): number {
@@ -735,6 +778,7 @@ function buildCandlestickOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     legend: {
       data: [ticker, "Sentiment Z"],
       textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
@@ -786,6 +830,7 @@ function buildCandlestickOption(
       {
         name: ticker,
         type: "candlestick",
+        ...ECHART_SERIES_PERF,
         data: ohlc,
         itemStyle: {
           color: GREEN,
@@ -797,6 +842,7 @@ function buildCandlestickOption(
       {
         name: "Sentiment Z",
         type: "line",
+        ...ECHART_SERIES_PERF,
         yAxisIndex: 1,
         data: sentiments,
         smooth: true,
@@ -821,6 +867,7 @@ function buildDualAxisOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     legend: {
       data: ["Price", "Sentiment"],
       textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
@@ -871,6 +918,7 @@ function buildDualAxisOption(
       {
         name: "Price",
         type: "line",
+        ...ECHART_SERIES_PERF,
         yAxisIndex: 0,
         data: prices,
         symbol: "none",
@@ -880,6 +928,7 @@ function buildDualAxisOption(
       {
         name: "Sentiment",
         type: "line",
+        ...ECHART_SERIES_PERF,
         yAxisIndex: 1,
         data: sentiments,
         symbol: "none",
@@ -913,6 +962,7 @@ function buildDepthOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     legend: {
       data: ["Bids (+)", "Asks (−)"],
       textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
@@ -950,6 +1000,7 @@ function buildDepthOption(
       {
         name: "Bids (+)",
         type: "line",
+        ...ECHART_SERIES_PERF,
         step: "middle",
         data: posData,
         symbol: "none",
@@ -959,6 +1010,7 @@ function buildDepthOption(
       {
         name: "Asks (−)",
         type: "line",
+        ...ECHART_SERIES_PERF,
         step: "middle",
         data: negData,
         symbol: "none",
@@ -985,6 +1037,7 @@ function buildCorrHeatmapOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     tooltip: {
       position: "top",
       backgroundColor: SURFACE,
@@ -1048,6 +1101,7 @@ function buildGaugeOption(label: string, value: number, max: number): EChartsOpt
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     series: [
       {
         type: "gauge",
@@ -1092,6 +1146,7 @@ function buildSparklineOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     xAxis: { type: "category", show: false },
     yAxis: [
       { type: "value", show: false, scale: true },
@@ -1100,6 +1155,7 @@ function buildSparklineOption(
     series: [
       {
         type: "line",
+        ...ECHART_SERIES_PERF,
         data: prices,
         symbol: "none",
         lineStyle: { color: ACCENT, width: 1.2 },
@@ -1108,6 +1164,7 @@ function buildSparklineOption(
       },
       {
         type: "line",
+        ...ECHART_SERIES_PERF,
         yAxisIndex: 1,
         data: sentiments,
         symbol: "none",
@@ -1136,6 +1193,7 @@ function buildSentimentHeatmapOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     tooltip: {
       position: "top",
       backgroundColor: SURFACE,
@@ -1198,6 +1256,7 @@ function buildLatencyOption(samples: { t: string; ms: number }[]): EChartsOption
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     tooltip: {
       trigger: "axis",
       backgroundColor: SURFACE,
@@ -1223,6 +1282,7 @@ function buildLatencyOption(samples: { t: string; ms: number }[]): EChartsOption
     series: [
       {
         type: "line",
+        ...ECHART_SERIES_PERF,
         data: samples.map((s) => s.ms),
         symbol: "circle",
         symbolSize: 3,
@@ -1245,11 +1305,13 @@ function buildMarketSparklineOption(prices: number[]): EChartsOption {
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     xAxis: { type: "category", show: false },
     yAxis: { type: "value", show: false, scale: true },
     series: [
       {
         type: "line",
+        ...ECHART_SERIES_PERF,
         data: prices,
         symbol: "none",
         lineStyle: { color: ACCENT, width: 1.5 },
@@ -1269,6 +1331,7 @@ function buildExposureDonutOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     tooltip: {
       trigger: "item",
       backgroundColor: SURFACE,
@@ -1324,6 +1387,7 @@ function buildMiniCandleOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "cross", lineStyle: { color: ACCENT, width: 1 } },
@@ -1341,6 +1405,7 @@ function buildMiniCandleOption(
       {
         name: ticker,
         type: "candlestick",
+        ...ECHART_SERIES_PERF,
         data: ohlc,
         itemStyle: {
           color: GREEN,
@@ -1352,6 +1417,7 @@ function buildMiniCandleOption(
       {
         name: `Z (${zScores.length}pt)`,
         type: "line",
+        ...ECHART_SERIES_PERF,
         yAxisIndex: 1,
         data: zScores,
         symbol: "none",
@@ -1377,6 +1443,7 @@ function buildOrderBookDepthOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     legend: {
       data: ["Bids", "Asks", "Mid"],
       textStyle: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9 },
@@ -1412,6 +1479,7 @@ function buildOrderBookDepthOption(
       {
         name: "Bids",
         type: "line",
+        ...ECHART_SERIES_PERF,
         step: "middle",
         data: bidData,
         symbol: "none",
@@ -1421,6 +1489,7 @@ function buildOrderBookDepthOption(
       {
         name: "Asks",
         type: "line",
+        ...ECHART_SERIES_PERF,
         step: "middle",
         data: askData,
         symbol: "none",
@@ -1430,6 +1499,7 @@ function buildOrderBookDepthOption(
       {
         name: "Mid",
         type: "line",
+        ...ECHART_SERIES_PERF,
         data: [[mid, 0], [mid, maxVol * 1.05]],
         symbol: "none",
         lineStyle: { color: ACCENT, width: 1, type: "dashed" },
@@ -1457,6 +1527,7 @@ function buildZScoreMatrixOption(
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     tooltip: {
       position: "top",
       backgroundColor: SURFACE,
@@ -1523,6 +1594,7 @@ function buildSentimentGaugeOption(netSentiment: number): EChartsOption {
     backgroundColor: "transparent",
     textStyle: ECHART_TEXT,
     animation: false,
+    ...ECHART_PERF,
     series: [
       {
         type: "gauge",
@@ -1604,7 +1676,8 @@ function VirtualizedAssetList({
     count: assets.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 28,
-    overscan: 10,
+    overscan: 8,
+    getItemKey: (i) => assets[i]?.ticker ?? i,
   });
 
   return (
@@ -1691,6 +1764,7 @@ function VirtualizedSignalFeed({ alerts }: { alerts: AlertItem[] }) {
     getScrollElement: () => parentRef.current,
     estimateSize: () => 28,
     overscan: 8,
+    getItemKey: (i) => alerts[i]?.id ?? i,
   });
 
   return (
@@ -1767,6 +1841,7 @@ function VirtualizedAlphaScorecard({
     getScrollElement: () => parentRef.current,
     estimateSize: () => 32,
     overscan: 8,
+    getItemKey: (i) => rows[i]?.ticker ?? i,
   });
 
   return (
@@ -1977,6 +2052,49 @@ export function AlphaDeskDashboard({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [expandedMiniCandle, setExpandedMiniCandle] = useState<string | null>(null);
 
+  // ─── Hardening refs (V10) ───
+  // Throttle gate for setAssets — caps UI repaints to 1/sec even if the
+  // user hammers the Refresh button or auto-polling is added later.
+  const lastAssetsUpdateRef = useRef(0);
+  // Track every AbortController we hand out so we can cancel them all
+  // on unmount (memory cleanup + avoids setState-after-unmount warnings).
+  const inFlightControllers = useRef<Set<AbortController>>(new Set());
+
+  // Throttled setter — max 1 update/sec. Dropped updates are not a
+  // problem because the next accepted update overwrites them anyway.
+  const maybeUpdateAssets = useCallback((rows: AlphaAssetRow[]) => {
+    const now = Date.now();
+    if (now - lastAssetsUpdateRef.current < 1000) return;
+    lastAssetsUpdateRef.current = now;
+    setAssets(rows);
+  }, []);
+
+  // Debounced ticker selection — coalesces rapid arrow-key scrolling
+  // in the virtualized asset list so we don't fire one correlation
+  // fetch per keypress (each of which would cancel the previous).
+  // 50ms is well below human perception but long enough to coalesce
+  // a key-repeat burst.
+  const debouncedSetTicker = useMemo(
+    () => debounce(setSelectedTicker, 50),
+    [],
+  );
+
+  // Stable user-action handlers — useCallback so child components
+  // (virtualized lists, market tabs, currency switcher) don't re-render
+  // with new function identities on every parent render.
+  const selectTicker = useCallback(
+    (t: string) => debouncedSetTicker(t),
+    [debouncedSetTicker],
+  );
+  const switchMarket = useCallback(
+    (code: MarketCode) => setSelectedMarket(code),
+    [],
+  );
+  const switchCurrency = useCallback(
+    (cur: SettlementCurrency) => setSettlementCurrency(cur),
+    [],
+  );
+
   const recordLatency = useCallback((ms: number) => {
     setLatencySamples((prev) => {
       const next = [...prev, { t: new Date().toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }), ms }];
@@ -1984,87 +2102,139 @@ export function AlphaDeskDashboard({
     });
   }, []);
 
-  // ─── Initial fetch ───
-  useEffect(() => {
-    if (injectedKpis) return;
-    (async () => {
-      const t0 = performance.now();
-      try {
-        const [assetsRes, statsRes] = await Promise.all([
-          fetch("/api/trader/assets"),
-          fetch("/api/trader/stats"),
-        ]);
-        recordLatency(Math.round(performance.now() - t0));
+  // ─── Initial fetch (loadData) ───
+  // Hoisted into a useCallback so the handler identity is stable
+  // across renders — the consuming useEffect only re-fires when the
+  // inputs (injectedKpis) actually change. Uses AbortController so
+  // unmount or a re-fire cancels in-flight requests cleanly.
+  const loadData = useCallback(async (signal: AbortSignal) => {
+    const t0 = performance.now();
+    try {
+      const [assetsRes, statsRes] = await Promise.all([
+        fetch("/api/trader/assets", { signal }),
+        fetch("/api/trader/stats", { signal }),
+      ]);
+      recordLatency(Math.round(performance.now() - t0));
 
-        if (assetsRes.ok) {
-          const data = await assetsRes.json();
-          const assetRows: AlphaAssetRow[] = (data.assets ?? []).map((a: Record<string, unknown>) => ({
-            ticker: a.ticker as string,
-            name: a.name as string,
-            assetType: a.assetType as string,
-            latestPrice: (a.latestPrice as number) ?? null,
-            latestChange: (a.latestChange as number) ?? null,
-            latestSentiment: (a.latestSentiment as number) ?? null,
-            correlation: null,
-            exchange: (a.exchange as string | null) ?? null,
-            sentimentArticleCount: (a.sentimentArticleCount as number) ?? 0,
-            volume: null,
-          }));
-          setAssets(assetRows);
-          if (assetRows.length > 0) setSelectedTicker(assetRows[0].ticker);
-        }
+      if (assetsRes.ok) {
+        const data = await assetsRes.json();
+        const assetRows: AlphaAssetRow[] = (data.assets ?? []).map((a: Record<string, unknown>) => ({
+          ticker: a.ticker as string,
+          name: a.name as string,
+          assetType: a.assetType as string,
+          latestPrice: (a.latestPrice as number) ?? null,
+          latestChange: (a.latestChange as number) ?? null,
+          latestSentiment: (a.latestSentiment as number) ?? null,
+          correlation: null,
+          exchange: (a.exchange as string | null) ?? null,
+          sentimentArticleCount: (a.sentimentArticleCount as number) ?? 0,
+          volume: null,
+        }));
+        maybeUpdateAssets(assetRows);
+        if (assetRows.length > 0) setSelectedTicker(assetRows[0].ticker);
+      }
 
-        if (statsRes.ok) {
-          const s = await statsRes.json();
-          setKpis({
-            latencySignal: Math.round(performance.now() - t0),
-            sentimentSpike: 0,
-            assetTicker: s.topMover?.ticker ?? "—",
-            assetsTracked: s.totalAssets ?? 0,
-            avgSentiment: s.avgSentiment ?? 0,
-            topGainer: s.topGainer ?? null,
-            topLoser: s.topLoser ?? null,
-          });
-        }
-      } catch {
+      if (statsRes.ok) {
+        const s = await statsRes.json();
+        setKpis({
+          latencySignal: Math.round(performance.now() - t0),
+          sentimentSpike: 0,
+          assetTicker: s.topMover?.ticker ?? "—",
+          assetsTracked: s.totalAssets ?? 0,
+          avgSentiment: s.avgSentiment ?? 0,
+          topGainer: s.topGainer ?? null,
+          topLoser: s.topLoser ?? null,
+        });
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
         setError(true);
       }
-      setLoading(false);
-    })();
-  }, [injectedKpis, recordLatency]);
+    }
+  }, [recordLatency, maybeUpdateAssets]);
 
-  // ─── Fetch correlation for selected ticker ───
+  useEffect(() => {
+    if (injectedKpis) return;
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
+    (async () => {
+      await loadData(controller.signal);
+      setLoading(false);
+      inFlightControllers.current.delete(controller);
+    })();
+    return () => {
+      controller.abort();
+      inFlightControllers.current.delete(controller);
+    };
+  }, [injectedKpis, loadData]);
+
+  // ─── Unmount cleanup: cancel ALL in-flight fetches ───
+  // Belt-and-braces safety net. Each effect also cleans up its own
+  // controller, but this catches any controller that slipped through
+  // (e.g. a fetch that hasn't resolved yet when the effect's cleanup
+  // already ran). Also clears any pending debounce timer implicitly
+  // (the timer is captured in the debouncedSetTicker closure).
+  useEffect(() => {
+    return () => {
+      inFlightControllers.current.forEach((c) => {
+        if (!c.signal.aborted) c.abort();
+      });
+      inFlightControllers.current.clear();
+    };
+  }, []);
+
+  // ─── Fetch correlation for selected ticker (AbortController) ───
+  // When the user rapidly switches tickers (e.g. arrow-key scrolling
+  // through the virtualized list), the previous fetch is aborted via
+  // its AbortController — no stale response can overwrite the latest.
   useEffect(() => {
     if (!selectedTicker) return;
-    let cancelled = false;
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
     (async () => {
       setCorrLoading(true);
       try {
-        const res = await fetch(`/api/trader/assets/${selectedTicker}/correlation?window=30`);
-        if (!cancelled && res.ok) {
+        const res = await fetch(
+          `/api/trader/assets/${selectedTicker}/correlation?window=30`,
+          { signal: controller.signal },
+        );
+        if (res.ok) {
           const data = await res.json();
           setCorrelation(data);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          // ignore — silent
+        }
+      } finally {
+        if (!controller.signal.aborted) setCorrLoading(false);
+        inFlightControllers.current.delete(controller);
       }
-      if (!cancelled) setCorrLoading(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      controller.abort();
+      inFlightControllers.current.delete(controller);
+    };
   }, [selectedTicker]);
 
-  // ─── Fetch correlation for ALL assets (feeds heatmap, sparklines, distribution) ───
-  const tickerSignature = assets.map((a) => a.ticker).join(",");
+  // ─── Fetch correlation for ALL assets (AbortController) ───
+  // Feeds heatmap, sparklines, distribution. A single master controller
+  // cancels all per-asset sub-fetches if the asset set changes (e.g.
+  // after a refresh). Aborts propagate to each fetch via Promise.all.
   useEffect(() => {
     if (assets.length === 0) return;
-    let cancelled = false;
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
     (async () => {
       setCorrDistLoading(true);
       try {
         const results = await Promise.all(
           assets.map(async (a): Promise<AssetCorrEntry> => {
             try {
-              const res = await fetch(`/api/trader/assets/${a.ticker}/correlation?window=30`);
+              const res = await fetch(
+                `/api/trader/assets/${a.ticker}/correlation?window=30`,
+                { signal: controller.signal },
+              );
               if (!res.ok) return { ticker: a.ticker, correlation: 0, dataPoints: 0, alignedData: [] };
               const data = await res.json();
               return {
@@ -2073,33 +2243,51 @@ export function AlphaDeskDashboard({
                 dataPoints: data.dataPoints ?? 0,
                 alignedData: (data.alignedData ?? []) as AlignedPoint[],
               };
-            } catch {
+            } catch (err) {
+              // Re-throw abort errors so Promise.all rejects fast; swallow
+              // everything else so a single bad asset doesn't nuke the batch.
+              if (err instanceof Error && err.name === "AbortError") throw err;
               return { ticker: a.ticker, correlation: 0, dataPoints: 0, alignedData: [] };
             }
           })
         );
-        if (!cancelled) setAssetCorrData(results);
-      } catch {
-        // ignore
+        if (!controller.signal.aborted) setAssetCorrData(results);
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          // ignore
+        }
+      } finally {
+        if (!controller.signal.aborted) setCorrDistLoading(false);
+        inFlightControllers.current.delete(controller);
       }
-      if (!cancelled) setCorrDistLoading(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      controller.abort();
+      inFlightControllers.current.delete(controller);
+    };
   }, [tickerSignature]);
 
   // ─── Executive Module 3 — Fetch history for ALL assets (window=30)
   // Feeds: mini candlestick grid, NLP order-book depth, Z-score matrix.
   // Endpoint: /api/trader/assets/[ticker]/history?window=30
+  // tickerSignature must be declared OUTSIDE the effect so multiple
+  // effects can depend on it (correlation + history). Previously it was
+  // declared inline above the effect; we keep the same shape here.
+  // (See the const declaration above this effect.)
   useEffect(() => {
     if (assets.length === 0) return;
-    let cancelled = false;
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
     (async () => {
       setHistoryLoading(true);
       try {
         const results = await Promise.all(
           assets.map(async (a): Promise<[string, AssetHistory | null]> => {
             try {
-              const res = await fetch(`/api/trader/assets/${a.ticker}/history?window=30`);
+              const res = await fetch(
+                `/api/trader/assets/${a.ticker}/history?window=30`,
+                { signal: controller.signal },
+              );
               if (!res.ok) return [a.ticker, null];
               const data = await res.json();
               return [a.ticker, {
@@ -2113,32 +2301,42 @@ export function AlphaDeskDashboard({
                   dataPoints: data.stats?.dataPoints ?? 0,
                 },
               }];
-            } catch {
+            } catch (err) {
+              if (err instanceof Error && err.name === "AbortError") throw err;
               return [a.ticker, null];
             }
           })
         );
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           const map: Record<string, AssetHistory> = {};
           for (const [t, h] of results) {
             if (h) map[t] = h;
           }
           setAssetHistories(map);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          // ignore
+        }
+      } finally {
+        if (!controller.signal.aborted) setHistoryLoading(false);
+        inFlightControllers.current.delete(controller);
       }
-      if (!cancelled) setHistoryLoading(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      controller.abort();
+      inFlightControllers.current.delete(controller);
+    };
   }, [tickerSignature]);
 
   // ─── Fetch alerts (may 403 for harch-alpha) ───
   useEffect(() => {
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
     (async () => {
       setAlertsLoading(true);
       try {
-        const res = await fetch("/api/console/alerts");
+        const res = await fetch("/api/console/alerts", { signal: controller.signal });
         if (res.status === 403) {
           setAlertsGated(true);
           setAlerts([]);
@@ -2147,19 +2345,29 @@ export function AlphaDeskDashboard({
           setAlerts((data.alerts ?? []) as AlertItem[]);
           setAlertsGated(false);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          // ignore
+        }
+      } finally {
+        if (!controller.signal.aborted) setAlertsLoading(false);
+        inFlightControllers.current.delete(controller);
       }
-      setAlertsLoading(false);
     })();
+    return () => {
+      controller.abort();
+      inFlightControllers.current.delete(controller);
+    };
   }, [lastRefresh]);
 
   // ─── Fetch AI visibility (may 403) ───
   useEffect(() => {
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
     (async () => {
       setAiLoading(true);
       try {
-        const res = await fetch("/api/console/ai-visibility");
+        const res = await fetch("/api/console/ai-visibility", { signal: controller.signal });
         if (res.status === 403) {
           setAiGated(true);
           setAiPlatforms([]);
@@ -2168,11 +2376,19 @@ export function AlphaDeskDashboard({
           setAiPlatforms((data.platforms ?? []) as AIVisibilityPlatform[]);
           setAiGated(false);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          // ignore
+        }
+      } finally {
+        if (!controller.signal.aborted) setAiLoading(false);
+        inFlightControllers.current.delete(controller);
       }
-      setAiLoading(false);
     })();
+    return () => {
+      controller.abort();
+      inFlightControllers.current.delete(controller);
+    };
   }, [lastRefresh]);
 
   const firstName = userName.split(" ")[0] || "there";
@@ -2186,14 +2402,19 @@ export function AlphaDeskDashboard({
     index: TEXT_MUTED,
   };
 
-  // ─── Refresh ───
+  // ─── Refresh (AbortController + throttled setAssets) ───
+  // The refresh button is user-triggered, but it still benefits from
+  // AbortController (cancel the refresh if the user navigates away
+  // mid-fetch) and the throttled setter (cap UI repaints to 1/sec).
   const refreshAssets = useCallback(async () => {
     setRefreshing(true);
+    const controller = new AbortController();
+    inFlightControllers.current.add(controller);
     const t0 = performance.now();
     try {
       const [assetsRes, statsRes] = await Promise.all([
-        fetch("/api/trader/assets"),
-        fetch("/api/trader/stats"),
+        fetch("/api/trader/assets", { signal: controller.signal }),
+        fetch("/api/trader/stats", { signal: controller.signal }),
       ]);
       recordLatency(Math.round(performance.now() - t0));
       if (assetsRes.ok) {
@@ -2210,7 +2431,7 @@ export function AlphaDeskDashboard({
           sentimentArticleCount: (a.sentimentArticleCount as number) ?? 0,
           volume: null,
         }));
-        setAssets(assetRows);
+        maybeUpdateAssets(assetRows);
       }
       if (statsRes.ok) {
         const s = await statsRes.json();
@@ -2225,11 +2446,15 @@ export function AlphaDeskDashboard({
         });
       }
       setLastRefresh(new Date());
-    } catch {
-      // ignore
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        // ignore
+      }
+    } finally {
+      if (!controller.signal.aborted) setRefreshing(false);
+      inFlightControllers.current.delete(controller);
     }
-    setRefreshing(false);
-  }, [recordLatency]);
+  }, [recordLatency, maybeUpdateAssets]);
 
   // ─── Filter assets by type ───
   const filteredAssets = useMemo(
@@ -2939,6 +3164,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 9. Virtualized Asset List */}
+            <DashboardErrorBoundary label="Asset Selector" accent={ACCENT}>
             <WidgetCard
               title={`Asset Selector · ${filteredAssets.length}`}
               subtitle="click to load chart"
@@ -2978,14 +3204,16 @@ export function AlphaDeskDashboard({
                   <VirtualizedAssetList
                     assets={filteredAssets}
                     selectedTicker={selectedTicker}
-                    onSelect={setSelectedTicker}
+                    onSelect={selectTicker}
                     typeColors={typeColors}
                   />
                 </>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 7. Candlestick + Z-Score Overlay */}
+            <DashboardErrorBoundary label="Candlestick + Z-Score" accent={ACCENT}>
             <WidgetCard
               title={`Candlestick + Z-Score · ${selectedTicker ?? "—"}`}
               subtitle="30d close-to-close · sentiment overlay"
@@ -3012,8 +3240,10 @@ export function AlphaDeskDashboard({
                 <AwaitingTelemetry label="price telemetry" />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 10. NLP Order-Book Depth */}
+            <DashboardErrorBoundary label="Order-Book Depth" accent={ACCENT}>
             <WidgetCard
               title="NLP Order-Book Depth"
               subtitle="sentiment-weighted bid/ask"
@@ -3036,6 +3266,7 @@ export function AlphaDeskDashboard({
                 />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3050,6 +3281,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 11. LLM Probe Matrix */}
+            <DashboardErrorBoundary label="LLM Probe Matrix" accent={ACCENT}>
             <WidgetCard
               title="LLM Probe Matrix"
               subtitle="8 AI engines · sentiment"
@@ -3115,8 +3347,10 @@ export function AlphaDeskDashboard({
                 </div>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 12. Correlation Strength Heatmap (asset × asset) */}
+            <DashboardErrorBoundary label="Correlation Matrix" accent={ACCENT}>
             <WidgetCard
               title="Correlation Matrix"
               subtitle="asset × asset price r"
@@ -3136,8 +3370,10 @@ export function AlphaDeskDashboard({
                 <AwaitingTelemetry label="correlation matrix" />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 14. Volatility Micro-Gauges */}
+            <DashboardErrorBoundary label="Volatility Gauges" accent={ACCENT}>
             <WidgetCard
               title="Volatility Gauges"
               subtitle="|Δ%| per asset"
@@ -3168,6 +3404,7 @@ export function AlphaDeskDashboard({
                 </div>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3181,6 +3418,7 @@ export function AlphaDeskDashboard({
               marginBottom: "8px",
             }}
           >
+            <DashboardErrorBoundary label="Sparkline Dashboard" accent={ACCENT}>
             <WidgetCard
               title="Multi-Asset Sparkline Dashboard"
               subtitle="price (cyan) + sentiment (amber) · 30d"
@@ -3242,6 +3480,7 @@ export function AlphaDeskDashboard({
                 </div>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3256,6 +3495,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 16. Virtualized Signal Feed */}
+            <DashboardErrorBoundary label="Signal Feed" accent={ACCENT}>
             <WidgetCard
               title={`Signal Feed · ${alerts.length}`}
               subtitle="crisis alerts · virtualized"
@@ -3299,8 +3539,10 @@ export function AlphaDeskDashboard({
                 </>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 17. Virtualized Alpha Scorecard */}
+            <DashboardErrorBoundary label="Alpha Scorecard" accent={ACCENT}>
             <WidgetCard
               title={`Alpha Scorecard · ${alphaRows.length}`}
               subtitle="divergence signals · ranked"
@@ -3341,6 +3583,7 @@ export function AlphaDeskDashboard({
                 </>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3405,6 +3648,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 8. Price × Sentiment Dual Axis (ECharts) */}
+            <DashboardErrorBoundary label="Dual Axis Chart" accent={ACCENT}>
             <WidgetCard
               title={`Price × Sentiment Dual Axis · ${selectedTicker ?? "—"}`}
               subtitle="divergence highlight"
@@ -3424,8 +3668,10 @@ export function AlphaDeskDashboard({
                 <AwaitingTelemetry label="dual-axis telemetry" />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 13. Pearson r Distribution (Recharts bar) */}
+            <DashboardErrorBoundary label="Pearson r Distribution" accent={ACCENT}>
             <WidgetCard
               title="Pearson r Distribution"
               subtitle="sentiment → price · all assets"
@@ -3470,6 +3716,7 @@ export function AlphaDeskDashboard({
                 </ResponsiveContainer>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3484,6 +3731,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 18. Sentiment Distribution Pie (Recharts) */}
+            <DashboardErrorBoundary label="Sentiment Distribution" accent={ACCENT}>
             <WidgetCard
               title="Sentiment Distribution"
               subtitle="asset count"
@@ -3522,8 +3770,10 @@ export function AlphaDeskDashboard({
                 </ResponsiveContainer>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 19. Top Gainers / Losers (Recharts) */}
+            <DashboardErrorBoundary label="Top Movers" accent={ACCENT}>
             <WidgetCard
               title="Top Movers"
               subtitle="gainers vs losers"
@@ -3567,8 +3817,10 @@ export function AlphaDeskDashboard({
                 </ResponsiveContainer>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 20. Sentiment Heatmap Grid (ECharts) */}
+            <DashboardErrorBoundary label="Sentiment Heatmap" accent={ACCENT}>
             <WidgetCard
               title="Sentiment Heatmap"
               subtitle="assets × metrics"
@@ -3586,8 +3838,10 @@ export function AlphaDeskDashboard({
                 />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 21. Latency Timeline (ECharts) */}
+            <DashboardErrorBoundary label="Latency Timeline" accent={ACCENT}>
             <WidgetCard
               title="Latency Timeline"
               subtitle="client RTT · rolling 30"
@@ -3610,6 +3864,7 @@ export function AlphaDeskDashboard({
                 />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3617,6 +3872,7 @@ export function AlphaDeskDashboard({
               Preserved from V7 (chart 2)
               ═══════════════════════════════════════════════════════════ */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(24, 1fr)", gap: "8px" }}>
+            <DashboardErrorBoundary label="Asset Performance" accent={ACCENT}>
             <WidgetCard
               title="Asset Performance — Latest Δ%"
               subtitle="all assets · horizontal bar"
@@ -3660,6 +3916,7 @@ export function AlphaDeskDashboard({
                 </ResponsiveContainer>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -3713,6 +3970,7 @@ export function AlphaDeskDashboard({
               marginBottom: "8px",
             }}
           >
+            <DashboardErrorBoundary label="Market Selector (M1)" accent={ACCENT}>
             <WidgetCard
               title="Sélecteur de Marché Global & Régional"
               subtitle="multi-venue · timezone-aware status"
@@ -3743,7 +4001,7 @@ export function AlphaDeskDashboard({
                   return (
                     <button
                       key={code}
-                      onClick={() => setSelectedMarket(code)}
+                      onClick={() => switchMarket(code)}
                       style={{
                         padding: "6px 10px",
                         fontSize: "10px",
@@ -3968,7 +4226,7 @@ export function AlphaDeskDashboard({
                         return (
                           <div
                             key={a.ticker}
-                            onClick={() => setSelectedTicker(a.ticker)}
+                            onClick={() => selectTicker(a.ticker)}
                             style={{
                               display: "grid",
                               gridTemplateColumns: "56px 1fr 80px 60px 56px 56px",
@@ -4007,6 +4265,7 @@ export function AlphaDeskDashboard({
                 </div>
               </div>
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -4021,6 +4280,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* Currency switcher + portfolio value strip */}
+            <DashboardErrorBoundary label="Settlement Ledger (M2)" accent={ACCENT}>
             <WidgetCard
               title="Multi-Devises & Settlement Ledger"
               subtitle={`SETTLEMENT RATE · ${settlementCurrency}/USD ${FX_SETTLEMENT_RATE[settlementCurrency].USD.toFixed(4)} · ${settlementCurrency}/EUR ${FX_SETTLEMENT_RATE[settlementCurrency].EUR.toFixed(4)}`}
@@ -4031,7 +4291,7 @@ export function AlphaDeskDashboard({
                   {(["MAD", "EUR", "USD"] as const).map((c) => (
                     <button
                       key={c}
-                      onClick={() => setSettlementCurrency(c)}
+                      onClick={() => switchCurrency(c)}
                       style={{
                         padding: "4px 10px",
                         fontSize: "9px",
@@ -4146,6 +4406,7 @@ export function AlphaDeskDashboard({
                 )}
               </div>
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
@@ -4160,6 +4421,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 3a — Multi-asset candlestick grid */}
+            <DashboardErrorBoundary label="Candlestick Grid (M3a)" accent={ACCENT}>
             <WidgetCard
               title="Multi-Asset Candlestick Grid"
               subtitle="4-8 mini candles · Z-score overlay · click to expand"
@@ -4194,7 +4456,7 @@ export function AlphaDeskDashboard({
                       <div
                         key={m.ticker}
                         onClick={() => {
-                          setSelectedTicker(m.ticker);
+                          selectTicker(m.ticker);
                           setExpandedMiniCandle(isExpanded ? null : m.ticker);
                         }}
                         style={{
@@ -4235,8 +4497,10 @@ export function AlphaDeskDashboard({
                 </div>
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 3b — NLP Order-Book Depth (selected asset) */}
+            <DashboardErrorBoundary label="Order-Book Depth (M3b)" accent={ACCENT}>
             <WidgetCard
               title={`NLP Order-Book Depth · ${selectedTicker ?? "—"}`}
               subtitle="synthetic price ladder · sentiment-weighted bid/ask"
@@ -4268,8 +4532,10 @@ export function AlphaDeskDashboard({
                 />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 3c — Z-Score Matrix */}
+            <DashboardErrorBoundary label="Z-Score Matrix (M3c)" accent={ACCENT}>
             <WidgetCard
               title="Multi-Asset Z-Score Matrix"
               subtitle="Z > 3 anomaly · Z > 1.5 amber · else slate"
@@ -4299,8 +4565,10 @@ export function AlphaDeskDashboard({
                 />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
 
             {/* 3d — Sentiment Pressure Gauge */}
+            <DashboardErrorBoundary label="Sentiment Pressure (M3d)" accent={ACCENT}>
             <WidgetCard
               title={`Sentiment Pressure · ${selectedTicker ?? "—"}`}
               subtitle="net buy vs sell · radial"
@@ -4318,6 +4586,7 @@ export function AlphaDeskDashboard({
                 />
               )}
             </WidgetCard>
+            </DashboardErrorBoundary>
           </div>
 
           {/* ─── Footer signature ─── */}
