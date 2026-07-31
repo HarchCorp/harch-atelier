@@ -32,8 +32,12 @@ const E164_RE = /^\+\d{6,15}$/;
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
+  const userId = session.user.id;
 
   // Parse the optional body — `whatsappNumber` may be missing (then we
   // fall back to the user's saved number).
@@ -67,7 +71,7 @@ export async function POST(req: Request) {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { name: true, whatsappNumber: true },
     });
 

@@ -15,9 +15,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
+  const userId = session.user.id;
   // Admin can access any API (to preview what investors see)
   if (session.user?.accountType !== "investment-bank" && session.user?.role !== "admin") {
     return NextResponse.json(
@@ -28,7 +32,7 @@ export async function GET() {
 
   try {
     const dossiers = await prisma.dossier.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { updatedAt: "desc" },
       include: {
         company: {

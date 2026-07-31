@@ -10,31 +10,34 @@ import { authOptions } from "@/lib/auth/auth.config";
 //  PATCH  — marks notifications as read
 //             body: { id: "all" | "<notification-id>" }
 //
-//  Auth: requires a session (any accountType).
+//  Auth: requires a session with a valid user.id (any accountType).
 //  Notifications are scoped to the caller's userId — a user can
 //  only read/mark-as-read their own notifications.
+//
+//  SECURITY: We hard-fail with 401 if `session.user.id` is missing.
+//  Previously this route used an email-lookup band-aid to work around
+//  the JWT not carrying `id`, but that is no longer necessary now that
+//  auth.config.ts populates `token.id` → `session.user.id`. Allowing
+//  the route to run without `user.id` would let Prisma treat
+//  `where: { userId: undefined }` as "no filter" and leak every
+//  notification in the DB (IDOR).
 // ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
-
-  // Look up user by email (session.user.id may be undefined in JWT sessions)
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
+  const userId = session.user.id;
 
   try {
     const notifications = await prisma.notification.findMany({
-      where: { userId: user.id },
+      where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {
@@ -67,18 +70,13 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
-
-  // Look up user by email (session.user.id may be undefined in JWT sessions)
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
+  const userId = session.user.id;
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -90,7 +88,7 @@ export async function PATCH(req: Request) {
 
     if (id === "all") {
       const result = await prisma.notification.updateMany({
-        where: { userId: user.id, read: false },
+        where: { userId, read: false },
         data: { read: true },
       });
       return NextResponse.json({ marked: result.count, scope: "all" });
@@ -98,7 +96,7 @@ export async function PATCH(req: Request) {
 
     // Single notification — verify ownership before updating
     const updated = await prisma.notification.updateMany({
-      where: { id, userId: user.id },
+      where: { id, userId },
       data: { read: true },
     });
 

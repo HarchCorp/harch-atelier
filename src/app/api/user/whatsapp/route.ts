@@ -51,12 +51,16 @@ function normalizePhone(raw: string): string | null {
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
+  const userId = session.user.id;
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         whatsappNumber: true,
         whatsappAlerts: true,
@@ -93,8 +97,12 @@ export async function GET() {
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
+  const userId = session.user.id;
 
   let body: unknown;
   try {
@@ -180,7 +188,7 @@ export async function PATCH(req: Request) {
 
   try {
     const updated = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data,
       select: {
         whatsappNumber: true,

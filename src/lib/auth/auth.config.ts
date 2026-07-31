@@ -21,6 +21,7 @@ import { prisma } from "@/lib/db";
 // callers of `getServerSession(authOptions)` and `getToken()`.
 declare module "next-auth" {
   interface User {
+    id?: string;
     role?: string;
     accountType?: string;  // brand-monitor | market-competitor | investment-bank | harch-alpha
   }
@@ -38,6 +39,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id?: string;
     role?: string;
     accountType?: string;
   }
@@ -115,6 +117,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.id = (user as { id?: string }).id;
         token.role = (user as { role?: string }).role;
         token.accountType = (user as { accountType?: string }).accountType;
       }
@@ -122,6 +125,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
+        (session.user as { id?: string }).id = token.id;
         (session.user as { role?: string }).role = token.role;
         (session.user as { accountType?: string }).accountType = token.accountType;
       }

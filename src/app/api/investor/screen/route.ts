@@ -59,8 +59,8 @@ export const maxDuration = 120;
 
 async function authorize() {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return { ok: false as const, status: 401, error: "Unauthorized" };
+  if (!session?.user?.id) {
+    return { ok: false as const, status: 401, error: "Unauthorized — session invalid" };
   }
   if (
     session.user?.accountType !== "investment-bank" &&
@@ -72,7 +72,7 @@ async function authorize() {
       error: "Forbidden — investment-bank account required",
     };
   }
-  return { ok: true as const, userId: session.user.id as string };
+  return { ok: true as const, userId: session.user.id };
 }
 
 // ─── Load all portfolio holdings for the user (for aggregate screening) ──

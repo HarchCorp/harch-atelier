@@ -20,9 +20,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
+  const userId = session.user.id;
   if (session.user?.accountType !== "investment-bank" && session.user?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden — investment-bank account required" }, { status: 403 });
   }
@@ -31,7 +35,7 @@ export async function GET() {
     // For admin, show all portfolios; for investor, show only theirs
     const whereClause = session.user?.role === "admin"
       ? {}
-      : { userId: session.user.id };
+      : { userId };
 
     const portfolios = await prisma.portfolio.findMany({
       where: whereClause,
@@ -69,7 +73,7 @@ export async function GET() {
     );
 
     // Dossiers
-    const dossierWhere = session.user?.role === "admin" ? {} : { userId: session.user.id };
+    const dossierWhere = session.user?.role === "admin" ? {} : { userId };
     const [totalDossiers, readyDossiers, draftDossiers] = await Promise.all([
       prisma.dossier.count({ where: dossierWhere }),
       prisma.dossier.count({ where: { ...dossierWhere, status: "ready" } }),

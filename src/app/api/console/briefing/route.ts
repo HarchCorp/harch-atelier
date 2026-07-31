@@ -39,9 +39,13 @@ export const maxDuration = 45; // LLM call can take 5–15s in cold start
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized — session invalid" },
+      { status: 401 },
+    );
   }
+  const userId = session.user.id;
 
   const url = new URL(req.url);
   const requestedDate = url.searchParams.get("date");
@@ -65,7 +69,7 @@ export async function GET(req: Request) {
 
   // 1. Return cached briefing for this date unless regeneration forced.
   if (!regenerate) {
-    const cached = await loadCachedBriefing(session.user.id, dateKey);
+    const cached = await loadCachedBriefing(userId, dateKey);
     if (cached) {
       return NextResponse.json({ briefing: cached, cached: true, date: dateKey });
     }
@@ -82,7 +86,7 @@ export async function GET(req: Request) {
   // 2. Resolve the primary company for this user (same heuristic as
   //    /api/console/alerts and /api/cron/generate-reports).
   const company = await getPrimaryCompanyForUser({
-    id: session.user.id,
+    id: userId,
     accountType: session.user.accountType ?? "brand-monitor",
   });
   if (!company) {
@@ -95,21 +99,21 @@ export async function GET(req: Request) {
   // 3. Generate fresh (LLM call + citation mapping).
   try {
     const payload: BriefingPayload = await generateBriefing({
-      userId: session.user.id,
+      userId,
       companyId: company.id,
       companyName: company.name,
       dateKey,
     });
 
     // 4. Persist for next time (fire-and-forget — don't block the response).
-    persistBriefing(session.user.id, company.id, dateKey, payload).catch((err) => {
-      logError("briefing.persist", `userId=${session.user?.id} date=${dateKey}: ${(err as Error).message}`);
+    persistBriefing(userId, company.id, dateKey, payload).catch((err) => {
+      logError("briefing.persist", `userId=${userId} date=${dateKey}: ${(err as Error).message}`);
     });
 
     return NextResponse.json({ briefing: payload, cached: false, date: dateKey });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    logError("briefing.route", `userId=${session.user.id} date=${dateKey}: ${msg}`);
+    logError("briefing.route", `userId=${userId} date=${dateKey}: ${msg}`);
     return NextResponse.json(
       { error: "Couldn't generate briefing. Try again.", detail: msg, date: dateKey },
       { status: 500 },
