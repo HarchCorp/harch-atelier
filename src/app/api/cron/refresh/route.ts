@@ -89,11 +89,11 @@ export async function GET(req: NextRequest) {
     results.tasks.push({ task: "sentiment-snapshot", status: "error", detail: err.message });
   }
 
-  // Task 3: Clean up old invitations (expired > 7 days)
+  // Task 3: Clean up old invitations (expired and unused)
   try {
     const expired = await prisma.invitation.deleteMany({
       where: {
-        status: "pending",
+        usedAt: null, // not yet accepted
         expiresAt: { lt: new Date() },
       },
     });
