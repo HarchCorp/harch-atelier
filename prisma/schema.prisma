@@ -145,8 +145,22 @@ model AIVisibility {
   checkedAt     DateTime @default(now())
   createdAt     DateTime @default(now())
 
+  // ─── REAL AI PROBING (Task: ai-visibility-real) ───────────────
+  // One row per (engine × probe query). A single probe run produces
+  // 10 queries × 8 engines = 80 rows grouped by `batchId`.
+  query           String?  // The probe query that was sent to the engine
+  rank            Int?     // 1-based position where the company was first mentioned (null when not mentioned)
+  mentions        Int?     // Count of company-name occurrences in the response
+  shareOfVoice    Float?   // 0-100 — share of the response that is about this company
+  simulated       Boolean  @default(false) // true when the engine is simulated via prompt variation (labeled in UI)
+  responseExcerpt String?  // Short excerpt (~240 chars) of the LLM response
+  sentimentScore  Float?   // -1 (very negative) to 1 (very positive)
+  batchId         String?  // Groups all 80 rows from a single probe run (cuid-based)
+
   @@index([companyId, platform])
   @@index([companyId, checkedAt])
+  @@index([companyId, batchId])
+  @@index([batchId, platform])
 }
 
 // ─── ENTITY GRAPH ───────────────────────────────────────────────
@@ -603,4 +617,53 @@ model Briefing {
   @@unique([userId, date])
   @@index([userId, createdAt])
   @@index([date])
+}
+
+// ─── INFLUENCER DATABASE (Klear / Meltwater-style) ────────────────
+// Curated directory of Moroccan journalists, editors, analysts and
+// content creators across press / Twitter-X / LinkedIn / YouTube /
+// TikTok / Instagram. Each profile carries composite influence
+// metrics (reach / engagement / authority) plus a 30-day mention
+// history (InfluencerMention) — surfaced in the Brand Monitor
+// console under "Influencers DB".
+
+model Influencer {
+  id              String   @id @default(cuid())
+  name            String
+  handle          String?  // @username on the platform
+  platform        String   // twitter | linkedin | instagram | youtube | tiktok | press
+  bio             String?
+  followers       Int      @default(0)
+  following       Int      @default(0)
+  verified        Boolean  @default(false)
+  location        String?  // Casablanca, Rabat, etc.
+  languages       String   @default("[]") // JSON array of language codes
+  topics          String   @default("[]") // JSON array of topic labels
+  reachScore      Int      @default(0)    // 0-100
+  engagementScore Int      @default(0)    // 0-100
+  authorityScore  Int      @default(0)    // 0-100
+  influenceScore  Int      @default(0)    // composite 0-100
+  lastAnalyzed    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  mentions        InfluencerMention[]
+
+  @@index([platform, influenceScore])
+  @@index([location])
+}
+
+model InfluencerMention {
+  id           String   @id @default(cuid())
+  influencerId String
+  influencer   Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  alertId      String?  // link to the alert/article if applicable
+  title        String
+  url          String?
+  sentiment    String   @default("neutral") // positive | neutral | negative
+  reach        Int      @default(0)
+  publishedAt  DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([influencerId, publishedAt])
 }
