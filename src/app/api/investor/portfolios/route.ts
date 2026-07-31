@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { demoFilterFromSession } from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/investor/portfolios
@@ -31,17 +32,24 @@ export async function GET() {
     );
   }
 
+  // Task: domain-matching-demo-isolation — demo investors see demo
+  // portfolios only, real investors see real portfolios only. The
+  // userId filter alone is not enough because the same demo user
+  // could theoretically have real-data portfolios if the schema
+  // were ever relaxed; this filter is defense-in-depth.
+  const demoFilter = demoFilterFromSession(session);
+
   try {
     const portfolios = await prisma.portfolio.findMany({
-      where: { userId },
+      where: { userId, ...demoFilter },
       orderBy: { createdAt: "asc" },
       include: {
         holdings: {
           include: {
             company: {
               include: {
-                reputationScores: { orderBy: { calculatedAt: "desc" }, take: 1 },
-                riskAssessments: { where: { riskLevel: "high" }, take: 5 },
+                reputationScores: { where: demoFilter, orderBy: { calculatedAt: "desc" }, take: 1 },
+                riskAssessments: { where: { riskLevel: "high", ...demoFilter }, take: 5 },
               },
             },
             asset: {

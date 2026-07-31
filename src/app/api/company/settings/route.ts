@@ -4,6 +4,7 @@ import {
   requireCompanyAdmin,
   toErrorResponse,
 } from "@/lib/auth/company-scope";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/company/settings
@@ -143,6 +144,18 @@ export async function PATCH(req: NextRequest) {
       };
     };
 
+    // Snapshot of which top-level fields were touched (for audit).
+    const companyFieldsTouched = companyPatch
+      ? Object.keys(companyPatch).filter(
+          (k) => companyPatch[k as keyof typeof companyPatch] !== undefined,
+        )
+      : [];
+    const settingsFieldsTouched = settingsPatch
+      ? Object.keys(settingsPatch).filter(
+          (k) => settingsPatch[k as keyof typeof settingsPatch] !== undefined,
+        )
+      : [];
+
     // ─── Update company row ──────────────────────────────────────
     if (companyPatch && Object.keys(companyPatch).length > 0) {
       // If ICE is being changed, verify it doesn't collide with
@@ -277,6 +290,26 @@ export async function PATCH(req: NextRequest) {
         ),
       },
     });
+
+    // ─── Audit log (Loi 09-08) — settings were changed ───────────
+    // Only fire if at least one field actually changed.
+    if (
+      companyFieldsTouched.length > 0 ||
+      settingsFieldsTouched.length > 0
+    ) {
+      await logAudit({
+        userId: scope.userId,
+        action: "company_settings_update",
+        resource: `company:${scope.companyId}`,
+        result: "success",
+        ipAddress: extractIp(req),
+        userAgent: extractUserAgent(req),
+        metadata: {
+          companyFieldsTouched,
+          settingsFieldsTouched,
+        },
+      });
+    }
   } catch (err) {
     return toErrorResponse(err);
   }

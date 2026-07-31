@@ -34,6 +34,20 @@ export interface UserCompanyOk {
   ok: true;
   data: {
     userId: string;
+    /** True for the four executive demo accounts. Drives demoFilter. */
+    isDemo: boolean;
+    /**
+     * Prisma where-clause fragment that isolates demo data from real
+     * data. Spread into every Article / AIVisibility / RiskAssessment
+     * / ReputationScore / Portfolio / Dossier / Notification query
+     * the caller makes for this user.
+     *
+     *   demo users  →  { isDemo: true }   (see ONLY demo data)
+     *   real users  →  { isDemo: false }  (see ONLY real data)
+     *
+     * Task: domain-matching-demo-isolation
+     */
+    demoFilter: { isDemo: boolean };
     user: {
       id: string;
       email: string;
@@ -99,6 +113,7 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
       accountType: true,
       companyId: true,
       onboardingCompleted: true,
+      isDemo: true,
     },
   });
 
@@ -108,6 +123,16 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
       response: NextResponse.json({ error: "User not found" }, { status: 404 }),
     };
   }
+
+  // ─── Task: domain-matching-demo-isolation ──────────────────────
+  // Build the demo isolation filter. Demo users (the four executive
+  // demo accounts) see ONLY isDemo:true data. Real users (everyone
+  // else, including admins) see ONLY isDemo:false data. This is the
+  // single chokepoint — callers spread `demoFilter` into every
+  // Article / AIVisibility / RiskAssessment / ReputationScore /
+  // Portfolio / Dossier / Notification where clause.
+  const isDemo = user.isDemo === true;
+  const demoFilter: { isDemo: boolean } = { isDemo };
 
   // ─── 3. Company check ──────────────────────────────────────────
   // No companyId → the user hasn't completed onboarding. Return a 403
@@ -158,6 +183,8 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
     ok: true,
     data: {
       userId: user.id,
+      isDemo,
+      demoFilter,
       user: {
         id: user.id,
         email: user.email,
@@ -169,4 +196,33 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
       company,
     },
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DEMO FILTER HELPER — for routes that don't go through
+//  requireUserCompany() (e.g. the admin ?company=<slug> preview
+//  path, or routes that only need the filter without the full
+//  company resolution).
+//
+//  Reads isDemo from the NextAuth session JWT (populated in
+//  auth.config.ts). Falls back to false if the claim is missing —
+//  the safe default is "real user" so a malformed session never
+//  accidentally exposes demo data.
+//
+//  Task: domain-matching-demo-isolation
+// ═══════════════════════════════════════════════════════════════
+
+interface SessionLike {
+  user?: { isDemo?: boolean } | null;
+}
+
+/**
+ * Build a `{ isDemo: boolean }` Prisma filter from a NextAuth session.
+ *
+ *   demo users   →  { isDemo: true }
+ *   real users   →  { isDemo: false }
+ *   missing/jwt  →  { isDemo: false }   (safe default — real user view)
+ */
+export function demoFilterFromSession(session: SessionLike | null | undefined): { isDemo: boolean } {
+  return { isDemo: session?.user?.isDemo === true };
 }

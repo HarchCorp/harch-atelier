@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { demoFilterFromSession } from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/investor/dossiers
@@ -13,7 +15,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -30,9 +32,13 @@ export async function GET() {
     );
   }
 
+  // Task: domain-matching-demo-isolation — demo investors see demo
+  // dossiers only, real investors see real dossiers only.
+  const demoFilter = demoFilterFromSession(session);
+
   try {
     const dossiers = await prisma.dossier.findMany({
-      where: { userId },
+      where: { userId, ...demoFilter },
       orderBy: { updatedAt: "desc" },
       include: {
         company: {
@@ -40,8 +46,8 @@ export async function GET() {
             slug: true,
             name: true,
             sector: true,
-            reputationScores: { orderBy: { calculatedAt: "desc" }, take: 1 },
-            riskAssessments: { where: { riskLevel: "high" } },
+            reputationScores: { where: demoFilter, orderBy: { calculatedAt: "desc" }, take: 1 },
+            riskAssessments: { where: { riskLevel: "high", ...demoFilter } },
           },
         },
       },
@@ -81,6 +87,17 @@ export async function GET() {
             }
           : null,
       };
+    });
+
+    // ─── Audit log (Loi 09-08) — dossier list was viewed ─────────
+    await logAudit({
+      userId,
+      action: "dossier_view",
+      resource: "dossier:list",
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: { count: formatted.length },
     });
 
     return NextResponse.json({ dossiers: formatted });

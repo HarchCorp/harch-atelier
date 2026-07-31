@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/sentiment-trend?range=7d|30d|365d
@@ -52,6 +55,8 @@ export async function GET(req: NextRequest) {
     const range = (Object.keys(RANGE_DAYS).find((k) => RANGE_DAYS[k] === days) || "30d") as string;
 
     const companySlug = searchParams.get("company");
+    // Task: domain-matching-demo-isolation
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -79,6 +84,7 @@ export async function GET(req: NextRequest) {
       where: {
         companyId: company.id,
         publishedAt: { gte: since },
+        ...demoFilter,
       },
       select: {
         sentimentScore: true,

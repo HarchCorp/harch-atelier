@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { demoFilterFromSession } from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/console/notifications
@@ -34,10 +35,13 @@ export async function GET() {
     );
   }
   const userId = session.user.id;
+  // Task: domain-matching-demo-isolation — demo users see only demo
+  // notifications, real users see only real notifications.
+  const demoFilter = demoFilterFromSession(session);
 
   try {
     const notifications = await prisma.notification.findMany({
-      where: { userId },
+      where: { userId, ...demoFilter },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {
@@ -77,6 +81,8 @@ export async function PATCH(req: Request) {
     );
   }
   const userId = session.user.id;
+  // Task: domain-matching-demo-isolation
+  const demoFilter = demoFilterFromSession(session);
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -88,7 +94,7 @@ export async function PATCH(req: Request) {
 
     if (id === "all") {
       const result = await prisma.notification.updateMany({
-        where: { userId, read: false },
+        where: { userId, read: false, ...demoFilter },
         data: { read: true },
       });
       return NextResponse.json({ marked: result.count, scope: "all" });
@@ -96,7 +102,7 @@ export async function PATCH(req: Request) {
 
     // Single notification — verify ownership before updating
     const updated = await prisma.notification.updateMany({
-      where: { id, userId },
+      where: { id, userId, ...demoFilter },
       data: { read: true },
     });
 

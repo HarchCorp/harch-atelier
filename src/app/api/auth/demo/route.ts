@@ -38,6 +38,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { logInfo, logWarn } from "@/lib/logger";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +149,11 @@ export async function POST(req: NextRequest) {
         // without forcing the user through onboarding first.
         companyId: demoCompanyId,
         onboardingCompleted: true,
+        // ─── Task: domain-matching-demo-isolation ─────────────────
+        // Mark the demo user as isDemo so the company-session helper
+        // builds demoFilter = { isDemo: true } for every console API
+        // call. Demo users see ONLY demo data, never real data.
+        isDemo: true,
       },
       create: {
         email: demoEmail,
@@ -159,6 +165,7 @@ export async function POST(req: NextRequest) {
         alertSeverityThreshold: "critical",
         companyId: demoCompanyId,
         onboardingCompleted: true,
+        isDemo: true,
       },
       select: {
         id: true,
@@ -173,6 +180,21 @@ export async function POST(req: NextRequest) {
       "auth.demo",
       `Demo user ready: ${user.email} (accountType=${user.accountType})`,
     );
+
+    // ─── Audit log (Loi 09-08) — demo access granted ────────────
+    await logAudit({
+      userId: user.id,
+      action: "demo_access",
+      resource: `demo:${typedAccountType}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        demoEmail: user.email,
+        accountType: typedAccountType,
+        companyId: demoCompanyId,
+      },
+    });
 
     // ─── Return credentials for client-side signIn ──────────────
     // The client (DemoPage.tsx) calls signIn("credentials", ...)

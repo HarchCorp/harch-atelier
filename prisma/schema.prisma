@@ -30,6 +30,17 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  // domain: official website domain used for self-registration matching.
+  // When a user signs up with med.alami@attijariwafa.com, we extract
+  // "attijariwafa.com" and look it up here. NULL for companies that
+  // haven't been onboarded via the self-service flow yet.
+  // isDemo: true for companies created by the executive demo seed
+  // (Brand Monitor / Market Competitor demo competitors). Real users
+  // never see demo companies, demo users never see real companies.
+  domain         String?  @unique  // Official website domain (e.g. attijariwafa.com)
+  isDemo         Boolean  @default(false)
+
   // ─── Task: company-dedup-enterprise-admin ─────────────────────────
   // ICE = Identifiant Commun de l'Entreprise (Morocco tax id, 15 digits).
   // RC  = Registre de Commerce (Morocco trade register number).
@@ -59,6 +70,7 @@ model Company {
   @@unique([iceNumber]) // ICE must be unique if provided
   @@index([sector])
   @@index([parentId])
+  @@index([isDemo])
 }
 
 model Article {
@@ -81,10 +93,18 @@ model Article {
   processed     Boolean  @default(false)
   createdAt     DateTime @default(now())
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  // isDemo: true when this article was created by the executive demo
+  // seed (Brand Monitor demo alerts, Market Competitor demo articles).
+  // Real users filter isDemo:false in every console query so demo
+  // alerts never pollute a real company's reputation console.
+  isDemo        Boolean  @default(false)
+
   @@index([companyId, publishedAt])
   @@index([source])
   @@index([sentimentLabel])
   @@index([processed])
+  @@index([isDemo])
 }
 
 // ─── ANALYTICS ──────────────────────────────────────────────────
@@ -103,7 +123,11 @@ model SentimentScore {
   calculatedAt  DateTime @default(now())
   createdAt     DateTime @default(now())
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  isDemo        Boolean  @default(false)
+
   @@index([companyId, calculatedAt])
+  @@index([isDemo])
 }
 
 model RiskAssessment {
@@ -122,9 +146,13 @@ model RiskAssessment {
   assessedAt    DateTime @default(now())
   createdAt     DateTime @default(now())
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  isDemo        Boolean  @default(false)
+
   @@index([companyId, assessedAt])
   @@index([riskLevel])
   @@index([category])
+  @@index([isDemo])
 }
 
 model ReputationScore {
@@ -147,7 +175,11 @@ model ReputationScore {
   calculatedAt  DateTime @default(now())
   createdAt     DateTime @default(now())
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  isDemo        Boolean  @default(false)
+
   @@index([companyId, calculatedAt])
+  @@index([isDemo])
 }
 
 model AIVisibility {
@@ -175,10 +207,18 @@ model AIVisibility {
   sentimentScore  Float?   // -1 (very negative) to 1 (very positive)
   batchId         String?  // Groups all 80 rows from a single probe run (cuid-based)
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  // isDemo: true when this row was created by the executive demo seed.
+  // The Brand Monitor demo seeds 8 AIVisibility rows on the first
+  // (real) company; without this flag, a real user attached to that
+  // same company would see the demo citations as if they were real.
+  isDemo          Boolean  @default(false)
+
   @@index([companyId, platform])
   @@index([companyId, checkedAt])
   @@index([companyId, batchId])
   @@index([batchId, platform])
+  @@index([isDemo])
 }
 
 // ─── ENTITY GRAPH ───────────────────────────────────────────────
@@ -352,6 +392,15 @@ model User {
   whatsappAlerts          Boolean  @default(false)
   alertSeverityThreshold  String   @default("high") // low | medium | high | critical
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  // isDemo: true for the four executive demo accounts
+  // (demo-brand-monitor@, demo-market-competitor@, demo-investment-bank@,
+  // demo-harch-alpha@harch.atelier). Demo users see ONLY isDemo:true
+  // data; real users see ONLY isDemo:false data. The flag is also
+  // surfaced in the JWT session so the company-session helper can
+  // build the demoFilter without an extra DB round-trip per request.
+  isDemo                  Boolean  @default(false)
+
   sessions      Session[]
   apiKeys       ApiKey[]
   accounts      Account[]
@@ -363,6 +412,7 @@ model User {
 
   @@index([companyId])
   @@index([status])
+  @@index([isDemo])
 }
 
 model Account {
@@ -554,9 +604,13 @@ model Portfolio {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  isDemo      Boolean  @default(false)
+
   holdings    PortfolioHolding[]
 
   @@index([userId])
+  @@index([isDemo])
 }
 
 model PortfolioHolding {
@@ -586,8 +640,12 @@ model Dossier {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  isDemo      Boolean  @default(false)
+
   @@index([userId])
   @@index([status])
+  @@index([isDemo])
 }
 
 // ─── MONTHLY REPORTS (PDF) ──────────────────────────────────────
@@ -631,8 +689,12 @@ model Notification {
   link      String?  // URL to navigate to
   createdAt DateTime @default(now())
 
+  // ─── Task: domain-matching-demo-isolation ──────────────────────────
+  isDemo    Boolean  @default(false)
+
   @@index([userId, read, createdAt])
   @@index([userId, createdAt])
+  @@index([isDemo])
 }
 
 // ─── DAILY AI BRIEFINGS ───────────────────────────────────────────

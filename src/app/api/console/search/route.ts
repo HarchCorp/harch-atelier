@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/search?q=<query>&limit=<n>
@@ -52,10 +56,25 @@ export async function GET(req: Request) {
     }
 
     // Resolve the caller's primary company
+    // Task: domain-matching-demo-isolation
     const companySlug = url.searchParams.get("company");
-    const company = companySlug
-      ? await prisma.company.findUnique({ where: { slug: companySlug } })
-      : await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+    const demoFilter = demoFilterFromSession(session);
+    let company;
+    if (companySlug) {
+      if (session.user?.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only view your own company" },
+          { status: 403 },
+        );
+      }
+      company = await prisma.company.findUnique({ where: { slug: companySlug } });
+    } else {
+      const result = await requireUserCompany();
+      if (!result.ok) return result.response;
+      company = await prisma.company.findUnique({
+        where: { id: result.data.company.id },
+      });
+    }
 
     if (!company) {
       return NextResponse.json({ query, results: [], total: 0 });
@@ -75,6 +94,7 @@ export async function GET(req: Request) {
             { summary: contains },
             { source: contains },
           ],
+          ...demoFilter,
         },
         orderBy: { publishedAt: "desc" },
         take: 10,
@@ -97,6 +117,7 @@ export async function GET(req: Request) {
             { category: contains },
             { trajectory: contains },
           ],
+          ...demoFilter,
         },
         orderBy: { riskScore: "desc" },
         take: 5,
@@ -147,6 +168,7 @@ export async function GET(req: Request) {
       where: {
         companyId: company.id,
         source: contains,
+        ...demoFilter,
       },
       select: { source: true },
     });
@@ -168,6 +190,7 @@ export async function GET(req: Request) {
         where: {
           companyId: company.id,
           category: contains,
+          ...demoFilter,
         },
         select: { category: true, articleCount: true },
       });
@@ -187,7 +210,7 @@ export async function GET(req: Request) {
     // query matches the formatted month title (e.g. "July 2026") or
     // the period (e.g. "2026-07"). Return the most recent matches.
     const allArticlesForReports = await prisma.article.findMany({
-      where: { companyId: company.id, publishedAt: { not: null } },
+      where: { companyId: company.id, publishedAt: { not: null }, ...demoFilter },
       select: { publishedAt: true },
       orderBy: { publishedAt: "desc" },
       take: 500,

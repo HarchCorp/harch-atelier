@@ -4,6 +4,7 @@ import {
   requireCompanyAdmin,
   toErrorResponse,
 } from "@/lib/auth/company-scope";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/company/team
@@ -223,6 +224,20 @@ export async function DELETE(req: NextRequest) {
       where: { id: userId },
       data: { status: "suspended" },
       select: { id: true, status: true },
+    });
+
+    // ─── Audit log (Loi 09-08) — user suspended ──────────────────
+    await logAudit({
+      userId: scope.userId,
+      action: "user_suspend",
+      resource: `user:${userId}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        suspendedUserId: userId,
+        companyId: scope.companyId,
+      },
     });
 
     return NextResponse.json({ user: updated });

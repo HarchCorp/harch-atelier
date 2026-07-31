@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/topics
@@ -33,6 +36,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
 
+    // Task: domain-matching-demo-isolation
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -60,6 +65,7 @@ export async function GET(req: Request) {
       where: {
         companyId: company.id,
         publishedAt: { gte: thirtyDaysAgo },
+        ...demoFilter,
       },
       select: { sentimentLabel: true, source: true },
     });
@@ -72,7 +78,7 @@ export async function GET(req: Request) {
 
     // Also get risk categories as topics
     const risks = await prisma.riskAssessment.findMany({
-      where: { companyId: company.id },
+      where: { companyId: company.id, ...demoFilter },
       select: { category: true, articleCount: true },
     });
 

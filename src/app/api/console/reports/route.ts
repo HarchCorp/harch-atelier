@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/reports
@@ -32,6 +35,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
 
+    // Task: domain-matching-demo-isolation
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -54,20 +59,20 @@ export async function GET(req: Request) {
 
     const [articles, reputationScore, aiVisibility, risks] = await Promise.all([
       prisma.article.findMany({
-        where: { companyId: company.id, publishedAt: { gte: thirtyDaysAgo } },
+        where: { companyId: company.id, publishedAt: { gte: thirtyDaysAgo }, ...demoFilter },
         select: { sentimentLabel: true, source: true },
       }),
       prisma.reputationScore.findFirst({
-        where: { companyId: company.id },
+        where: { companyId: company.id, ...demoFilter },
         orderBy: { calculatedAt: "desc" },
       }),
       prisma.aIVisibility.findMany({
-        where: { companyId: company.id },
+        where: { companyId: company.id, ...demoFilter },
         orderBy: { checkedAt: "desc" },
         select: { platform: true, cited: true, position: true, sentiment: true },
       }),
       prisma.riskAssessment.findMany({
-        where: { companyId: company.id },
+        where: { companyId: company.id, ...demoFilter },
         orderBy: { riskScore: "desc" },
         take: 5,
         select: { category: true, riskLevel: true, riskScore: true },

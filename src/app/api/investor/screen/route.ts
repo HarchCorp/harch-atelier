@@ -48,6 +48,7 @@ import {
   type AggregateScreeningInput,
 } from "@/lib/sanctions/matcher";
 import { logInfo, logWarn } from "@/lib/logger";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -207,6 +208,25 @@ export async function POST(req: NextRequest) {
         .join(", ")}`,
     );
   }
+
+  // ─── Audit log (Loi 09-08) — record the screening outcome ──────
+  await logAudit({
+    userId: auth.userId,
+    action: "sanctions_screen",
+    resource: `screen:${name}`,
+    result: "success",
+    ipAddress: extractIp(req),
+    userAgent: extractUserAgent(req),
+    metadata: {
+      name,
+      type: typeFilter ?? null,
+      threshold,
+      matchCount: adHoc.matches.length,
+      holdingsFlagged: holdings?.flaggedCount ?? 0,
+      holdingsScreened: holdings?.totalScreened ?? 0,
+      listsScreened: ["OFAC", "EU", "UN"],
+    },
+  });
 
   return NextResponse.json({
     adHoc,

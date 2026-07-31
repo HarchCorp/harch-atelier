@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/ai-visibility-trend?range=7d|30d
@@ -67,9 +71,27 @@ export async function GET(req: NextRequest) {
     const range = (Object.keys(RANGE_DAYS).find((k) => RANGE_DAYS[k] === days) || "30d") as string;
 
     const companySlug = searchParams.get("company");
-    const company = companySlug
-      ? await prisma.company.findUnique({ where: { slug: companySlug } })
-      : await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+    // Task: domain-matching-demo-isolation — use requireUserCompany()
+    // for the default path so demo users get the right demoFilter
+    // applied to their AIVisibility queries. Admin preview path
+    // (?company=<slug>) falls back to demoFilterFromSession.
+    const demoFilter = demoFilterFromSession(session);
+    let company;
+    if (companySlug) {
+      if (session.user?.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only view your own company" },
+          { status: 403 },
+        );
+      }
+      company = await prisma.company.findUnique({ where: { slug: companySlug } });
+    } else {
+      const result = await requireUserCompany();
+      if (!result.ok) return result.response;
+      company = await prisma.company.findUnique({
+        where: { id: result.data.company.id },
+      });
+    }
 
     if (!company) {
       return NextResponse.json({ engines: [], data: [] });
@@ -83,6 +105,7 @@ export async function GET(req: NextRequest) {
       where: {
         companyId: company.id,
         checkedAt: { gte: since },
+        ...demoFilter,
       },
       select: {
         platform: true,

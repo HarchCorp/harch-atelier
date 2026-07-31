@@ -16,6 +16,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { logAudit } from "@/lib/harchiq/audit-log";
 
 // Augment NextAuth JWT & Session types so role/accountType are visible to
 // callers of `getServerSession(authOptions)` and `getToken()`.
@@ -26,6 +27,7 @@ declare module "next-auth" {
     accountType?: string;  // brand-monitor | market-competitor | investment-bank | harch-alpha
     companyId?: string | null;
     status?: string;
+    isDemo?: boolean;     // Task: domain-matching-demo-isolation — true for demo-*@harch.atelier
   }
   interface Session {
     user: {
@@ -37,6 +39,7 @@ declare module "next-auth" {
       accountType?: string;
       companyId?: string | null;
       status?: string;
+      isDemo?: boolean;
     };
   }
 }
@@ -48,6 +51,7 @@ declare module "next-auth/jwt" {
     accountType?: string;
     companyId?: string | null;
     status?: string;
+    isDemo?: boolean;
   }
 }
 
@@ -96,22 +100,76 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // ─── Extract IP + UA from the NextAuth request context ─────
+        // RequestInternal.headers is a Record<string, string> (or
+        // an IncomingHttpHeaders-like object) — read defensively.
+        const headerVal = (name: string): string | undefined => {
+          const h = req?.headers as Record<string, string | string[] | undefined> | undefined;
+          if (!h) return undefined;
+          const v = h[name];
+          if (Array.isArray(v)) return v[0];
+          return v ?? undefined;
+        };
+        let ip: string | undefined;
+        const fwd = headerVal("x-forwarded-for");
+        if (fwd) {
+          ip = fwd.split(",")[0]?.trim() || undefined;
+        }
+        if (!ip) ip = headerVal("x-real-ip");
+        const userAgent = headerVal("user-agent");
+
+        const attemptedEmail = credentials.email;
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-        if (!user || !user.passwordHash) return null;
+        if (!user || !user.passwordHash) {
+          // ─── Audit log (Loi 09-08) — failed login, unknown user ─
+          await logAudit({
+            userId: null,
+            action: "login_failed",
+            resource: `auth:${attemptedEmail}`,
+            result: "denied",
+            ipAddress: ip,
+            userAgent,
+            metadata: { reason: "user_not_found" },
+          });
+          return null;
+        }
 
         // Suspended users cannot sign in (company-admin can deactivate).
-        if (user.status === "suspended") return null;
+        if (user.status === "suspended") {
+          await logAudit({
+            userId: user.id,
+            action: "login_failed",
+            resource: `auth:${user.email}`,
+            result: "denied",
+            ipAddress: ip,
+            userAgent,
+            metadata: { reason: "suspended" },
+          });
+          return null;
+        }
 
         const valid = await bcrypt.compare(
           credentials.password,
           user.passwordHash,
         );
-        if (!valid) return null;
+        if (!valid) {
+          await logAudit({
+            userId: user.id,
+            action: "login_failed",
+            resource: `auth:${user.email}`,
+            result: "denied",
+            ipAddress: ip,
+            userAgent,
+            metadata: { reason: "bad_password" },
+          });
+          return null;
+        }
 
         // Best-effort update of lastLoginAt (fire-and-forget — do not
         // block the sign-in flow on this write).
@@ -124,6 +182,20 @@ export const authOptions: NextAuthOptions = {
             /* swallow — best-effort */
           });
 
+        // ─── Audit log (Loi 09-08) — successful login ─────────────
+        await logAudit({
+          userId: user.id,
+          action: "login",
+          resource: `auth:${user.email}`,
+          result: "success",
+          ipAddress: ip,
+          userAgent,
+          metadata: {
+            role: user.role,
+            accountType: user.accountType,
+          },
+        });
+
         return {
           id: user.id,
           email: user.email,
@@ -132,6 +204,7 @@ export const authOptions: NextAuthOptions = {
           accountType: user.accountType,
           companyId: user.companyId,
           status: user.status,
+          isDemo: user.isDemo,
         };
       },
     }),
@@ -144,6 +217,7 @@ export const authOptions: NextAuthOptions = {
         token.accountType = (user as { accountType?: string }).accountType;
         token.companyId = (user as { companyId?: string | null }).companyId;
         token.status = (user as { status?: string }).status;
+        token.isDemo = (user as { isDemo?: boolean }).isDemo;
       }
       return token;
     },
@@ -154,6 +228,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as { accountType?: string }).accountType = token.accountType;
         (session.user as { companyId?: string | null }).companyId = token.companyId;
         (session.user as { status?: string }).status = token.status;
+        (session.user as { isDemo?: boolean }).isDemo = token.isDemo;
       }
       return session;
     },

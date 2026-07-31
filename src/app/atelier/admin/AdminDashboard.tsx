@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { C } from "../components/tokens";
+import { AuditLogViewer } from "./AuditLogViewer";
 
 // ═══════════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD — Manage access requests + invitations
@@ -158,7 +159,7 @@ interface ScrapeSummary {
 }
 
 export function AdminDashboard() {
-  const [tab, setTab] = useState<"requests" | "invitations" | "sources">("requests");
+  const [tab, setTab] = useState<"requests" | "invitations" | "sources" | "audit">("requests");
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -481,11 +482,14 @@ export function AdminDashboard() {
         <button onClick={() => setTab("sources")} style={tabStyle(tab === "sources")}>
           Data Sources
         </button>
+        <button onClick={() => setTab("audit")} style={tabStyle(tab === "audit")}>
+          Audit Logs
+        </button>
       </div>
 
       {/* Content */}
       <main style={{ padding: "32px 24px", maxWidth: "1200px", margin: "0 auto" }}>
-        {loading && tab !== "sources" ? (
+        {loading && tab !== "sources" && tab !== "audit" ? (
           <div style={{ color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading...</div>
         ) : tab === "requests" ? (
           <div>
@@ -522,6 +526,8 @@ export function AdminDashboard() {
               </div>
             )}
           </div>
+        ) : tab === "audit" ? (
+          <AuditLogViewer />
         ) : (
           <DataSourcesPanel
             status={scraperStatus}

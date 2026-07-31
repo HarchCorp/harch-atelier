@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/alerts
@@ -30,6 +33,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
 
+    // Task: domain-matching-demo-isolation — demo users see demo
+    // alerts only, real users see real alerts only.
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -57,6 +63,7 @@ export async function GET(req: Request) {
           companyId: company.id,
           sentimentLabel: "negative",
           publishedAt: { gte: sevenDaysAgo },
+          ...demoFilter,
         },
         orderBy: { publishedAt: "desc" },
         take: 10,
@@ -70,7 +77,7 @@ export async function GET(req: Request) {
         },
       }),
       prisma.riskAssessment.findMany({
-        where: { companyId: company.id, riskLevel: { in: ["high", "critical"] } },
+        where: { companyId: company.id, riskLevel: { in: ["high", "critical"] }, ...demoFilter },
         orderBy: { riskScore: "desc" },
         take: 5,
         select: { id: true, category: true, riskLevel: true, riskScore: true, trajectory: true, articleCount: true },

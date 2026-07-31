@@ -29,6 +29,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { logInfo, logWarn } from "@/lib/logger";
 import { classifySector, slugify } from "@/lib/harchiq/sector-classifier";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -340,8 +341,10 @@ export async function POST(req: NextRequest) {
 
     // Investment-bank: portfolio CSV upload → Portfolio + Holdings.
     let portfolioId: string | null = null;
+    let portfolioRowCount = 0;
     if (typeof body.portfolioCsv === "string" && body.portfolioCsv.trim()) {
       const rows = parsePortfolioCsv(body.portfolioCsv);
+      portfolioRowCount = rows.length;
       if (rows.length > 0) {
         const portfolio = await prisma.portfolio.create({
           data: {
@@ -411,6 +414,38 @@ export async function POST(req: NextRequest) {
       "user.onboard",
       `User ${userId} onboarded (company=${companyId}, accountType=${accountType}, competitors=${competitorIds.length}, portfolio=${portfolioId ?? "none"})`,
     );
+
+    // ─── Audit log (Loi 09-08) — portfolio import + onboarding ──
+    if (portfolioId) {
+      await logAudit({
+        userId,
+        action: "portfolio_import",
+        resource: `portfolio:${portfolioId}`,
+        result: "success",
+        ipAddress: extractIp(req),
+        userAgent: extractUserAgent(req),
+        metadata: {
+          rowCount: portfolioRowCount,
+          accountType,
+        },
+      });
+    }
+
+    await logAudit({
+      userId,
+      action: "onboarding_complete",
+      resource: `user:${userId}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        companyId,
+        accountType,
+        competitorCount: competitorIds.length,
+        portfolioId,
+        skip,
+      },
+    });
 
     return NextResponse.json({
       ok: true,

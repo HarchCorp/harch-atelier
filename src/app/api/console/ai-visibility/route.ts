@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/ai-visibility
@@ -35,6 +38,11 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
 
+    // Task: domain-matching-demo-isolation — demo users see demo
+    // AIVisibility rows only (the Brand Monitor demo seeds 8 rows
+    // on the first real company; without this filter a real user
+    // attached to that company would see the demo citations).
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -55,7 +63,7 @@ export async function GET(req: Request) {
     }
 
     const aiVisibility = await prisma.aIVisibility.findMany({
-      where: { companyId: company.id },
+      where: { companyId: company.id, ...demoFilter },
       orderBy: { checkedAt: "desc" },
     });
 

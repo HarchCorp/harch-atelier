@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/influencers?range=7d|30d
@@ -91,6 +94,8 @@ export async function GET(req: NextRequest) {
     const range: RangeKey = days === 30 ? "30d" : "7d";
 
     const companySlug = searchParams.get("company");
+    // Task: domain-matching-demo-isolation
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -122,6 +127,7 @@ export async function GET(req: NextRequest) {
         where: {
           companyId: company.id,
           publishedAt: { gte: since },
+          ...demoFilter,
         },
         orderBy: { publishedAt: "desc" },
         take: 1000,
@@ -137,6 +143,7 @@ export async function GET(req: NextRequest) {
           companyId: company.id,
           riskLevel: { in: ["high", "critical"] },
           assessedAt: { gte: since },
+          ...demoFilter,
         },
         orderBy: { assessedAt: "desc" },
         take: 30,

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/neighbors
@@ -66,6 +69,12 @@ export async function GET(req: Request) {
     const companySlug = url.searchParams.get("company");
 
     // Get the primary company (the "you")
+    // Task: domain-matching-demo-isolation — the demoFilter is applied
+    // to every child query (neighbor companies, their reputation
+    // scores, their articles) so a real user never sees the demo
+    // competitor companies created by the executive demo seed, and
+    // a demo user never sees real competitor companies.
+    const demoFilter = demoFilterFromSession(session);
     let primaryCompany;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -90,19 +99,23 @@ export async function GET(req: Request) {
 
     // Get primary company's reputation score
     const primaryScore = await prisma.reputationScore.findFirst({
-      where: { companyId: primaryCompany.id },
+      where: { companyId: primaryCompany.id, ...demoFilter },
       orderBy: { calculatedAt: "desc" },
     });
     const yourScore = primaryScore?.overall ?? 50;
 
-    // Get all OTHER companies in the same sector as neighbors
+    // Get all OTHER companies in the same sector as neighbors.
+    // Filter by isDemo so demo competitor companies (created by the
+    // demo seed) never show up for a real user, and vice-versa.
     const sameSectorNeighbors = await prisma.company.findMany({
       where: {
         id: { not: primaryCompany.id },
         sector: primaryCompany.sector,
+        ...demoFilter,
       },
       include: {
         reputationScores: {
+          where: demoFilter,
           orderBy: { calculatedAt: "desc" },
           take: 1,
         },
@@ -114,9 +127,11 @@ export async function GET(req: Request) {
       where: {
         id: { not: primaryCompany.id },
         sector: { not: primaryCompany.sector },
+        ...demoFilter,
       },
       include: {
         reputationScores: {
+          where: demoFilter,
           orderBy: { calculatedAt: "desc" },
           take: 1,
         },
@@ -135,7 +150,7 @@ export async function GET(req: Request) {
 
         // Get recent articles for this neighbor (their "moves")
         const recentArticles = await prisma.article.findMany({
-          where: { companyId: n.id },
+          where: { companyId: n.id, ...demoFilter },
           orderBy: { publishedAt: "desc" },
           take: 3,
         });

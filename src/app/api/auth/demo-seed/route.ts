@@ -295,6 +295,7 @@ async function seedBrandMonitor(_userId: string): Promise<Record<string, number>
           relevanceScore: 0.85,
           publishedAt,
           processed: true,
+          isDemo: true,
         },
         create: {
           companyId: company.id,
@@ -308,6 +309,7 @@ async function seedBrandMonitor(_userId: string): Promise<Record<string, number>
           publishedAt,
           language: "fr",
           processed: true,
+          isDemo: true,
         },
       });
       alertsCreated++;
@@ -358,6 +360,7 @@ async function seedBrandMonitor(_userId: string): Promise<Record<string, number>
           sentimentScore,
           batchId,
           checkedAt: new Date(now - i * 60 * 60 * 1000),
+          isDemo: true,
         },
       });
       aiCreated++;
@@ -394,6 +397,7 @@ async function seedBrandMonitor(_userId: string): Promise<Record<string, number>
           trajectory: i % 2 === 0 ? "rising" : "stable",
           articleCount: 3 + i,
           assessedAt: new Date(now - i * 12 * 60 * 60 * 1000),
+          isDemo: true,
         },
       });
       risksCreated++;
@@ -444,6 +448,7 @@ async function seedMarketCompetitor(): Promise<Record<string, number>> {
         ticker: c.ticker,
         headquarters: "Casablanca",
         description: `Demo competitor for the ${c.sector} sector radar.`,
+        isDemo: true,
       },
     });
 
@@ -461,6 +466,7 @@ async function seedMarketCompetitor(): Promise<Record<string, number>> {
         shareOfVoice: 5 + Math.floor(rng() * 15),
         trend: rng() > 0.5 ? "up" : "down",
         calculatedAt: new Date(now - Math.floor(rng() * 7) * 24 * 60 * 60 * 1000),
+        isDemo: true,
       },
     });
 
@@ -481,6 +487,7 @@ async function seedMarketCompetitor(): Promise<Record<string, number>> {
           publishedAt: new Date(now - (i + 1) * 24 * 60 * 60 * 1000),
           language: "fr",
           processed: true,
+          isDemo: true,
         },
       });
     }
@@ -534,6 +541,7 @@ async function seedInvestmentBank(userId: string): Promise<Record<string, number
           name: spec.name,
           userId,
           description: spec.description,
+          isDemo: true,
         },
       });
       portfoliosCreated++;
@@ -581,6 +589,7 @@ async function seedInvestmentBank(userId: string): Promise<Record<string, number
           pageCount: dossierStatuses[i] === "ready" ? 24 + i * 4 : null,
           createdAt: new Date(now - i * 3 * 24 * 60 * 60 * 1000),
           updatedAt: new Date(now - i * 24 * 60 * 60 * 1000),
+          isDemo: true,
         },
       });
       dossiersCreated++;
@@ -627,6 +636,7 @@ async function seedInvestmentBank(userId: string): Promise<Record<string, number
               ? `${eng.platform} mentioned the company in position ${eng.position} with ${eng.sentiment} sentiment.`
               : `${eng.platform} did not mention the company in the tested queries.`,
             checkedAt: new Date(now - Math.floor(Math.random() * 48) * 60 * 60 * 1000),
+            isDemo: true,
           },
         });
         aiVisibilityCreated++;
@@ -662,6 +672,7 @@ async function seedInvestmentBank(userId: string): Promise<Record<string, number
           read: spec.minsAgo > 200,
           link: spec.link,
           createdAt: new Date(now - spec.minsAgo * 60 * 1000),
+          isDemo: true,
         },
       });
       notificationsCreated++;

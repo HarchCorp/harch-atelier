@@ -6,6 +6,7 @@ import {
   requireCompanyAdmin,
   toErrorResponse,
 } from "@/lib/auth/company-scope";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/company/invite
@@ -133,6 +134,23 @@ export async function POST(req: NextRequest) {
     const baseUrl =
       process.env.NEXTAUTH_URL || "https://atelier.harchcorp.com";
     const accessUrl = `${baseUrl}/atelier/access?token=${token}`;
+
+    // ─── Audit log (Loi 09-08) — invitation created ──────────────
+    await logAudit({
+      userId: scope.userId,
+      action: "user_invite",
+      resource: `invitation:${invitation.id}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        invitedEmail: email,
+        invitedName: name,
+        invitedRole: finalRole,
+        invitedAccountType: finalAccountType,
+        companyId: scope.companyId,
+      },
+    });
 
     return NextResponse.json({
       status: "created",

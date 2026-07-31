@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 import ZAI from "z-ai-web-dev-sdk";
 
 // ═══════════════════════════════════════════════════════════════
@@ -124,11 +128,22 @@ export async function POST(req: NextRequest) {
 
   try {
     // 3. FETCH REAL DATA — same primitives the existing console APIs use.
-    //    Pick the primary company (first created, like the alerts API).
-    const company = await prisma.company.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, slug: true, sector: true },
-    });
+    //    Resolve the company from the logged-in user's companyId via
+    //    requireUserCompany() (the old findFirst leak is gone).
+    //    Task: domain-matching-demo-isolation — demoFilter applied to
+    //    every child query so the LLM is grounded ONLY in the data
+    //    the caller is allowed to see.
+    const demoFilter = demoFilterFromSession(session);
+    let company: { id: string; name: string; slug: string; sector: string } | null = null;
+    {
+      const result = await requireUserCompany();
+      if (result.ok) {
+        company = await prisma.company.findUnique({
+          where: { id: result.data.company.id },
+          select: { id: true, name: true, slug: true, sector: true },
+        });
+      }
+    }
 
     // Compute the 7-day window for "recent" alerts.
     const sevenDaysAgo = new Date();
@@ -144,6 +159,7 @@ export async function POST(req: NextRequest) {
                 companyId: company.id,
                 sentimentLabel: "negative",
                 publishedAt: { gte: sevenDaysAgo },
+                ...demoFilter,
               },
               orderBy: { publishedAt: "desc" },
               take: 30,
@@ -160,7 +176,7 @@ export async function POST(req: NextRequest) {
         // ALERTS (part 2) — high/critical risk assessments.
         company
           ? prisma.riskAssessment.findMany({
-              where: { companyId: company.id, riskLevel: { in: ["high", "critical"] } },
+              where: { companyId: company.id, riskLevel: { in: ["high", "critical"] }, ...demoFilter },
               orderBy: { riskScore: "desc" },
               take: 10,
               select: {
@@ -176,7 +192,7 @@ export async function POST(req: NextRequest) {
         // AI VISIBILITY — latest row per platform.
         company
           ? prisma.aIVisibility.findMany({
-              where: { companyId: company.id },
+              where: { companyId: company.id, ...demoFilter },
               orderBy: { checkedAt: "desc" },
               select: {
                 id: true,
@@ -192,7 +208,7 @@ export async function POST(req: NextRequest) {
         // PRIMARY SCORE — for reputation trend questions.
         company
           ? prisma.reputationScore.findFirst({
-              where: { companyId: company.id },
+              where: { companyId: company.id, ...demoFilter },
               orderBy: { calculatedAt: "desc" },
               select: {
                 id: true,
@@ -206,11 +222,14 @@ export async function POST(req: NextRequest) {
             })
           : Promise.resolve(null),
         // NEIGHBORS — same-sector companies + adjacent ones.
+        // Filter by isDemo so demo competitors don't leak into a
+        // real user's LLM context, and vice-versa.
         company
           ? prisma.company.findMany({
-              where: { id: { not: company.id } },
+              where: { id: { not: company.id }, ...demoFilter },
               include: {
                 reputationScores: {
+                  where: demoFilter,
                   orderBy: { calculatedAt: "desc" },
                   take: 1,
                   select: { overall: true },
@@ -225,6 +244,7 @@ export async function POST(req: NextRequest) {
               where: {
                 companyId: company.id,
                 publishedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+                ...demoFilter,
               },
               select: { source: true, sentimentLabel: true },
               take: 500,
@@ -303,7 +323,7 @@ export async function POST(req: NextRequest) {
 
         // Get the latest article title for this neighbor (their latest "move").
         const latest = await prisma.article.findFirst({
-          where: { companyId: n.id },
+          where: { companyId: n.id, ...demoFilter },
           orderBy: { publishedAt: "desc" },
           select: { title: true },
         });

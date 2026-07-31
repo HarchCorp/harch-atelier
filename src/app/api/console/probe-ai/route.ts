@@ -26,8 +26,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 import { probeCompany, loadLatestProbeBatch, type ProbeSummary } from "@/lib/harchiq/ai-probe";
 import { logError } from "@/lib/logger";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -67,6 +72,11 @@ export async function POST(req: Request) {
 
   // Try to resolve a Company row matching this name (so we can persist
   // with a proper companyId). Fall back to the user's primary company.
+  // Task: domain-matching-demo-isolation — resolve from the user's
+  // companyId via requireUserCompany() instead of the old findFirst
+  // leak. The name-based lookup still happens first (so the user can
+  // probe a competitor by name), but the fallback is the user's own
+  // company, not "the first company in the DB".
   let companyId: string | undefined;
   try {
     const byName = await prisma.company.findFirst({
@@ -79,14 +89,11 @@ export async function POST(req: Request) {
       const merged = new Set<string>([...byName.aliases, ...aliases]);
       aliases.push(...Array.from(merged));
     } else {
-      // No exact match — fall back to the user's primary company so we
-      // can still persist the probe (the dashboard's companyName label
-      // will reflect what the user typed, not the DB row's name).
-      const primary = await prisma.company.findFirst({
-        orderBy: { createdAt: "asc" },
-        select: { id: true },
-      });
-      companyId = primary?.id;
+      // No exact match — fall back to the user's own company.
+      const result = await requireUserCompany();
+      if (result.ok) {
+        companyId = result.data.company.id;
+      }
     }
   } catch (err) {
     logError("probe-ai.resolve", `companyName="${companyName}": ${(err as Error).message}`);
@@ -99,10 +106,37 @@ export async function POST(req: Request) {
       aliases,
       companyId,
     });
+
+    // ─── Audit log (Loi 09-08) — AI visibility probe ─────────────
+    await logAudit({
+      userId: session.user.id,
+      action: "ai_probe",
+      resource: `probe:${companyName}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        companyName,
+        companyId: companyId ?? null,
+        live: summary.live,
+        engines: summary.engines.length,
+      },
+    });
+
     return NextResponse.json({ summary, live: summary.live });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     logError("probe-ai.route", `companyName="${companyName}": ${msg}`);
+    // ─── Audit log (Loi 09-08) — probe failed ────────────────────
+    await logAudit({
+      userId: session.user.id,
+      action: "ai_probe",
+      resource: `probe:${companyName}`,
+      result: "error",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: { error: msg },
+    });
     return NextResponse.json(
       { error: "Probe failed. Try again.", detail: msg },
       { status: 500 },
@@ -128,15 +162,29 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const companySlug = url.searchParams.get("company");
 
-    const company = companySlug
-      ? await prisma.company.findUnique({
-          where: { slug: companySlug },
-          select: { id: true, name: true, aliases: true },
-        })
-      : await prisma.company.findFirst({
-          orderBy: { createdAt: "asc" },
-          select: { id: true, name: true, aliases: true },
-        });
+    // Task: domain-matching-demo-isolation — use requireUserCompany()
+    // for the default path. Admin preview (?company=<slug>) still
+    // works. The old findFirst fallback that leaked OCP data is gone.
+    let company: { id: string; name: string; aliases: string[] } | null = null;
+    if (companySlug) {
+      if (session.user?.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only view your own company" },
+          { status: 403 },
+        );
+      }
+      company = await prisma.company.findUnique({
+        where: { slug: companySlug },
+        select: { id: true, name: true, aliases: true },
+      });
+    } else {
+      const result = await requireUserCompany();
+      if (!result.ok) return result.response;
+      company = await prisma.company.findUnique({
+        where: { id: result.data.company.id },
+        select: { id: true, name: true, aliases: true },
+      });
+    }
 
     if (!company) {
       return NextResponse.json({ error: "No company found." }, { status: 404 });

@@ -111,7 +111,11 @@ export function briefingDateKey(d: Date = new Date()): string {
 
 // ─── Alert fetcher (last 24h) ──────────────────────────────────
 
-async function fetchLast24hAlerts(companyId: string, windowEnd: Date): Promise<BriefingAlert[]> {
+async function fetchLast24hAlerts(
+  companyId: string,
+  windowEnd: Date,
+  demoFilter: { isDemo: boolean },
+): Promise<BriefingAlert[]> {
   const since = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
 
   const [negativeArticles, positiveArticles, highRisks] = await Promise.all([
@@ -120,6 +124,7 @@ async function fetchLast24hAlerts(companyId: string, windowEnd: Date): Promise<B
         companyId,
         sentimentLabel: "negative",
         publishedAt: { gte: since, lte: windowEnd },
+        ...demoFilter,
       },
       orderBy: { publishedAt: "desc" },
       take: 40,
@@ -137,6 +142,7 @@ async function fetchLast24hAlerts(companyId: string, windowEnd: Date): Promise<B
         companyId,
         sentimentLabel: "positive",
         publishedAt: { gte: since, lte: windowEnd },
+        ...demoFilter,
       },
       orderBy: { publishedAt: "desc" },
       take: 20,
@@ -154,6 +160,7 @@ async function fetchLast24hAlerts(companyId: string, windowEnd: Date): Promise<B
         companyId,
         riskLevel: { in: ["high", "critical"] },
         assessedAt: { gte: since, lte: windowEnd },
+        ...demoFilter,
       },
       orderBy: { riskScore: "desc" },
       take: 8,
@@ -210,7 +217,11 @@ async function fetchLast24hAlerts(companyId: string, windowEnd: Date): Promise<B
 
 // ─── Previous-day sentiment fetcher (for "sentimentShift") ─────
 
-async function fetchPreviousDaySentiment(companyId: string, windowEnd: Date): Promise<{
+async function fetchPreviousDaySentiment(
+  companyId: string,
+  windowEnd: Date,
+  demoFilter: { isDemo: boolean },
+): Promise<{
   positivePct: number;
   negativePct: number;
   neutralPct: number;
@@ -223,6 +234,7 @@ async function fetchPreviousDaySentiment(companyId: string, windowEnd: Date): Pr
     where: {
       companyId,
       publishedAt: { gte: since, lt: until },
+      ...demoFilter,
     },
     select: { sentimentLabel: true },
   });
@@ -242,10 +254,14 @@ async function fetchPreviousDaySentiment(companyId: string, windowEnd: Date): Pr
 
 // ─── AI visibility fetcher (last 24h) ──────────────────────────
 
-async function fetchAiVisibilityContext(companyId: string, windowEnd: Date): Promise<string> {
+async function fetchAiVisibilityContext(
+  companyId: string,
+  windowEnd: Date,
+  demoFilter: { isDemo: boolean },
+): Promise<string> {
   const since = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
   const rows = await prisma.aIVisibility.findMany({
-    where: { companyId, checkedAt: { gte: since, lte: windowEnd } },
+    where: { companyId, checkedAt: { gte: since, lte: windowEnd }, ...demoFilter },
     orderBy: { checkedAt: "desc" },
     take: 8,
     select: { platform: true, cited: true, position: true, sentiment: true, summary: true },
@@ -383,18 +399,25 @@ export interface GenerateBriefingOptions {
   dateKey?: string; // defaults to today (Casablanca)
   windowEnd?: Date; // defaults to now
   forceRefresh?: boolean;
+  /** Task: domain-matching-demo-isolation — when true, only demo
+   *  telemetry (isDemo:true) is fetched. When false/undefined, only
+   *  real telemetry (isDemo:false) is fetched. */
+  isDemo?: boolean;
 }
 
 export async function generateBriefing(opts: GenerateBriefingOptions): Promise<BriefingPayload> {
   const dateKey = opts.dateKey ?? briefingDateKey();
   const windowEnd = opts.windowEnd ?? new Date();
   const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
+  const demoFilter = { isDemo: opts.isDemo === true };
 
   // 1. Fetch all telemetry in parallel.
+  //    Task: domain-matching-demo-isolation — pass demoFilter so the
+  //    LLM is grounded ONLY in the data the caller is allowed to see.
   const [alerts, aiVisibilityContext, prevDay] = await Promise.all([
-    fetchLast24hAlerts(opts.companyId, windowEnd),
-    fetchAiVisibilityContext(opts.companyId, windowEnd),
-    fetchPreviousDaySentiment(opts.companyId, windowEnd),
+    fetchLast24hAlerts(opts.companyId, windowEnd, demoFilter),
+    fetchAiVisibilityContext(opts.companyId, windowEnd, demoFilter),
+    fetchPreviousDaySentiment(opts.companyId, windowEnd, demoFilter),
   ]);
 
   // 2. Build the prompt.
@@ -616,12 +639,40 @@ export async function persistBriefing(
 export async function getPrimaryCompanyForUser(user: {
   id: string;
   accountType: string;
+  isDemo?: boolean;
 }): Promise<{ id: string; name: string } | null> {
   // Trader (harch-alpha) accounts have no primary Company — they monitor
   // Assets instead. For briefings we still surface company-level intel
-  // from the first Company in the DB (the same convention used by the
-  // console's alerts/weather/reports endpoints).
-  const company = await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+  // from the user's own company (resolved via User.companyId), falling
+  // back to the first REAL company in the DB (isDemo:false) so demo
+  // companies never leak into a real user's briefing, and vice-versa.
+  //
+  // Task: domain-matching-demo-isolation
+  const isDemo = user.isDemo === true;
+  const demoFilter = { isDemo };
+
+  // 1. Try the user's companyId first (the onboarding-attached company).
+  if (user.id) {
+    const userRow = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { companyId: true },
+    });
+    if (userRow?.companyId) {
+      const c = await prisma.company.findUnique({
+        where: { id: userRow.companyId },
+        select: { id: true, name: true, isDemo: true },
+      });
+      if (c && c.isDemo === isDemo) {
+        return { id: c.id, name: c.name };
+      }
+    }
+  }
+
+  // 2. Fallback: first company matching the demoFilter.
+  const company = await prisma.company.findFirst({
+    where: demoFilter,
+    orderBy: { createdAt: "asc" },
+  });
   if (!company) return null;
   return { id: company.id, name: company.name };
 }

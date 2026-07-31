@@ -21,6 +21,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import type { DocumentProps } from "@react-pdf/renderer";
 import { ReportPDF, type ReportData, type ReportAlert, type ReportAiEngine, type ReportSentimentDay, type ReportSourceRow } from "@/app/atelier/console/views/ReportPDF";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -53,8 +54,8 @@ function safeArr<T>(v: unknown): T[] {
 }
 
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // 1. Auth
   const session = await getServerSession(authOptions);
@@ -81,6 +82,16 @@ export async function GET(
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
   if (!isAdmin && report.userId !== userId) {
+    // ─── Audit log (Loi 09-08) — denied report access ──────────
+    await logAudit({
+      userId,
+      action: "report_export",
+      resource: `report:${id}`,
+      result: "denied",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: { reason: "forbidden", reportOwner: report.userId },
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -122,6 +133,23 @@ export async function GET(
     const element = React.createElement(ReportPDF, { data }) as React.ReactElement<DocumentProps>;
     const buffer = await renderToBuffer(element);
 
+    // ─── Audit log (Loi 09-08) — report PDF exported ────────────
+    await logAudit({
+      userId,
+      action: "report_export",
+      resource: `report:${id}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        title: report.title,
+        period: report.period,
+        companyId: report.companyId ?? null,
+        companyName: report.company?.name ?? null,
+        bytes: buffer.length,
+      },
+    });
+
     const filename = `harchiq-report-${report.period}.pdf`;
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
@@ -134,9 +162,21 @@ export async function GET(
     });
   } catch (err) {
     console.error("[reports.pdf] renderToBuffer failed:", err);
+    // ─── Audit log (Loi 09-08) — PDF render failed ──────────────
+    await logAudit({
+      userId,
+      action: "report_export",
+      resource: `report:${id}`,
+      result: "error",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        error: err instanceof Error ? err.message : "unknown",
+      },
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to render PDF" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

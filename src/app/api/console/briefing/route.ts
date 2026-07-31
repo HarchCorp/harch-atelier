@@ -32,6 +32,7 @@ import {
   type BriefingPayload,
 } from "@/lib/harchiq/briefing";
 import { logError } from "@/lib/logger";
+import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -85,9 +86,12 @@ export async function GET(req: Request) {
 
   // 2. Resolve the primary company for this user (same heuristic as
   //    /api/console/alerts and /api/cron/generate-reports).
+  //    Task: domain-matching-demo-isolation — pass isDemo so the
+  //    helper builds the right demoFilter.
   const company = await getPrimaryCompanyForUser({
     id: userId,
     accountType: session.user.accountType ?? "brand-monitor",
+    isDemo: session.user.isDemo,
   });
   if (!company) {
     return NextResponse.json(
@@ -103,6 +107,23 @@ export async function GET(req: Request) {
       companyId: company.id,
       companyName: company.name,
       dateKey,
+      isDemo: session.user.isDemo,
+    });
+
+    // ─── Audit log (Loi 09-08) — briefing generated ──────────────
+    await logAudit({
+      userId,
+      action: "briefing_generate",
+      resource: `briefing:${dateKey}`,
+      result: "success",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        companyId: company.id,
+        companyName: company.name,
+        date: dateKey,
+        regenerate,
+      },
     });
 
     // 4. Persist for next time (fire-and-forget — don't block the response).
@@ -114,6 +135,20 @@ export async function GET(req: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     logError("briefing.route", `userId=${userId} date=${dateKey}: ${msg}`);
+    // ─── Audit log (Loi 09-08) — briefing generation failed ──────
+    await logAudit({
+      userId,
+      action: "briefing_generate",
+      resource: `briefing:${dateKey}`,
+      result: "error",
+      ipAddress: extractIp(req),
+      userAgent: extractUserAgent(req),
+      metadata: {
+        companyId: company.id,
+        date: dateKey,
+        error: msg,
+      },
+    });
     return NextResponse.json(
       { error: "Couldn't generate briefing. Try again.", detail: msg, date: dateKey },
       { status: 500 },

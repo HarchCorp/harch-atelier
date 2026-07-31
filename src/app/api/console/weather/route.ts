@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/weather
@@ -48,6 +51,11 @@ export async function GET(req: Request) {
     // which leaked OCP data to every user. We now resolve the company
     // from the logged-in user's companyId — only fallback to slug
     // lookup when an admin explicitly passes ?company= (preview mode).
+    //
+    // Task: domain-matching-demo-isolation — derive demoFilter from
+    // the session so admin preview path AND normal user path both
+    // apply the isDemo filter to every child query.
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -74,7 +82,7 @@ export async function GET(req: Request) {
 
     // Get latest reputation score
     const reputationScore = await prisma.reputationScore.findFirst({
-      where: { companyId: company.id },
+      where: { companyId: company.id, ...demoFilter },
       orderBy: { calculatedAt: "desc" },
     });
 
@@ -86,6 +94,7 @@ export async function GET(req: Request) {
       where: {
         companyId: company.id,
         publishedAt: { gte: thirtyDaysAgo },
+        ...demoFilter,
       },
       orderBy: { publishedAt: "desc" },
       take: 50,

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
-import { requireUserCompany } from "@/lib/harchiq/company-session";
+import {
+  requireUserCompany,
+  demoFilterFromSession,
+} from "@/lib/harchiq/company-session";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/source-matrix
@@ -51,6 +54,8 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(limitParam || 20, 1), 100);
 
     const companySlug = searchParams.get("company");
+    // Task: domain-matching-demo-isolation
+    const demoFilter = demoFilterFromSession(session);
     let company;
     if (companySlug) {
       if (session.user.role !== "admin") {
@@ -81,6 +86,7 @@ export async function GET(req: NextRequest) {
       where: {
         companyId: company.id,
         publishedAt: { gte: since },
+        ...demoFilter,
       },
       select: {
         source: true,
