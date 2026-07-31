@@ -3158,7 +3158,7 @@ export function InvestorDeskDashboard({
                 <span><span style={{ display: "inline-block", width: 8, height: 8, background: C.borderStrong, marginRight: 4, verticalAlign: "middle" }} />Asset</span>
               </div>
             </div>
-            <DashboardErrorBoundary label="06 — Entity Resolution Graph" accent={ACCENT}>
+            <DashboardErrorBoundary title="06 — Entity Resolution Graph" accent={ACCENT}>
               <EntityGraph holdings={holdings} portfoliosCount={kpis?.portfoliosManaged ?? 0} loading={loading} />
             </DashboardErrorBoundary>
           </div>
@@ -3195,7 +3195,7 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Drag to zoom</div>
             </div>
-            <DashboardErrorBoundary label="15 — Adverse Media Timeline" accent={ACCENT}>
+            <DashboardErrorBoundary title="15 — Adverse Media Timeline" accent={ACCENT}>
               <AdverseMediaTimeline alerts={alerts} holdings={holdings} loading={loading} />
             </DashboardErrorBoundary>
           </div>
@@ -3212,7 +3212,7 @@ export function InvestorDeskDashboard({
                 <div style={chartSubtitleStyle}>ECharts · sector × risk-type matrix</div>
               </div>
             </div>
-            <DashboardErrorBoundary label="16 — Cross-Border Risk Heatmap" accent={ACCENT}>
+            <DashboardErrorBoundary title="16 — Cross-Border Risk Heatmap" accent={ACCENT}>
               <CrossBorderHeatmap holdings={holdings} dossiers={dossiers} />
             </DashboardErrorBoundary>
           </div>
@@ -3225,7 +3225,7 @@ export function InvestorDeskDashboard({
                 <div style={chartSubtitleStyle}>ECharts · funnel · {dossierTotal} dossiers</div>
               </div>
             </div>
-            <DashboardErrorBoundary label="17 — Dossier Status Pipeline" accent={ACCENT}>
+            <DashboardErrorBoundary title="17 — Dossier Status Pipeline" accent={ACCENT}>
               <DossierPipelineFunnel dossiers={dossiers} />
             </DashboardErrorBoundary>
           </div>
@@ -3423,7 +3423,7 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Drag nodes to reposition</div>
             </div>
-            <DashboardErrorBoundary label="24 — Threat Network Graph" accent={ACCENT}>
+            <DashboardErrorBoundary title="24 — Threat Network Graph" accent={ACCENT}>
               <ThreatNetworkGraph holdings={holdings} dossiers={dossiers} />
             </DashboardErrorBoundary>
           </div>
@@ -3441,7 +3441,7 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Company · UBO · Subsidiary · Director · Shell</div>
             </div>
-            <DashboardErrorBoundary label="25 — Moteur de Due Diligence UBO" accent={ACCENT}>
+            <DashboardErrorBoundary title="25 — Moteur de Due Diligence UBO" accent={ACCENT}>
               <UboGraphModule holdings={holdings} dossiers={dossiers} loading={loading} />
             </DashboardErrorBoundary>
           </div>
@@ -3459,7 +3459,7 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Risk-derived · deterministic</div>
             </div>
-            <DashboardErrorBoundary label="26 — Registre de Conformité Globale" accent={ACCENT}>
+            <DashboardErrorBoundary title="26 — Registre de Conformité Globale" accent={ACCENT}>
               <ComplianceRegistry holdings={holdings} dossiers={dossiers} loading={loading} />
             </DashboardErrorBoundary>
           </div>
@@ -3477,7 +3477,7 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Legal · Ecological · Fiscal · Reputational · Regulatory</div>
             </div>
-            <DashboardErrorBoundary label="27 — Timeline Adverse Media 15 Ans" accent={ACCENT}>
+            <DashboardErrorBoundary title="27 — Timeline Adverse Media 15 Ans" accent={ACCENT}>
               <AdverseMedia15yr alerts={alerts} holdings={holdings} dossiers={dossiers} loading={loading} />
             </DashboardErrorBoundary>
           </div>

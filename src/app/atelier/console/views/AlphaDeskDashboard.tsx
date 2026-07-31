@@ -3165,7 +3165,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 9. Virtualized Asset List */}
-            <DashboardErrorBoundary label="Asset Selector" accent={ACCENT}>
+            <DashboardErrorBoundary title="Asset Selector" accent={ACCENT}>
             <WidgetCard
               title={`Asset Selector · ${filteredAssets.length}`}
               subtitle="click to load chart"
@@ -3214,7 +3214,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 7. Candlestick + Z-Score Overlay */}
-            <DashboardErrorBoundary label="Candlestick + Z-Score" accent={ACCENT}>
+            <DashboardErrorBoundary title="Candlestick + Z-Score" accent={ACCENT}>
             <WidgetCard
               title={`Candlestick + Z-Score · ${selectedTicker ?? "—"}`}
               subtitle="30d close-to-close · sentiment overlay"
@@ -3244,7 +3244,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 10. NLP Order-Book Depth */}
-            <DashboardErrorBoundary label="Order-Book Depth" accent={ACCENT}>
+            <DashboardErrorBoundary title="Order-Book Depth" accent={ACCENT}>
             <WidgetCard
               title="NLP Order-Book Depth"
               subtitle="sentiment-weighted bid/ask"
@@ -3282,7 +3282,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 11. LLM Probe Matrix */}
-            <DashboardErrorBoundary label="LLM Probe Matrix" accent={ACCENT}>
+            <DashboardErrorBoundary title="LLM Probe Matrix" accent={ACCENT}>
             <WidgetCard
               title="LLM Probe Matrix"
               subtitle="8 AI engines · sentiment"
@@ -3351,7 +3351,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 12. Correlation Strength Heatmap (asset × asset) */}
-            <DashboardErrorBoundary label="Correlation Matrix" accent={ACCENT}>
+            <DashboardErrorBoundary title="Correlation Matrix" accent={ACCENT}>
             <WidgetCard
               title="Correlation Matrix"
               subtitle="asset × asset price r"
@@ -3374,7 +3374,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 14. Volatility Micro-Gauges */}
-            <DashboardErrorBoundary label="Volatility Gauges" accent={ACCENT}>
+            <DashboardErrorBoundary title="Volatility Gauges" accent={ACCENT}>
             <WidgetCard
               title="Volatility Gauges"
               subtitle="|Δ%| per asset"
@@ -3419,7 +3419,7 @@ export function AlphaDeskDashboard({
               marginBottom: "8px",
             }}
           >
-            <DashboardErrorBoundary label="Sparkline Dashboard" accent={ACCENT}>
+            <DashboardErrorBoundary title="Sparkline Dashboard" accent={ACCENT}>
             <WidgetCard
               title="Multi-Asset Sparkline Dashboard"
               subtitle="price (cyan) + sentiment (amber) · 30d"
@@ -3496,7 +3496,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 16. Virtualized Signal Feed */}
-            <DashboardErrorBoundary label="Signal Feed" accent={ACCENT}>
+            <DashboardErrorBoundary title="Signal Feed" accent={ACCENT}>
             <WidgetCard
               title={`Signal Feed · ${alerts.length}`}
               subtitle="crisis alerts · virtualized"
@@ -3543,7 +3543,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 17. Virtualized Alpha Scorecard */}
-            <DashboardErrorBoundary label="Alpha Scorecard" accent={ACCENT}>
+            <DashboardErrorBoundary title="Alpha Scorecard" accent={ACCENT}>
             <WidgetCard
               title={`Alpha Scorecard · ${alphaRows.length}`}
               subtitle="divergence signals · ranked"
@@ -3649,7 +3649,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 8. Price × Sentiment Dual Axis (ECharts) */}
-            <DashboardErrorBoundary label="Dual Axis Chart" accent={ACCENT}>
+            <DashboardErrorBoundary title="Dual Axis Chart" accent={ACCENT}>
             <WidgetCard
               title={`Price × Sentiment Dual Axis · ${selectedTicker ?? "—"}`}
               subtitle="divergence highlight"
@@ -3672,7 +3672,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 13. Pearson r Distribution (Recharts bar) */}
-            <DashboardErrorBoundary label="Pearson r Distribution" accent={ACCENT}>
+            <DashboardErrorBoundary title="Pearson r Distribution" accent={ACCENT}>
             <WidgetCard
               title="Pearson r Distribution"
               subtitle="sentiment → price · all assets"
@@ -3732,7 +3732,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 18. Sentiment Distribution Pie (Recharts) */}
-            <DashboardErrorBoundary label="Sentiment Distribution" accent={ACCENT}>
+            <DashboardErrorBoundary title="Sentiment Distribution" accent={ACCENT}>
             <WidgetCard
               title="Sentiment Distribution"
               subtitle="asset count"
@@ -3774,7 +3774,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 19. Top Gainers / Losers (Recharts) */}
-            <DashboardErrorBoundary label="Top Movers" accent={ACCENT}>
+            <DashboardErrorBoundary title="Top Movers" accent={ACCENT}>
             <WidgetCard
               title="Top Movers"
               subtitle="gainers vs losers"
@@ -3821,7 +3821,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 20. Sentiment Heatmap Grid (ECharts) */}
-            <DashboardErrorBoundary label="Sentiment Heatmap" accent={ACCENT}>
+            <DashboardErrorBoundary title="Sentiment Heatmap" accent={ACCENT}>
             <WidgetCard
               title="Sentiment Heatmap"
               subtitle="assets × metrics"
@@ -3842,7 +3842,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 21. Latency Timeline (ECharts) */}
-            <DashboardErrorBoundary label="Latency Timeline" accent={ACCENT}>
+            <DashboardErrorBoundary title="Latency Timeline" accent={ACCENT}>
             <WidgetCard
               title="Latency Timeline"
               subtitle="client RTT · rolling 30"
@@ -3873,7 +3873,7 @@ export function AlphaDeskDashboard({
               Preserved from V7 (chart 2)
               ═══════════════════════════════════════════════════════════ */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(24, 1fr)", gap: "8px" }}>
-            <DashboardErrorBoundary label="Asset Performance" accent={ACCENT}>
+            <DashboardErrorBoundary title="Asset Performance" accent={ACCENT}>
             <WidgetCard
               title="Asset Performance — Latest Δ%"
               subtitle="all assets · horizontal bar"
@@ -3971,7 +3971,7 @@ export function AlphaDeskDashboard({
               marginBottom: "8px",
             }}
           >
-            <DashboardErrorBoundary label="Market Selector (M1)" accent={ACCENT}>
+            <DashboardErrorBoundary title="Market Selector (M1)" accent={ACCENT}>
             <WidgetCard
               title="Sélecteur de Marché Global & Régional"
               subtitle="multi-venue · timezone-aware status"
@@ -4281,7 +4281,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* Currency switcher + portfolio value strip */}
-            <DashboardErrorBoundary label="Settlement Ledger (M2)" accent={ACCENT}>
+            <DashboardErrorBoundary title="Settlement Ledger (M2)" accent={ACCENT}>
             <WidgetCard
               title="Multi-Devises & Settlement Ledger"
               subtitle={`SETTLEMENT RATE · ${settlementCurrency}/USD ${FX_SETTLEMENT_RATE[settlementCurrency].USD.toFixed(4)} · ${settlementCurrency}/EUR ${FX_SETTLEMENT_RATE[settlementCurrency].EUR.toFixed(4)}`}
@@ -4422,7 +4422,7 @@ export function AlphaDeskDashboard({
             }}
           >
             {/* 3a — Multi-asset candlestick grid */}
-            <DashboardErrorBoundary label="Candlestick Grid (M3a)" accent={ACCENT}>
+            <DashboardErrorBoundary title="Candlestick Grid (M3a)" accent={ACCENT}>
             <WidgetCard
               title="Multi-Asset Candlestick Grid"
               subtitle="4-8 mini candles · Z-score overlay · click to expand"
@@ -4501,7 +4501,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 3b — NLP Order-Book Depth (selected asset) */}
-            <DashboardErrorBoundary label="Order-Book Depth (M3b)" accent={ACCENT}>
+            <DashboardErrorBoundary title="Order-Book Depth (M3b)" accent={ACCENT}>
             <WidgetCard
               title={`NLP Order-Book Depth · ${selectedTicker ?? "—"}`}
               subtitle="synthetic price ladder · sentiment-weighted bid/ask"
@@ -4536,7 +4536,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 3c — Z-Score Matrix */}
-            <DashboardErrorBoundary label="Z-Score Matrix (M3c)" accent={ACCENT}>
+            <DashboardErrorBoundary title="Z-Score Matrix (M3c)" accent={ACCENT}>
             <WidgetCard
               title="Multi-Asset Z-Score Matrix"
               subtitle="Z > 3 anomaly · Z > 1.5 amber · else slate"
@@ -4569,7 +4569,7 @@ export function AlphaDeskDashboard({
             </DashboardErrorBoundary>
 
             {/* 3d — Sentiment Pressure Gauge */}
-            <DashboardErrorBoundary label="Sentiment Pressure (M3d)" accent={ACCENT}>
+            <DashboardErrorBoundary title="Sentiment Pressure (M3d)" accent={ACCENT}>
             <WidgetCard
               title={`Sentiment Pressure · ${selectedTicker ?? "—"}`}
               subtitle="net buy vs sell · radial"
