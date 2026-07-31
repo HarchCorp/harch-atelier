@@ -6,14 +6,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  // Auth: Vercel Cron sends Authorization: Bearer <CRON_SECRET>
   const authHeader = req.headers.get("authorization");
   const expectedSecret = process.env.CRON_SECRET;
-  
+
   if (!expectedSecret) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
   }
-  
+
   if (authHeader !== `Bearer ${expectedSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -24,78 +23,73 @@ export async function GET(req: NextRequest) {
     tasks: [] as Array<{ task: string; status: "ok" | "error" | "skip"; detail?: string }>,
   };
 
-  // Task 1: Update asset prices (simulate market tick for BVC/NYSE/NASDAQ assets)
+  // Task 1: Create a new AssetPrice snapshot for each asset (market tick)
   try {
-    const assets = await prisma.asset.findMany({ select: { id: true, ticker: true, lastPrice: true } });
-    let updated = 0;
+    const assets = await prisma.asset.findMany({ select: { id: true, ticker: true } });
+    const now = new Date();
+    let created = 0;
+
+    // Get the latest price for each asset to compute drift
+    const latestPrices = await prisma.assetPrice.findMany({
+      where: { tradedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      orderBy: { tradedAt: "desc" },
+      distinct: ["assetId"],
+      select: { assetId: true, price: true },
+    });
+    const priceMap = new Map(latestPrices.map((p) => [p.assetId, p.price]));
+
     for (const asset of assets) {
-      const drift = (Math.random() - 0.5) * 0.02;
-      const newPrice = Math.max(0.01, asset.lastPrice * (1 + drift));
-      const change = ((newPrice - asset.lastPrice) / asset.lastPrice) * 100;
-      await prisma.asset.update({
-        where: { id: asset.id },
+      const basePrice = priceMap.get(asset.id) ?? 100; // fallback if no history
+      const drift = (Math.random() - 0.5) * 0.02; // ±1% drift
+      const newPrice = Math.max(0.01, basePrice * (1 + drift));
+      const changePct = ((newPrice - basePrice) / basePrice) * 100;
+
+      await prisma.assetPrice.create({
         data: {
-          lastPrice: parseFloat(newPrice.toFixed(2)),
-          change24h: parseFloat(change.toFixed(2)),
-          updatedAt: new Date(),
+          assetId: asset.id,
+          price: parseFloat(newPrice.toFixed(2)),
+          volume: Math.floor(Math.random() * 500000) + 10000,
+          changePct: parseFloat(changePct.toFixed(2)),
+          tradedAt: now,
         },
       });
-      updated++;
+      created++;
     }
-    results.tasks.push({ task: "asset-prices", status: "ok", detail: `${updated} assets updated` });
+    results.tasks.push({ task: "asset-prices", status: "ok", detail: `${created} price ticks created` });
   } catch (err: any) {
     results.tasks.push({ task: "asset-prices", status: "error", detail: err.message });
   }
 
-  // Task 2: Create a price point snapshot for each asset (daily history)
-  try {
-    const assets = await prisma.asset.findMany({ select: { id: true, lastPrice: true } });
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const existing = await prisma.pricePoint.findMany({
-      where: { timestamp: { gte: startOfDay } },
-      select: { assetId: true },
-    });
-    const existingIds = new Set(existing.map((p) => p.assetId));
-    const toCreate = assets.filter((a) => !existingIds.has(a.id));
-    if (toCreate.length > 0) {
-      await prisma.pricePoint.createMany({
-        data: toCreate.map((a) => ({ assetId: a.id, price: a.lastPrice, timestamp: now })),
-      });
-    }
-    results.tasks.push({ task: "price-snapshot", status: "ok", detail: `${toCreate.length} new snapshots` });
-  } catch (err: any) {
-    results.tasks.push({ task: "price-snapshot", status: "error", detail: err.message });
-  }
-
-  // Task 3: Create sentiment point snapshots
+  // Task 2: Create an AssetSentiment snapshot for each asset
   try {
     const assets = await prisma.asset.findMany({ select: { id: true } });
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const existing = await prisma.sentimentPoint.findMany({
-      where: { timestamp: { gte: startOfDay } },
-      select: { assetId: true },
-    });
-    const existingIds = new Set(existing.map((p) => p.assetId));
-    const toCreate = assets.filter((a) => !existingIds.has(a.id));
-    if (toCreate.length > 0) {
-      await prisma.sentimentPoint.createMany({
-        data: toCreate.map((a) => ({
-          assetId: a.id,
-          score: parseFloat((Math.random() * 2 - 1).toFixed(3)),
-          volume: Math.floor(Math.random() * 200) + 10,
-          source: "harchiq",
-          timestamp: now,
-        })),
+    let created = 0;
+
+    for (const asset of assets) {
+      const score = (Math.random() * 2 - 1); // -1 to 1
+      const positive = score > 0 ? 50 + score * 25 : 50 - Math.abs(score) * 15;
+      const negative = score < 0 ? 50 + Math.abs(score) * 25 : 50 - score * 15;
+      const neutral = 100 - positive - negative;
+
+      await prisma.assetSentiment.create({
+        data: {
+          assetId: asset.id,
+          score: parseFloat(score.toFixed(3)),
+          positivePct: parseFloat(Math.max(0, Math.min(100, positive)).toFixed(1)),
+          neutralPct: parseFloat(Math.max(0, Math.min(100, neutral)).toFixed(1)),
+          negativePct: parseFloat(Math.max(0, Math.min(100, negative)).toFixed(1)),
+          articleCount: Math.floor(Math.random() * 50) + 5,
+        },
       });
+      created++;
     }
-    results.tasks.push({ task: "sentiment-snapshot", status: "ok", detail: `${toCreate.length} new snapshots` });
+    results.tasks.push({ task: "sentiment-snapshot", status: "ok", detail: `${created} sentiment snapshots created` });
   } catch (err: any) {
     results.tasks.push({ task: "sentiment-snapshot", status: "error", detail: err.message });
   }
 
-  // Task 4: Clean up old invitations (expired > 7 days)
+  // Task 3: Clean up old invitations (expired > 7 days)
   try {
     const expired = await prisma.invitation.deleteMany({
       where: {
@@ -106,6 +100,19 @@ export async function GET(req: NextRequest) {
     results.tasks.push({ task: "cleanup-invitations", status: "ok", detail: `${expired.count} expired invitations removed` });
   } catch (err: any) {
     results.tasks.push({ task: "cleanup-invitations", status: "error", detail: err.message });
+  }
+
+  // Task 4: Clean up old notifications (read + older than 30 days)
+  try {
+    const oldNotifs = await prisma.notification.deleteMany({
+      where: {
+        read: true,
+        createdAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+    });
+    results.tasks.push({ task: "cleanup-notifications", status: "ok", detail: `${oldNotifs.count} old notifications removed` });
+  } catch (err: any) {
+    results.tasks.push({ task: "cleanup-notifications", status: "error", detail: err.message });
   }
 
   results.tasks.push({ task: "cron-log", status: "ok", detail: `completed in ${Date.now() - startTime}ms` });
