@@ -256,7 +256,7 @@ function toRegulatoryResult(
     url: article.url,
     source: article.source,
     publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
-    snippet: article.rawContent.slice(0, 500),
+    snippet: (article.rawContent || article.description || "").slice(0, 500),
     // Full content not fetched for regulatory filings — they're usually
     // PDF attachments that fetchArticleContent can't extract. The
     // snippet from the RSS feed is sufficient for dossier generation.

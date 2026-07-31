@@ -1,95 +1,130 @@
 // ═══════════════════════════════════════════════════════════════
-//  RSS SCRAPER v3 — AEGIS-SCRAPER reinforced edition
-//  Project AEGIS remediation: hardened RSS / Google News ingestion
+//  RSS SCRAPER v4 — REAL MOROCCAN MEDIA FEEDS
 //
-//  Highlights:
-//  • 15 User-Agent rotation to defeat naive bot blocking
-//  • 30 s request timeout via AbortController (no more hung scrapes)
-//  • Exponential backoff retry (3 attempts) on transient failures
-//  • Direct-feed scraper with 403-aware UA fallback (TelQuel, Medias24)
-//  • Full article content fetcher with HTML sanitization (5 000 char cap
-//    to respect GLM-4 context window)
-//  • Lightweight language detection (ar / fr / en)
-//  • SHA-256 URL hashing for stable dedupe keys
-//  • Backward-compatible exports: Article / scrapeForCompany / scrapeAllSources
-//    so orchestrator-v2.ts, sentiment-analyzer.ts and route handlers keep working
+//  Two layers in this module:
+//
+//  LAYER A — NEW REAL-FEED PIPELINE (Task: real-rss-scrapers)
+//  ------------------------------------------------------------
+//  • RSSFeed / MOROCCAN_FEEDS  — 10 hand-picked Moroccan media feeds
+//    (Hespress, Le360, TelQuel, Medias24, L'Economiste, Aujourdhui,
+//    Morocco World News, Yabiladi, LesEco — Arabic / French / English).
+//  • scrapeFeed(feed)          — fetches one feed, returns ScrapedArticle[]
+//    with description + content + language (Darija NLP) + urlHash.
+//  • parseRSS(xml, feed)       — pure XML → ScrapedArticle[] parser.
+//    Handles RSS 2.0 <item> AND Atom <entry>. Robust against malformed
+//    XML (regex-based extraction, never throws on a single bad item).
+//  • URL dedup via SHA-256 urlHash (unique in DB).
+//
+//  LAYER B — LEGACY v3 ENTRY POINTS (kept for orchestrator-v2.ts,
+//  sentiment-analyzer.ts, /api/atelier/scrape, /api/atelier/whatsapp)
+//  ------------------------------------------------------------
+//  • scrapeForCompany(name)    — Google News RSS + direct feeds → Article[]
+//  • scrapeAllSources()        — general "Maroc" Google News + direct feeds
+//  • scrapeGoogleNewsRSS / scrapeDirectRSS — reinforced primitives
+//  • USER_AGENTS, hashUrl, parseRSSDate, stripHtml, fetchArticleContent…
+//
+//  The new `ScrapedArticle` interface carries both `description` (the
+//  RSS <description> short summary) and `content` (the full article
+//  text from <content:encoded> or fetched HTML — may be empty when only
+//  the feed is fetched). The legacy `rawContent` field is kept as a
+//  deprecated alias of `description` so the v3 layer keeps compiling.
 // ═══════════════════════════════════════════════════════════════
 
 import { createHash } from "crypto";
+import {
+  detectLanguage as detectDarijaLanguage,
+  type LanguageLabel,
+} from "@/lib/harchiq/darija";
 
-// ─── CORE TYPES ───────────────────────────────────────────────────
+// ─── CORE TYPES (NEW SPEC) ────────────────────────────────────────
 
 /**
- * ScrapedArticle — the reinforced article payload produced by the new
- * scraping primitives (scrapeGoogleNewsRSS / scrapeDirectRSS).
+ * ScrapedArticle — the canonical article payload produced by the new
+ * real-feed pipeline. The legacy `rawContent` field is kept as a
+ * deprecated alias of `description` so the v3 layer keeps compiling.
  */
 export interface ScrapedArticle {
   title: string;
   url: string;
   source: string;
   publishedAt: Date | null;
-  rawContent: string;
-  language: "ar" | "fr" | "en" | string;
+  /** Short summary from the RSS <description> / Atom <summary> tag. */
+  description: string;
+  /** Full article text — from <content:encoded> or fetched HTML. May be
+   *  empty when only the feed was fetched (cron never fetches full body
+   *  for speed). */
+  content: string;
+  /** Language label from the Darija NLP module
+   *  (darija | arabic | french | english | mixed). */
+  language: string;
+  /** SHA-256 of the URL — stable dedupe key (matches DB unique field). */
   urlHash: string;
+  /** @deprecated use `description` instead. Kept for v3 callers. */
+  rawContent?: string;
 }
 
 /**
- * ScrapeOptions — tuning knobs for every scrape primitive in this module.
+ * RSSFeed — a single Moroccan media RSS feed to scrape on schedule.
  */
-export interface ScrapeOptions {
-  query: string;
-  language: "fr" | "ar" | "en";
-  country: string; // ISO-2 e.g. MA, FR
-  maxArticles: number;
-  timeout: number; // ms
-  retryCount: number;
+export interface RSSFeed {
+  /** Human-readable publisher / feed name. */
+  name: string;
+  /** RSS or Atom endpoint URL. */
+  url: string;
+  /** Primary feed language. */
+  language: "ar" | "fr" | "en";
+  /** Editorial category. */
+  category: "news" | "business" | "tech";
 }
 
-// ─── USER-AGENT ROTATION POOL (15 strings) ────────────────────────
-// Realistic, up-to-date UA strings spanning Chrome / Firefox / Safari /
-// Edge on desktop + mobile. Rotating these drastically reduces the
-// chance of being blocked by Cloudflare-style bot filters (the main
-// failure mode of the previous scraper on TelQuel / Medias24).
+// ─── 10 REAL MOROCCAN MEDIA FEEDS ────────────────────────────────
+//
+//  Curated list of working Moroccan media RSS feeds. Each entry was
+//  verified to return a parseable XML body at the time of writing.
+//  Feeds that 403 / 404 silently are skipped by scrapeFeed() — the
+//  cron never crashes on a single broken feed.
+//
+//  Language coverage: Arabic (Hespress), French (the bulk), English
+//  (Morocco World News). Category coverage: general news + business.
+//  This is the real data source — no simulated seeds.
 
-export const USER_AGENTS: readonly string[] = [
-  // Chrome — desktop
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  // Chrome — mobile
-  "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) CriOS/125.0.0.0 Mobile/15E148 Safari/604.1",
-  // Firefox — desktop
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:125.0) Gecko/20100101 Firefox/125.0",
-  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0",
-  // Firefox — mobile
-  "Mozilla/5.0 (Android 14; Mobile; rv:125.0) Gecko/125.0 Firefox/125.0",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/125.0 Mobile/15E148 Safari/605.1.15",
-  // Safari — desktop & mobile
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-  "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-  // Edge — desktop
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
-] as const;
+export const MOROCCAN_FEEDS: RSSFeed[] = [
+  // Hespress (Arabic — the largest Moroccan news site by traffic)
+  { name: "Hespress", url: "https://www.hespress.com/rss", language: "ar", category: "news" },
+  { name: "Hespress - Economy", url: "https://www.hespress.com/rss/index.xml", language: "ar", category: "business" },
+  // Le360 (French — high-volume general news)
+  { name: "Le360", url: "https://fr.le360.ma/rss", language: "fr", category: "news" },
+  // TelQuel (French — independent weekly)
+  { name: "TelQuel", url: "https://telquel.ma/feed", language: "fr", category: "news" },
+  // Medias24 (French — business / economy)
+  { name: "Medias24", url: "https://www.medias24.com/feed", language: "fr", category: "business" },
+  // L'Economiste (French — daily business paper)
+  { name: "L'Economiste", url: "https://www.leconomiste.com/rss", language: "fr", category: "business" },
+  // Aujourd'hui Le Maroc (French — daily general news)
+  { name: "Aujourdhui Le Maroc", url: "https://aujourdhui.ma/feed", language: "fr", category: "news" },
+  // Morocco World News (English — Morocco-focused, international audience)
+  { name: "Morocco World News", url: "https://www.moroccoworldnews.com/feed", language: "en", category: "news" },
+  // Yabiladi (French — community + news portal)
+  { name: "Yabiladi", url: "https://www.yabiladi.com/rss.xml", language: "fr", category: "news" },
+  // LesEco (French — business / markets)
+  { name: "LesEco", url: "https://leseco.ma/feed", language: "fr", category: "business" },
+];
 
-/**
- * Randomly select one of the USER_AGENTS. Each call yields a fresh pick
- * so retry attempts naturally rotate UAs.
- */
-export function getRandomUserAgent(): string {
-  const idx = Math.floor(Math.random() * USER_AGENTS.length);
-  return USER_AGENTS[idx];
-}
+// ─── POLITE BOT USER-AGENT ───────────────────────────────────────
+//
+//  Identifies us to publishers so they can throttle / contact us.
+//  The cron job is the only caller that uses this UA — the legacy
+//  v3 layer keeps its rotating UA pool for adversarial feeds.
+
+const HARCH_BOT_UA =
+  "HarchAtelierBot/1.0 (monitoring; contact: amine@harchcorp.com)";
 
 // ─── URL HASHING (stable dedupe key) ──────────────────────────────
 
 /**
  * SHA-256 hash of a URL — used as a stable primary key for articles so
  * the same story seen via Google News + a direct feed collapses to a
- * single row in the DB.
+ * single row in the DB. Matches the @unique urlHash column on Article.
  */
 export function hashUrl(url: string): string {
   return createHash("sha256").update(url).digest("hex");
@@ -145,7 +180,7 @@ function pad(n: string | number): string {
 /**
  * Strip HTML to plain text:
  *  • Unwrap CDATA sections
- *  • Decode the common XML / HTML entities
+ *  • Decode the common XML / HTML entities (incl. Arabic punctuation)
  *  • Drop all tags
  *  • Collapse whitespace
  */
@@ -187,14 +222,13 @@ export function stripHtml(html: string): string {
   return out;
 }
 
-// ─── LANGUAGE DETECTION (heuristic) ───────────────────────────────
+// ─── LANGUAGE DETECTION ───────────────────────────────────────────
 
 /**
- * Cheap heuristic language detection:
+ * Cheap heuristic language detection (legacy — used by the v3 layer).
  *  • Arabic letters (U+0600–U+06FF) > 15 % → "ar"
  *  • French accented chars (àâçéèêëîïôûùüœ) > 2 % → "fr"
  *  • Otherwise → "en"
- * Good enough for routing articles to the right GLM-4 prompt.
  */
 export function detectLanguage(text: string): "ar" | "fr" | "en" {
   if (!text) return "en";
@@ -212,10 +246,236 @@ export function detectLanguage(text: string): "ar" | "fr" | "en" {
   return "en";
 }
 
-// ─── XML PARSING ──────────────────────────────────────────────────
+/**
+ * Detect language via the Darija NLP module — returns the rich label
+ * (darija | arabic | french | english | mixed) plus confidence and
+ * markers. Falls back to the cheap heuristic if the module throws.
+ */
+export function detectLanguageRich(text: string): {
+  language: LanguageLabel;
+  confidence: number;
+  markers: string[];
+} {
+  try {
+    const r = detectDarijaLanguage(text || "");
+    return {
+      language: r.language,
+      confidence: r.confidence,
+      markers: r.markers,
+    };
+  } catch {
+    const simple = detectLanguage(text || "");
+    const map: Record<string, LanguageLabel> = {
+      ar: "arabic",
+      fr: "french",
+      en: "english",
+    };
+    return { language: map[simple] || "mixed", confidence: 0.4, markers: [] };
+  }
+}
+
+// ─── XML HELPERS (shared by the new + legacy parsers) ─────────────
+
+/** Extract the inner text of <tag>…</tag> (first match, case-insensitive).
+ *  Handles namespaced tags (dc:date, content:encoded) by escaping the
+ *  colon in the regex. */
+function extractTag(xml: string, tag: string): string | null {
+  const safe = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`<${safe}[^>]*>([\\s\\S]*?)<\\/${safe}>`, "i");
+  const match = xml.match(regex);
+  return match ? match[1].trim() : null;
+}
+
+/** Extract CDATA-wrapped content of <tag><![CDATA[…]]></tag>. */
+function extractCDATA(xml: string, tag: string): string | null {
+  const safe = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(
+    `<${safe}[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*<\\/${safe}>`,
+    "i",
+  );
+  const match = xml.match(regex);
+  return match ? match[1].trim() : null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LAYER A — NEW REAL-FEED PIPELINE
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * Parse an RSS XML string into ScrapedArticle[].
+ * Fetch a single RSS / Atom feed and return parsed articles.
+ *
+ *  • 15-second timeout (AbortSignal.timeout) so slow feeds don't hang
+ *    the cron.
+ *  • Polite HarchAtelierBot User-Agent.
+ *  • Never throws — returns [] on any error (fetch, parse, network).
+ *  • Uses the Darija NLP module to detect language per article.
+ */
+export async function scrapeFeed(feed: RSSFeed): Promise<ScrapedArticle[]> {
+  try {
+    const res = await fetch(feed.url, {
+      headers: {
+        "User-Agent": HARCH_BOT_UA,
+        Accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8,ar;q=0.7",
+        "Cache-Control": "no-cache",
+      },
+      // Next.js fetch extension — opt out of caching for live scraping
+      // @ts-ignore — Next.js fetch supports this
+      cache: "no-store",
+      redirect: "follow",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      console.warn(
+        `[rss-scraper] scrapeFeed(${feed.name}) → HTTP ${res.status} ${res.statusText}`,
+      );
+      return [];
+    }
+    const xml = await res.text();
+    if (!xml || xml.length < 32) {
+      console.warn(`[rss-scraper] scrapeFeed(${feed.name}) → empty body`);
+      return [];
+    }
+    return parseRSS(xml, feed);
+  } catch (err: unknown) {
+    const name = (err as { name?: string })?.name;
+    if (name === "TimeoutError" || name === "AbortError") {
+      console.warn(`[rss-scraper] scrapeFeed(${feed.name}) → timeout (15s)`);
+    } else {
+      console.warn(
+        `[rss-scraper] scrapeFeed(${feed.name}) → error:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+    return [];
+  }
+}
+
+/**
+ * Pure XML → ScrapedArticle[] parser. Handles BOTH formats:
+ *
+ *  • RSS 2.0  → <item><title><link><pubDate><description><content:encoded></item>
+ *  • Atom 1.0 → <entry><title><link href="…"><updated><summary><content></entry>
+ *
+ * Robustness:
+ *  • Item-level try/catch — one malformed <item> never crashes the batch.
+ *  • CDATA sections unwrapped.
+ *  • HTML entities decoded (Arabic punctuation included).
+ *  • Empty titles or links → item skipped.
+ *  • Date falls back to <dc:date>, <published>, <updated>, then null.
+ *  • Content pulled from <content:encoded> (RSS) or <content> (Atom).
+ *  • Language detected per-article via the Darija NLP module.
+ *
+ * @param xml  raw RSS / Atom XML
+ * @param feed the feed definition (source name, primary language)
+ */
+export function parseRSS(xml: string, feed: RSSFeed): ScrapedArticle[] {
+  const articles: ScrapedArticle[] = [];
+  if (!xml) return articles;
+
+  // Detect format: Atom feeds have <entry> tags; RSS 2.0 feeds have <item>.
+  const isAtom = /<entry[\s>]/i.test(xml) && !/<item[\s>]/i.test(xml);
+
+  const itemRegex = isAtom
+    ? /<entry[\s\S]*?<\/entry>/gi
+    : /<item[\s\S]*?<\/item>/gi;
+  const items = xml.match(itemRegex) || [];
+
+  for (const item of items) {
+    try {
+      // ── title ──
+      const rawTitle =
+        extractCDATA(item, "title") || extractTag(item, "title") || "";
+      const title = stripHtml(rawTitle);
+      if (!title) continue;
+
+      // ── link ──
+      //  RSS:  <link>https://…</link>
+      //  Atom: <link href="https://…" />  (prefer rel="alternate", fall back to first)
+      let link = extractTag(item, "link");
+      if (!link) {
+        // Try Atom <link rel="alternate" href="…" />
+        const altLink = item.match(
+          /<link[^>]*\brel=["']alternate["'][^>]*\bhref=["']([^"']+)["']/i,
+        );
+        if (altLink) {
+          link = altLink[1];
+        } else {
+          // Fallback: any <link href="…" />
+          const linkAttr = item.match(/<link[^>]*\bhref=["']([^"']+)["']/i);
+          link = linkAttr ? linkAttr[1] : "";
+        }
+      }
+      if (!link) continue;
+      link = link.trim();
+
+      // ── description / summary ──
+      //  RSS:  <description>
+      //  Atom: <summary>
+      const rawDesc =
+        extractCDATA(item, "description") ||
+        extractTag(item, "description") ||
+        extractCDATA(item, "summary") ||
+        extractTag(item, "summary") ||
+        "";
+      const description = stripHtml(rawDesc);
+
+      // ── content (full body) ──
+      //  RSS:  <content:encoded>   (namespaced — common in WordPress feeds)
+      //  Atom: <content>
+      const rawContent =
+        extractCDATA(item, "content:encoded") ||
+        extractTag(item, "content:encoded") ||
+        extractCDATA(item, "content") ||
+        extractTag(item, "content") ||
+        "";
+      const content = stripHtml(rawContent);
+
+      // ── pubDate ──
+      //  RSS:  <pubDate> | <dc:date>
+      //  Atom: <published> | <updated>
+      const pubDateRaw =
+        extractTag(item, "pubDate") ||
+        extractTag(item, "dc:date") ||
+        extractTag(item, "published") ||
+        extractTag(item, "updated") ||
+        "";
+      const publishedAt = pubDateRaw ? parseRSSDate(pubDateRaw) : null;
+
+      // ── language (Darija NLP) ──
+      // Run on title + description (cheap, no need for the full body —
+      // the cron job calls this on every article, so keep it fast).
+      const detected = detectLanguageRich(`${title} ${description}`);
+      const language = detected.language;
+
+      // ── urlHash ──
+      const cleanUrl = link;
+      const urlHash = hashUrl(cleanUrl);
+
+      articles.push({
+        title,
+        url: cleanUrl,
+        source: feed.name,
+        publishedAt,
+        description,
+        content,
+        language,
+        urlHash,
+        rawContent: description, // legacy alias
+      });
+    } catch {
+      // Malformed <item> — skip, never crash the whole batch
+      continue;
+    }
+  }
+
+  return dedupeByHash(articles);
+}
+
+// ─── LEGACY v3 PARSER (kept for scrapeGoogleNewsRSS / scrapeDirectRSS) ─
+
+/**
+ * Parse an RSS XML string into ScrapedArticle[] (legacy RSS 2.0 only).
  *
  * Uses regex (not a DOM parser) because:
  *  • RSS feeds in the MA / African media landscape are notoriously malformed
@@ -269,8 +529,6 @@ export function parseRSSXML(xml: string, maxArticles: number): ScrapedArticle[] 
 
       if (!title || !link) continue;
 
-      // Clean Google News redirect URLs ("https://news.google.com/rss/articles/…")
-      // back to the underlying publisher URL when possible.
       const cleanUrl = normalizeGoogleNewsUrl(link);
 
       articles.push({
@@ -278,9 +536,11 @@ export function parseRSSXML(xml: string, maxArticles: number): ScrapedArticle[] 
         url: cleanUrl,
         source,
         publishedAt,
-        rawContent: description,
+        description,
+        content: description,
         language: detectLanguage(`${title} ${description}`),
         urlHash: hashUrl(cleanUrl),
+        rawContent: description,
       });
     } catch {
       // Malformed <item> — skip, never crash the whole batch
@@ -289,23 +549,6 @@ export function parseRSSXML(xml: string, maxArticles: number): ScrapedArticle[] 
   }
 
   return articles;
-}
-
-/** Extract the inner text of <tag>…</tag> (first match, case-insensitive). */
-function extractTag(xml: string, tag: string): string | null {
-  const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
-  const match = xml.match(regex);
-  return match ? match[1].trim() : null;
-}
-
-/** Extract CDATA-wrapped content of <tag><![CDATA[…]]></tag>. */
-function extractCDATA(xml: string, tag: string): string | null {
-  const regex = new RegExp(
-    `<${tag}[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*<\\/${tag}>`,
-    "i",
-  );
-  const match = xml.match(regex);
-  return match ? match[1].trim() : null;
 }
 
 /** Best-effort decode of Google News article URLs. */
@@ -318,6 +561,45 @@ function normalizeGoogleNewsUrl(url: string): string {
 }
 
 // ─── HTTP FETCH PRIMITIVE (retry + UA rotation + timeout) ─────────
+
+// ─── USER-AGENT ROTATION POOL (15 strings) ────────────────────────
+// Realistic, up-to-date UA strings spanning Chrome / Firefox / Safari /
+// Edge on desktop + mobile. Rotating these drastically reduces the
+// chance of being blocked by Cloudflare-style bot filters (the main
+// failure mode of the previous scraper on TelQuel / Medias24).
+
+export const USER_AGENTS: readonly string[] = [
+  // Chrome — desktop
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  // Chrome — mobile
+  "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) CriOS/125.0.0.0 Mobile/15E148 Safari/604.1",
+  // Firefox — desktop
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:125.0) Gecko/20100101 Firefox/125.0",
+  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0",
+  // Firefox — mobile
+  "Mozilla/5.0 (Android 14; Mobile; rv:125.0) Gecko/125.0 Firefox/125.0",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/125.0 Mobile/15E148 Safari/605.1.15",
+  // Safari — desktop & mobile
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+  // Edge — desktop
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+] as const;
+
+/**
+ * Randomly select one of the USER_AGENTS. Each call yields a fresh pick
+ * so retry attempts naturally rotate UAs.
+ */
+export function getRandomUserAgent(): string {
+  const idx = Math.floor(Math.random() * USER_AGENTS.length);
+  return USER_AGENTS[idx];
+}
 
 interface FetchResult {
   ok: boolean;
@@ -461,13 +743,6 @@ export async function scrapeGoogleNewsRSS(
  *  • 403 is common (TelQuel Cloudflare rule) — we retry with a fresh UA
  *  • Articles are filtered to those that mention `companyName`
  *  • Optional `rateLimitMs` is respected before returning
- *
- * @param feedUrl      RSS endpoint
- * @param companyName  filter articles by company mention (case-insensitive,
- *                     matches the company name OR any of its aliases via
- *                     matchCompanyInText in sources-config.ts — but to keep
- *                     this module dependency-free we accept a simple string)
- * @param options      optional ScrapeOptions overrides
  */
 export async function scrapeDirectRSS(
   feedUrl: string,
@@ -485,7 +760,7 @@ export async function scrapeDirectRSS(
 
   console.log(`[scraper-v3] Direct RSS → ${feedUrl}`);
 
-  const result = await resilientFetch(url(feedUrl), {
+  const result = await resilientFetch(feedUrl, {
     timeout,
     retryCount,
     accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
@@ -506,11 +781,11 @@ export async function scrapeDirectRSS(
   // Override the source name — direct feeds don't carry per-item <source>
   articles = articles.map((a) => ({ ...a, source: hostnameOf(feedUrl) }));
 
-  // Filter to articles that mention the company (title + rawContent)
+  // Filter to articles that mention the company (title + description)
   if (companyName) {
     const needle = companyName.toLowerCase();
     articles = articles.filter((a) => {
-      const haystack = `${a.title} ${a.rawContent}`.toLowerCase();
+      const haystack = `${a.title} ${a.description}`.toLowerCase();
       return haystack.includes(needle);
     });
   }
@@ -520,10 +795,6 @@ export async function scrapeDirectRSS(
   );
 
   return dedupeByHash(articles);
-}
-
-function url(u: string): string {
-  return u;
 }
 
 function hostnameOf(u: string): string {
@@ -599,13 +870,25 @@ function dedupeByHash(articles: ScrapedArticle[]): ScrapedArticle[] {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  BACKWARD-COMPATIBLE LAYER
+//  LAYER B — LEGACY ENTRY POINTS
 //  The functions below preserve the old public API consumed by
 //  orchestrator-v2.ts, orchestrator.ts, sentiment-analyzer.ts,
 //  risk-intelligence.ts, intelligence-engine.ts and the
 //  /api/atelier/scrape + /api/atelier/whatsapp route handlers.
 //  They internally delegate to the reinforced v3 primitives.
 // ═══════════════════════════════════════════════════════════════
+
+/**
+ * ScrapeOptions — tuning knobs for every scrape primitive in this module.
+ */
+export interface ScrapeOptions {
+  query: string;
+  language: "fr" | "ar" | "en";
+  country: string; // ISO-2 e.g. MA, FR
+  maxArticles: number;
+  timeout: number; // ms
+  retryCount: number;
+}
 
 /**
  * Article — legacy article shape (v2) preserved for downstream analyzers.
@@ -642,7 +925,7 @@ function toLegacyArticle(s: ScrapedArticle, country: string): Article {
     sourceName: s.source,
     title: s.title,
     url: s.url,
-    summary: s.rawContent.slice(0, 500),
+    summary: s.description.slice(0, 500),
     publishedAt: s.publishedAt ? s.publishedAt.toISOString() : new Date().toISOString(),
     language: s.language,
     country,
@@ -707,7 +990,7 @@ export async function scrapeForCompany(companyName: string): Promise<Article[]> 
   const all = [...googleArticles, ...directArticles];
   const needle = companyName.toLowerCase();
   const filtered = all.filter((a) => {
-    const hay = `${a.title} ${a.rawContent}`.toLowerCase();
+    const hay = `${a.title} ${a.description}`.toLowerCase();
     return hay.includes(needle);
   });
   const unique = dedupeByHash(filtered);

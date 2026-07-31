@@ -102,6 +102,84 @@ export interface InvestorDeskDashboardProps {
   redFlags?: RedFlag[];
 }
 
+// ─── Real sanctions screening (client mirror of matcher.ts types) ───
+//
+//  These types mirror the JSON shape returned by /api/investor/screen.
+//  We re-declare them here (instead of importing from
+//  src/lib/sanctions/matcher.ts) so the client bundle never pulls in
+//  the matcher module — the matcher stays server-side only and the
+//  full sanctions list NEVER reaches the browser.
+
+type SanctionsListCode = "OFAC" | "EU" | "UN";
+
+interface SanctionsMatch {
+  list: SanctionsListCode;
+  name: string;
+  matchedField: "name" | "alias";
+  type: "individual" | "entity" | "vessel" | "unknown";
+  similarity: number; // 0..1
+  program?: string;
+  regulation?: string;
+  remarks?: string;
+}
+
+interface ScreeningResultDTO {
+  query: string;
+  normalizedQuery: string;
+  matches: SanctionsMatch[];
+  clean: boolean;
+  threshold: number;
+  screenedAt: string;
+  listsScreened: SanctionsListCode[];
+  totalEntriesScreened: number;
+}
+
+interface AggregateScreeningItemDTO {
+  input: { name: string; type?: string; context?: string };
+  result: ScreeningResultDTO;
+}
+
+interface AggregateScreeningResultDTO {
+  items: AggregateScreeningItemDTO[];
+  overallClean: boolean;
+  flaggedCount: number;
+  totalScreened: number;
+  screenedAt: string;
+  threshold: number;
+  totalEntriesScreened: number;
+}
+
+interface CacheListStatusDTO {
+  entryCount: number;
+  downloadedAt: string | null;
+  stale: boolean;
+  sourceUrl: string | null;
+}
+
+interface CacheStatusDTO {
+  ofac: CacheListStatusDTO | null;
+  eu: CacheListStatusDTO | null;
+  un: CacheListStatusDTO | null;
+  totalEntries: number;
+}
+
+interface ScreenApiResponse {
+  adHoc?: ScreeningResultDTO;
+  holdings?: AggregateScreeningResultDTO | null;
+  cache: CacheStatusDTO;
+  stale: boolean;
+  warnings: string[];
+}
+
+// Match tier classification (mirrors src/lib/sanctions/matcher.ts
+// matchTier, kept in sync manually — see the dashboard's tier
+// legend for the threshold table).
+function matchTierOf(similarity: number): "critical" | "strong" | "review" {
+  if (similarity >= 0.92) return "critical";
+  if (similarity >= 0.88) return "strong";
+  return "review";
+}
+
 // ─── New types (forensic terminal) ─────────────────────────────
 
 type DdCategory = "OFAC" | "Sanctions" | "Litigation" | "ESG" | "Labor" | "Regulatory";
@@ -2114,97 +2192,135 @@ function UboGraphModule({ holdings, dossiers, loading }: {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  MODULE 2 — Registre de Conformité Globale (OFAC/UE/FATF)
+//  MODULE 2 — Registre de Conformité Globale (REAL OFAC/EU/UN)
 //
-//  Sanctions screening panel: 3 virtualized columns (OFAC | EU | FATF).
-//  Cross-filter: sanctioned (red) / watchlisted (amber) / clear (green).
-//  Compliance scorecard: 4 big-number tiles (total / clear / watch / flagged).
-//  Virtualized compliance table: Holding | Jurisdiction | OFAC | EU |
-//    FATF | Last Screened | Risk Band. 32px rows.
-//  Alert feed: any sanctioned/watch holding renders as red alert card.
+//  REAL sanctions screening panel — replaced the previous fake
+//  "derived compliance" (which used reputationScore + highRiskCount
+//  heuristics) with actual matches against the OFAC SDN, EU
+//  Financial Sanctions Files, and UN Security Council Consolidated
+//  lists. The full lists live server-side in SanctionsCache (Prisma)
+//  and are screened by /api/investor/screen — the dashboard only
+//  receives the matches above the 0.86 similarity threshold.
 //
-//  Derivation (risk-based, from real data fields — NOT mock):
-//    reputationScore < 30        -> OFAC: REVIEW REQUIRED (amber)
-//    highRiskCount > 5           -> EU:   FLAGGED (red)
-//    uboFlag === "red"           -> FATF: ENHANCED DUE DILIGENCE (red)
-//    else                        -> CLEAR (green)
-//  Last screened = dossier.updatedAt (if matched) or now.
+//  Layout:
+//    • Toolbar: "Re-screen" button + "Screen new entity" input +
+//      cache freshness chips (OFAC/EU/UN entry counts + age).
+//    • Alert feed: holdings with >=1 match render as red cards.
+//    • Scorecard: 4 tiles (total / clear / watch / sanctioned).
+//    • 3 virtualized columns (OFAC | EU | UN) — match counts per
+//      holding per list.
+//    • Virtualized compliance table — 32px rows, expandable to
+//      show full match details (matched name, similarity tier,
+//      program, regulation).
+//    • Ad-hoc result panel (collapsible) — shows the result of the
+//      last "Screen new entity" query.
+//
+//  Match tiering (mirrors matcher.matchTier):
+//    similarity >= 0.92 -> CRITICAL (red, "MATCH FOUND")
+//    0.88..0.92         -> STRONG   (red, "STRONG MATCH")
+//    0.86..0.88         -> REVIEW   (amber, "REVIEW")
+//    < 0.86             -> not surfaced (filtered server-side)
 // ═══════════════════════════════════════════════════════════════
 
-type ComplianceStatus = "CLEAR" | "REVIEW REQUIRED" | "FLAGGED" | "ENHANCED DUE DILIGENCE";
+type ComplianceStatus = "CLEAR" | "REVIEW" | "STRONG MATCH" | "MATCH FOUND";
 
-interface ComplianceRow {
+interface RealComplianceRow {
   holdingId: string;
   companyName: string;
-  jurisdiction: string;
   sector: string;
-  ofac: ComplianceStatus;
-  eu: ComplianceStatus;
-  fatf: ComplianceStatus;
-  lastScreened: string;
+  ofacMatches: SanctionsMatch[];
+  euMatches: SanctionsMatch[];
+  unMatches: SanctionsMatch[];
+  topSimilarity: number;       // 0 if no matches at all
+  lastScreened: string;        // ISO timestamp from the screening API
   riskBand: "low" | "medium" | "high" | "critical";
-  reputationScore: number | null;
-  highRiskCount: number;
-  uboFlag: InvestorHolding["uboFlag"];
-}
-
-function deriveCompliance(holdings: InvestorHolding[], dossiers: InvestorDossier[]): ComplianceRow[] {
-  const rows: ComplianceRow[] = [];
-  const dossierByTarget = new Map<string, InvestorDossier>();
-  for (const d of dossiers) dossierByTarget.set(d.target, d);
-
-  holdings.forEach((h) => {
-    const rep = h.reputationScore;
-    const ofac: ComplianceStatus = rep !== null && rep < 30 ? "REVIEW REQUIRED" : "CLEAR";
-    const eu: ComplianceStatus = h.highRiskCount > 5 ? "FLAGGED" : "CLEAR";
-    const fatf: ComplianceStatus = h.uboFlag === "red" ? "ENHANCED DUE DILIGENCE" : "CLEAR";
-
-    const dossier = dossierByTarget.get(h.companyName);
-    const lastScreened = dossier?.updatedAt ?? new Date().toISOString();
-
-    let riskBand: ComplianceRow["riskBand"] = "low";
-    const riskSignals = (ofac !== "CLEAR" ? 1 : 0) + (eu !== "CLEAR" ? 1 : 0) + (fatf !== "CLEAR" ? 1 : 0) + (h.highRiskCount > 0 ? 1 : 0);
-    if (riskSignals >= 3) riskBand = "critical";
-    else if (riskSignals >= 2) riskBand = "high";
-    else if (riskSignals >= 1) riskBand = "medium";
-
-    const hHash = hashString(h.companyName);
-    rows.push({
-      holdingId: h.id,
-      companyName: h.companyName,
-      jurisdiction: deriveJurisdiction(hHash),
-      sector: h.sector,
-      ofac, eu, fatf,
-      lastScreened,
-      riskBand,
-      reputationScore: rep,
-      highRiskCount: h.highRiskCount,
-      uboFlag: h.uboFlag,
-    });
-  });
-  return rows;
 }
 
 const COMPLIANCE_COLORS: Record<ComplianceStatus, string> = {
   "CLEAR": GREEN,
-  "REVIEW REQUIRED": AMBER,
-  "FLAGGED": RED,
-  "ENHANCED DUE DILIGENCE": CRITICAL,
+  "REVIEW": AMBER,
+  "STRONG MATCH": RED,
+  "MATCH FOUND": CRITICAL,
 };
 
 const COMPLIANCE_SHORT: Record<ComplianceStatus, string> = {
   "CLEAR": "CLEAR",
-  "REVIEW REQUIRED": "REVIEW",
-  "FLAGGED": "FLAGGED",
-  "ENHANCED DUE DILIGENCE": "EDD",
+  "REVIEW": "REVIEW",
+  "STRONG MATCH": "STRONG",
+  "MATCH FOUND": "MATCH",
+};
+
+const TIER_COLORS: Record<"critical" | "strong" | "review", string> = {
+  critical: CRITICAL,
+  strong: RED,
+  review: AMBER,
 };
 
 const RISK_BAND_LABEL: Record<string, string> = { low: "LOW", medium: "MED", high: "HIGH", critical: "CRIT" };
 
-function complianceOverall(row: ComplianceRow): "clear" | "watch" | "sanctioned" {
-  if (row.eu === "FLAGGED" || row.fatf === "ENHANCED DUE DILIGENCE") return "sanctioned";
-  if (row.ofac === "REVIEW REQUIRED") return "watch";
-  return "clear";
+function statusFromMatches(matches: SanctionsMatch[]): ComplianceStatus {
+  if (matches.length === 0) return "CLEAR";
+  const top = matches[0];
+  const tier = matchTierOf(top.similarity);
+  if (tier === "critical") return "MATCH FOUND";
+  if (tier === "strong") return "STRONG MATCH";
+  return "REVIEW";
+}
+
+function rowOverall(row: RealComplianceRow): "clear" | "watch" | "sanctioned" {
+  const all = [...row.ofacMatches, ...row.euMatches, ...row.unMatches];
+  if (all.length === 0) return "clear";
+  const top = all[0];
+  const tier = matchTierOf(top.similarity);
+  if (tier === "review") return "watch";
+  return "sanctioned";
+}
+
+function buildRealComplianceRows(
+  holdings: InvestorHolding[],
+  screening: AggregateScreeningResultDTO | null,
+): RealComplianceRow[] {
+  if (!screening) return [];
+  // Index screening items by the holding name (the API screens by
+  // holding.companyName; we map back via the input.context field,
+  // which is `holding:<companyName>`).
+  const byName = new Map<string, AggregateScreeningItemDTO>();
+  for (const item of screening.items) {
+    byName.set(item.input.name.toUpperCase(), item);
+  }
+
+  return holdings.map((h) => {
+    const item = byName.get(h.companyName.toUpperCase());
+    const matches = item?.result.matches ?? [];
+    const ofacMatches = matches.filter((m) => m.list === "OFAC");
+    const euMatches = matches.filter((m) => m.list === "EU");
+    const unMatches = matches.filter((m) => m.list === "UN");
+    const topSimilarity = matches.length > 0
+      ? Math.max(...matches.map((m) => m.similarity))
+      : 0;
+
+    let riskBand: RealComplianceRow["riskBand"] = "low";
+    if (matches.length === 0) {
+      riskBand = "low";
+    } else {
+      const tier = matchTierOf(topSimilarity);
+      if (tier === "critical") riskBand = "critical";
+      else if (tier === "strong") riskBand = "high";
+      else riskBand = "medium";
+    }
+
+    return {
+      holdingId: h.id,
+      companyName: h.companyName,
+      sector: h.sector,
+      ofacMatches,
+      euMatches,
+      unMatches,
+      topSimilarity,
+      lastScreened: item?.result.screenedAt ?? new Date().toISOString(),
+      riskBand,
+    };
+  });
 }
 
 function ComplianceCell({ status }: { status: ComplianceStatus }) {
@@ -2233,13 +2349,22 @@ function ScorecardTile({ label, value, color, active, onClick }: {
 }
 
 function SanctionsColumn({ title, subtitle, rows, field }: {
-  title: string; subtitle: string; rows: ComplianceRow[]; field: "ofac" | "eu" | "fatf";
+  title: string;
+  subtitle: string;
+  rows: RealComplianceRow[];
+  field: "ofacMatches" | "euMatches" | "unMatches";
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const counts = useMemo(() => {
-    const c: Record<ComplianceStatus, number> = { CLEAR: 0, "REVIEW REQUIRED": 0, FLAGGED: 0, "ENHANCED DUE DILIGENCE": 0 };
-    for (const r of rows) c[r[field]]++;
-    return c;
+    let clear = 0, review = 0, strong = 0, critical = 0;
+    for (const r of rows) {
+      const status = statusFromMatches(r[field]);
+      if (status === "CLEAR") clear++;
+      else if (status === "REVIEW") review++;
+      else if (status === "STRONG MATCH") strong++;
+      else critical++;
+    }
+    return { clear, review, flagged: strong + critical };
   }, [rows, field]);
 
   const virt = useVirtualizer({ count: rows.length, getScrollElement: () => parentRef.current, estimateSize: () => 24, overscan: 8 });
@@ -2252,11 +2377,11 @@ function SanctionsColumn({ title, subtitle, rows, field }: {
           <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, textTransform: "uppercase", letterSpacing: "0.05em" }}>{subtitle}</div>
         </div>
         <div style={{ display: "flex", gap: 4, fontSize: 9, fontFamily: FONT.mono }}>
-          <span style={{ color: GREEN, fontWeight: 700 }}>{counts.CLEAR}</span>
+          <span style={{ color: GREEN, fontWeight: 700 }}>{counts.clear}</span>
           <span style={{ color: SLATE_MID }}>/</span>
-          <span style={{ color: AMBER, fontWeight: 700 }}>{counts["REVIEW REQUIRED"]}</span>
+          <span style={{ color: AMBER, fontWeight: 700 }}>{counts.review}</span>
           <span style={{ color: SLATE_MID }}>/</span>
-          <span style={{ color: RED, fontWeight: 700 }}>{counts.FLAGGED + counts["ENHANCED DUE DILIGENCE"]}</span>
+          <span style={{ color: RED, fontWeight: 700 }}>{counts.flagged}</span>
         </div>
       </div>
       {rows.length === 0 ? (
@@ -2268,17 +2393,20 @@ function SanctionsColumn({ title, subtitle, rows, field }: {
           <div style={{ height: `${virt.getTotalSize()}px`, position: "relative" }}>
             {virt.getVirtualItems().map((vi) => {
               const r = rows[vi.index];
-              const status = r[field];
+              const status = statusFromMatches(r[field]);
               const color = COMPLIANCE_COLORS[status];
               return (
                 <div key={r.holdingId} style={{
                   position: "absolute", top: 0, left: 0, width: "100%",
                   transform: `translateY(${vi.start}px)`,
-                  display: "grid", gridTemplateColumns: "1fr auto",
+                  display: "grid", gridTemplateColumns: "1fr auto auto",
                   alignItems: "center", padding: "3px 0", borderBottom: `1px solid ${C.bgHover}`,
-                  fontSize: 10, fontFamily: FONT.mono,
+                  fontSize: 10, fontFamily: FONT.mono, gap: 6,
                 }}>
                   <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 6 }}>{r.companyName}</span>
+                  {r[field].length > 0 && (
+                    <span style={{ fontSize: 9, color: SLATE_MID, flexShrink: 0 }}>{Math.round(r[field][0].similarity * 100)}%</span>
+                  )}
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
                 </div>
               );
@@ -2290,18 +2418,72 @@ function SanctionsColumn({ title, subtitle, rows, field }: {
   );
 }
 
-function ComplianceRegistry({ holdings, dossiers, loading }: {
+function MatchDetailList({ matches }: { matches: SanctionsMatch[] }) {
+  if (matches.length === 0) {
+    return <div style={{ fontSize: 9, color: SLATE_MID, fontFamily: FONT.mono, padding: "4px 0" }}>No matches above threshold</div>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "4px 0" }}>
+      {matches.slice(0, 5).map((m, i) => {
+        const tier = matchTierOf(m.similarity);
+        const color = TIER_COLORS[tier];
+        return (
+          <div key={`${m.list}-${m.name}-${i}`} style={{ display: "grid", gridTemplateColumns: "auto auto 1fr auto", gap: 8, alignItems: "baseline", fontSize: 10, fontFamily: FONT.mono }}>
+            <span style={{ padding: "1px 5px", background: `${color}15`, color, fontWeight: 700, fontSize: 8, letterSpacing: "0.05em", textTransform: "uppercase", borderRadius: "2px" }}>{m.list}</span>
+            <span style={{ color: SLATE_MID, fontSize: 8, textTransform: "uppercase" }}>{tier}</span>
+            <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {m.name}
+              {m.matchedField === "alias" && <span style={{ color: SLATE_MID, fontSize: 8, marginLeft: 4 }}>(alias)</span>}
+              {m.program && <span style={{ color: SLATE_MID, fontSize: 8, marginLeft: 6 }}>· {m.program}</span>}
+              {m.regulation && <span style={{ color: SLATE_MID, fontSize: 8, marginLeft: 6 }}>· {m.regulation}</span>}
+            </span>
+            <span style={{ color, fontWeight: 700, fontSize: 9, flexShrink: 0 }}>{Math.round(m.similarity * 100)}%</span>
+          </div>
+        );
+      })}
+      {matches.length > 5 && (
+        <div style={{ fontSize: 9, color: SLATE_MID, fontFamily: FONT.mono }}>+ {matches.length - 5} more match{matches.length - 5 === 1 ? "" : "es"}</div>
+      )}
+    </div>
+  );
+}
+
+function ComplianceRegistry({
+  holdings,
+  screening,
+  cacheStatus,
+  stale,
+  warnings,
+  adHocResult,
+  loading,
+  screeningLoading,
+  onRescreen,
+  onScreenAdHoc,
+}: {
   holdings: InvestorHolding[];
-  dossiers: InvestorDossier[];
+  screening: AggregateScreeningResultDTO | null;
+  cacheStatus: CacheStatusDTO | null;
+  stale: boolean;
+  warnings: string[];
+  adHocResult: ScreeningResultDTO | null;
   loading: boolean;
+  screeningLoading: boolean;
+  onRescreen: () => void;
+  onScreenAdHoc: (name: string, type?: "individual" | "entity" | "vessel") => void;
 }) {
   const [filter, setFilter] = useState<"all" | "sanctioned" | "watch" | "clear">("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [adHocName, setAdHocName] = useState("");
+  const [adHocType, setAdHocType] = useState<"individual" | "entity" | "vessel">("entity");
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const rows = useMemo(() => deriveCompliance(holdings, dossiers), [holdings, dossiers]);
+  const rows = useMemo(
+    () => buildRealComplianceRows(holdings, screening),
+    [holdings, screening],
+  );
   const filtered = useMemo(() => {
     if (filter === "all") return rows;
-    return rows.filter((r) => complianceOverall(r) === filter);
+    return rows.filter((r) => rowOverall(r) === filter);
   }, [rows, filter]);
 
   const rowVirt = useVirtualizer({
@@ -2314,7 +2496,7 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
   const scorecard = useMemo(() => {
     let clear = 0, watch = 0, sanctioned = 0;
     for (const r of rows) {
-      const o = complianceOverall(r);
+      const o = rowOverall(r);
       if (o === "clear") clear++;
       else if (o === "watch") watch++;
       else sanctioned++;
@@ -2322,22 +2504,155 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
     return { clear, watch, sanctioned, total: rows.length };
   }, [rows]);
 
-  const alertRows = useMemo(() => rows.filter((r) => complianceOverall(r) !== "clear"), [rows]);
+  const alertRows = useMemo(() => rows.filter((r) => rowOverall(r) !== "clear"), [rows]);
 
-  if (loading) {
+  const toggleExpand = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleAdHocSubmit = useCallback(() => {
+    const trimmed = adHocName.trim();
+    if (!trimmed) return;
+    onScreenAdHoc(trimmed, adHocType);
+  }, [adHocName, adHocType, onScreenAdHoc]);
+
+  if (loading || screeningLoading) {
     return <div style={{ height: 600, padding: 24 }}><SkeletonLoader accent={ACCENT} lines={4} height={120} /></div>;
   }
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !screening) {
     return (
       <div style={{ height: 600, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <AwaitingTelemetry label="Compliance Telemetry" minHeight={300} />
+        <AwaitingTelemetry label="Sanctions Screening (awaiting first /api/investor/screen call)" minHeight={300} />
       </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* Toolbar: Re-screen + Screen new entity + cache chips */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}`, paddingBottom: 12 }}>
+        <button
+          onClick={onRescreen}
+          disabled={screeningLoading}
+          style={{
+            padding: "6px 12px", fontSize: 10, fontFamily: FONT.mono, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase",
+            background: ACCENT, color: "#ffffff", border: "none", borderRadius: "3px", cursor: screeningLoading ? "wait" : "pointer",
+            opacity: screeningLoading ? 0.6 : 1, transition: "all 0.15s ease",
+          }}
+        >
+          {screeningLoading ? "Screening..." : "Re-screen Holdings"}
+        </button>
+
+        <div style={{ display: "flex", gap: 4, alignItems: "center", flex: 1, minWidth: 280 }}>
+          <select
+            value={adHocType}
+            onChange={(e) => setAdHocType(e.target.value as "individual" | "entity" | "vessel")}
+            style={{
+              padding: "6px 8px", fontSize: 10, fontFamily: FONT.mono, background: C.bg, color: C.text,
+              border: `1px solid ${C.border}`, borderRadius: "3px", cursor: "pointer",
+            }}
+          >
+            <option value="entity">Entity</option>
+            <option value="individual">Individual</option>
+            <option value="vessel">Vessel</option>
+          </select>
+          <input
+            type="text"
+            value={adHocName}
+            onChange={(e) => setAdHocName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAdHocSubmit(); }}
+            placeholder="Screen new entity (e.g. Saddam Hussein, OCP Group)"
+            style={{
+              padding: "6px 10px", fontSize: 11, fontFamily: FONT.mono, background: C.bg, color: C.text,
+              border: `1px solid ${C.border}`, borderRadius: "3px", flex: 1, minWidth: 200,
+            }}
+          />
+          <button
+            onClick={handleAdHocSubmit}
+            disabled={!adHocName.trim() || screeningLoading}
+            style={{
+              padding: "6px 12px", fontSize: 10, fontFamily: FONT.mono, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase",
+              background: adHocName.trim() ? ACCENT : C.bgHover, color: adHocName.trim() ? "#ffffff" : SLATE_MID,
+              border: `1px solid ${C.border}`, borderRadius: "3px", cursor: adHocName.trim() && !screeningLoading ? "pointer" : "default",
+            }}
+          >
+            Screen
+          </button>
+        </div>
+      </div>
+
+      {/* Cache freshness chips */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontSize: 9, fontFamily: FONT.mono }}>
+        <span style={{ color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Lists:</span>
+        {cacheStatus && (
+          <>
+            {(["ofac", "eu", "un"] as const).map((k) => {
+              const s = cacheStatus[k];
+              if (!s) return (
+                <span key={k} style={{ padding: "2px 6px", background: `${RED}15`, color: RED, borderRadius: "2px", fontWeight: 700, letterSpacing: "0.05em" }}>
+                  {k.toUpperCase()}: NOT CACHED
+                </span>
+              );
+              const color = s.stale ? AMBER : GREEN;
+              const ageMs = s.downloadedAt ? Date.now() - new Date(s.downloadedAt).getTime() : 0;
+              const ageHours = Math.floor(ageMs / 3600000);
+              return (
+                <span key={k} style={{ padding: "2px 6px", background: `${color}15`, color, borderRadius: "2px", fontWeight: 700, letterSpacing: "0.05em" }}>
+                  {k.toUpperCase()}: {s.entryCount.toLocaleString()} entries · {ageHours}h ago{s.stale ? " · STALE" : ""}
+                </span>
+              );
+            })}
+            <span style={{ color: SLATE_MID, marginLeft: 6 }}>total {cacheStatus.totalEntries.toLocaleString()}</span>
+            {stale && <span style={{ color: AMBER, marginLeft: 6, fontWeight: 700 }}>STALE — cron refresh pending</span>}
+          </>
+        )}
+      </div>
+
+      {/* Warnings (if any) */}
+      {warnings.length > 0 && (
+        <div style={{ padding: "6px 10px", background: `${AMBER}08`, border: `1px solid ${AMBER}40`, borderLeft: `3px solid ${AMBER}`, borderRadius: "3px", fontSize: 9, fontFamily: FONT.mono, color: AMBER }}>
+          {warnings.map((w, i) => (
+            <div key={i} style={{ marginBottom: i < warnings.length - 1 ? 2 : 0 }}>warn: {w}</div>
+          ))}
+        </div>
+      )}
+
+      {/* Ad-hoc screening result (if any) */}
+      {adHocResult && (
+        <div style={{
+          padding: "10px 12px",
+          background: adHocResult.clean ? `${GREEN}08` : `${RED}08`,
+          border: `1px solid ${adHocResult.clean ? GREEN + "40" : RED + "40"}`,
+          borderLeft: `3px solid ${adHocResult.clean ? GREEN : RED}`,
+          borderRadius: "3px",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8, flexWrap: "wrap" }}>
+            <div>
+              <span style={{ fontSize: 10, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700 }}>Ad-hoc screening</span>
+              <span style={{ fontSize: 12, fontFamily: FONT.sans, color: C.text, marginLeft: 8, fontWeight: 700 }}>&ldquo;{adHocResult.query}&rdquo;</span>
+              <span style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, marginLeft: 6 }}>(screened {adHocResult.totalEntriesScreened.toLocaleString()} entries)</span>
+            </div>
+            <span style={{
+              fontSize: 10, fontFamily: FONT.mono, padding: "3px 8px", borderRadius: "2px",
+              background: adHocResult.clean ? `${GREEN}15` : `${RED}15`,
+              color: adHocResult.clean ? GREEN : RED, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase",
+            }}>
+              {adHocResult.clean ? "CLEAR" : `${adHocResult.matches.length} MATCH${adHocResult.matches.length === 1 ? "" : "ES"}`}
+            </span>
+          </div>
+          {!adHocResult.clean && <MatchDetailList matches={adHocResult.matches} />}
+          <div style={{ fontSize: 9, color: SLATE_MID, fontFamily: FONT.mono, marginTop: 6 }}>
+            Screened at {new Date(adHocResult.screenedAt).toLocaleString("en-US")} · threshold {(adHocResult.threshold * 100).toFixed(0)}%
+          </div>
+        </div>
+      )}
+
       {/* Alert feed (top) — any sanctioned/watch holding */}
       {alertRows.length > 0 && (
         <div>
@@ -2346,8 +2661,9 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
           </div>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: 4 }}>
             {alertRows.slice(0, 10).map((r) => {
-              const overall = complianceOverall(r);
+              const overall = rowOverall(r);
               const color = overall === "sanctioned" ? RED : AMBER;
+              const totalMatches = r.ofacMatches.length + r.euMatches.length + r.unMatches.length;
               return (
                 <div key={r.holdingId} style={{
                   flex: "0 0 280px", padding: "10px 12px", background: `${color}08`,
@@ -2358,7 +2674,7 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
                     <span style={{ fontSize: 8, fontFamily: FONT.mono, padding: "1px 5px", borderRadius: "2px", background: `${color}15`, color, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", flexShrink: 0 }}>{overall}</span>
                   </div>
                   <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.03em" }}>
-                    OFAC {COMPLIANCE_SHORT[r.ofac]} · EU {COMPLIANCE_SHORT[r.eu]} · FATF {COMPLIANCE_SHORT[r.fatf]}
+                    {totalMatches} match{totalMatches === 1 ? "" : "es"} · OFAC {r.ofacMatches.length} · EU {r.euMatches.length} · UN {r.unMatches.length} · top {Math.round(r.topSimilarity * 100)}%
                   </div>
                 </div>
               );
@@ -2375,17 +2691,17 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
         <ScorecardTile label="Sanctioned" value={scorecard.sanctioned} color={RED} active={filter === "sanctioned"} onClick={() => setFilter("sanctioned")} />
       </div>
 
-      {/* 3-column sanctions screening (OFAC | EU | FATF) — virtualized */}
+      {/* 3-column sanctions screening (OFAC | EU | UN) — virtualized */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-        <SanctionsColumn title="OFAC" subtitle="US Treasury SDN List" rows={rows} field="ofac" />
-        <SanctionsColumn title="EU" subtitle="Consolidated Sanctions List" rows={rows} field="eu" />
-        <SanctionsColumn title="FATF" subtitle="High-Risk Jurisdictions" rows={rows} field="fatf" />
+        <SanctionsColumn title="OFAC" subtitle="US Treasury SDN List" rows={rows} field="ofacMatches" />
+        <SanctionsColumn title="EU" subtitle="Consolidated Sanctions List" rows={rows} field="euMatches" />
+        <SanctionsColumn title="UN" subtitle="Security Council Consolidated" rows={rows} field="unMatches" />
       </div>
 
-      {/* Virtualized compliance table (32px rows, 100+ capacity) */}
+      {/* Virtualized compliance table (32px rows, 100+ capacity, expandable) */}
       <div style={{ border: `1px solid ${C.border}`, borderRadius: "4px", overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 0.8fr", gap: 0, background: C.bgDarkest, minWidth: 900 }}>
-          {["Holding", "Jurisdiction", "OFAC", "EU", "FATF", "Last Screened", "Risk Band"].map((label) => (
+          {["Holding", "Sector", "OFAC", "EU", "UN", "Last Screened", "Risk Band"].map((label) => (
             <div key={label} style={{ padding: "8px 12px", fontSize: 10, fontFamily: FONT.mono, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{label}</div>
           ))}
         </div>
@@ -2393,26 +2709,66 @@ function ComplianceRegistry({ holdings, dossiers, loading }: {
           <div style={{ height: `${rowVirt.getTotalSize()}px`, position: "relative", width: "100%" }}>
             {rowVirt.getVirtualItems().map((vi) => {
               const r = filtered[vi.index];
+              const isExpanded = expanded.has(r.holdingId);
+              const hasMatches = r.ofacMatches.length + r.euMatches.length + r.unMatches.length > 0;
               return (
                 <div key={r.holdingId} style={{
                   position: "absolute", top: 0, left: 0, width: "100%",
                   transform: `translateY(${vi.start}px)`,
-                  display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 0.8fr",
-                  alignItems: "center", borderBottom: `1px solid ${C.bgHover}`,
+                  display: "flex", flexDirection: "column",
+                  borderBottom: `1px solid ${C.bgHover}`,
                   fontSize: 11, fontFamily: FONT.mono, transition: "background 0.12s ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = `${ACCENT}06`; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  <div style={{ padding: "6px 12px", color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.companyName}</div>
-                  <div style={{ padding: "6px 12px", color: SLATE_MID, fontSize: 10 }}>{r.jurisdiction}</div>
-                  <ComplianceCell status={r.ofac} />
-                  <ComplianceCell status={r.eu} />
-                  <ComplianceCell status={r.fatf} />
-                  <div style={{ padding: "6px 12px", color: SLATE_MID, fontSize: 10 }}>{new Date(r.lastScreened).toLocaleDateString("en-US")}</div>
-                  <div style={{ padding: "6px 12px" }}>
-                    <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: "2px", background: `${RISK_BAND_COLORS[r.riskBand]}15`, color: RISK_BAND_COLORS[r.riskBand], fontWeight: 700, letterSpacing: "0.05em" }}>{RISK_BAND_LABEL[r.riskBand]}</span>
+                  background: isExpanded ? `${ACCENT}06` : "transparent",
+                }}>
+                  <div
+                    style={{
+                      display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 0.8fr",
+                      alignItems: "center", cursor: hasMatches ? "pointer" : "default",
+                    }}
+                    onClick={() => hasMatches && toggleExpand(r.holdingId)}
+                    onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = `${ACCENT}06`; }}
+                    onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <div style={{ padding: "6px 12px", color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
+                      {hasMatches && (
+                        <span style={{ fontSize: 8, color: SLATE_MID }}>{isExpanded ? "▼" : "▶"}</span>
+                      )}
+                      {r.companyName}
+                    </div>
+                    <div style={{ padding: "6px 12px", color: SLATE_MID, fontSize: 10 }}>{r.sector}</div>
+                    <ComplianceCell status={statusFromMatches(r.ofacMatches)} />
+                    <ComplianceCell status={statusFromMatches(r.euMatches)} />
+                    <ComplianceCell status={statusFromMatches(r.unMatches)} />
+                    <div style={{ padding: "6px 12px", color: SLATE_MID, fontSize: 10 }}>{new Date(r.lastScreened).toLocaleString("en-US", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>
+                    <div style={{ padding: "6px 12px" }}>
+                      <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: "2px", background: `${RISK_BAND_COLORS[r.riskBand]}15`, color: RISK_BAND_COLORS[r.riskBand], fontWeight: 700, letterSpacing: "0.05em" }}>{RISK_BAND_LABEL[r.riskBand]}</span>
+                    </div>
                   </div>
+                  {isExpanded && hasMatches && (
+                    <div style={{ padding: "8px 12px 12px 24px", background: C.bg, borderTop: `1px solid ${C.bgHover}` }}>
+                      <div style={{ fontSize: 9, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6, fontWeight: 700 }}>
+                        Match Details · top similarity {Math.round(r.topSimilarity * 100)}%
+                      </div>
+                      {r.ofacMatches.length > 0 && (
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 9, color: ACCENT, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 4 }}>OFAC ({r.ofacMatches.length})</div>
+                          <MatchDetailList matches={r.ofacMatches} />
+                        </div>
+                      )}
+                      {r.euMatches.length > 0 && (
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 9, color: ACCENT, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 4 }}>EU ({r.euMatches.length})</div>
+                          <MatchDetailList matches={r.euMatches} />
+                        </div>
+                      )}
+                      {r.unMatches.length > 0 && (
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 9, color: ACCENT, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 4 }}>UN ({r.unMatches.length})</div>
+                          <MatchDetailList matches={r.unMatches} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2874,6 +3230,17 @@ export function InvestorDeskDashboard({
   const [sortField, setSortField] = useState<"companyName" | "weight" | "reputationScore" | "highRiskCount">("companyName");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  // ─── Real sanctions screening state ───────────────────────────
+  //  `screening` holds the aggregate screening result for every
+  //  portfolio holding. `adHocResult` holds the result of the last
+  //  "Screen new entity" query (independent of holdings).
+  const [screening, setScreening] = useState<AggregateScreeningResultDTO | null>(null);
+  const [adHocResult, setAdHocResult] = useState<ScreeningResultDTO | null>(null);
+  const [cacheStatus, setCacheStatus] = useState<CacheStatusDTO | null>(null);
+  const [screeningStale, setScreeningStale] = useState(false);
+  const [screeningWarnings, setScreeningWarnings] = useState<string[]>([]);
+  const [screeningLoading, setScreeningLoading] = useState(false);
+
   const loadData = useCallback(async (isRefresh = false, signal?: AbortSignal) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
@@ -2970,10 +3337,92 @@ export function InvestorDeskDashboard({
     // setState-after-unmount warnings and prevents orphaned fetches
     // when the user navigates away mid-load.
     const controller = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData(false, controller.signal);
     return () => controller.abort();
   }, [injectedKpis, loadData]);
+
+  // ─── Real sanctions screening loader ──────────────────────────
+  //
+  //  Fetches /api/investor/screen (GET — screens every portfolio
+  //  holding against the cached OFAC/EU/UN lists). Triggered on
+  //  mount (after holdings are loaded) and on manual "Re-screen".
+  //  Aborts gracefully on unmount or re-fetch.
+  const loadScreening = useCallback(async (signal?: AbortSignal) => {
+    setScreeningLoading(true);
+    try {
+      const res = await fetch("/api/investor/screen", { signal });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        setScreeningWarnings([
+          `Screening API returned HTTP ${res.status}${errBody.error ? `: ${errBody.error}` : ""}`,
+        ]);
+        setScreening(null);
+      } else {
+        const data = (await res.json()) as ScreenApiResponse;
+        setScreening(data.holdings ?? null);
+        setCacheStatus(data.cache);
+        setScreeningStale(data.stale);
+        setScreeningWarnings(data.warnings ?? []);
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      setScreeningWarnings([
+        `Screening fetch threw: ${(err as Error).message}`,
+      ]);
+      setScreening(null);
+    } finally {
+      setScreeningLoading(false);
+    }
+  }, []);
+
+  // Trigger screening after holdings are loaded (one-shot per load).
+  // We don't trigger if holdings were injected via props (story mode).
+  useEffect(() => {
+    if (injectedKpis) return; // story mode — skip auto-screening
+    if (holdings.length === 0) return;
+    const controller = new AbortController();
+    loadScreening(controller.signal);
+    return () => controller.abort();
+  }, [holdings.length, injectedKpis, loadScreening]);
+
+  // ─── Ad-hoc "Screen new entity" handler ───────────────────────
+  //
+  //  POSTs to /api/investor/screen with a single name. The response
+  //  includes both the ad-hoc result AND the holdings screening
+  //  (since the backend always re-screens holdings in the same
+  //  request when includeHoldings=true). We refresh both.
+  const screenAdHoc = useCallback(async (
+    name: string,
+    type?: "individual" | "entity" | "vessel",
+  ) => {
+    setScreeningLoading(true);
+    try {
+      const res = await fetch("/api/investor/screen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, type, includeHoldings: true }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        setScreeningWarnings([
+          `Ad-hoc screening failed: HTTP ${res.status}${errBody.error ? `: ${errBody.error}` : ""}`,
+        ]);
+        return;
+      }
+      const data = (await res.json()) as ScreenApiResponse;
+      if (data.adHoc) setAdHocResult(data.adHoc);
+      if (data.holdings) setScreening(data.holdings);
+      setCacheStatus(data.cache);
+      setScreeningStale(data.stale);
+      setScreeningWarnings(data.warnings ?? []);
+    } catch (err) {
+      setScreeningWarnings([
+        `Ad-hoc screening threw: ${(err as Error).message}`,
+      ]);
+    } finally {
+      setScreeningLoading(false);
+    }
+  }, []);
 
   const firstName = userName.split(" ")[0] || "there";
 
@@ -3483,6 +3932,18 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Company · UBO · Subsidiary · Director · Shell</div>
             </div>
+            {/* HONESTY DISCLAIMER — entity graph is derived from portfolio
+                holdings + public registry data, NOT from a real UBO
+                registry feed. For comprehensive UBO tracing (OCP / OMPIC
+                integration), contact sales. */}
+            <div style={{
+              padding: "8px 12px", marginBottom: 8,
+              background: `${AMBER}08`, border: `1px solid ${AMBER}40`, borderLeft: `3px solid ${AMBER}`,
+              borderRadius: "3px", fontSize: 10, fontFamily: FONT.mono, color: C.text, lineHeight: 1.4,
+            }}>
+              <span style={{ color: AMBER, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginRight: 6 }}>Disclaimer:</span>
+              Entity graph is derived from portfolio holdings and public company registry data. For comprehensive UBO tracing, contact sales for OCP/OMPIC integration.
+            </div>
             <DashboardErrorBoundary title="25 — Moteur de Due Diligence UBO" accent={ACCENT}>
               <UboGraphModule holdings={holdings} dossiers={dossiers} loading={loading} />
             </DashboardErrorBoundary>
@@ -3490,7 +3951,7 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 7.6 — Module 2: Registre de Conformité Globale (24 cols, OFAC/UE/FATF) ═══ */}
+      {/* ═══ ROW 7.6 — Module 2: Registre de Conformité Globale (24 cols, REAL OFAC/EU/UN) ═══ */}
       </section>
       <section data-template-row="9" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
@@ -3499,12 +3960,28 @@ export function InvestorDeskDashboard({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: "8px" }}>
               <div>
                 <div style={chartTitleStyle}>26 — Registre de Conformité Globale</div>
-                <div style={chartSubtitleStyle}>OFAC · EU · FATF · virtualized screening · cross-filter · alert feed</div>
+                <div style={chartSubtitleStyle}>REAL OFAC SDN · EU Consolidated · UN Security Council · fuzzy name match (Jaro-Winkler + Levenshtein + token-set)</div>
               </div>
-              <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Risk-derived · deterministic</div>
+              <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                {cacheStatus ? `${cacheStatus.totalEntries.toLocaleString()} entries cached` : "Live screening"}
+              </div>
             </div>
             <DashboardErrorBoundary title="26 — Registre de Conformité Globale" accent={ACCENT}>
-              <ComplianceRegistry holdings={holdings} dossiers={dossiers} loading={loading} />
+              <ComplianceRegistry
+                holdings={holdings}
+                screening={screening}
+                cacheStatus={cacheStatus}
+                stale={screeningStale}
+                warnings={screeningWarnings}
+                adHocResult={adHocResult}
+                loading={loading}
+                screeningLoading={screeningLoading}
+                onRescreen={() => {
+                  const controller = new AbortController();
+                  loadScreening(controller.signal);
+                }}
+                onScreenAdHoc={screenAdHoc}
+              />
             </DashboardErrorBoundary>
           </div>
         </div>

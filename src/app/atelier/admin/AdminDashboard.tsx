@@ -71,8 +71,60 @@ interface AdminStats {
   data: { articles: number; companies: number; assets: number; portfolios: number; dossiers: number };
 }
 
+// ─── Data Sources tab types (Task: real-rss-scrapers) ─────────────
+interface FeedStatus {
+  name: string;
+  url: string;
+  language: "ar" | "fr" | "en";
+  category: "news" | "business" | "tech";
+  status: "ok" | "error" | "never";
+  lastScrapeAt: string | null;
+  lastDurationMs: number | null;
+  lastArticlesFound: number;
+  lastArticlesNew: number;
+  lastError: string | null;
+  articlesIngested: number;
+  errorCount24h: number;
+}
+
+interface ScraperStatus {
+  success: boolean;
+  summary: {
+    feedsActive: number;
+    feedsError: number;
+    feedsNever: number;
+    totalFeeds: number;
+    totalArticles: number;
+    totalRealArticles: number;
+    totalSeedArticles: number;
+    newArticles24h: number;
+  };
+  feeds: FeedStatus[];
+}
+
+interface ScrapeSummary {
+  success: boolean;
+  feedsProcessed: number;
+  articlesFound: number;
+  articlesNew: number;
+  articlesMatched: number;
+  errors: { feed: string; message: string }[];
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  perFeed: Array<{
+    name: string;
+    url: string;
+    found: number;
+    new: number;
+    matched: number;
+    durationMs: number;
+    error?: string;
+  }>;
+}
+
 export function AdminDashboard() {
-  const [tab, setTab] = useState<"requests" | "invitations">("requests");
+  const [tab, setTab] = useState<"requests" | "invitations" | "sources">("requests");
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -80,6 +132,12 @@ export function AdminDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // ─── Data Sources tab state (Task: real-rss-scrapers) ──────────
+  const [scraperStatus, setScraperStatus] = useState<ScraperStatus | null>(null);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<ScrapeSummary | null>(null);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
 
   // Form state
   const [formEmail, setFormEmail] = useState("");
@@ -121,6 +179,50 @@ export function AdminDashboard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // ─── Data Sources tab — fetch status + trigger scrape ───────────
+  const fetchScraperStatus = useCallback(async () => {
+    setSourcesLoading(true);
+    try {
+      const res = await fetch("/api/admin/scraper-status", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setScraperStatus(data);
+      }
+    } catch {
+      // ignore
+    }
+    setSourcesLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (tab === "sources") {
+      fetchScraperStatus();
+    }
+  }, [tab, fetchScraperStatus]);
+
+  const handleScrapeNow = async () => {
+    if (scraping) return;
+    if (!confirm("Run an RSS scrape now? This fetches all 10 feeds and may take 30-60 seconds.")) return;
+    setScraping(true);
+    setScrapeResult(null);
+    try {
+      const res = await fetch("/api/admin/scrape-now", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setScrapeResult(data);
+        // Refresh the status panel so the new counts show
+        fetchScraperStatus();
+        // Also refresh the top-level stats (article count changed)
+        fetchData();
+      } else {
+        alert(data.error || data.detail || "Scrape failed");
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Network error");
+    }
+    setScraping(false);
+  };
 
   const openCreateModal = (request?: AccessRequest) => {
     if (request) {
@@ -236,11 +338,14 @@ export function AdminDashboard() {
         <button onClick={() => setTab("invitations")} style={tabStyle(tab === "invitations")}>
           Invitations ({invitations.length})
         </button>
+        <button onClick={() => setTab("sources")} style={tabStyle(tab === "sources")}>
+          Data Sources
+        </button>
       </div>
 
       {/* Content */}
       <main style={{ padding: "32px 24px", maxWidth: "1200px", margin: "0 auto" }}>
-        {loading ? (
+        {loading && tab !== "sources" ? (
           <div style={{ color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading...</div>
         ) : tab === "requests" ? (
           <div>
@@ -267,7 +372,7 @@ export function AdminDashboard() {
               </>
             )}
           </div>
-        ) : (
+        ) : tab === "invitations" ? (
           <div>
             {invitations.length === 0 ? (
               <EmptyState text="No invitations created yet." />
@@ -277,6 +382,15 @@ export function AdminDashboard() {
               </div>
             )}
           </div>
+        ) : (
+          <DataSourcesPanel
+            status={scraperStatus}
+            loading={sourcesLoading}
+            scraping={scraping}
+            scrapeResult={scrapeResult}
+            onScrapeNow={handleScrapeNow}
+            onRefresh={fetchScraperStatus}
+          />
         )}
       </main>
 
@@ -596,6 +710,254 @@ function KpiCell({ label, value, sub, color }: { label: string; value: number | 
         {label}
       </div>
       {sub && <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "2px" }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DATA SOURCES PANEL — Real RSS scraper monitoring
+//
+//  Shows per-feed status (last scrape, articles ingested, errors) and
+//  a "Scrape now" button that triggers an immediate run across all
+//  10 Moroccan media feeds.
+//
+//  Task ID: real-rss-scrapers
+// ═══════════════════════════════════════════════════════════════
+
+function fmtRelative(iso: string | null): string {
+  if (!iso) return "never";
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
+function fmtDuration(ms: number | null): string {
+  if (ms == null) return "-";
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+const STATUS_COLORS: Record<FeedStatus["status"], { bg: string; fg: string; label: string }> = {
+  ok: { bg: `${C.cta}15`, fg: C.cta, label: "ACTIVE" },
+  error: { bg: `${C.danger}15`, fg: C.danger, label: "ERROR" },
+  never: { bg: `${C.textMuted}15`, fg: C.textMuted, label: "PENDING" },
+};
+
+const LANG_COLORS: Record<FeedStatus["language"], string> = {
+  ar: "#9333ea", // purple for Arabic
+  fr: "#0ea5e9", // sky for French
+  en: "#10b981", // emerald for English
+};
+
+function DataSourcesPanel({
+  status,
+  loading,
+  scraping,
+  scrapeResult,
+  onScrapeNow,
+  onRefresh,
+}: {
+  status: ScraperStatus | null;
+  loading: boolean;
+  scraping: boolean;
+  scrapeResult: ScrapeSummary | null;
+  onScrapeNow: () => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <div>
+      {/* Header bar — title + actions */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "24px" }}>
+        <div>
+          <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "4px" }}>
+            Real RSS Pipeline
+          </div>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: C.text, margin: 0 }}>
+            Moroccan media feeds — 10 sources, every 30 min
+          </h2>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            style={{
+              padding: "8px 14px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "4px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: C.fontSans,
+            }}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+          <button
+            onClick={onScrapeNow}
+            disabled={scraping}
+            style={{
+              padding: "8px 14px",
+              background: scraping ? C.border : C.cta,
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: scraping ? "not-allowed" : "pointer",
+              fontFamily: C.fontSans,
+            }}
+          >
+            {scraping ? "Scraping…" : "Scrape now"}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary KPI strip */}
+      {status && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "1px", background: C.border, border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "24px" }}>
+          <KpiCell label="Feeds active" value={status.summary.feedsActive} color={C.cta} />
+          <KpiCell label="Feeds error" value={status.summary.feedsError} color={status.summary.feedsError > 0 ? C.danger : undefined} />
+          <KpiCell label="Feeds pending" value={status.summary.feedsNever} color={C.textMuted} />
+          <KpiCell label="Real articles" value={status.summary.totalRealArticles} color={C.cta} />
+          <KpiCell label="Seed articles" value={status.summary.totalSeedArticles} color={C.textMuted} />
+          <KpiCell label="Total articles" value={status.summary.totalArticles} />
+          <KpiCell label="New (24h)" value={status.summary.newArticles24h} color={status.summary.newArticles24h > 0 ? C.cta : undefined} />
+        </div>
+      )}
+
+      {/* Last scrape result (after a manual "Scrape now" run) */}
+      {scrapeResult && (
+        <div style={{ marginBottom: "24px", padding: "16px 20px", background: C.bgSubtle, border: `1px solid ${C.border}`, borderRadius: "6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.cta, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+              Last scrape result
+            </div>
+            <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted }}>
+              {new Date(scrapeResult.completedAt).toLocaleString()} · {fmtDuration(scrapeResult.durationMs)}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: "12px" }}>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: C.text }}>{scrapeResult.articlesFound}</div>
+              <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>Found</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: C.cta }}>{scrapeResult.articlesNew}</div>
+              <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>New</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: C.accent }}>{scrapeResult.articlesMatched}</div>
+              <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>Matched</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: C.fontMono, color: scrapeResult.errors.length > 0 ? C.danger : C.textMuted }}>{scrapeResult.errors.length}</div>
+              <div style={{ fontSize: "9px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.1em" }}>Errors</div>
+            </div>
+          </div>
+          {scrapeResult.perFeed.some((f) => f.error) && (
+            <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${C.border}`, fontSize: "11px", color: C.danger, fontFamily: C.fontMono, lineHeight: 1.6 }}>
+              {scrapeResult.perFeed.filter((f) => f.error).map((f) => (
+                <div key={f.name}>· {f.name}: {f.error}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Per-feed table */}
+      {!status ? (
+        <EmptyState text={loading ? "Loading scraper status…" : "No scraper status available."} />
+      ) : (
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden" }}>
+          {/* Header row */}
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 2fr) minmax(80px, 0.6fr) minmax(90px, 0.8fr) minmax(110px, 0.8fr) minmax(80px, 0.6fr) minmax(80px, 0.6fr) minmax(120px, 0.8fr)", gap: "1px", background: C.border, fontFamily: C.fontMono, fontSize: "9px", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Feed</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Lang</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Status</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Last scrape</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px", textAlign: "right" }}>Found</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px", textAlign: "right" }}>New</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 14px", textAlign: "right" }}>Ingested</div>
+          </div>
+          {/* Body rows */}
+          {status.feeds.map((feed) => {
+            const sc = STATUS_COLORS[feed.status];
+            return (
+              <div
+                key={feed.name}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(180px, 2fr) minmax(80px, 0.6fr) minmax(90px, 0.8fr) minmax(110px, 0.8fr) minmax(80px, 0.6fr) minmax(80px, 0.6fr) minmax(120px, 0.8fr)",
+                  gap: "1px",
+                  background: C.border,
+                  fontFamily: C.fontSans,
+                  fontSize: "12px",
+                  color: C.text,
+                }}
+              >
+                <div style={{ background: C.bg, padding: "12px 14px" }}>
+                  <div style={{ fontWeight: 600, color: C.text }}>{feed.name}</div>
+                  <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono, marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {feed.url.replace(/^https?:\/\//, "")}
+                  </div>
+                  {feed.lastError && (
+                    <div style={{ fontSize: "10px", color: C.danger, fontFamily: C.fontMono, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {feed.lastError}
+                    </div>
+                  )}
+                </div>
+                <div style={{ background: C.bg, padding: "12px 14px" }}>
+                  <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: `${LANG_COLORS[feed.language]}15`, color: LANG_COLORS[feed.language], textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
+                    {feed.language}
+                  </span>
+                </div>
+                <div style={{ background: C.bg, padding: "12px 14px" }}>
+                  <span style={{ fontSize: "10px", fontFamily: C.fontMono, padding: "2px 8px", borderRadius: "2px", background: sc.bg, color: sc.fg, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
+                    {sc.label}
+                  </span>
+                  {feed.errorCount24h > 0 && (
+                    <div style={{ fontSize: "9px", color: C.danger, fontFamily: C.fontMono, marginTop: "4px" }}>
+                      {feed.errorCount24h} err/24h
+                    </div>
+                  )}
+                </div>
+                <div style={{ background: C.bg, padding: "12px 14px", fontFamily: C.fontMono, fontSize: "11px", color: C.textBody }}>
+                  <div>{fmtRelative(feed.lastScrapeAt)}</div>
+                  {feed.lastDurationMs != null && (
+                    <div style={{ fontSize: "9px", color: C.textMuted, marginTop: "2px" }}>{fmtDuration(feed.lastDurationMs)}</div>
+                  )}
+                </div>
+                <div style={{ background: C.bg, padding: "12px 14px", textAlign: "right", fontFamily: C.fontMono, fontSize: "12px", color: C.textBody }}>
+                  {feed.lastArticlesFound}
+                </div>
+                <div style={{ background: C.bg, padding: "12px 14px", textAlign: "right", fontFamily: C.fontMono, fontSize: "12px", color: feed.lastArticlesNew > 0 ? C.cta : C.textBody, fontWeight: feed.lastArticlesNew > 0 ? 700 : 400 }}>
+                  {feed.lastArticlesNew}
+                </div>
+                <div style={{ background: C.bg, padding: "12px 14px", textAlign: "right", fontFamily: C.fontMono, fontSize: "12px", color: feed.articlesIngested > 0 ? C.text : C.textMuted, fontWeight: feed.articlesIngested > 0 ? 700 : 400 }}>
+                  {feed.articlesIngested}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Footnote */}
+      <div style={{ marginTop: "16px", fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, lineHeight: 1.6 }}>
+        Cron runs every 30 min (Vercel schedule <code style={{ background: C.bgSubtle, padding: "1px 4px", borderRadius: "2px" }}>*&#x2F;30 * * * *</code>).
+        Each feed has a 15s timeout. Articles are deduped by SHA-256 URL hash.
+        New articles run through the Darija NLP pipeline (detectLanguage + analyzeSentiment + extractEntities) and are matched against the Company table by name + aliases.
+        Articles that mention no tracked company are still inserted (companyId = null) — they remain queryable in the news feed.
+      </div>
     </div>
   );
 }

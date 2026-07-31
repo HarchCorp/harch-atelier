@@ -353,7 +353,7 @@ function toCollectionResult(
     url: article.url,
     source: article.source,
     publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
-    snippet: article.rawContent.slice(0, 500),
+    snippet: (article.rawContent || article.description || "").slice(0, 500),
     fullContent: fullContent ?? null,
     language,
     collector: "rss",

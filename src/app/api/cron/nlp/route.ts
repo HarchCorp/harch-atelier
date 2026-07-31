@@ -54,10 +54,12 @@ export async function POST(req: Request) {
       });
     }
 
-    const jobs = unprocessed.map((row) => ({
-      name: `nlp:${row.company.slug}`,
-      data: { companySlug: row.company.slug },
-    }));
+    const jobs = unprocessed
+      .filter((row) => row.company !== null)
+      .map((row) => ({
+        name: `nlp:${row.company!.slug}`,
+        data: { companySlug: row.company!.slug },
+      }));
 
     const enqueued = await nlpQueue.addBulk(jobs);
 

@@ -105,7 +105,7 @@ async function upsertArticle(
   // First sighting — fetch the full article body for downstream NLP.
   // If fetchArticleContent fails (403, timeout, paywall), fall back to
   // the RSS description so the article still enters the pipeline.
-  let content = article.rawContent;
+  let content = article.rawContent || article.description || "";
   try {
     const full = await fetchArticleContent(article.url);
     if (full && full.length > content.length) content = full;
@@ -125,7 +125,7 @@ async function upsertArticle(
       sourceId: article.source.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 30),
       publishedAt: article.publishedAt,
       content,
-      summary: article.rawContent.slice(0, 500) || null,
+      summary: (article.rawContent || article.description || "").slice(0, 500) || null,
       language: article.language,
       urlHash: article.urlHash,
       // No `processed` column on the actual Article table — we use

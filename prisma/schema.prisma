@@ -45,8 +45,8 @@ model Company {
 
 model Article {
   id            String   @id @default(cuid())
-  companyId     String
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   title         String
   url           String   @unique
   source        String
@@ -666,4 +666,29 @@ model InfluencerMention {
   createdAt    DateTime @default(now())
 
   @@index([influencerId, publishedAt])
+}
+
+// ─── SANCTIONS LISTS CACHE (real OFAC/EU/UN screening) ────────────
+// Parsed sanctions entries are persisted here by the daily cron
+// (/api/cron/refresh-sanctions at 03:00 UTC) and served to
+// /api/investor/screen on every screening request. Each row holds the
+// full parsed list as a JSON string (`data`) plus a denormalized
+// `entryCount` for quick capacity reporting. The cache is treated as
+// stale after 24h — if a screening request hits a stale row, the route
+// triggers a background refresh and serves the stale data meanwhile.
+// If a fresh download fails, the route logs a warning and falls back
+// to the last successful cache (NEVER serves an empty list silently).
+
+model SanctionsCache {
+  id            String   @id @default(cuid())
+  list          String   @unique // "OFAC" | "EU" | "UN"
+  data          String   // JSON string of SanctionsEntry[]
+  entryCount    Int
+  downloadedAt  DateTime
+  sourceUrl     String?  // URL the data was fetched from (for audit)
+  byteSize      Int?     // raw payload size in bytes (for telemetry)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([list, downloadedAt])
 }
