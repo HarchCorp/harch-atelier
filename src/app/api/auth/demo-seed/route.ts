@@ -86,7 +86,8 @@ function mulberry32(seed: number): () => number {
 }
 
 function hashStringToSeed(s: string): number {
-  return crypto.createHash("sha256").update(s).digest("readUInt32BE", 0);
+  const buf = crypto.createHash("sha256").update(s).digest();
+  return buf.readUInt32BE(0);
 }
 
 function hashUrl(url: string): string {
