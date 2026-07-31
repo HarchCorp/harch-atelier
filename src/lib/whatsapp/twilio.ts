@@ -14,9 +14,20 @@
 //  secrets.
 // ═══════════════════════════════════════════════════════════════
 
-import Twilio from "twilio";
-
-type TwilioClient = InstanceType<typeof Twilio>;
+// Twilio v6's default export is a factory function, not a standard class,
+// so InstanceType<typeof Twilio> doesn't compile. We use a structural type
+// covering only the methods we call (messages.create). This keeps type
+// safety on our usage without fighting the SDK's internal typing.
+// The SDK is loaded lazily via dynamic import in getTwilioClient().
+interface TwilioClient {
+  messages: {
+    create: (params: {
+      from: string;
+      to: string;
+      body: string;
+    }) => Promise<{ sid: string; errorCode?: number; errorMessage?: string }>;
+  };
+}
 
 // ─── Types ──────────────────────────────────────────────────────────
 
