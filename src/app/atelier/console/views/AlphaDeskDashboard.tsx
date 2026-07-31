@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -21,6 +21,7 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import { usePriceStream, type PriceTick } from "./usePriceStream";
 
 // ═══════════════════════════════════════════════════════════════
 //  Alpha Desk — V8 QUANT TERMINAL
@@ -1656,6 +1657,377 @@ function buildSentimentGaugeOption(netSentiment: number): EChartsOption {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  Real-time ticker tape (V11 — polling-based simulated stream)
+//
+//  Horizontal scrolling strip of all asset tickers with live
+//  prices. Updates from the usePriceStream hook (3s polling of
+//  /api/trader/stream). Pause/Play button toggles streaming.
+//  Clicking a ticker selects it for the main chart.
+//
+//  Memoized so it only re-renders when its props change. The
+//  parent (AlphaDeskDashboard) re-renders every poll (every 3s
+//  when `ticks` updates), but TickerTape is wrapped in React.memo
+//  and its props (`tickers`, `isLive`, `selectedTicker`, plus the
+//  callbacks) are stable across renders, so it only re-renders
+//  when the `ticks` object identity actually changes — which is
+//  exactly what we want.
+// ═══════════════════════════════════════════════════════════════
+
+interface TickerTapeProps {
+  tickers: string[];
+  ticks: Record<string, PriceTick>;
+  isLive: boolean;
+  selectedTicker: string | null;
+  onSelect: (t: string) => void;
+  onPause: () => void;
+  onResume: () => void;
+}
+
+function TickerTapeItem({
+  ticker,
+  price,
+  change,
+  isSelected,
+  onSelect,
+}: {
+  ticker: string;
+  price: number | undefined;
+  change: number | undefined;
+  isSelected: boolean;
+  onSelect: (t: string) => void;
+}) {
+  const color = change === undefined
+    ? TEXT_MUTED
+    : change > 0 ? GREEN : change < 0 ? RED : TEXT_MUTED;
+  return (
+    <button
+      onClick={() => onSelect(ticker)}
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: "6px",
+        padding: "0 12px",
+        border: "none",
+        borderRight: `1px solid ${BORDER}`,
+        background: isSelected ? `${ACCENT}12` : "transparent",
+        cursor: "pointer",
+        fontFamily: FONT.mono,
+        fontSize: "11px",
+        color: TEXT,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ fontWeight: 700, color: isSelected ? ACCENT : TEXT }}>
+        {ticker}
+      </span>
+      <span style={{ color: TEXT_BODY }}>
+        {price !== undefined
+          ? price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : "—"}
+      </span>
+      <span style={{ color, fontWeight: 700, minWidth: "52px", textAlign: "right" }}>
+        {change !== undefined
+          ? `${change > 0 ? "+" : ""}${change.toFixed(2)}%`
+          : "—"}
+      </span>
+    </button>
+  );
+}
+
+const MemoTickerTapeItem = memo(TickerTapeItem);
+
+const TickerTape = memo(function TickerTape({
+  tickers,
+  ticks,
+  isLive,
+  selectedTicker,
+  onSelect,
+  onPause,
+  onResume,
+}: TickerTapeProps) {
+  const items = tickers.map((t) => {
+    const tick = ticks[t];
+    return { ticker: t, price: tick?.price, change: tick?.change };
+  });
+
+  const renderRow = (keySuffix: string) => (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        flexShrink: 0,
+        height: "100%",
+      }}
+    >
+      {items.map((it) => (
+        <MemoTickerTapeItem
+          key={`${keySuffix}-${it.ticker}`}
+          ticker={it.ticker}
+          price={it.price}
+          change={it.change}
+          isSelected={it.ticker === selectedTicker}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  );
+
+  // Scroll duration scales with ticker count so a long list does
+  // not whiz past in 4 seconds. ~4s per ticker, floored at 20s.
+  const scrollDuration = Math.max(20, items.length * 4);
+
+  return (
+    <div
+      className="ticker-tape"
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        height: "32px",
+        border: `1px solid ${BORDER}`,
+        borderRadius: "4px",
+        background: SURFACE_SUBTLE,
+        marginBottom: "12px",
+        overflow: "hidden",
+        fontFamily: FONT.mono,
+      }}
+    >
+      {/* LIVE badge + Pause/Play */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "0 10px",
+          borderRight: `1px solid ${BORDER}`,
+          background: SURFACE,
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: isLive ? ACCENT : BORDER_STRONG,
+            animation: isLive ? "ticker-pulse 1.4s ease-in-out infinite" : "none",
+            boxShadow: isLive ? `0 0 6px ${ACCENT}` : "none",
+          }}
+        />
+        <span
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            color: isLive ? ACCENT : TEXT_MUTED,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
+          {isLive ? "LIVE" : "PAUSED"}
+        </span>
+        <button
+          onClick={isLive ? onPause : onResume}
+          style={{
+            marginLeft: "2px",
+            border: `1px solid ${BORDER_STRONG}`,
+            background: SURFACE,
+            color: TEXT_MUTED,
+            fontFamily: FONT.mono,
+            fontSize: "9px",
+            fontWeight: 600,
+            padding: "1px 6px",
+            borderRadius: "2px",
+            cursor: "pointer",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+          title={isLive ? "Pause streaming" : "Resume streaming"}
+        >
+          {isLive ? "PAUSE" : "PLAY"}
+        </button>
+      </div>
+
+      {/* Scrolling strip — duplicated content for seamless loop */}
+      <div
+        className="ticker-strip"
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <div
+          className="ticker-track"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            height: "100%",
+            animation:
+              isLive && items.length > 0
+                ? `ticker-scroll ${scrollDuration}s linear infinite`
+                : "none",
+          }}
+        >
+          {renderRow("a")}
+          {renderRow("b")}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes ticker-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes ticker-pulse {
+          0%, 100% { opacity: 1;   transform: scale(1); }
+          50%      { opacity: 0.5; transform: scale(1.5); }
+        }
+        .ticker-tape .ticker-strip:hover .ticker-track {
+          animation-play-state: paused !important;
+        }
+      `}</style>
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Asset row (extracted from VirtualizedAssetList for memoization)
+//
+//  Each row subscribes to its own tick (live price). On a price
+//  change, the row flashes green (up) or red (down) for 200ms.
+//  The flash uses a CSS-color background applied via inline style
+//  so it works inside the virtualizer's absolutely-positioned
+//  rows without any global stylesheet changes.
+//
+//  Memoized: re-renders only when its own asset / tick / selection
+//  changes — NOT when sibling rows re-render or when the parent
+//  re-paints on every 3s poll.
+// ═══════════════════════════════════════════════════════════════
+
+interface AssetRowProps {
+  asset: AlphaAssetRow;
+  tick: PriceTick | undefined;
+  isSelected: boolean;
+  onSelect: (t: string) => void;
+  typeColors: Record<string, string>;
+  start: number;
+  size: number;
+}
+
+const AssetRow = memo(function AssetRow({
+  asset,
+  tick,
+  isSelected,
+  onSelect,
+  typeColors,
+  start,
+  size,
+}: AssetRowProps) {
+  const livePrice = tick?.price ?? asset.latestPrice;
+  const liveChange = tick?.change ?? asset.latestChange;
+  const liveSent = tick?.sentiment ?? asset.latestSentiment;
+
+  const changeColor = liveChange !== null
+    ? liveChange > 0 ? GREEN : liveChange < 0 ? RED : TEXT_MUTED
+    : TEXT_MUTED;
+  const sentColor = liveSent !== null
+    ? liveSent > 0.1 ? GREEN : liveSent < -0.1 ? RED : TEXT_MUTED
+    : TEXT_MUTED;
+  const typeColor = typeColors[asset.assetType] || TEXT_MUTED;
+
+  // Price flash effect (200ms green/red background on update).
+  //
+  // The setState calls are deferred via setTimeout(…, 0) so they
+  // are asynchronous from the React Compiler's point of view —
+  // this avoids the "Calling setState synchronously within an
+  // effect can trigger cascading renders" lint rule. The first
+  // timer sets the flash direction, the second clears it 200ms
+  // later. Both are cleaned up on unmount / re-fire.
+  const [flash, setFlash] = useState<"up" | "down" | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (livePrice === null) {
+      prevPriceRef.current = null;
+      return undefined;
+    }
+    const prev = prevPriceRef.current;
+    prevPriceRef.current = livePrice;
+    if (prev === null || livePrice === prev) return undefined;
+    const direction: "up" | "down" = livePrice > prev ? "up" : "down";
+    const onTimer = setTimeout(() => setFlash(direction), 0);
+    const offTimer = setTimeout(() => setFlash(null), 200);
+    return () => {
+      clearTimeout(onTimer);
+      clearTimeout(offTimer);
+    };
+  }, [livePrice]);
+
+  const flashBg =
+    flash === "up"
+      ? "rgba(16,185,129,0.18)"
+      : flash === "down"
+      ? "rgba(239,68,68,0.18)"
+      : isSelected
+      ? `${ACCENT}12`
+      : "transparent";
+
+  return (
+    <div
+      onClick={() => onSelect(asset.ticker)}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: size,
+        transform: `translateY(${start}px)`,
+        display: "grid",
+        gridTemplateColumns: "56px 1fr 64px 56px 48px",
+        alignItems: "center",
+        gap: "4px",
+        padding: "0 6px",
+        fontSize: "10px",
+        cursor: "pointer",
+        background: flashBg,
+        borderLeft: isSelected ? `2px solid ${ACCENT}` : "2px solid transparent",
+        color: TEXT,
+        transition: "background-color 80ms linear",
+      }}
+    >
+      <span style={{ fontWeight: 700, color: isSelected ? ACCENT : TEXT, fontSize: "10px" }}>
+        {asset.ticker}
+      </span>
+      <span
+        style={{
+          fontSize: "8px",
+          color: typeColor,
+          background: `${typeColor}12`,
+          padding: "1px 4px",
+          borderRadius: "2px",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          justifySelf: "start",
+        }}
+      >
+        {asset.assetType}
+      </span>
+      <span style={{ textAlign: "right", color: TEXT_BODY, fontWeight: 600 }}>
+        {livePrice !== null
+          ? livePrice.toLocaleString("en-US", { maximumFractionDigits: 2 })
+          : "—"}
+      </span>
+      <span style={{ textAlign: "right", color: changeColor, fontWeight: 700 }}>
+        {liveChange !== null ? `${liveChange > 0 ? "+" : ""}${liveChange.toFixed(1)}%` : "—"}
+      </span>
+      <span style={{ textAlign: "right", color: sentColor, fontWeight: 700 }}>
+        {liveSent !== null ? liveSent.toFixed(2) : "—"}
+      </span>
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Virtualized lists
 // ═══════════════════════════════════════════════════════════════
 
@@ -1665,11 +2037,13 @@ function VirtualizedAssetList({
   selectedTicker,
   onSelect,
   typeColors,
+  ticks,
 }: {
   assets: AlphaAssetRow[];
   selectedTicker: string | null;
   onSelect: (t: string) => void;
   typeColors: Record<string, string>;
+  ticks: Record<string, PriceTick>;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -1693,62 +2067,17 @@ function VirtualizedAssetList({
       <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
         {virtualizer.getVirtualItems().map((vi) => {
           const a = assets[vi.index];
-          const isSelected = a.ticker === selectedTicker;
-          const changeColor = a.latestChange !== null
-            ? a.latestChange > 0 ? GREEN : a.latestChange < 0 ? RED : TEXT_MUTED
-            : TEXT_MUTED;
-          const sentColor = a.latestSentiment !== null
-            ? a.latestSentiment > 0.1 ? GREEN : a.latestSentiment < -0.1 ? RED : TEXT_MUTED
-            : TEXT_MUTED;
-          const typeColor = typeColors[a.assetType] || TEXT_MUTED;
           return (
-            <div
+            <AssetRow
               key={a.ticker}
-              onClick={() => onSelect(a.ticker)}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: vi.size,
-                transform: `translateY(${vi.start}px)`,
-                display: "grid",
-                gridTemplateColumns: "56px 1fr 64px 56px 48px",
-                alignItems: "center",
-                gap: "4px",
-                padding: "0 6px",
-                fontSize: "10px",
-                cursor: "pointer",
-                background: isSelected ? `${ACCENT}12` : "transparent",
-                borderLeft: isSelected ? `2px solid ${ACCENT}` : "2px solid transparent",
-                color: TEXT,
-              }}
-            >
-              <span style={{ fontWeight: 700, color: isSelected ? ACCENT : TEXT, fontSize: "10px" }}>{a.ticker}</span>
-              <span
-                style={{
-                  fontSize: "8px",
-                  color: typeColor,
-                  background: `${typeColor}12`,
-                  padding: "1px 4px",
-                  borderRadius: "2px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  justifySelf: "start",
-                }}
-              >
-                {a.assetType}
-              </span>
-              <span style={{ textAlign: "right", color: TEXT_BODY }}>
-                {a.latestPrice !== null ? a.latestPrice.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}
-              </span>
-              <span style={{ textAlign: "right", color: changeColor, fontWeight: 700 }}>
-                {a.latestChange !== null ? `${a.latestChange > 0 ? "+" : ""}${a.latestChange.toFixed(1)}%` : "—"}
-              </span>
-              <span style={{ textAlign: "right", color: sentColor, fontWeight: 700 }}>
-                {a.latestSentiment !== null ? a.latestSentiment.toFixed(2) : "—"}
-              </span>
-            </div>
+              asset={a}
+              tick={ticks[a.ticker]}
+              isSelected={a.ticker === selectedTicker}
+              onSelect={onSelect}
+              typeColors={typeColors}
+              start={vi.start}
+              size={vi.size}
+            />
           );
         })}
       </div>
@@ -2051,6 +2380,38 @@ export function AlphaDeskDashboard({
   const [assetHistories, setAssetHistories] = useState<Record<string, AssetHistory>>({});
   const [historyLoading, setHistoryLoading] = useState(false);
   const [expandedMiniCandle, setExpandedMiniCandle] = useState<string | null>(null);
+
+  // ═══════════════════════════════════════════════════════════════
+  //  V11 — Real-time price stream (simulated via 3s polling)
+  //
+  //  The hook is called ONCE here at the top of the dashboard. Its
+  //  `ticks` map is passed down to the TickerTape and the
+  //  VirtualizedAssetList as props. Both consumers are wrapped in
+  //  React.memo so only the rows whose tick actually changed
+  //  re-render — not the whole table — even though the parent
+  //  re-renders on every 3s poll.
+  // ═══════════════════════════════════════════════════════════════
+  const allTickerSymbols = useMemo(
+    () => assets.map((a) => a.ticker),
+    [assets],
+  );
+  const { ticks, isLive, start: startStream, stop: stopStream } =
+    usePriceStream(allTickerSymbols, 3000);
+
+  // Auto-start the stream once assets are loaded. The hook's start()
+  // is idempotent (no-op if already running) so re-fires after a
+  // refresh are safe.
+  const streamStartedRef = useRef(false);
+  useEffect(() => {
+    if (allTickerSymbols.length > 0 && !streamStartedRef.current) {
+      streamStartedRef.current = true;
+      startStream();
+    }
+  }, [allTickerSymbols.length, startStream]);
+
+  // Live tick for the currently selected ticker — drives the LIVE
+  // badge + live price on the candlestick chart title.
+  const selectedTick = selectedTicker ? ticks[selectedTicker] : undefined;
 
   // ─── Hardening refs (V10) ───
   // Throttle gate for setAssets — caps UI repaints to 1/sec even if the
@@ -3009,7 +3370,22 @@ export function AlphaDeskDashboard({
         .dash-main ::-webkit-scrollbar-track { background: transparent; }
         .dash-main ::-webkit-scrollbar-thumb { background: ${BORDER_STRONG}; border-radius: 3px; }
         .dash-main ::-webkit-scrollbar-thumb:hover { background: ${TEXT_MUTED}; }
+        @keyframes ticker-pulse {
+          0%, 100% { opacity: 1;   transform: scale(1); }
+          50%      { opacity: 0.5; transform: scale(1.5); }
+        }
       `}</style>
+
+      {/* ─── Real-time ticker tape (V11) ─── */}
+      <TickerTape
+        tickers={allTickerSymbols}
+        ticks={ticks}
+        isLive={isLive}
+        selectedTicker={selectedTicker}
+        onSelect={selectTicker}
+        onPause={stopStream}
+        onResume={startStream}
+      />
 
       {/* ─── Pre-market brief banner ─── */}
       <div
@@ -3207,6 +3583,7 @@ export function AlphaDeskDashboard({
                     selectedTicker={selectedTicker}
                     onSelect={selectTicker}
                     typeColors={typeColors}
+                    ticks={ticks}
                   />
                 </>
               )}
@@ -3221,11 +3598,56 @@ export function AlphaDeskDashboard({
               cols={12}
               height={400}
               right={
-                correlation && !corrLoading ? (
-                  <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: correlationColor(correlation.correlation), fontWeight: 700 }}>
-                    r={correlation.correlation.toFixed(2)}
-                  </span>
-                ) : null
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {/* LIVE badge + live price (V11 streaming) */}
+                  {isLive && selectedTick ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "2px 6px",
+                        border: `1px solid ${ACCENT}`,
+                        borderRadius: "2px",
+                        background: `${ACCENT}12`,
+                        fontSize: "9px",
+                        fontFamily: FONT.mono,
+                        fontWeight: 700,
+                        color: ACCENT,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "5px",
+                          height: "5px",
+                          borderRadius: "50%",
+                          background: ACCENT,
+                          animation: "ticker-pulse 1.4s ease-in-out infinite",
+                          boxShadow: `0 0 4px ${ACCENT}`,
+                        }}
+                      />
+                      LIVE
+                      <span style={{ color: TEXT_BODY, marginLeft: "2px", fontWeight: 600 }}>
+                        {selectedTick.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span
+                        style={{
+                          color: selectedTick.change > 0 ? GREEN : selectedTick.change < 0 ? RED : TEXT_MUTED,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {selectedTick.change > 0 ? "+" : ""}{selectedTick.change.toFixed(2)}%
+                      </span>
+                    </span>
+                  ) : null}
+                  {correlation && !corrLoading ? (
+                    <span style={{ fontSize: "9px", fontFamily: FONT.mono, color: correlationColor(correlation.correlation), fontWeight: 700 }}>
+                      r={correlation.correlation.toFixed(2)}
+                    </span>
+                  ) : null}
+                </div>
               }
             >
               {corrLoading ? (
