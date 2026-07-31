@@ -1647,7 +1647,7 @@ export function InvestorDeskDashboard({
       )}
 
       {/* ═══ ROW 1 — RISK STRIP (5 KPI tiles, 24 cols) ═══ */}
-      <div style={{ ...gridCols(["5", "5", "5", "5", "4"]), marginBottom: "16px" }}>
+      <div style={{ ...gridCols([5, 5, 5, 5, 4]), marginBottom: "16px" }}>
         <div style={colSpan(5)}><KpiTile index={1} label="Adverse Media Hits" value={kpis?.adverseMediaHits ?? 0} color={adverseColor} sublabel={adverseColor === RED ? "Threshold breached" : "Within tolerance"} loading={loading} /></div>
         <div style={colSpan(5)}><KpiTile index={2} label="UBO Risk Score" value={kpis?.uboRiskScore ?? 0} color={uboColor} sublabel="0–100 · higher = riskier" loading={loading} /></div>
         <div style={colSpan(5)}><KpiTile index={3} label="M&A Target Sentiment" value={`${(kpis?.maTargetSentiment ?? 0) > 0 ? "+" : ""}${(kpis?.maTargetSentiment ?? 0).toFixed(2)}`} color={maColor} sublabel="-1 to +1 scale" loading={loading} /></div>
@@ -1656,7 +1656,7 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 2 — DD Checklist (6) · Entity Graph (12) · Red Flags (6) ═══ */}
-      <div style={{ ...gridCols(["6", "12", "6"]), marginBottom: "16px" }}>
+      <div style={{ ...gridCols([6, 12, 6]), marginBottom: "16px" }}>
         {/* LEFT — DD Checklist column */}
         <div style={colSpan(6)}>
           <div style={chartCardStyle}>
@@ -1715,7 +1715,7 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 3 — Adverse Media Timeline (24 cols, ECharts) ═══ */}
-      <div style={{ ...gridCols(["24"]), marginBottom: "16px" }}>
+      <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
@@ -1731,7 +1731,7 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 4 — Cross-Border Heatmap (12) · Dossier Pipeline Funnel (12) ═══ */}
-      <div style={{ ...gridCols(["12", "12"]), marginBottom: "16px" }}>
+      <div style={{ ...gridCols([12, 12]), marginBottom: "16px" }}>
         <div style={colSpan(12)}>
           <div style={chartCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
@@ -1764,7 +1764,7 @@ export function InvestorDeskDashboard({
           ))}
         </div>
       ) : (
-        <div style={{ ...gridCols(["8", "8", "8"]), marginBottom: "16px" }}>
+        <div style={{ ...gridCols([8, 8, 8]), marginBottom: "16px" }}>
           {/* 18 — Portfolio Exposure by Sector (Donut PieChart, preserved) */}
           <div style={colSpan(8)}>
             <div style={chartCardStyle}>
@@ -1866,7 +1866,7 @@ export function InvestorDeskDashboard({
           ))}
         </div>
       ) : (
-        <div style={{ ...gridCols(["8", "8", "8"]), marginBottom: "16px" }}>
+        <div style={{ ...gridCols([8, 8, 8]), marginBottom: "16px" }}>
           {/* 21 — Top Concentrations (Horizontal BarChart, preserved) */}
           <div style={colSpan(8)}>
             <div style={chartCardStyle}>
@@ -1937,7 +1937,7 @@ export function InvestorDeskDashboard({
       )}
 
       {/* ═══ ROW 7 — Threat Network Graph (24 cols, ECharts force-directed) ═══ */}
-      <div style={{ ...gridCols(["24"]), marginBottom: "16px" }}>
+      <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
@@ -1953,7 +1953,7 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 8 — Virtualized Holdings Table (24 cols, preserved features) ═══ */}
-      <div style={{ ...gridCols(["24"]), marginBottom: "16px" }}>
+      <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <VirtualizedHoldingsTable
             holdings={holdings}
