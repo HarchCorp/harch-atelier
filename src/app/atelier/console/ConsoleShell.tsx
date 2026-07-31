@@ -977,6 +977,42 @@ function DashboardTopBar({
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
+      {/* LIVE indicator — pulsing dot showing real-time data connection */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          border: `1px solid ${C.border}`,
+          borderRadius: "4px",
+          background: C.surfaceAlt,
+        }}
+        title="Real-time data connection active"
+      >
+        <span
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: C.accent,
+            display: "inline-block",
+            animation: "live-pulse 1.5s ease-in-out infinite",
+          }}
+        />
+        <span
+          style={{
+            fontSize: "9px",
+            fontFamily: FONT.mono,
+            fontWeight: 700,
+            color: C.accent,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+          }}
+        >
+          Live
+        </span>
+      </div>
 
       {/* Notification bell with red "3" badge — exact copy of the mockup */}
       <div style={{ position: "relative", cursor: "pointer" }} title="3 new alerts">
@@ -1709,6 +1745,10 @@ function PlaceholderView({ title, subtitle, theme }: { title: string; subtitle: 
           @keyframes placeholder-pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.3; transform: scale(0.7); }
+          }
+          @keyframes live-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+            50% { opacity: 0.6; box-shadow: 0 0 0 4px transparent; }
           }
         `}</style>
       </div>

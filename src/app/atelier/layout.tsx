@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AtelierSessionProvider } from "./AtelierSessionProvider";
+import { Toaster } from "@/components/ui/sonner";
 import "./atelier.css";
 
 // ─── ATELIER LAYOUT ──────────────────────────────────────────────
@@ -59,6 +60,7 @@ export default function AtelierLayout({
         Skip to main content
       </a>
       <div id="main-content">{children}</div>
+      <Toaster position="bottom-right" richColors closeButton />
     </AtelierSessionProvider>
   );
 }
