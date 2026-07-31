@@ -2303,10 +2303,10 @@ export function BrandMonitorDashboard({
                     {
                       key: "source",
                       header: "Source",
-                      width: "120px",
+                      width: "140px",
                       render: (a) => (
                         <span style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.source}>
-                          {a.source.length > 16 ? a.source.slice(0, 14) + "\u2026" : a.source}
+                          {a.source}
                         </span>
                       ),
                     },
@@ -2664,7 +2664,7 @@ export function BrandMonitorDashboard({
                       <tbody>
                         {severityHeatmapData.sources.map((src) => (
                           <tr key={src} style={{ borderBottom: `1px solid ${C.bgSubtle}` }}>
-                            <td style={{ padding: "6px 8px", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 120 }} title={src}>
+                            <td style={{ padding: "6px 8px", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 200 }} title={src}>
                               {src}
                             </td>
                             {severityHeatmapData.severities.map((sev) => {
