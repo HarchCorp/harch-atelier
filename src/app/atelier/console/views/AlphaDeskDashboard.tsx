@@ -1,6 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine,
+} from "recharts";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 
@@ -17,7 +33,10 @@ const FONT = { sans: C.fontSans, mono: C.fontMono };
 //  Layout: Dark background → Pre-market brief banner → 3 KPI cards
 //  (latency, sentiment spike Z-score, asset ticker) → Asset ticker
 //  feed (ticker → sentiment delta → price delta → AI confidence) →
-//  Correlation quick-view. Cyan accent on dark. Terminal vibe.
+//  Correlation quick-view + Price×Sentiment dual-axis chart →
+//  Market Analytics (performance bars, sentiment heatmap, correlation
+//  distribution, gainers/losers, sentiment pie). Cyan accent on
+//  dark. Terminal vibe.
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Types (typed KPI props, ready for real-time API binding) ───
@@ -59,8 +78,102 @@ const DARK_SURFACE = "#ffffff";
 const DARK_BORDER = "#e5e5e5";
 const GREEN = "#10b981";
 const RED = "#ef4444";
+const AMBER = "#d97706";
+const SLATE = "#94a3b8";
 const TEXT_ON_DARK = "#0a0a0a";
 const TEXT_MUTED_DARK = "#737373";
+
+// ─── Chart card + title styles (terminal vibe) ──────────────────
+
+const chartCardStyle: React.CSSProperties = {
+  border: "1px solid #e5e5e5",
+  borderRadius: "8px",
+  padding: "20px",
+  marginBottom: "24px",
+  background: "#ffffff",
+};
+
+const chartTitleStyle: React.CSSProperties = {
+  fontSize: "11px",
+  fontFamily: FONT.mono,
+  color: TEXT_MUTED_DARK,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  marginBottom: "16px",
+  fontWeight: 600,
+};
+
+const axisTickStyle = {
+  fontSize: 10,
+  fontFamily: FONT.mono,
+  fill: TEXT_MUTED_DARK,
+};
+
+const tooltipContentStyle: React.CSSProperties = {
+  background: "#ffffff",
+  border: "1px solid #e5e5e5",
+  borderRadius: "4px",
+  fontSize: "11px",
+  fontFamily: FONT.mono,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+};
+
+const tooltipLabelStyle: React.CSSProperties = {
+  fontSize: "10px",
+  fontFamily: FONT.mono,
+  color: TEXT_MUTED_DARK,
+  textTransform: "uppercase",
+  letterSpacing: "0.1em",
+  marginBottom: "4px",
+};
+
+// ─── Chart helpers ──────────────────────────────────────────────
+
+function sentimentColor(s: number | null): string {
+  if (s === null) return "#f4f4f5";
+  if (s > 0.1) {
+    const alpha = Math.min(Math.abs(s), 1) * 0.55 + 0.2;
+    return `rgba(16,185,129,${alpha})`;
+  }
+  if (s < -0.1) {
+    const alpha = Math.min(Math.abs(s), 1) * 0.55 + 0.2;
+    return `rgba(239,68,68,${alpha})`;
+  }
+  return "#f4f4f5";
+}
+
+function sentimentTextColor(s: number | null): string {
+  if (s === null) return TEXT_MUTED_DARK;
+  if (Math.abs(s) > 0.5) return "#ffffff";
+  return TEXT_ON_DARK;
+}
+
+function correlationColor(c: number): string {
+  const abs = Math.abs(c);
+  if (abs > 0.5) return c > 0 ? GREEN : RED;
+  if (abs > 0.3) return AMBER;
+  return SLATE;
+}
+
+function formatDateTick(iso: string): string {
+  if (!iso) return "";
+  const parts = iso.split("-");
+  if (parts.length < 3) return iso;
+  return `${parts[1]}/${parts[2]}`;
+}
+
+function formatPct(v: number): string {
+  return `${v > 0 ? "+" : ""}${v.toFixed(2)}%`;
+}
+
+// ─── Aligned data point (from correlation API) ──────────────────
+
+interface AlignedPoint {
+  date: string;
+  sentiment: number | null;
+  price: number | null;
+  changePct: number | null;
+}
 
 // ─── Component ──────────────────────────────────────────────────
 
@@ -79,6 +192,7 @@ export function AlphaDeskDashboard({
     direction: string;
     interpretation: string;
     dataPoints: number;
+    alignedData?: AlignedPoint[];
   } | null>(null);
   const [corrLoading, setCorrLoading] = useState(false);
   const [loading, setLoading] = useState(!injectedKpis);
@@ -86,6 +200,10 @@ export function AlphaDeskDashboard({
   const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "stock" | "crypto" | "fx" | "commodity">("all");
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  // All-asset correlation distribution
+  const [assetCorrs, setAssetCorrs] = useState<{ ticker: string; correlation: number }[]>([]);
+  const [corrDistLoading, setCorrDistLoading] = useState(false);
 
   useEffect(() => {
     if (injectedKpis) return;
@@ -130,29 +248,61 @@ export function AlphaDeskDashboard({
     })();
   }, [injectedKpis]);
 
-  // Fetch correlation when ticker selected
+  // Fetch correlation when ticker selected (includes alignedData time series)
   useEffect(() => {
     if (!selectedTicker) return;
-    setCorrLoading(true);
+    let cancelled = false;
     (async () => {
+      setCorrLoading(true);
       try {
         const res = await fetch(`/api/trader/assets/${selectedTicker}/correlation?window=30`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setCorrelation(data);
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setCorrelation(data);
+        }
       } catch {
         // ignore
       }
-      setCorrLoading(false);
+      if (!cancelled) setCorrLoading(false);
     })();
+    return () => { cancelled = true; };
   }, [selectedTicker]);
 
+  // Fetch correlation for ALL assets (for distribution chart)
+  const tickerSignature = assets.map((a) => a.ticker).join(",");
+  useEffect(() => {
+    if (assets.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      setCorrDistLoading(true);
+      try {
+        const results = await Promise.all(
+          assets.map(async (a) => {
+            try {
+              const res = await fetch(`/api/trader/assets/${a.ticker}/correlation?window=30`);
+              if (!res.ok) return { ticker: a.ticker, correlation: 0 };
+              const data = await res.json();
+              return { ticker: a.ticker, correlation: data.correlation ?? 0 };
+            } catch {
+              return { ticker: a.ticker, correlation: 0 };
+            }
+          })
+        );
+        if (!cancelled) setAssetCorrs(results);
+      } catch {
+        // ignore
+      }
+      if (!cancelled) setCorrDistLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [tickerSignature]);
+
   const firstName = userName.split(" ")[0] || "there";
-  const spikeColor = (kpis?.sentimentSpike ?? 0) > 3 ? RED : (kpis?.sentimentSpike ?? 0) > 1.5 ? "#d97706" : ACCENT;
+  const spikeColor = (kpis?.sentimentSpike ?? 0) > 3 ? RED : (kpis?.sentimentSpike ?? 0) > 1.5 ? AMBER : ACCENT;
 
   const typeColors: Record<string, string> = {
     stock: GREEN,
-    crypto: "#d97706",
+    crypto: AMBER,
     fx: ACCENT,
     commodity: RED,
     index: TEXT_MUTED_DARK,
@@ -214,6 +364,42 @@ export function AlphaDeskDashboard({
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  // ─── Chart data derivations (real data, no mock) ─────────────
+
+  // Performance comparison: all assets with latestChange
+  const perfData = assets
+    .filter((a) => a.latestChange !== null)
+    .map((a) => ({ ticker: a.ticker, change: a.latestChange as number }))
+    .sort((a, b) => b.change - a.change);
+
+  // Sentiment distribution buckets
+  const sentimentBuckets = { bullish: 0, neutral: 0, bearish: 0, unknown: 0 };
+  for (const a of assets) {
+    if (a.latestSentiment === null) { sentimentBuckets.unknown++; continue; }
+    if (a.latestSentiment > 0.1) sentimentBuckets.bullish++;
+    else if (a.latestSentiment < -0.1) sentimentBuckets.bearish++;
+    else sentimentBuckets.neutral++;
+  }
+  const pieData = [
+    { name: "Bullish", value: sentimentBuckets.bullish, color: GREEN },
+    { name: "Neutral", value: sentimentBuckets.neutral, color: SLATE },
+    { name: "Bearish", value: sentimentBuckets.bearish, color: RED },
+  ].filter((d) => d.value > 0);
+
+  // Top movers: top 3 gainers + top 3 losers (deduped)
+  const moversData = (() => {
+    const withChange = assets.filter((a) => a.latestChange !== null);
+    if (withChange.length === 0) return [];
+    const sorted = [...withChange].sort((a, b) => (b.latestChange ?? 0) - (a.latestChange ?? 0));
+    const top = sorted.slice(0, 3);
+    const bottom = sorted.slice(-3).reverse();
+    const map = new Map<string, number>();
+    [...top, ...bottom].forEach((a) => map.set(a.ticker, a.latestChange ?? 0));
+    return Array.from(map.entries())
+      .map(([ticker, change]) => ({ ticker, change }))
+      .sort((a, b) => b.change - a.change);
+  })();
 
   return (
     <div className="dash-main" style={{ padding: "24px", background: "#ffffff", overflowX: "hidden", color: "#0a0a0a", fontFamily: FONT.sans }}>
@@ -413,7 +599,7 @@ export function AlphaDeskDashboard({
 
       {/* ─── Correlation quick-view ─── */}
       {selectedTicker && (
-        <div style={{ padding: "24px", background: DARK_SURFACE, border: `1px solid ${DARK_BORDER}`, borderRadius: "8px" }}>
+        <div style={{ padding: "24px", background: DARK_SURFACE, border: `1px solid ${DARK_BORDER}`, borderRadius: "8px", marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
             <div>
               <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
@@ -425,7 +611,7 @@ export function AlphaDeskDashboard({
             </div>
             {correlation && !corrLoading && (
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "32px", fontWeight: 800, fontFamily: FONT.mono, color: Math.abs(correlation.correlation) > 0.5 ? GREEN : Math.abs(correlation.correlation) > 0.3 ? "#d97706" : TEXT_MUTED_DARK }}>
+                <div style={{ fontSize: "32px", fontWeight: 800, fontFamily: FONT.mono, color: Math.abs(correlation.correlation) > 0.5 ? GREEN : Math.abs(correlation.correlation) > 0.3 ? AMBER : TEXT_MUTED_DARK }}>
                   {correlation.correlation.toFixed(2)}
                 </div>
                 <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, textTransform: "uppercase", letterSpacing: "0.1em" }}>
@@ -437,7 +623,7 @@ export function AlphaDeskDashboard({
           {corrLoading ? (
             <div style={{ color: TEXT_MUTED_DARK, fontFamily: FONT.mono, fontSize: "13px", padding: "24px 0" }}>Computing…</div>
           ) : correlation ? (
-            <div style={{ padding: "16px", background: DARK_BG, borderRadius: "4px", fontSize: "14px", color: "#a3a3a3", lineHeight: 1.6 }}>
+            <div style={{ padding: "16px", background: DARK_BG, borderRadius: "4px", fontSize: "14px", color: "#525252", lineHeight: 1.6 }}>
               <strong style={{ color: correlation.direction === "positive" ? GREEN : RED, fontFamily: FONT.mono, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                 {correlation.direction === "positive" ? "Positive" : "Negative"}
               </strong>
@@ -449,6 +635,373 @@ export function AlphaDeskDashboard({
           )}
         </div>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          CHART 1 — Price × Sentiment Dual Axis (KILLER FEATURE)
+          Uses alignedData from correlation API (real time series).
+          Cyan line = price (left axis), amber line = sentiment (right).
+          Shows divergence between sentiment and price — the trader's
+          core alpha signal.
+          ═══════════════════════════════════════════════════════════ */}
+      {selectedTicker && (
+        <div style={chartCardStyle}>
+          <div style={chartTitleStyle}>
+            Price × Sentiment Divergence — {selectedTicker} (30d)
+          </div>
+          {corrLoading ? (
+            <SkeletonLoader accent={ACCENT} lines={1} height={250} />
+          ) : correlation?.alignedData && correlation.alignedData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart data={correlation.alignedData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDateTick}
+                  tick={axisTickStyle}
+                  stroke="#e5e5e5"
+                />
+                <YAxis
+                  yAxisId="price"
+                  orientation="left"
+                  tick={{ ...axisTickStyle, fill: ACCENT }}
+                  stroke="#e5e5e5"
+                  width={56}
+                />
+                <YAxis
+                  yAxisId="sentiment"
+                  orientation="right"
+                  domain={[-1, 1]}
+                  tick={{ ...axisTickStyle, fill: AMBER }}
+                  stroke="#e5e5e5"
+                  width={40}
+                />
+                <Tooltip
+                  contentStyle={tooltipContentStyle}
+                  labelStyle={tooltipLabelStyle}
+                  labelFormatter={formatDateTick}
+                  formatter={(value: number | string, name: string) => [
+                    typeof value === "number" ? value.toFixed(2) : value,
+                    name,
+                  ]}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: "10px", fontFamily: FONT.mono, paddingTop: "8px" }}
+                />
+                <ReferenceLine yAxisId="sentiment" y={0} stroke={SLATE} strokeDasharray="2 2" strokeOpacity={0.4} />
+                <Line
+                  yAxisId="price"
+                  type="monotone"
+                  dataKey="price"
+                  stroke={ACCENT}
+                  strokeWidth={2}
+                  dot={false}
+                  name="Price"
+                  connectNulls
+                />
+                <Line
+                  yAxisId="sentiment"
+                  type="monotone"
+                  dataKey="sentiment"
+                  stroke={AMBER}
+                  strokeWidth={2}
+                  dot={false}
+                  name="Sentiment"
+                  connectNulls
+                  strokeDasharray="4 2"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <ErrorState accent={ACCENT} message="No time-series data available for this asset." />
+          )}
+        </div>
+      )}
+
+      {/* ─── Market Analytics section header ─── */}
+      <div style={{ marginTop: "8px", marginBottom: "20px" }}>
+        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: ACCENT, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+          Market Analytics
+        </div>
+        <div style={{ fontSize: "16px", fontWeight: 700, color: TEXT_ON_DARK }}>
+          Cross-asset visualizations
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          CHART 2 — Asset Performance Comparison (horizontal BarChart)
+          From /api/trader/assets — latestChange % for all assets.
+          Green bars = positive, red bars = negative. Horizontal for
+          terminal vibe. Center reference line at 0.
+          ═══════════════════════════════════════════════════════════ */}
+      <div style={chartCardStyle}>
+        <div style={chartTitleStyle}>
+          Asset Performance — Latest Δ% (all assets)
+        </div>
+        {loading ? (
+          <SkeletonLoader accent={ACCENT} lines={1} height={250} />
+        ) : perfData.length === 0 ? (
+          <ErrorState accent={ACCENT} message="No price change data available." />
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(250, perfData.length * 26)}>
+            <BarChart data={perfData} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
+              <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" horizontal={false} />
+              <XAxis
+                type="number"
+                tick={axisTickStyle}
+                stroke="#e5e5e5"
+                tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`}
+              />
+              <YAxis
+                type="category"
+                dataKey="ticker"
+                tick={{ ...axisTickStyle, fill: TEXT_ON_DARK, fontWeight: 700 }}
+                stroke="#e5e5e5"
+                width={56}
+              />
+              <Tooltip
+                contentStyle={tooltipContentStyle}
+                labelStyle={tooltipLabelStyle}
+                formatter={(value: number | string) => [
+                  typeof value === "number" ? formatPct(value) : value,
+                  "Change",
+                ]}
+              />
+              <ReferenceLine x={0} stroke={TEXT_MUTED_DARK} strokeOpacity={0.5} />
+              <Bar dataKey="change" name="Δ%" radius={[2, 2, 2, 2]}>
+                {perfData.map((entry, i) => (
+                  <Cell key={`perf-${i}`} fill={entry.change > 0 ? GREEN : entry.change < 0 ? RED : SLATE} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          CHART 3 — Sentiment Heatmap (custom grid)
+          All assets colored by latestSentiment (-1 to 1). Red for
+          negative, green for positive, slate for neutral. Each cell
+          shows ticker + sentiment value. Dense terminal grid.
+          ═══════════════════════════════════════════════════════════ */}
+      <div style={chartCardStyle}>
+        <div style={chartTitleStyle}>
+          Sentiment Heatmap — all assets (−1 to +1)
+        </div>
+        {loading ? (
+          <SkeletonLoader accent={ACCENT} lines={4} height={50} />
+        ) : assets.length === 0 ? (
+          <ErrorState accent={ACCENT} message="No sentiment data available." />
+        ) : (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                gap: "8px",
+                marginBottom: "16px",
+              }}
+            >
+              {assets.map((a) => {
+                const s = a.latestSentiment;
+                const bg = sentimentColor(s);
+                const fg = sentimentTextColor(s);
+                return (
+                  <div
+                    key={a.ticker}
+                    title={`${a.ticker} — ${a.name} · sentiment ${s !== null ? s.toFixed(2) : "N/A"}`}
+                    style={{
+                      padding: "12px 10px",
+                      background: bg,
+                      borderRadius: "4px",
+                      border: "1px solid #e5e5e5",
+                      textAlign: "center",
+                      transition: "transform 0.1s ease",
+                      cursor: "default",
+                    }}
+                  >
+                    <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: FONT.mono, color: fg, lineHeight: 1.2 }}>
+                      {a.ticker}
+                    </div>
+                    <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: fg, opacity: 0.85, marginTop: "4px" }}>
+                      {s !== null ? (s > 0 ? "+" : "") + s.toFixed(2) : "—"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Legend strip */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "10px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              <span>Bearish</span>
+              <div style={{ flex: 1, height: "8px", borderRadius: "2px", background: "linear-gradient(90deg, rgba(239,68,68,0.75) 0%, rgba(239,68,68,0.2) 35%, #f4f4f5 50%, rgba(16,185,129,0.2) 65%, rgba(16,185,129,0.75) 100%)" }} />
+              <span>Bullish</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          CHART 4 + 6 — Correlation Distribution + Sentiment Pie
+          Side-by-side grid for terminal density.
+          ═══════════════════════════════════════════════════════════ */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 380px), 1fr))", gap: "24px", marginBottom: "24px" }}>
+        {/* CHART 4 — Correlation Strength Distribution */}
+        <div style={{ ...chartCardStyle, marginBottom: 0 }}>
+          <div style={chartTitleStyle}>
+            Correlation Strength — Pearson r per asset
+          </div>
+          {corrDistLoading ? (
+            <SkeletonLoader accent={ACCENT} lines={1} height={250} />
+          ) : assetCorrs.length === 0 ? (
+            <ErrorState accent={ACCENT} message="No correlation data available." />
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={assetCorrs} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="ticker"
+                  tick={{ ...axisTickStyle, fill: TEXT_ON_DARK, fontWeight: 700 }}
+                  stroke="#e5e5e5"
+                  interval={0}
+                  angle={-30}
+                  textAnchor="end"
+                  height={50}
+                />
+                <YAxis
+                  domain={[-1, 1]}
+                  tick={axisTickStyle}
+                  stroke="#e5e5e5"
+                  width={36}
+                />
+                <Tooltip
+                  contentStyle={tooltipContentStyle}
+                  labelStyle={tooltipLabelStyle}
+                  formatter={(value: number | string) => [
+                    typeof value === "number" ? value.toFixed(3) : value,
+                    "Pearson r",
+                  ]}
+                />
+                <ReferenceLine y={0} stroke={TEXT_MUTED_DARK} strokeOpacity={0.5} />
+                <ReferenceLine y={0.5} stroke={GREEN} strokeDasharray="2 2" strokeOpacity={0.3} />
+                <ReferenceLine y={-0.5} stroke={RED} strokeDasharray="2 2" strokeOpacity={0.3} />
+                <Bar dataKey="correlation" name="Pearson r" radius={[2, 2, 0, 0]}>
+                  {assetCorrs.map((entry, i) => (
+                    <Cell key={`corr-${i}`} fill={correlationColor(entry.correlation)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* CHART 6 — Sentiment Distribution (PieChart) */}
+        <div style={{ ...chartCardStyle, marginBottom: 0 }}>
+          <div style={chartTitleStyle}>
+            Sentiment Distribution — asset count
+          </div>
+          {loading ? (
+            <SkeletonLoader accent={ACCENT} lines={1} height={250} />
+          ) : pieData.length === 0 ? (
+            <ErrorState accent={ACCENT} message="No sentiment data available." />
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={75}
+                  innerRadius={40}
+                  paddingAngle={2}
+                  label={({ name, value }: { name: string; value: number }) => `${name} ${value}`}
+                  labelLine={{ stroke: TEXT_MUTED_DARK, strokeWidth: 1 }}
+                  style={{ fontSize: "10px", fontFamily: FONT.mono, fill: TEXT_ON_DARK }}
+                >
+                  {pieData.map((entry, i) => (
+                    <Cell key={`pie-${i}`} fill={entry.color} stroke="#ffffff" strokeWidth={2} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={tooltipContentStyle}
+                  labelStyle={tooltipLabelStyle}
+                  formatter={(value: number | string, name: string) => [`${value} assets`, name]}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: "10px", fontFamily: FONT.mono, paddingTop: "8px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          CHART 5 — Top Gainers / Losers (horizontal diverging BarChart)
+          Top 3 gainers (green, right of 0) + top 3 losers (red, left).
+          Real data from /api/trader/assets latestChange. Stats API
+          confirms the #1 gainer/loser in KPI strip.
+          ═══════════════════════════════════════════════════════════ */}
+      <div style={chartCardStyle}>
+        <div style={chartTitleStyle}>
+          Top Movers — gainers vs losers (top 3 each)
+        </div>
+        {loading ? (
+          <SkeletonLoader accent={ACCENT} lines={1} height={250} />
+        ) : moversData.length === 0 ? (
+          <ErrorState accent={ACCENT} message="No price change data available." />
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={moversData} layout="vertical" margin={{ top: 4, right: 24, bottom: 0, left: 8 }}>
+                <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={axisTickStyle}
+                  stroke="#e5e5e5"
+                  tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="ticker"
+                  tick={{ ...axisTickStyle, fill: TEXT_ON_DARK, fontWeight: 700 }}
+                  stroke="#e5e5e5"
+                  width={56}
+                />
+                <Tooltip
+                  contentStyle={tooltipContentStyle}
+                  labelStyle={tooltipLabelStyle}
+                  formatter={(value: number | string) => [
+                    typeof value === "number" ? formatPct(value) : value,
+                    "Change",
+                  ]}
+                />
+                <ReferenceLine x={0} stroke={TEXT_MUTED_DARK} strokeOpacity={0.6} />
+                <Bar dataKey="change" name="Δ%" radius={[2, 2, 2, 2]}>
+                  {moversData.map((entry, i) => (
+                    <Cell key={`mover-${i}`} fill={entry.change > 0 ? GREEN : entry.change < 0 ? RED : SLATE} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            {/* Summary row: stats API top gainer / loser */}
+            <div style={{ display: "flex", gap: "16px", marginTop: "12px", flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 160px", padding: "10px 14px", background: `${GREEN}10`, borderRadius: "4px", borderLeft: `3px solid ${GREEN}` }}>
+                <div style={{ fontSize: "9px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, textTransform: "uppercase", letterSpacing: "0.1em" }}>Top Gainer</div>
+                <div style={{ fontSize: "15px", fontWeight: 700, fontFamily: FONT.mono, color: GREEN, marginTop: "2px" }}>
+                  {kpis?.topGainer?.ticker ?? "—"} {kpis?.topGainer ? `+${kpis.topGainer.changePct}%` : ""}
+                </div>
+              </div>
+              <div style={{ flex: "1 1 160px", padding: "10px 14px", background: `${RED}10`, borderRadius: "4px", borderLeft: `3px solid ${RED}` }}>
+                <div style={{ fontSize: "9px", fontFamily: FONT.mono, color: TEXT_MUTED_DARK, textTransform: "uppercase", letterSpacing: "0.1em" }}>Top Loser</div>
+                <div style={{ fontSize: "15px", fontWeight: 700, fontFamily: FONT.mono, color: RED, marginTop: "2px" }}>
+                  {kpis?.topLoser?.ticker ?? "—"} {kpis?.topLoser ? `${kpis.topLoser.changePct}%` : ""}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
