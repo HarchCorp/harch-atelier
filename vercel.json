@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/generate-reports",
       "schedule": "0 1 1 * *"
+    },
+    {
+      "path": "/api/cron/generate-briefings",
+      "schedule": "0 7 * * *"
     }
   ]
 }

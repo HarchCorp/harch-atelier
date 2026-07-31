@@ -720,6 +720,15 @@ export function ConsoleShell({
   // root so it overlays everything (zIndex 150).
   const [assistantOpen, setAssistantOpen] = useState(false);
 
+  // ─── DAILY BRIEFING (Cmd+Shift+B) ────────────────────────────────
+  // Morning LLM briefing modal — Dataminr "LLM briefings with citations"
+  // equivalent. Toggled via Cmd+Shift+B / Ctrl+Shift+B, the top-bar
+  // sun-icon button, or the "Daily Briefing" command in the Cmd+K
+  // palette. Auto-shown the first time a user opens the console each
+  // day (tracked via localStorage `harchiq.briefing.lastViewed` =
+  // today's YYYY-MM-DD in Africa/Casablanca tz).
+  const [briefingOpen, setBriefingOpen] = useState(false);
+
   // Last-refresh label shown in the palette footer. Updated whenever
   // the weather data refreshes (proxy for "data freshness").
   const [lastRefreshTime, setLastRefreshTime] = useState<string | null>(null);
@@ -754,6 +763,13 @@ export function ConsoleShell({
         setAssistantOpen((v) => !v);
         return;
       }
+      // Cmd+Shift+B (mac) / Ctrl+Shift+B (win/linux) → toggle Daily Briefing.
+      // B for Briefing — natural neighbour of F (search) on the bottom row.
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "b" || e.key === "B")) {
+        e.preventDefault();
+        setBriefingOpen((v) => !v);
+        return;
+      }
       // Cmd+Shift+F (mac) / Ctrl+Shift+F (win/linux) → toggle global search
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "f" || e.key === "F")) {
         e.preventDefault();
@@ -764,7 +780,7 @@ export function ConsoleShell({
       // all modals are closed)
       const target = e.target as HTMLElement;
       const isTyping = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
-      if (isTyping || paletteOpen || searchOpen || assistantOpen) return;
+      if (isTyping || paletteOpen || searchOpen || assistantOpen || briefingOpen) return;
 
       if (e.key === "r" || e.key === "R") {
         e.preventDefault();
@@ -787,7 +803,38 @@ export function ConsoleShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paletteOpen, searchOpen, assistantOpen, commandCenterOpen]);
+  }, [paletteOpen, searchOpen, assistantOpen, commandCenterOpen, briefingOpen]);
+
+  // ─── AUTO-SHOW BRIEFING ON FIRST LOGIN OF THE DAY ──────────────
+  // Check localStorage `harchiq.briefing.lastViewed`. If it's not
+  // today's YYYY-MM-DD (Africa/Casablanca), open the briefing modal
+  // automatically on first console mount — mirrors how Dataminr
+  // surfaces the morning brief the first time you log in.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Africa/Casablanca",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const todayKey = fmt.format(new Date());
+      const lastViewed = window.localStorage.getItem("harchiq.briefing.lastViewed");
+      if (lastViewed !== todayKey) {
+        // Don't auto-open if a modal is already in the user's way.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount-time open, intentional
+        setBriefingOpen(true);
+        // Mark as viewed so a same-day reload doesn't re-trigger it.
+        // The actual "viewed" timestamp is also bumped when the
+        // briefing closes (see onClose below) — this write just
+        // suppresses the auto-open during rapid HMR reloads in dev.
+        window.localStorage.setItem("harchiq.briefing.lastViewed", todayKey);
+      }
+    } catch {
+      // localStorage may be unavailable (private mode) — skip silently.
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -893,7 +940,7 @@ export function ConsoleShell({
         action: () => {
           // Open the docs hint in a new tab — Harch Atelier trust center
           if (typeof window !== "undefined") {
-            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close command palette\n  Cmd+J / Ctrl+J — open HarchIQ Assistant (GenAI chat)\n  Cmd+Shift+F / Ctrl+Shift+F — global search (alerts, topics, reports)\n  / — global search (no modifier)\n  ? — open command palette\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n  R — refresh data\n  E — export CSV\n  F — cycle filter\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
+            window.alert("Command palette\n\nShortcuts:\n  Cmd+K / Ctrl+K — open & close command palette\n  Cmd+J / Ctrl+J — open HarchIQ Assistant (GenAI chat)\n  Cmd+Shift+B / Ctrl+Shift+B — Daily Briefing (morning LLM brief)\n  Cmd+Shift+F / Ctrl+Shift+F — global search (alerts, topics, reports)\n  Cmd+Shift+C / Ctrl+Shift+C — Enter Command Center (war-room)\n  / — global search (no modifier)\n  ? — open command palette\n  ↑ ↓ — navigate\n  ↵ — select\n  esc — close\n  R — refresh data\n  E — export CSV\n  F — cycle filter\n\nStart typing to fuzzy-search across navigation, quick actions, and account commands.");
           }
         },
       },
@@ -926,6 +973,17 @@ export function ConsoleShell({
         },
       },
       {
+        id: "action-daily-briefing",
+        label: "Daily Briefing",
+        hint: "⌘⇧B",
+        icon: "☀",
+        group: "actions",
+        keywords: "daily morning briefing summary threats opportunities actions llm dataminr citations email report",
+        action: () => {
+          setBriefingOpen(true);
+        },
+      },
+      {
         id: "action-command-center",
         label: "Enter Command Center",
         hint: "⌘⇧C",
@@ -955,6 +1013,27 @@ export function ConsoleShell({
   const openAssistant = useCallback(() => setAssistantOpen(true), []);
   const closeAssistant = useCallback(() => setAssistantOpen(false), []);
   const toggleAssistant = useCallback(() => setAssistantOpen((v) => !v), []);
+
+  // Briefing open/close — `closeBriefing` also stamps the localStorage
+  // marker so the auto-show doesn't fire again until tomorrow.
+  const openBriefing = useCallback(() => setBriefingOpen(true), []);
+  const closeBriefing = useCallback(() => {
+    setBriefingOpen(false);
+    try {
+      if (typeof window !== "undefined") {
+        const fmt = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Africa/Casablanca",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+        const todayKey = fmt.format(new Date());
+        window.localStorage.setItem("harchiq.briefing.lastViewed", todayKey);
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   // ─── GLOBAL SEARCH → CONSOLE NAVIGATION ──────────────────────────
   // When a user picks a result from the Global Search, we either
@@ -1017,6 +1096,7 @@ export function ConsoleShell({
             onOpenWhatsapp={() => setWhatsappOpen(true)}
             onToggleAssistant={toggleAssistant}
             onOpenCommandCenter={openCommandCenter}
+            onOpenBriefing={openBriefing}
           />
 
           {/* 3-column dashboard layout (matches DashboardMockup exactly) */}
@@ -1088,6 +1168,19 @@ export function ConsoleShell({
           and global search (200). */}
       <HarchIQAssistant open={assistantOpen} onOpenChange={closeAssistant} />
 
+      {/* DAILY BRIEFING — morning LLM briefing modal (Cmd+Shift+B).
+          Rendered at the shell root so it overlays the dashboard.
+          zIndex 150 (same as the assistant) — the briefing modal has
+          its own Esc-to-close handler so it doesn't conflict with the
+          palette or global search. */}
+      <DailyBriefing
+        open={briefingOpen}
+        onClose={closeBriefing}
+        accent={theme.accent}
+        userEmail={userEmail}
+        userName={userName}
+      />
+
       <style>{pageStyles}</style>
     </div>
   );
@@ -1113,6 +1206,7 @@ function DashboardTopBar({
   onOpenWhatsapp,
   onToggleAssistant,
   onOpenCommandCenter,
+  onOpenBriefing,
 }: {
   onMobileMenuToggle: () => void;
   mobileMenuOpen: boolean;
@@ -1127,6 +1221,7 @@ function DashboardTopBar({
   onOpenWhatsapp: () => void;
   onToggleAssistant: () => void;
   onOpenCommandCenter: () => void;
+  onOpenBriefing: () => void;
 }) {
   return (
     <header
@@ -1354,6 +1449,46 @@ function DashboardTopBar({
       >
         <IconMonitor size={14} color="currentColor" />
         <span>Command Center</span>
+      </button>
+
+      {/* Daily Briefing button — sun icon for the morning LLM brief.
+          Opens the DailyBriefing modal (Cmd+Shift+B). Surfaced BEFORE
+          the bell so the morning ritual reads left-to-right: read the
+          brief → check alerts → check notifications. */}
+      <button
+        onClick={onOpenBriefing}
+        aria-label="Open Daily Briefing"
+        title="Daily Briefing (Cmd+Shift+B / Ctrl+Shift+B)"
+        style={{
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: "0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: C.textSecondary,
+          transition: "color 0.15s, transform 0.1s",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = theme.accent; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = C.textSecondary; }}
+        onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.94)"; }}
+        onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
       </button>
 
       {/* Notification bell — real dropdown fed by

@@ -40,6 +40,7 @@ model Company {
   portfolioHoldings PortfolioHolding[]
   dossiers         Dossier[]
   reports          Report[]
+  briefings        Briefing[]
 }
 
 model Article {
@@ -297,6 +298,7 @@ model User {
   portfolios    Portfolio[]
   dossiers      Dossier[]
   reports       Report[]
+  briefings     Briefing[]
 }
 
 model Account {
@@ -557,4 +559,48 @@ model Notification {
 
   @@index([userId, read, createdAt])
   @@index([userId, createdAt])
+}
+
+// ─── DAILY AI BRIEFINGS ───────────────────────────────────────────
+// Generated each morning by /api/cron/generate-briefings (07:00 UTC).
+// One row per (userId, date). The LLM is prompted with the last 24h of
+// alerts/topics/ai-visibility/neighbors and returns a structured
+// briefing with cited REAL alert IDs (no hallucinated sources — the
+// API maps the LLM's alertIndex back to actual Article/RiskAssessment
+// ids before persisting). The Console fetches the cached row by date
+// and falls back to on-demand generation if missing.
+//
+// `sections` JSON shape mirrors what the /api/console/briefing route
+// returns on the wire:
+//   {
+//     executiveSummary: string,
+//     topThreats:       [{ title, alertId, alertIndex, reason, source, url, severity }],
+//     topOpportunities: [{ title, alertId, alertIndex, reason, source, url, severity }],
+//     sentimentShift:   string,
+//     recommendedActions: string[],
+//     citedAlertIds:    string[],
+//     sources:          [{ id, title, source, url, severity, publishedAt }]
+//   }
+
+model Briefing {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  date        String   // YYYY-MM-DD (Casablanca local day the briefing covers)
+  title       String   // e.g. "Daily Intelligence Briefing — 2026-07-31"
+  summary     String   // 2-3 sentence executive summary (also stored in sections.executiveSummary)
+  sections    Json     // structured briefing payload (see comment above)
+  model       String?  // LLM model used (e.g. "glm-4")
+  alertCount  Int      // number of alerts fed to the LLM
+  citedCount  Int      // number of real alerts cited
+  status      String   @default("ready") // draft | generating | ready | failed
+  error       String?  // populated when status = "failed"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, createdAt])
+  @@index([date])
 }
