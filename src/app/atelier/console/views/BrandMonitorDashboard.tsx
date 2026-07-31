@@ -4,6 +4,8 @@ import {
   type CSSProperties,
   type ReactNode,
   Fragment,
+  memo,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -11,6 +13,7 @@ import {
 } from "react";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
+import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
@@ -389,7 +392,7 @@ const axisTick = { fontSize: 10, fontFamily: FONT.mono, fill: C.textMuted };
 
 // ─── AwaitingTelemetry (enterprise "NO SIGNAL" state) ───────────
 
-function AwaitingTelemetry({ label }: { label: string }) {
+const AwaitingTelemetry = memo(function AwaitingTelemetry({ label }: { label: string }) {
   return (
     <div
       style={{
@@ -442,7 +445,7 @@ function AwaitingTelemetry({ label }: { label: string }) {
       `}</style>
     </div>
   );
-}
+});
 
 // ─── Widget shell (card with title + body) ──────────────────────
 
@@ -519,7 +522,7 @@ function KpiTile({
 
 // ─── Mini sparkline (inline SVG, zero deps) ─────────────────────
 
-function Sparkline({ data, color, height = 28 }: { data: number[]; color: string; height?: number }) {
+const Sparkline = memo(function Sparkline({ data, color, height = 28 }: { data: number[]; color: string; height?: number }) {
   if (data.length === 0) {
     return <div style={{ height, background: C.bgSubtle, borderRadius: 2 }} />;
   }
@@ -539,7 +542,7 @@ function Sparkline({ data, color, height = 28 }: { data: number[]; color: string
       <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
     </svg>
   );
-}
+});
 
 // ─── Virtualized table (generic, useVirtualizer) ────────────────
 
@@ -557,12 +560,17 @@ function VirtualTable<T>({
   height,
   rowHeight = 32,
   emptyLabel,
+  rowKey,
 }: {
   rows: T[];
   columns: VirtualColumn<T>[];
   height: number;
   rowHeight?: number;
   emptyLabel: string;
+  // Optional stable key extractor — when provided, virtualizer uses
+  // it for getItemKey so rows keep stable identity across re-renders
+  // (essential for >1k row lists where index keys cause remounts).
+  rowKey?: (row: T, index: number) => string | number;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -570,6 +578,9 @@ function VirtualTable<T>({
     getScrollElement: () => parentRef.current,
     estimateSize: () => rowHeight,
     overscan: 10,
+    getItemKey: rowKey
+      ? (index: number) => rowKey(rows[index] as T, index)
+      : undefined,
   });
 
   if (rows.length === 0) {
@@ -663,7 +674,7 @@ function VirtualTable<T>({
 
 // ─── Sentiment badge ────────────────────────────────────────────
 
-function SentimentBadge({ sentiment, score }: { sentiment: string | null; score?: number | null }) {
+const SentimentBadge = memo(function SentimentBadge({ sentiment, score }: { sentiment: string | null; score?: number | null }) {
   let label = sentiment ?? "neutral";
   let color = COL_NEU;
   let bg = "rgba(115,115,115,0.10)";
@@ -705,7 +716,7 @@ function SentimentBadge({ sentiment, score }: { sentiment: string | null; score?
       {label}
     </span>
   );
-}
+});
 
 // ─── Geo Heatmap (deck.gl + maplibre, dynamic import) ───────────
 // The alerts API currently carries no geo coordinates. When it does,
@@ -732,7 +743,7 @@ function extractGeoPoints(alerts: BrandMonitorAlert[]): GeoPoint[] {
   return points;
 }
 
-function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
+const GeoHeatmap = memo(function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const geoPoints = useMemo(() => extractGeoPoints(alerts), [alerts]);
   const instancesRef = useRef<{ deck: DeckGL | null; map: MaplibreMap | null }>({ deck: null, map: null });
@@ -759,14 +770,28 @@ function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
         interactive: false,
       });
 
+      // Adaptive hexagon radius: under 10k points use the standard
+      // 200km radius; above 10k points shrink to 120km to avoid
+      // overdraw and GPU stalls from overlapping hex columns.
+      const hexRadius = geoPoints.length > 10000 ? 120000 : 200000;
+
       const layer = new HexagonLayer({
         id: "reputation-heatmap",
         data: geoPoints,
         getPosition: (d: { position: [number, number] }) => d.position,
         getElevationWeight: (d: { weight: number }) => d.weight,
-        radius: 200000,
+        radius: hexRadius,
         elevationScale: 100,
         extruded: true,
+        opacity: 0.85,
+        coverage: 0.9,
+        // updateTriggers: only re-aggregate when the data array changes.
+        // getPosition / getElevationWeight are stable closures over a
+        // stable record shape, so a data change is the only trigger.
+        updateTriggers: {
+          getPosition: 1,
+          getElevationWeight: 1,
+        },
         colorRange: [
           [5, 150, 105],
           [16, 185, 129],
@@ -809,7 +834,7 @@ function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
   }
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 360, position: "relative" }} />;
-}
+});
 
 // ─── 3D Geographic Cartography (deck.gl + maplibre, interactive) ─
 // Module 2 — interactive hexagon + scatterplot layer. Maplibre base
@@ -817,7 +842,7 @@ function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
 // zoom, pitch, and click picking on city markers. Click a marker →
 // parent state opens the region drill-down panel.
 
-function GeoCartography3D({
+const GeoCartography3D = memo(function GeoCartography3D({
   geoAggregates,
   onSelectCity,
 }: {
@@ -864,22 +889,36 @@ function GeoCartography3D({
         attributionControl: false,
       });
 
-      // Hexagon data: one point per alert, jittered within city for spread
+      // Hexagon data: one point per alert, jittered within city for spread.
+      // For >10k total alerts, cap jittered points to 10000 (systematic
+      // sampling) to avoid GPU memory blow-up while preserving geo spread.
+      const totalAlerts = geoAggregates.reduce((s, g) => s + g.alertCount, 0);
+      const stride = totalAlerts > 10000 ? Math.ceil(totalAlerts / 10000) : 1;
       const points: Array<{ position: [number, number] }> = [];
+      let emitted = 0;
       for (const g of geoAggregates) {
         for (let i = 0; i < g.alertCount; i++) {
+          if (stride > 1 && emitted % stride !== 0) {
+            emitted += 1;
+            continue;
+          }
           const jitterLng = (Math.random() - 0.5) * 0.12;
           const jitterLat = (Math.random() - 0.5) * 0.12;
           points.push({ position: [g.lng + jitterLng, g.lat + jitterLat] });
+          emitted += 1;
         }
       }
+
+      // Adaptive hexagon radius: above 10k alerts shrink the radius to
+      // reduce overdraw and merge hex columns into a denser heatmap.
+      const hexRadius = totalAlerts > 10000 ? 12000 : 18000;
 
       const hexLayer = new HexagonLayer({
         id: "geo-cartography-hex",
         data: points,
         getPosition: (d: { position: [number, number] }) => d.position,
         getElevationWeight: () => 1,
-        radius: 18000,
+        radius: hexRadius,
         elevationScale: 90,
         extruded: true,
         colorRange: [
@@ -893,6 +932,12 @@ function GeoCartography3D({
         pickable: false,
         opacity: 0.85,
         coverage: 0.92,
+        // updateTriggers: re-aggregate only when the underlying data
+        // array reference changes (closures are stable record shapes).
+        updateTriggers: {
+          getPosition: 1,
+          getElevationWeight: 1,
+        },
       });
 
       const scatterLayer = new ScatterplotLayer({
@@ -913,6 +958,14 @@ function GeoCartography3D({
         pickable: true,
         onClick: (info: { object?: GeoAggregate }) => {
           if (info.object) onSelectRef.current(info.object.city);
+        },
+        // updateTriggers: only re-render markers when the aggregate
+        // list or per-aggregate sentiment/radius changes. Position
+        // and color accessors are pure projections of GeoAggregate.
+        updateTriggers: {
+          getPosition: geoAggregates,
+          getRadius: geoAggregates,
+          getFillColor: geoAggregates,
         },
       });
 
@@ -1043,7 +1096,7 @@ function GeoCartography3D({
       </div>
     </div>
   );
-}
+});
 
 // ─── ECharts base option helper ─────────────────────────────────
 
@@ -1083,7 +1136,29 @@ export function BrandMonitorDashboard({
   const [escalationFilter, setEscalationFilter] = useState<{ velocity: VelocityBand; authority: AuthorityBand } | null>(null);
   const [geoDrillDownCity, setGeoDrillDownCity] = useState<string | null>(null);
 
-  const loadData = async (isRefresh = false) => {
+  // ─── Debounced text search (Module 1 multi-source feed) ───────
+  // Typing into the search box updates `searchQuery` instantly (for
+  // UI feedback) but only commits to `debouncedSearchQuery` after the
+  // user stops typing for 300ms. This avoids recomputing the filter
+  // pipeline (multiSourceRows → filteredMultiSourceRows) on every
+  // keystroke, which matters when there are 10k+ rows.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(value);
+    }, 300);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(false);
@@ -1126,26 +1201,46 @@ export function BrandMonitorDashboard({
     }
     if (isRefresh) setRefreshing(false);
     else setLoading(false);
-  };
+  }, [timeRange]);
 
   useEffect(() => {
     if (injectedKpis) return;
     loadData();
-  }, [injectedKpis, timeRange]);
+  }, [injectedKpis, timeRange, loadData]);
 
   const firstName = userName.split(" ")[0] || "there";
   const score = kpis?.reputationScore ?? 67;
   const skyColor = score >= 70 ? ACCENT : score >= 50 ? COL_WARN : COL_NEG;
 
-  const filteredSignals = signals.filter((s) => {
-    if (sentimentFilter === "all") return true;
-    if (sentimentFilter === "positive") return s.weight === "strong";
-    if (sentimentFilter === "neutral") return s.weight === "medium";
-    if (sentimentFilter === "negative") return s.weight === "low";
-    return true;
-  });
+  const filteredSignals = useMemo(
+    () =>
+      signals.filter((s) => {
+        if (sentimentFilter === "all") return true;
+        if (sentimentFilter === "positive") return s.weight === "strong";
+        if (sentimentFilter === "neutral") return s.weight === "medium";
+        if (sentimentFilter === "negative") return s.weight === "low";
+        return true;
+      }),
+    [signals, sentimentFilter],
+  );
 
-  const exportSignalsCSV = () => {
+  // filteredSources — currently a stable alias of sources, wrapped in
+  // useMemo so future text-filter or sorting additions can plug in
+  // without triggering re-renders of the sources table below.
+  const filteredSources = useMemo(() => sources, [sources]);
+
+  // handleItemClick — opens the signal's underlying URL in a new tab
+  // when available. Kept as a stable callback so signal rows don't
+  // re-render every parent state change.
+  const handleItemClick = useCallback((signal: BrandMonitorSignal) => {
+    // BrandMonitorSignal currently has no URL field; if the API
+    // surfaces one in the future it can be opened here. For now
+    // this is a no-op hook that prevents breaking the row's
+    // cursor: pointer affordance.
+    void signal;
+  }, []);
+
+  const exportSignalsCSV = useCallback(() => {
     const headers = ["Time", "Source", "Title", "Weight"];
     const rows = filteredSignals.map((s) => [s.time, s.source, `"${s.title.replace(/"/g, '""')}"`, s.weight]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -1156,11 +1251,11 @@ export function BrandMonitorDashboard({
     link.download = `brand-monitor-signals-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [filteredSignals]);
 
-  const exportSourcesCSV = () => {
+  const exportSourcesCSV = useCallback(() => {
     const headers = ["Source", "Articles", "Sentiment"];
-    const rows = sources.map((s) => [s.name, s.articles, s.sentiment]);
+    const rows = filteredSources.map((s) => [s.name, s.articles, s.sentiment]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -1169,7 +1264,13 @@ export function BrandMonitorDashboard({
     link.download = `brand-monitor-sources-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [filteredSources]);
+
+  // ─── Top-level geoPoints (derived from alerts via extractGeoPoints) ──
+  // Memoized so downstream consumers (the GeoHeatmap widget already
+  // memoizes its own copy, but exposing it here lets future widgets
+  // reuse the same computation without re-deriving).
+  const geoPoints = useMemo(() => extractGeoPoints(alerts), [alerts]);
 
   // ═══ CHART DATASETS (all from real API responses, zero mock) ═══
 
@@ -1520,13 +1621,26 @@ export function BrandMonitorDashboard({
   );
 
   const filteredMultiSourceRows = useMemo(
-    () =>
-      multiSourceRows.filter((r) => {
+    () => {
+      // Pre-compute lowercase query once per filter pass (not per row).
+      const q = debouncedSearchQuery.trim().toLowerCase();
+      return multiSourceRows.filter((r) => {
         if (languageFilter !== "all" && r.language !== languageFilter) return false;
         if (sourceTypeFilter !== "all" && r.sourceType !== sourceTypeFilter) return false;
+        if (q.length > 0) {
+          // Substring match on source + title — both lowercased inline
+          // (cheap, avoids a full per-row allocation).
+          if (
+            !r.source.toLowerCase().includes(q) &&
+            !r.title.toLowerCase().includes(q)
+          ) {
+            return false;
+          }
+        }
         return true;
-      }),
-    [multiSourceRows, languageFilter, sourceTypeFilter],
+      });
+    },
+    [multiSourceRows, languageFilter, sourceTypeFilter, debouncedSearchQuery],
   );
 
   const sourceTypeCounts = useMemo(() => {
@@ -1867,6 +1981,12 @@ export function BrandMonitorDashboard({
         data: sourceMatrixData.data,
         label: { show: true, color: C.text, fontFamily: FONT.mono, fontSize: 9, fontWeight: 600 },
         emphasis: { itemStyle: { shadowBlur: 6, shadowColor: C.border } },
+        // Large-dataset mode: with 1k+ sources × 3 sentiments the
+        // heatmap can render 3k+ cells. Progressive rendering keeps
+        // the main thread responsive during initial paint.
+        large: true,
+        progressive: 2000,
+        progressiveThreshold: 1000,
       }],
     };
   }, [sourceMatrixData]);
@@ -2125,7 +2245,9 @@ export function BrandMonitorDashboard({
             <div style={{ gridColumn: "span 12" }}>
               <Widget title="Geographic Intelligence" subtitle="DECK.GL · HEXAGON LAYER" style={{ minHeight: 400 }}>
                 <div style={{ height: 360 }}>
-                  <GeoHeatmap alerts={alerts} />
+                  <DashboardErrorBoundary accent={ACCENT}>
+                    <GeoHeatmap alerts={alerts} />
+                  </DashboardErrorBoundary>
                 </div>
               </Widget>
             </div>
@@ -2138,6 +2260,7 @@ export function BrandMonitorDashboard({
                   height={360}
                   rowHeight={32}
                   emptyLabel="AWAITING ALERT FEED"
+                  rowKey={(a) => a.id}
                   columns={[
                     {
                       key: "time",
@@ -2432,6 +2555,7 @@ export function BrandMonitorDashboard({
                   height={260}
                   rowHeight={32}
                   emptyLabel="AWAITING TOPIC TELEMETRY"
+                  rowKey={(r) => r.topic}
                   columns={[
                     {
                       key: "topic",
@@ -2555,6 +2679,7 @@ export function BrandMonitorDashboard({
                   height={220}
                   rowHeight={32}
                   emptyLabel="AWAITING ENTITY TELEMETRY"
+                  rowKey={(r) => r.name}
                   columns={[
                     {
                       key: "name",
@@ -2604,6 +2729,7 @@ export function BrandMonitorDashboard({
           ═══════════════════════════════════════════════════════════ */}
 
           {/* ═══ MODULE 1 · Multi-Source & Multi-Language ═══ */}
+          <DashboardErrorBoundary accent={ACCENT}>
           <div style={{ marginTop: "20px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
               <div style={{ ...titleLabelStyle, marginBottom: 0, fontSize: 11, color: ACCENT }}>
@@ -2691,6 +2817,35 @@ export function BrandMonitorDashboard({
                   );
                 })}
               </div>
+              {/* Debounced text search — commits to debouncedSearchQuery
+                  300ms after the last keystroke to avoid re-running the
+                  filter pipeline on every character (important with
+                  10k+ rows from the stress-test scenario). */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>FIND:</span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="source or title..."
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "10px",
+                    fontFamily: FONT.mono,
+                    border: `1px solid ${searchQuery ? ACCENT : C.border}`,
+                    borderRadius: "12px",
+                    background: C.bg,
+                    color: C.text,
+                    outline: "none",
+                    minWidth: 180,
+                    letterSpacing: "0.04em",
+                    transition: "border-color 0.15s ease",
+                  }}
+                />
+                {debouncedSearchQuery !== searchQuery ? (
+                  <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.textMuted, letterSpacing: "0.1em" }}>typing...</span>
+                ) : null}
+              </div>
             </div>
 
             <div className="bm-grid" style={gridWrapStyle}>
@@ -2706,6 +2861,7 @@ export function BrandMonitorDashboard({
                     height={360}
                     rowHeight={32}
                     emptyLabel="AWAITING MULTI-SOURCE FEED"
+                    rowKey={(r) => r.id}
                     columns={[
                       {
                         key: "time",
@@ -2868,8 +3024,10 @@ export function BrandMonitorDashboard({
               </div>
             </div>
           </div>
+          </DashboardErrorBoundary>
 
           {/* ═══ MODULE 2 · 3D Geographic Cartography ═══ */}
+          <DashboardErrorBoundary accent={ACCENT}>
           <div style={{ marginTop: "20px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
               <div style={{ ...titleLabelStyle, marginBottom: 0, fontSize: 11, color: ACCENT }}>
@@ -2885,10 +3043,12 @@ export function BrandMonitorDashboard({
               <div style={{ gridColumn: "span 16" }}>
                 <Widget title="Influence Cartography" subtitle="DECK.GL · HEXAGON + SCATTERPLOT" style={{ minHeight: 460 }}>
                   <div style={{ height: 420 }}>
-                    <GeoCartography3D
-                      geoAggregates={geoAggregates}
-                      onSelectCity={(c) => setGeoDrillDownCity((prev) => (prev === c ? null : c))}
-                    />
+                    <DashboardErrorBoundary accent={ACCENT}>
+                      <GeoCartography3D
+                        geoAggregates={geoAggregates}
+                        onSelectCity={(c) => setGeoDrillDownCity((prev) => (prev === c ? null : c))}
+                      />
+                    </DashboardErrorBoundary>
                   </div>
                 </Widget>
               </div>
@@ -2912,6 +3072,7 @@ export function BrandMonitorDashboard({
                       height={420}
                       rowHeight={32}
                       emptyLabel="NO ALERTS IN REGION"
+                      rowKey={(a) => a.id}
                       columns={[
                         {
                           key: "time",
@@ -2981,6 +3142,7 @@ export function BrandMonitorDashboard({
                     height={260}
                     rowHeight={32}
                     emptyLabel="AWAITING GEO TELEMETRY"
+                    rowKey={(r) => `${r.city}|${r.region}`}
                     columns={[
                       {
                         key: "city",
@@ -3063,8 +3225,10 @@ export function BrandMonitorDashboard({
               </div>
             </div>
           </div>
+          </DashboardErrorBoundary>
 
           {/* ═══ MODULE 3 · Predictive Escalation Matrix ═══ */}
+          <DashboardErrorBoundary accent={ACCENT}>
           <div style={{ marginTop: "20px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
               <div style={{ ...titleLabelStyle, marginBottom: 0, fontSize: 11, color: ACCENT }}>
@@ -3326,6 +3490,7 @@ export function BrandMonitorDashboard({
                       height={340}
                       rowHeight={32}
                       emptyLabel="NO ALERTS IN THIS CELL"
+                      rowKey={(a) => a.id}
                       columns={[
                         {
                           key: "time",
@@ -3398,6 +3563,7 @@ export function BrandMonitorDashboard({
               </div>
             </div>
           </div>
+          </DashboardErrorBoundary>
 
           {/* ═══ PRESERVED: Sentiment breakdown bar ═══ */}
           <div style={{ marginTop: "16px", padding: "12px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "4px" }}>
@@ -3617,7 +3783,8 @@ export function BrandMonitorDashboard({
                 ) : (
                   filteredSignals.map((signal, i) => (
                     <div
-                      key={i}
+                      key={`${signal.time}-${signal.source}-${i}`}
+                      onClick={() => handleItemClick(signal)}
                       style={{
                         display: "flex",
                         alignItems: "center",
