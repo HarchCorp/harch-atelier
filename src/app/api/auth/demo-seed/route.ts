@@ -593,6 +593,81 @@ async function seedInvestmentBank(userId: string): Promise<Record<string, number
   });
   const totalDossiers = await prisma.dossier.count({ where: { userId } });
 
+  // ─── AI Visibility (8 engines) ────────────────────────────────
+  // The Investor Desk dashboard shows AI visibility data. Without this,
+  // the AI Visibility section shows "AWAITING TELEMETRY" which looks
+  // broken in a demo. Create 8 records (one per LLM engine).
+  const company = await prisma.company.findFirst({ orderBy: { createdAt: "asc" } });
+  let aiVisibilityCreated = 0;
+  if (company) {
+    const existingAi = await prisma.aIVisibility.count({
+      where: { companyId: company.id },
+    });
+    if (existingAi < 4) {
+      const engines = [
+        { platform: "ChatGPT", cited: true, position: "2nd", sentiment: "positive", confidence: 0.82 },
+        { platform: "Claude", cited: true, position: "1st", sentiment: "positive", confidence: 0.88 },
+        { platform: "Gemini", cited: false, position: null, sentiment: null, confidence: 0.45 },
+        { platform: "Perplexity", cited: true, position: "3rd", sentiment: "neutral", confidence: 0.71 },
+        { platform: "Copilot", cited: false, position: null, sentiment: null, confidence: 0.38 },
+        { platform: "Llama", cited: true, position: "4th", sentiment: "positive", confidence: 0.65 },
+        { platform: "Mistral", cited: false, position: null, sentiment: null, confidence: 0.42 },
+        { platform: "Grok", cited: true, position: "5th", sentiment: "negative", confidence: 0.55 },
+      ];
+      for (const eng of engines) {
+        await prisma.aIVisibility.create({
+          data: {
+            companyId: company.id,
+            platform: eng.platform,
+            cited: eng.cited,
+            position: eng.position,
+            sentiment: eng.sentiment,
+            confidence: eng.confidence,
+            summary: eng.cited
+              ? `${eng.platform} mentioned the company in position ${eng.position} with ${eng.sentiment} sentiment.`
+              : `${eng.platform} did not mention the company in the tested queries.`,
+            checkedAt: new Date(now - Math.floor(Math.random() * 48) * 60 * 60 * 1000),
+          },
+        });
+        aiVisibilityCreated++;
+      }
+    }
+  }
+
+  // ─── Notifications (5 demo notifications) ─────────────────────
+  // Without notifications, the bell shows "0" which looks inactive.
+  // Create 5 realistic notifications for the demo.
+  const existingNotifs = await prisma.notification.count({ where: { userId } });
+  let notificationsCreated = 0;
+  if (existingNotifs < 3) {
+    const notifSpecs = [
+      { type: "alert", title: "Adverse media detected", body: "Hespress published a negative article about a portfolio holding.", severity: "critical", link: "/atelier/console/investment-bank", minsAgo: 15 },
+      { type: "threshold", title: "Risk score breach", body: "OCP Group risk score crossed 70 — review required.", severity: "warning", link: "/atelier/console/investment-bank", minsAgo: 45 },
+      { type: "report", title: "Monthly report ready", body: "Your July 2026 intelligence report is available for download.", severity: "info", link: "/atelier/console/investment-bank", minsAgo: 180 },
+      { type: "alert", title: "Sanctions screen complete", body: "17 holdings screened against OFAC/EU/UN — 0 matches found.", severity: "info", link: "/atelier/console/investment-bank", minsAgo: 240 },
+      { type: "system", title: "New dossier generated", body: "DD Q3 2026 — Attijariwafa Bank dossier is ready for review.", severity: "info", link: "/atelier/console/investment-bank", minsAgo: 360 },
+    ];
+    for (const spec of notifSpecs) {
+      const existing = await prisma.notification.findFirst({
+        where: { userId, title: spec.title },
+      });
+      if (existing) continue;
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: spec.type,
+          title: spec.title,
+          body: spec.body,
+          severity: spec.severity,
+          read: spec.minsAgo > 200,
+          link: spec.link,
+          createdAt: new Date(now - spec.minsAgo * 60 * 1000),
+        },
+      });
+      notificationsCreated++;
+    }
+  }
+
   return {
     portfolios: totalPortfolios,
     newPortfolios: portfoliosCreated,
@@ -600,6 +675,8 @@ async function seedInvestmentBank(userId: string): Promise<Record<string, number
     newHoldings: holdingsCreated,
     dossiers: totalDossiers,
     newDossiers: dossiersCreated,
+    aiVisibility: aiVisibilityCreated,
+    notifications: notificationsCreated,
   };
 }
 
