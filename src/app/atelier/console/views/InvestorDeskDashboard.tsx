@@ -1923,7 +1923,6 @@ function UboGraphModule({ holdings, dossiers, loading }: {
               }}
               maskColor="rgba(255,255,255,0.7)"
               style={{ background: C.bgSubtle, border: `1px solid ${C.border}` }}
-              onlyRenderVisibleElements
             />
           </ReactFlow>
         </div>
