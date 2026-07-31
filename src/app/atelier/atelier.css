@@ -54,3 +54,69 @@ input:focus {
 ::-webkit-scrollbar-track { background: #FAFAFA; }
 ::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+
+/* ─── Console dashboard mobile responsive (< 768px) ─────────────
+   Targets the .dash-main container and its 24-column grids.
+   - 24-col grid → 1-col stack
+   - KPI tiles: 2×2 grid (instead of 4-across / 6-across)
+   - Charts: full width, height reduced to 200px
+   - Tables: horizontal scroll with sticky first column
+   - Virtualized feeds: full width, 40px rows (larger touch targets)
+   The selector is scoped to [data-template-account] so it only
+   applies to the 4 institutional dashboards (not the legacy
+   placeholder views). */
+@media (max-width: 768px) {
+  .dash-main {
+    padding: 12px !important;
+  }
+  /* 24-col grids → 1-col stack on mobile. The dashboards use
+     inline style gridTemplateColumns: "repeat(24, 1fr)" which has
+     higher specificity than a class — we need !important to win. */
+  [data-template-account] > div[style*="repeat(24, 1fr)"],
+  [data-template-account] .bm-grid,
+  [data-template-account] .alpha-row > div,
+  [data-template-account] section > div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  /* KPI tile grids (auto-fit minmax) → 2x2 on mobile */
+  [data-template-account] > div[style*="auto-fit, minmax"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  /* Charts: cap height at 200px so they stay readable on phones */
+  [data-template-account] .recharts-wrapper,
+  [data-template-account] [class*="echarts"] {
+    max-height: 240px;
+  }
+  /* Tables: horizontal scroll with sticky first column */
+  [data-template-account] table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  [data-template-account] table td:first-child,
+  [data-template-account] table th:first-child {
+    position: sticky;
+    left: 0;
+    background: #ffffff;
+    z-index: 1;
+    box-shadow: 1px 0 0 #e5e5e5;
+  }
+  /* Virtualized feeds: 40px row height for touch targets */
+  [data-template-account] [style*="height: 32px"],
+  [data-template-account] [style*="height:32px"] {
+    height: 40px !important;
+  }
+}
+
+/* Touch-friendly: ensure all interactive elements in the dashboards
+   have at least 44px height on mobile (Apple HIG / Material guideline) */
+@media (max-width: 768px) {
+  [data-template-account] button,
+  [data-template-account] [role="button"] {
+    min-height: 36px;
+  }
+}

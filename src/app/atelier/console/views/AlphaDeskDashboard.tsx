@@ -22,6 +22,10 @@ import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { usePriceStream, type PriceTick } from "./usePriceStream";
+import {
+  useDashboardTemplate,
+  TemplateVisibilityStyle,
+} from "./DashboardTemplates";
 
 // ═══════════════════════════════════════════════════════════════
 //  Alpha Desk — V8 QUANT TERMINAL
@@ -2336,6 +2340,11 @@ export function AlphaDeskDashboard({
   kpis: injectedKpis,
   assets: injectedAssets,
 }: AlphaDeskDashboardProps) {
+  // Dashboard template (Talkwalker/Meltwater-style pre-configured
+  // layouts). Reads localStorage + listens for the `harchiq:template`
+  // CustomEvent dispatched by ConsoleShell's TemplateSelector.
+  const { template } = useDashboardTemplate("harch-alpha");
+
   const [kpis, setKpis] = useState<AlphaKPI | null>(injectedKpis ?? null);
   const [assets, setAssets] = useState<AlphaAssetRow[]>(injectedAssets ?? []);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
@@ -3357,6 +3366,8 @@ export function AlphaDeskDashboard({
   return (
     <div
       className="dash-main"
+      data-template={template}
+      data-template-account="harch-alpha"
       style={{
         padding: "16px",
         background: SURFACE,
@@ -3365,6 +3376,9 @@ export function AlphaDeskDashboard({
         fontFamily: FONT.sans,
       }}
     >
+      {/* Template visibility CSS — hides [data-template-row] elements
+          based on the active template. */}
+      <TemplateVisibilityStyle accountType="harch-alpha" />
       <style>{`
         .dash-main ::-webkit-scrollbar { width: 6px; height: 6px; }
         .dash-main ::-webkit-scrollbar-track { background: transparent; }
@@ -3373,6 +3387,12 @@ export function AlphaDeskDashboard({
         @keyframes ticker-pulse {
           0%, 100% { opacity: 1;   transform: scale(1); }
           50%      { opacity: 0.5; transform: scale(1.5); }
+        }
+        /* Mobile responsive — collapse 24-col grid to 1-col stack */
+        @media (max-width: 768px) {
+          [data-template-account="harch-alpha"] .alpha-row {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
 
@@ -3477,6 +3497,7 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 1 — PRE-MARKET STRIP (24 cols, 6 KPI tiles × 4 cols each)
               ═══════════════════════════════════════════════════════════ */}
+          <section data-template-row="1" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -3532,6 +3553,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 2 — ASSET SELECTOR (6) | MAIN CHART (12) | ORDER BOOK (6)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="2" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -3695,6 +3718,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 3 — LLM PROBE (8) | CORRELATION GRID (8) | VOLATILITY (8)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="3" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -3833,6 +3858,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 4 — MULTI-ASSET DASHBOARD (24 cols, 8 sparkline cards)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="4" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -3909,6 +3936,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 5 — SIGNAL FEED (12) | ALPHA SCORECARD (12)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="5" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -4012,6 +4041,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 6 — Correlation quick-view (preserved from V7, full width)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="6" className="alpha-row" style={{ display: "contents" }}>
           {selectedTicker && correlation && (
             <div
               style={{
@@ -4062,6 +4093,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 7 — Dual Axis (12) | Pearson r Distribution (12)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="7" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -4145,6 +4178,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               ROW 8 — Sentiment Pie (6) | Top Movers (6) | Heatmap (6) | Latency (6)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="8" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -4294,6 +4329,8 @@ export function AlphaDeskDashboard({
               ROW 9 — Asset Performance Comparison (full width, Recharts)
               Preserved from V7 (chart 2)
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="9" className="alpha-row" style={{ display: "contents" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(24, 1fr)", gap: "8px" }}>
             <DashboardErrorBoundary title="Asset Performance" accent={ACCENT}>
             <WidgetCard
@@ -4385,6 +4422,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               EXECUTIVE MODULE 1 — Sélecteur de Marché Global & Régional
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="10" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -4694,6 +4733,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               EXECUTIVE MODULE 2 — Multi-Devises & Settlement Ledger
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="11" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -4835,6 +4876,8 @@ export function AlphaDeskDashboard({
           {/* ═══════════════════════════════════════════════════════════
               EXECUTIVE MODULE 3 — Matrice Multi-Asset Z-Score & Order-Book
               ═══════════════════════════════════════════════════════════ */}
+          </section>
+          <section data-template-row="12" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
               display: "grid",
@@ -5013,6 +5056,7 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ─── Footer signature ─── */}
+          </section>
           <div
             style={{
               marginTop: "16px",

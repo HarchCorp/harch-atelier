@@ -14,6 +14,10 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import {
+  useDashboardTemplate,
+  TemplateVisibilityStyle,
+} from "./DashboardTemplates";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
@@ -1117,6 +1121,11 @@ export function BrandMonitorDashboard({
   signals: injectedSignals,
   sources: injectedSources,
 }: BrandMonitorDashboardProps) {
+  // Dashboard template (Talkwalker/Meltwater-style pre-configured
+  // layouts). Reads localStorage + listens for the `harchiq:template`
+  // CustomEvent dispatched by ConsoleShell's TemplateSelector.
+  const { template } = useDashboardTemplate("brand-monitor");
+
   const [kpis, setKpis] = useState<BrandMonitorKPI | null>(injectedKpis ?? null);
   const [signals, setSignals] = useState<BrandMonitorSignal[]>(injectedSignals ?? []);
   const [sources, setSources] = useState<BrandMonitorSource[]>(injectedSources ?? []);
@@ -2055,16 +2064,27 @@ export function BrandMonitorDashboard({
   // ═══ RENDER ═══
 
   return (
-    <div className="dash-main" style={{ padding: "16px", background: C.bg, overflowX: "hidden" }}>
-      {/* Responsive collapse for narrow screens */}
+    <div
+      className="dash-main"
+      data-template={template}
+      data-template-account="brand-monitor"
+      style={{ padding: "16px", background: C.bg, overflowX: "hidden" }}
+    >
+      {/* Template visibility CSS — hides [data-template-row] elements
+          based on the active template.Emitted once per mount. */}
+      <TemplateVisibilityStyle accountType="brand-monitor" />
+
+      {/* Responsive collapse for narrow screens + mobile KPI 2x2 grid */}
       <style>{`
         @media (max-width: 900px) {
           .bm-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .bm-grid > * { grid-column: span 2 !important; }
+          .bm-grid > section { grid-column: span 2 !important; }
+          .bm-grid > section > div { grid-column: span 2 !important; }
         }
         @media (max-width: 600px) {
           .bm-grid { grid-template-columns: 1fr !important; }
-          .bm-grid > * { grid-column: span 1 !important; }
+          .bm-grid > section { grid-column: span 1 !important; }
+          .bm-grid > section > div { grid-column: span 1 !important; }
         }
       `}</style>
 
@@ -2184,6 +2204,7 @@ export function BrandMonitorDashboard({
           <div className="bm-grid" style={gridWrapStyle}>
 
             {/* ─── ROW 1: Executive Strip (4 × span-6) ─── */}
+            <section data-template-row="1" style={{ display: "contents" }}>
 
             {/* Widget 1: Reputation Score */}
             <div style={{ gridColumn: "span 6" }}>
@@ -2239,7 +2260,10 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+            </section>
+
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
+            <section data-template-row="2" style={{ display: "contents" }}>
 
             {/* Widget 5: Geographic Heatmap (deck.gl) */}
             <div style={{ gridColumn: "span 12" }}>
@@ -2326,7 +2350,10 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+            </section>
+
             {/* ─── ROW 3: Sentiment Analytics (3 × span-8) ─── */}
+            <section data-template-row="3" style={{ display: "contents" }}>
 
             {/* Widget 7: 16-Axis Brand Health Radar */}
             <div style={{ gridColumn: "span 8" }}>
@@ -2401,7 +2428,10 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+            </section>
+
             {/* ─── ROW 4: Source Intelligence (12 + 6 + 6) ─── */}
+            <section data-template-row="4" style={{ display: "contents" }}>
 
             {/* Widget 10: Source Distribution Matrix (ECharts heatmap) */}
             <div style={{ gridColumn: "span 12" }}>
@@ -2444,7 +2474,10 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+            </section>
+
             {/* ─── ROW 5: AI Visibility Matrix (16 + 8) ─── */}
+            <section data-template-row="5" style={{ display: "contents" }}>
 
             {/* Widget 13: AI Engine Matrix (8×4 dense table) */}
             <div style={{ gridColumn: "span 16" }}>
@@ -2515,7 +2548,10 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+            </section>
+
             {/* ─── ROW 6: Topic Intelligence (12 + 6 + 6) ─── */}
+            <section data-template-row="6" style={{ display: "contents" }}>
 
             {/* Widget 15: Topic Network Graph (ECharts force-directed) */}
             <div style={{ gridColumn: "span 12" }}>
@@ -2600,7 +2636,10 @@ export function BrandMonitorDashboard({
               </Widget>
             </div>
 
+            </section>
+
             {/* ─── ROW 7: Escalation Matrix (8 + 8 + 8) ─── */}
+            <section data-template-row="7" style={{ display: "contents" }}>
 
             {/* Widget 18: Severity Heatmap (severity × source grid) */}
             <div style={{ gridColumn: "span 8" }}>
@@ -2717,6 +2756,8 @@ export function BrandMonitorDashboard({
                 />
               </Widget>
             </div>
+
+            </section>
 
           </div>
 

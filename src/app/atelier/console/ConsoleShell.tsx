@@ -10,6 +10,10 @@ import { InvestorDeskDashboard } from "./views/InvestorDeskDashboard";
 import { AlphaDeskDashboard } from "./views/AlphaDeskDashboard";
 import { NarrativePanel } from "./views/NarrativePanel";
 import { InfluencerPanel } from "./views/InfluencerPanel";
+import { InfluencerDatabase } from "./views/InfluencerDatabase";
+import { BroadcastMonitor } from "./views/BroadcastMonitor";
+import { AIVisibilityDashboard } from "./views/AIVisibilityDashboard";
+import { DarijaAnalyzer } from "./views/DarijaAnalyzer";
 import { CommandPalette, type CommandItem } from "./CommandPalette";
 import { GlobalSearch, type SearchResult } from "./GlobalSearch";
 import { NotificationBell } from "./NotificationBell";
@@ -17,6 +21,11 @@ import { WhatsAppSettingsModal } from "./WhatsAppSettingsModal";
 import { CommandCenter } from "./CommandCenter";
 import { DailyBriefing } from "./DailyBriefing";
 import { HarchIQAssistant } from "./HarchIQAssistant";
+import {
+  TemplateSelector,
+  buildTemplateCommands,
+  type TemplateAccountType,
+} from "./views/DashboardTemplates";
 
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ CONSOLE — Shell (CONSOLE-V3)
@@ -179,6 +188,64 @@ function IconInfluencer({ size = 18, color = C.textMuted }: { size?: number; col
       <path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z" />
       <path d="M14 8a4 4 0 0 1 0 8" />
       <path d="M17 5a8 8 0 0 1 0 14" />
+    </svg>
+  );
+}
+
+// Darija icon — speech bubble with an Arabic "ع" (ain) glyph inside,
+// signalling "Moroccan dialect NLP". The bubble outline matches the
+// IconInfluencer style; the inner glyph is stroked.
+function IconDarija({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      {/* Stylised Arabic "ع" (ain) — a small arc + eye dot */}
+      <path d="M9 11.5c.6-1.2 1.7-2 3-2 1.8 0 3 1.4 3 3.2 0 1.6-1 2.8-2.5 2.8-1 0-1.7-.5-2-1.3" />
+      <circle cx="11" cy="9.7" r="0.6" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
+// Influencer DB icon — a directory/contact-card with a star badge.
+// Distinct from IconInfluencer (megaphone waves): the DB view is a
+// curated directory, not the live influencer-scoring surface.
+function IconInfluencerDB({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="14" rx="2" />
+      <circle cx="8" cy="10" r="1.6" />
+      <path d="M5.5 15c.5-1.4 1.4-2.2 2.5-2.2s2 .8 2.5 2.2" />
+      <path d="M14 9.5h4M14 12h4M14 14.5h2.5" />
+      <path d="M17 2.5l.7 1.7 1.8.1-1.4 1.1.5 1.7L17 6.2l-1.6 1 .5-1.7-1.4-1.1 1.8-.1z" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
+// Broadcast icon — a TV/radio tower with broadcast waves. Signals
+// the broadcast-monitoring surface (TV + radio capture pipeline).
+function IconBroadcast({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 21h14" />
+      <path d="M12 21V11" />
+      <path d="M9 11l3-7 3 7" />
+      <path d="M8.5 14h7" />
+      <path d="M4 7a8 8 0 0 1 16 0" />
+      <path d="M7 7a5 5 0 0 1 10 0" />
+    </svg>
+  );
+}
+
+// AI Visibility icon — radar sweep (concentric circles + sweep line).
+// Signals "probing 8 AI engines". The filled dot at the centre
+// matches the IconDarija style; the sweep line is stroked.
+function IconAiVisibility({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.4" fill={color} stroke="none" />
+      <line x1="12" y1="12" x2="20" y2="6" />
     </svg>
   );
 }
@@ -392,7 +459,8 @@ function DashMiniStat({
 type NavId = "monitoring" | "sentiment" | "competitors" | "alerts" | "reports"
   | "watchlist" | "sentiment-price" | "ai-alpha" | "pre-market"
   | "portfolios" | "dossiers" | "esg" | "risks"
-  | "narratives" | "influencers";
+  | "narratives" | "influencers" | "darija" | "ai-visibility"
+  | "influencers-db" | "broadcast";
 
 interface NavItem {
   id: NavId;
@@ -424,13 +492,17 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
     ];
   }
 
-  // enterprise (default)
+  // enterprise (default — Brand Monitor + Market & Competitor)
   return [
     { id: "monitoring",   label: "Monitoring",   icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
     { id: "sentiment",    label: "Sentiment",    icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
     { id: "competitors",  label: "Competitors",  icon: <IconUsers size={16}  color={iconColor("competitors")} /> },
     { id: "narratives",   label: "Narratives",   icon: <IconNarrative size={16} color={iconColor("narratives")} /> },
     { id: "influencers",  label: "Influencers",  icon: <IconInfluencer size={16} color={iconColor("influencers")} /> },
+    { id: "influencers-db", label: "Influencers DB", icon: <IconInfluencerDB size={16} color={iconColor("influencers-db")} /> },
+    { id: "broadcast",    label: "Broadcast",    icon: <IconBroadcast size={16} color={iconColor("broadcast")} /> },
+    { id: "darija",       label: "Darija Analyzer", icon: <IconDarija size={16} color={iconColor("darija")} /> },
+    { id: "ai-visibility", label: "AI Visibility", icon: <IconAiVisibility size={16} color={iconColor("ai-visibility")} /> },
     { id: "alerts",       label: "Alerts",       icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
     { id: "reports",      label: "Reports",      icon: <IconReport size={16} color={iconColor("reports")} /> },
   ];
@@ -440,7 +512,7 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
 function defaultNavOrder(accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavId[] {
   if (accountType === "harch-alpha") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
   if (accountType === "investment-bank") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
-  return ["monitoring", "sentiment", "competitors", "narratives", "influencers", "alerts", "reports"];
+  return ["monitoring", "sentiment", "competitors", "narratives", "influencers", "influencers-db", "broadcast", "darija", "ai-visibility", "alerts", "reports"];
 }
 
 // Default active nav per accountType
@@ -577,12 +649,61 @@ const pageStyles = `
   @media (min-width: 901px) {
     .console-mobile-overlay { display: none !important; }
     .console-hamburger { display: none !important; }
+    .console-bottom-nav { display: none !important; }
   }
 
   /* Hover affordance on sidebar items is handled inline.
      The .section-actions visibility rule below is kept for future use. */
   .console-nav-item .nav-handle { opacity: 0; transition: opacity 0.15s; }
   .console-nav-item:hover .nav-handle { opacity: 0.4; }
+
+  /* ─── Mobile bottom nav (< 768px) ───────────────────────────────
+     5 key items: Home, Alerts, Search, AI, Menu. Touch-friendly
+     56px height + safe-area inset for iOS notch. Hidden ≥768px. */
+  .console-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    display: none;
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: #ffffff;
+    border-top: 1px solid #e5e5e5;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+  }
+  @media (max-width: 768px) {
+    .console-bottom-nav { display: flex !important; }
+    /* Pad the dashboard main so content isn't hidden behind the bar */
+    .dash-main { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important; }
+  }
+  .console-bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 4px 4px;
+    color: #737373;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.15s;
+    min-height: 44px;
+  }
+  .console-bottom-nav-item:active {
+    background: #f5f5f5;
+  }
+  .console-bottom-nav-item[data-active="true"] {
+    color: #0a0a0a;
+  }
 `;
 
 // ═══════════════════════════════════════════════════════════════
@@ -663,6 +784,13 @@ export function ConsoleShell({
   const initials = getInitials(userName);
   const displayName = userName?.split(" ")[0] || "User";
   const companyName = "OCP Group"; // TODO: from session.user.companyId → Company.name
+
+  // Template command shards for the Cmd+K palette. Memoised on the
+  // accountType so the paletteItems list stays stable across renders.
+  const templateCommands = useMemo(
+    () => buildTemplateCommands(accountType as TemplateAccountType),
+    [accountType],
+  );
 
   // Tier switcher (admin only — hidden from regular users)
 
@@ -984,6 +1112,18 @@ export function ConsoleShell({
         },
       },
       {
+        id: "action-probe-ai-visibility",
+        label: "Probe 8 AI Engines",
+        hint: "AI Visibility",
+        icon: "◎",
+        group: "actions",
+        keywords: "probe ai visibility engines chatgpt claude gemini perplexity copilot llama mistral harchiq llm simulation brand mention rank sentiment share voice",
+        action: () => {
+          setActiveNav("ai-visibility");
+          setMobileMenuOpen(false);
+        },
+      },
+      {
         id: "action-command-center",
         label: "Enter Command Center",
         hint: "⌘⇧C",
@@ -1003,8 +1143,17 @@ export function ConsoleShell({
       group: "actions" as const,
     }));
 
-    return [...nav, ...globalSearch, ...actions, ...account];
-  }, [orderedNavItems, activeNav, accountType, commands]);
+    // Template-switching commands — one per template for the active
+    // accountType (e.g. "Template: Crisis Comms", "Template: Full
+    // View"). Selecting one writes localStorage + dispatches the
+    // `harchiq:template` CustomEvent that each dashboard listens for.
+    const templateCmds: CommandItem[] = templateCommands.map((tc) => ({
+      ...tc,
+      group: "actions" as const,
+    }));
+
+    return [...nav, ...globalSearch, ...actions, ...templateCmds, ...account];
+  }, [orderedNavItems, activeNav, accountType, commands, templateCommands]);
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
@@ -1133,6 +1282,89 @@ export function ConsoleShell({
 
             <DashboardRightPanel theme={theme} accountType={accountType} />
           </div>
+
+          {/* Mobile bottom navigation (< 768px) — 5 key items:
+              Home, Alerts, Search, AI, Menu. Touch-friendly 44px+
+              targets, hidden on desktop via the pageStyles CSS rule. */}
+          <nav className="console-bottom-nav" aria-label="Mobile navigation">
+            <button
+              type="button"
+              className="console-bottom-nav-item"
+              data-active={activeNav === "monitoring" || activeNav === "watchlist" || activeNav === "portfolios" ? "true" : "false"}
+              onClick={() => {
+                setActiveNav(defaultActiveNav(accountType));
+                setMobileMenuOpen(false);
+              }}
+              aria-label="Home"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />
+              </svg>
+              <span>Home</span>
+            </button>
+            <button
+              type="button"
+              className="console-bottom-nav-item"
+              data-active={activeNav === "alerts" ? "true" : "false"}
+              onClick={() => {
+                setActiveNav("alerts");
+                setMobileMenuOpen(false);
+              }}
+              aria-label="Alerts"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span>Alerts</span>
+            </button>
+            <button
+              type="button"
+              className="console-bottom-nav-item"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span>Search</span>
+            </button>
+            <button
+              type="button"
+              className="console-bottom-nav-item"
+              onClick={() => setAssistantOpen(true)}
+              aria-label="Ask HarchIQ AI"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3l1.6 4.6L18 9.2l-4.4 1.6L12 15l-1.6-4.2L6 9.2l4.4-1.6z" />
+              </svg>
+              <span>AI</span>
+            </button>
+            <button
+              type="button"
+              className="console-bottom-nav-item"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label="Menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {mobileMenuOpen ? (
+                  <>
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                    <line x1="6" y1="18" x2="18" y2="6" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </>
+                )}
+              </svg>
+              <span>Menu</span>
+            </button>
+          </nav>
         </>
       )}
 
@@ -1370,6 +1602,18 @@ function DashboardTopBar({
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
+
+      {/* Dashboard Template Selector — Talkwalker/Meltwater-style
+          pre-configured layouts. Dropdown shows all templates for the
+          current accountType; selecting one writes localStorage +
+          dispatches the `harchiq:template` CustomEvent that each
+          dashboard listens for. Hidden on narrow screens via CSS. */}
+      <div className="console-template-wrap">
+        <TemplateSelector
+          accountType={accountType as TemplateAccountType}
+          accent={theme.accent}
+        />
+      </div>
 
       {/* LIVE indicator — pulsing dot showing real-time data connection */}
       <div
@@ -1680,11 +1924,19 @@ function DashboardTopBar({
           .console-harchiq-btn { padding: 0 8px !important; }
           .console-command-center span { display: none !important; }
           .console-command-center { padding: 4px 8px !important; }
+          /* Template selector — keep icon, hide label on phones.
+             The dropdown still works; just the button label is hidden. */
+          .console-template-wrap .console-template-btn .console-template-label { display: none !important; }
+          .console-template-wrap .console-template-btn { padding: 0 8px !important; }
+          .console-template-wrap .console-template-btn .console-template-icon { display: inline-flex !important; }
         }
         @media (max-width: 480px) {
           .console-cmdk-badge .console-cmdk-k { display: none !important; }
           .console-search-kbd { display: none !important; }
           .console-command-center { display: none !important; }
+          /* On very narrow screens, hide the template selector entirely
+             — it's still reachable from the Cmd+K palette. */
+          .console-template-wrap { display: none !important; }
         }
       `}</style>
     </header>
@@ -1913,6 +2165,18 @@ function DashboardMain({
     if (activeNav === "influencers") {
       return <InfluencerPanel companyName={companyName} />;
     }
+    if (activeNav === "influencers-db") {
+      return <InfluencerDatabase />;
+    }
+    if (activeNav === "broadcast") {
+      return <BroadcastMonitor />;
+    }
+    if (activeNav === "darija") {
+      return <DarijaAnalyzer />;
+    }
+    if (activeNav === "ai-visibility") {
+      return <AIVisibilityDashboard userName={displayName} companyName={companyName} />;
+    }
     return <CompetitorIntelDashboard userName={displayName} userEmail={null} companyName={companyName} sector="Mining & Phosphates" />;
   }
 
@@ -1931,6 +2195,18 @@ function DashboardMain({
   }
   if (activeNav === "influencers") {
     return <InfluencerPanel companyName={companyName} />;
+  }
+  if (activeNav === "influencers-db") {
+    return <InfluencerDatabase />;
+  }
+  if (activeNav === "broadcast") {
+    return <BroadcastMonitor />;
+  }
+  if (activeNav === "darija") {
+    return <DarijaAnalyzer />;
+  }
+  if (activeNav === "ai-visibility") {
+    return <AIVisibilityDashboard userName={displayName} companyName={companyName} />;
   }
   return <BrandMonitorDashboard userName={displayName} userEmail={null} companyName={companyName} />;
 }

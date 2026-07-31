@@ -35,6 +35,10 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import {
+  useDashboardTemplate,
+  TemplateVisibilityStyle,
+} from "./DashboardTemplates";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 const SHADOW = { card: C.shadowSm, deep: C.shadowMd };
@@ -1548,6 +1552,11 @@ export function CompetitorIntelDashboard({
   competitors: injectedCompetitors,
   moves: injectedMoves,
 }: CompetitorIntelDashboardProps) {
+  // Dashboard template (Talkwalker/Meltwater-style pre-configured
+  // layouts). Reads localStorage + listens for the `harchiq:template`
+  // CustomEvent dispatched by ConsoleShell's TemplateSelector.
+  const { template } = useDashboardTemplate("market-competitor");
+
   const [kpis, setKpis] = useState<CompetitorKPI | null>(injectedKpis ?? null);
   const [competitors, setCompetitors] = useState<CompetitorEntry[]>(injectedCompetitors ?? []);
   const [moves, setMoves] = useState<CompetitorMove[]>(injectedMoves ?? []);
@@ -3049,7 +3058,25 @@ export function CompetitorIntelDashboard({
   }, [eventTypeFilter]);
 
   return (
-    <div className="dash-main" style={{ padding: "16px", background: "#ffffff", overflowX: "hidden" }}>
+    <div
+      className="dash-main"
+      data-template={template}
+      data-template-account="market-competitor"
+      style={{ padding: "16px", background: "#ffffff", overflowX: "hidden" }}
+    >
+      {/* Template visibility CSS — hides [data-template-row] elements
+          based on the active template. */}
+      <TemplateVisibilityStyle accountType="market-competitor" />
+
+      {/* Mobile responsive — collapse multi-column grids to 1-col stack */}
+      <style>{`
+        @media (max-width: 768px) {
+          [data-template-account="market-competitor"] .war-room-split,
+          [data-template-account="market-competitor"] .exec-module-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       {/* ─── Welcome banner — aggressive tone ─── */}
       <div
         style={{
@@ -3153,6 +3180,7 @@ export function CompetitorIntelDashboard({
       {/* ═══════════════════════════════════════════════════════════
           EXECUTIVE STRIP — 4 KPI tiles (24-col grid)
           ═══════════════════════════════════════════════════════════ */}
+      <section data-template-row="1">
       <div
         style={{
           display: "grid",
@@ -3261,6 +3289,8 @@ export function CompetitorIntelDashboard({
       {/* ═══════════════════════════════════════════════════════════
           SPLIT-SCREEN — Macro (12) | Micro (12)
           ═══════════════════════════════════════════════════════════ */}
+      </section>
+      <section data-template-row="2">
       <DashboardErrorBoundary title="Macro + Micro Split-Screen Widgets" accent={ACCENT} subtitle="SOV area, Sankey, scatter, treemap, network graph + virtualized feeds">
       <div
         style={{
@@ -3791,6 +3821,8 @@ export function CompetitorIntelDashboard({
       {/* ═══════════════════════════════════════════════════════════
           BOTTOM STRIP — 24-col cross-cutting widgets
           ═══════════════════════════════════════════════════════════ */}
+      </section>
+      <section data-template-row="3">
       <DashboardErrorBoundary title="Bottom Strip — Cross-Cutting Widgets" accent={ACCENT} subtitle="Alert timeline, sentiment matrix, movers, network graph, scorecard">
       <div
         style={{
@@ -3911,6 +3943,8 @@ export function CompetitorIntelDashboard({
           ═══════════════════════════════════════════════════════════ */}
 
       {/* ─── Module 1: Multi-Entity Competitor Tracking ─── */}
+      </section>
+      <section data-template-row="4">
       <DashboardErrorBoundary title="Competitor Basket Module" accent={ACCENT} subtitle="Tracking configuration + virtualized comparison matrix">
       <div style={{ marginBottom: "16px" }}>
         <div style={{
@@ -4139,6 +4173,8 @@ export function CompetitorIntelDashboard({
       </DashboardErrorBoundary>
 
       {/* ─── Module 2: Sentiment Migration Sankey ─── */}
+      </section>
+      <section data-template-row="5">
       <DashboardErrorBoundary title="SOV Migration Sankey" accent={ACCENT} subtitle="Co-mention flows + SOV bars + SOV trend">
       <div style={{ marginBottom: "16px" }}>
         <div style={{
@@ -4217,6 +4253,8 @@ export function CompetitorIntelDashboard({
       </DashboardErrorBoundary>
 
       {/* ─── Module 3: Tactical Alert Terminal ─── */}
+      </section>
+      <section data-template-row="6">
       <DashboardErrorBoundary title="Tactical Alert Terminal" accent={ACCENT} subtitle="Virtualized 500+ capacity feed with expandable rows">
       <div style={{ marginBottom: "16px" }}>
         <div style={{
@@ -4314,6 +4352,7 @@ export function CompetitorIntelDashboard({
         </WarRoomCard>
       </div>
       </DashboardErrorBoundary>
+      </section>
 
       {/* ─── Competitive landscape (ranked, preserved V1) ─── */}
       <DashboardErrorBoundary title="Competitive Landscape" accent={ACCENT} subtitle="Ranked list with hover effects">

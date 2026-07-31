@@ -18,6 +18,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import {
+  useDashboardTemplate,
+  TemplateVisibilityStyle,
+} from "./DashboardTemplates";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 
@@ -2853,6 +2857,11 @@ export function InvestorDeskDashboard({
   holdings: injectedHoldings,
   redFlags: injectedRedFlags,
 }: InvestorDeskDashboardProps) {
+  // Dashboard template (Talkwalker/Meltwater-style pre-configured
+  // layouts). Reads localStorage + listens for the `harchiq:template`
+  // CustomEvent dispatched by ConsoleShell's TemplateSelector.
+  const { template } = useDashboardTemplate("investment-bank");
+
   const [kpis, setKpis] = useState<InvestorKPI | null>(injectedKpis ?? null);
   const [holdings, setHoldings] = useState<InvestorHolding[]>(injectedHoldings ?? []);
   const [dossiers, setDossiers] = useState<InvestorDossier[]>([]);
@@ -3082,7 +3091,25 @@ export function InvestorDeskDashboard({
   const adverseColor = (kpis?.adverseMediaHits ?? 0) > 5 ? RED : (kpis?.adverseMediaHits ?? 0) > 0 ? AMBER : GREEN;
 
   return (
-    <div className="dash-main" style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}>
+    <div
+      className="dash-main"
+      data-template={template}
+      data-template-account="investment-bank"
+      style={{ padding: "24px", background: C.bg, overflowX: "hidden" }}
+    >
+      {/* Template visibility CSS — hides [data-template-row] elements
+          based on the active template. */}
+      <TemplateVisibilityStyle accountType="investment-bank" />
+
+      {/* Mobile responsive — collapse multi-column grids to 1-col stack */}
+      <style>{`
+        @media (max-width: 768px) {
+          [data-template-account="investment-bank"] > div[style*="gridTemplateColumns"],
+          [data-template-account="investment-bank"] .investor-row {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       {/* Dev-only FPS overlay — hidden in production builds. */}
       {process.env.NODE_ENV === "development" && <PerformanceMonitor accent={ACCENT} />}
       {/* ─── Welcome banner — cold, institutional ─── */}
@@ -3115,6 +3142,7 @@ export function InvestorDeskDashboard({
       )}
 
       {/* ═══ ROW 1 — RISK STRIP (5 KPI tiles, 24 cols) ═══ */}
+      <section data-template-row="1" style={{ display: "contents" }}>
       <div style={{ ...gridCols([5, 5, 5, 5, 4]), marginBottom: "16px" }}>
         <div style={colSpan(5)}><KpiTile index={1} label="Adverse Media Hits" value={kpis?.adverseMediaHits ?? 0} color={adverseColor} sublabel={adverseColor === RED ? "Threshold breached" : "Within tolerance"} loading={loading} /></div>
         <div style={colSpan(5)}><KpiTile index={2} label="UBO Risk Score" value={kpis?.uboRiskScore ?? 0} color={uboColor} sublabel="0–100 · higher = riskier" loading={loading} /></div>
@@ -3124,6 +3152,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 2 — DD Checklist (6) · Entity Graph (12) · Red Flags (6) ═══ */}
+      </section>
+      <section data-template-row="2" style={{ display: "contents" }}>
       <div style={{ ...gridCols([6, 12, 6]), marginBottom: "16px" }}>
         {/* LEFT — DD Checklist column */}
         <div style={colSpan(6)}>
@@ -3185,6 +3215,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 3 — Adverse Media Timeline (24 cols, ECharts) ═══ */}
+      </section>
+      <section data-template-row="3" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
@@ -3203,6 +3235,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 4 — Cross-Border Heatmap (12) · Dossier Pipeline Funnel (12) ═══ */}
+      </section>
+      <section data-template-row="4" style={{ display: "contents" }}>
       <div style={{ ...gridCols([12, 12]), marginBottom: "16px" }}>
         <div style={colSpan(12)}>
           <div style={chartCardStyle}>
@@ -3233,6 +3267,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 5 — Preserved 6 Recharts (8/8/8) ═══ */}
+      </section>
+      <section data-template-row="5" style={{ display: "contents" }}>
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "12px", marginBottom: "16px" }}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -3335,6 +3371,8 @@ export function InvestorDeskDashboard({
       )}
 
       {/* ═══ ROW 6 — Preserved 6 Recharts (8/8/8, second row) ═══ */}
+      </section>
+      <section data-template-row="6" style={{ display: "contents" }}>
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "12px", marginBottom: "16px" }}>
           {[1, 2, 3].map((i) => (
@@ -3413,6 +3451,8 @@ export function InvestorDeskDashboard({
       )}
 
       {/* ═══ ROW 7 — Threat Network Graph (24 cols, ECharts force-directed) ═══ */}
+      </section>
+      <section data-template-row="7" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
@@ -3431,6 +3471,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 7.5 — Module 1: Moteur de Due Diligence UBO (24 cols, 10k+ nodes) ═══ */}
+      </section>
+      <section data-template-row="8" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
@@ -3449,6 +3491,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 7.6 — Module 2: Registre de Conformité Globale (24 cols, OFAC/UE/FATF) ═══ */}
+      </section>
+      <section data-template-row="9" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
@@ -3467,6 +3511,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 7.7 — Module 3: Timeline Adverse Media 15 Ans (24 cols, ECharts) ═══ */}
+      </section>
+      <section data-template-row="10" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <div style={chartCardStyle}>
@@ -3485,6 +3531,8 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ═══ ROW 8 — Virtualized Holdings Table (24 cols, preserved features) ═══ */}
+      </section>
+      <section data-template-row="11" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
           <VirtualizedHoldingsTable
@@ -3509,6 +3557,7 @@ export function InvestorDeskDashboard({
       </div>
 
       {/* ─── Injected red flags (preserved for backward compatibility) ─── */}
+      </section>
       {injectedRedFlags && injectedRedFlags.length > 0 && (
         <div>
           <div style={{ ...labelStyle, color: RED, marginBottom: "12px" }}>
