@@ -2698,30 +2698,37 @@ export function AlphaDeskDashboard({
     (async () => {
       setCorrDistLoading(true);
       try {
-        const results = await Promise.all(
-          assets.map(async (a): Promise<AssetCorrEntry> => {
-            try {
-              const res = await fetch(
-                `/api/trader/assets/${a.ticker}/correlation?window=30`,
-                { signal: controller.signal },
-              );
-              if (!res.ok) return { ticker: a.ticker, correlation: 0, dataPoints: 0, alignedData: [] };
-              const data = await res.json();
-              return {
-                ticker: a.ticker,
-                correlation: data.correlation ?? 0,
-                dataPoints: data.dataPoints ?? 0,
-                alignedData: (data.alignedData ?? []) as AlignedPoint[],
-              };
-            } catch (err) {
-              // Re-throw abort errors so Promise.all rejects fast; swallow
-              // everything else so a single bad asset doesn't nuke the batch.
-              if (err instanceof Error && err.name === "AbortError") throw err;
-              return { ticker: a.ticker, correlation: 0, dataPoints: 0, alignedData: [] };
-            }
-          })
-        );
-        if (!controller.signal.aborted) setAssetCorrData(results);
+        // Process assets in batches of 3 to avoid overwhelming the dev server
+        const results: AssetCorrEntry[] = [];
+        const batchSize = 3;
+        for (let i = 0; i < assets.length; i += batchSize) {
+          if (controller.signal.aborted) break;
+          const batch = assets.slice(i, i + batchSize);
+          const batchResults = await Promise.all(
+            batch.map(async (a): Promise<AssetCorrEntry> => {
+              try {
+                const res = await fetch(
+                  `/api/trader/assets/${a.ticker}/correlation?window=30`,
+                  { signal: controller.signal },
+                );
+                if (!res.ok) return { ticker: a.ticker, correlation: 0, dataPoints: 0, alignedData: [] };
+                const data = await res.json();
+                return {
+                  ticker: a.ticker,
+                  correlation: data.correlation ?? 0,
+                  dataPoints: data.dataPoints ?? 0,
+                  alignedData: (data.alignedData ?? []) as AlignedPoint[],
+                };
+              } catch (err) {
+                if (err instanceof Error && err.name === "AbortError") throw err;
+                return { ticker: a.ticker, correlation: 0, dataPoints: 0, alignedData: [] };
+              }
+            })
+          );
+          results.push(...batchResults);
+          // Update incrementally so charts render as data arrives
+          if (!controller.signal.aborted) setAssetCorrData([...results]);
+        }
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
           // ignore
@@ -2751,38 +2758,43 @@ export function AlphaDeskDashboard({
     (async () => {
       setHistoryLoading(true);
       try {
-        const results = await Promise.all(
-          assets.map(async (a): Promise<[string, AssetHistory | null]> => {
-            try {
-              const res = await fetch(
-                `/api/trader/assets/${a.ticker}/history?window=30`,
-                { signal: controller.signal },
-              );
-              if (!res.ok) return [a.ticker, null];
-              const data = await res.json();
-              return [a.ticker, {
-                ticker: a.ticker,
-                data: (data.data ?? []) as AssetHistoryPoint[],
-                stats: {
-                  priceChange: data.stats?.priceChange ?? 0,
-                  sentimentChange: data.stats?.sentimentChange ?? 0,
-                  correlation: data.stats?.correlation ?? 0,
-                  volatility: data.stats?.volatility ?? 0,
-                  dataPoints: data.stats?.dataPoints ?? 0,
-                },
-              }];
-            } catch (err) {
-              if (err instanceof Error && err.name === "AbortError") throw err;
-              return [a.ticker, null];
-            }
-          })
-        );
-        if (!controller.signal.aborted) {
-          const map: Record<string, AssetHistory> = {};
-          for (const [t, h] of results) {
-            if (h) map[t] = h;
+        // Process in batches of 3 to avoid overwhelming the dev server
+        const results: Record<string, AssetHistory> = {};
+        const batchSize = 3;
+        for (let i = 0; i < assets.length; i += batchSize) {
+          if (controller.signal.aborted) break;
+          const batch = assets.slice(i, i + batchSize);
+          const batchResults = await Promise.all(
+            batch.map(async (a): Promise<[string, AssetHistory | null]> => {
+              try {
+                const res = await fetch(
+                  `/api/trader/assets/${a.ticker}/history?window=30`,
+                  { signal: controller.signal },
+                );
+                if (!res.ok) return [a.ticker, null];
+                const data = await res.json();
+                return [a.ticker, {
+                  ticker: a.ticker,
+                  data: (data.data ?? []) as AssetHistoryPoint[],
+                  stats: {
+                    priceChange: data.stats?.priceChange ?? 0,
+                    sentimentChange: data.stats?.sentimentChange ?? 0,
+                    correlation: data.stats?.correlation ?? 0,
+                    volatility: data.stats?.volatility ?? 0,
+                    dataPoints: data.stats?.dataPoints ?? 0,
+                  },
+                }];
+              } catch (err) {
+                if (err instanceof Error && err.name === "AbortError") throw err;
+                return [a.ticker, null];
+              }
+            })
+          );
+          for (const [ticker, hist] of batchResults) {
+            if (hist) results[ticker] = hist;
           }
-          setAssetHistories(map);
+          // Update incrementally so charts render as data arrives
+          if (!controller.signal.aborted) setAssetHistories({ ...results });
         }
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
