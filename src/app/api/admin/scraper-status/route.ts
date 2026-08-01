@@ -26,7 +26,7 @@ interface FeedStatus {
   name: string;
   url: string;
   language: "ar" | "fr" | "en";
-  category: "news" | "business" | "tech";
+  category: "news" | "business" | "tech" | "regulatory" | "finance";
   status: "ok" | "error" | "never";
   lastScrapeAt: string | null;
   lastDurationMs: number | null;

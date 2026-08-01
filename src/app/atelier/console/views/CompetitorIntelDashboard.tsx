@@ -1675,8 +1675,8 @@ export function CompetitorIntelDashboard({
           const threatLevel = deriveThreatLevel(rank, delta);
           const crisisImpact = deriveCrisisImpact(rank, delta, nb.recentMoves ?? []);
           const marketShare = deriveMarketShare(nb.reputationScore, allScores);
-          const mentionCount = deriveMentionCount(nb.name, rawAlerts);
-          const sentimentScore = deriveSentimentScore(nb.name, rawAlerts);
+          const mentionCount = deriveMentionCount(nb.name, alerts);
+          const sentimentScore = deriveSentimentScore(nb.name, alerts);
           return {
             name: nb.name,
             sector: nb.sector,
@@ -1723,7 +1723,7 @@ export function CompetitorIntelDashboard({
             ? extList.map((e) => e.reputationScore).concat([yourScore])
             : [yourScore],
         ),
-        mentionCount: rawAlerts.length,
+        mentionCount: alerts.length,
         sentimentScore: 0,
         threatLevel: "watch",
         crisisImpact: "low",
@@ -1766,7 +1766,7 @@ export function CompetitorIntelDashboard({
       }
 
       if (alertsRes.ok && !injectedMoves) {
-        const alertMoves: CompetitorMove[] = rawAlerts.slice(0, 6).map((alert) => ({
+        const alertMoves: CompetitorMove[] = alerts.slice(0, 6).map((alert) => ({
           competitorName: alert.source || "HarchIQ Risk Engine",
           title: alert.title,
           date: alert.detectedAt
