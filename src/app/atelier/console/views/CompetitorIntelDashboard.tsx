@@ -3966,7 +3966,6 @@ export function CompetitorIntelDashboard({
           ═══════════════════════════════════════════════════════════ */}
 
       {/* ─── Module 1: Multi-Entity Competitor Tracking ─── */}
-      </section>
       <section data-template-row="4">
       <DashboardErrorBoundary title="Competitor Basket Module" accent={ACCENT} subtitle="Tracking configuration + virtualized comparison matrix">
       <div style={{ marginBottom: "16px" }}>
