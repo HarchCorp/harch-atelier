@@ -3298,6 +3298,7 @@ export function CompetitorIntelDashboard({
           </div>
         </div>
       </div>
+      </section>
 
       {/* ─── View Mode Tabs ─── */}
       <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
@@ -3305,10 +3306,9 @@ export function CompetitorIntelDashboard({
         <button onClick={() => setViewMode("deep")} style={{ padding: "10px 20px", fontSize: 12, fontFamily: FONT.sans, fontWeight: 600, border: "none", borderBottom: viewMode === "deep" ? `2px solid ${ACCENT}` : "2px solid transparent", background: "transparent", color: viewMode === "deep" ? ACCENT : C.textMuted, cursor: "pointer", transition: "all 0.15s" }}>Deep Dive</button>
       </div>
 
-      {/* ═══ OVERVIEW: Competitive landscape + Recent moves ═══ */}
+      {/* ═══ OVERVIEW: Split-screen + Competitive landscape + Recent moves ═══ */}
       {viewMode === "overview" && (
       <>
-      </section>
       <section data-template-row="2">
       <DashboardErrorBoundary title="Macro + Micro Split-Screen Widgets" accent={ACCENT} subtitle="SOV area, Sankey, scatter, treemap, network graph + virtualized feeds">
       <div
