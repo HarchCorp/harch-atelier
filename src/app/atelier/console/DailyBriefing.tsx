@@ -66,6 +66,9 @@ interface BriefingCitedItem {
   source: string;
   url: string | null;
   severity: string;
+  confidence?: number;
+  timelineContext?: string;
+  benchmark?: string;
 }
 
 interface BriefingSourceRef {
@@ -77,14 +80,24 @@ interface BriefingSourceRef {
   publishedAt: string | null;
 }
 
+interface BriefingRecommendedAction {
+  text: string;
+  owner?: string;
+  slaHours?: number;
+  alertId?: string | null;
+}
+
 interface BriefingPayload {
   executiveSummary: string;
   topThreats: BriefingCitedItem[];
   topOpportunities: BriefingCitedItem[];
   sentimentShift: string;
-  recommendedActions: string[];
+  competitiveBenchmark?: string;
+  timelineContext?: string;
+  recommendedActions: BriefingRecommendedAction[];
   citedAlertIds: string[];
   sources: BriefingSourceRef[];
+  confidence?: number;
   metadata?: {
     alertCount?: number;
     citedCount?: number;
@@ -570,9 +583,21 @@ export function DailyBriefing({
     lines.push("SENTIMENT SHIFT");
     lines.push(briefing.sentimentShift);
     lines.push("");
+    if (briefing.timelineContext) {
+      lines.push("TIMELINE CONTEXT");
+      lines.push(briefing.timelineContext);
+      lines.push("");
+    }
+    if (briefing.competitiveBenchmark) {
+      lines.push("COMPETITIVE BENCHMARK");
+      lines.push(briefing.competitiveBenchmark);
+      lines.push("");
+    }
     lines.push("RECOMMENDED ACTIONS");
     briefing.recommendedActions.forEach((a, i) => {
-      lines.push(`${i + 1}. ${a}`);
+      const owner = a.owner ? ` [${a.owner}]` : "";
+      const sla = a.slaHours ? ` (SLA ${a.slaHours}h)` : "";
+      lines.push(`${i + 1}. ${a.text}${owner}${sla}`);
     });
     lines.push("");
     lines.push("CITED SOURCES");
@@ -925,6 +950,32 @@ export function DailyBriefing({
               </section>
             </div>
 
+            {/* ─── Timeline context + Competitive benchmark ─── */}
+            {(briefing.timelineContext || briefing.competitiveBenchmark) && (
+              <section style={{ marginBottom: "24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "12px" }}>
+                {briefing.timelineContext && (
+                  <div style={{ padding: "12px 16px", border: `1px solid ${C.border}`, borderRadius: "6px", background: C.surfaceAlt }}>
+                    <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
+                      Timeline context
+                    </div>
+                    <div style={{ fontSize: "13px", color: C.textPrimary, lineHeight: 1.5 }}>
+                      {briefing.timelineContext}
+                    </div>
+                  </div>
+                )}
+                {briefing.competitiveBenchmark && (
+                  <div style={{ padding: "12px 16px", border: `1px solid ${C.border}`, borderRadius: "6px", background: C.surfaceAlt }}>
+                    <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
+                      Competitive benchmark
+                    </div>
+                    <div style={{ fontSize: "13px", color: C.textPrimary, lineHeight: 1.5 }}>
+                      {briefing.competitiveBenchmark}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* ─── Recommended Actions ─── */}
             <section style={{ marginBottom: "24px" }}>
               <SectionTitle>Recommended Actions</SectionTitle>
@@ -944,7 +995,7 @@ export function DailyBriefing({
                       display: "flex",
                       alignItems: "flex-start",
                       gap: "12px",
-                      padding: "8px 0",
+                      padding: "10px 0",
                       fontSize: "14px",
                       lineHeight: 1.55,
                       color: C.textPrimary,
@@ -970,7 +1021,16 @@ export function DailyBriefing({
                     >
                       {i + 1}
                     </span>
-                    <span style={{ flex: 1 }}>{action}</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ display: "block" }}>{action.text}</span>
+                      {(action.owner || action.slaHours) && (
+                        <span style={{ display: "block", marginTop: "4px", fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                          {action.owner ? `Owner: ${action.owner}` : ""}
+                          {action.owner && action.slaHours ? " · " : ""}
+                          {action.slaHours ? `SLA: ${action.slaHours}h` : ""}
+                        </span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ol>

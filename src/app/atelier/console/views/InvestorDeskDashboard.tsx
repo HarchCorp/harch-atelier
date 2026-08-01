@@ -19,10 +19,14 @@ import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { InsightPanel } from "./InsightPanel";
+import { BriefingArchive } from "./BriefingArchive";
+import { ComplianceReport } from "./ComplianceReport";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
 } from "./DashboardTemplates";
+import { CrisisIndicator } from "./CrisisIndicator";
+import { useLiveAlerts } from "./useLiveAlerts";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 
@@ -3477,7 +3481,14 @@ export function InvestorDeskDashboard({
   const [kpis, setKpis] = useState<InvestorKPI | null>(injectedKpis ?? null);
   const [holdings, setHoldings] = useState<InvestorHolding[]>(injectedHoldings ?? []);
   const [dossiers, setDossiers] = useState<InvestorDossier[]>([]);
-  const [alerts, setAlerts] = useState<Array<{ id: string; title: string; source: string; severity: string; detectedAt: string | null }>>([]);
+  // ─── Live alerts via WebSocket (port 3003) ────────────────────
+  // Task: dataminr-realtime-crisis — the Red Flags feed now streams
+  // in real-time. The loadData() REST fetch below is kept only as a
+  // one-time bootstrap; the hook itself does the same call on mount
+  // and then upgrades to WebSocket push.
+  const live = useLiveAlerts();
+  const alerts = live.alerts as Array<{ id: string; title: string; source: string; severity: string; detectedAt: string | null }>;
+  const liveFlashIds = live.flashIds;
   const [loading, setLoading] = useState(!injectedKpis);
   const [error, setError] = useState(false);
   const [riskFilter, setRiskFilter] = useState<"all" | "high" | "watch" | "clear">("all");
@@ -3486,6 +3497,27 @@ export function InvestorDeskDashboard({
   const [sortField, setSortField] = useState<"companyName" | "weight" | "reputationScore" | "highRiskCount">("companyName");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"overview" | "deep">("overview");
+
+  // ─── Task: dataminr-briefings-compliance ─────────────────────
+  //  Briefing Archive + Compliance Report modals. The Compliance
+  //  Report button is gated on the user's role — fetched lazily
+  //  from /api/auth/session the first time the dashboard mounts.
+  //  The ComplianceReport component itself also enforces the
+  //  company-admin/admin check server-side, so a non-admin user
+  //  who clicks the button sees a "ACCESS RESTRICTED" panel
+  //  rather than the report.
+  const [modal, setModal] = useState<null | "briefing-archive" | "compliance">(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((s: { user?: { role?: string } } | null) => {
+        if (s?.user?.role) setUserRole(s.user.role);
+      })
+      .catch(() => {
+        // Best-effort — the modal will surface the 403 if needed.
+      });
+  }, []);
 
   // ─── Real sanctions screening state ───────────────────────────
   //  `screening` holds the aggregate screening result for every
@@ -3545,11 +3577,11 @@ export function InvestorDeskDashboard({
       }
 
       let fetchedAlerts: typeof alerts = [];
+      // NOTE: alerts state is now owned by useLiveAlerts. We drain
+      // alertsRes so the Promise.all pattern doesn't leak, but we no
+      // longer call setAlerts here — the live hook does that.
       if (alertsRes.ok) {
-        const a = await alertsRes.json();
-        fetchedAlerts = (a.alerts ?? []).map((al: { id: string; title: string; source: string; severity: string; detectedAt: string | null }) => ({
-          id: al.id, title: al.title, source: al.source, severity: al.severity, detectedAt: al.detectedAt,
-        }));
+        await alertsRes.json();
       }
 
       if (statsRes.ok) {
@@ -3576,7 +3608,7 @@ export function InvestorDeskDashboard({
       }
       setHoldings(fetchedHoldings);
       setDossiers(fetchedDossiers);
-      setAlerts(fetchedAlerts);
+      // alerts state is owned by useLiveAlerts — no setAlerts here.
       setLastRefresh(new Date());
     } catch (err) {
       // AbortError is the expected path when the controller aborts on
@@ -3840,8 +3872,67 @@ export function InvestorDeskDashboard({
             Due Diligence Overview
           </h3>
         </div>
-        <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-          {holdings.length} holdings · {dossierTotal} dossiers · {alerts.length} alerts
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {/* ─── Task: dataminr-briefings-compliance ───
+              Two new entry points on the Investor Desk:
+                • Briefing Archive — searchable list of past HarchIQ
+                  briefings with re-deliver button.
+                • Compliance Report — Loi 09-08 / BAM CIRC. 16/G/2013
+                  audit trail. Gated on company-admin/admin role (the
+                  ComplianceReport component also enforces this server-side
+                  via /api/console/compliance-report). */}
+          <button
+            type="button"
+            onClick={() => setModal("briefing-archive")}
+            style={{
+              padding: "7px 12px",
+              fontSize: 10,
+              fontFamily: FONT.mono,
+              fontWeight: 700,
+              border: `1px solid ${C.border}`,
+              borderRadius: 3,
+              background: "transparent",
+              color: C.textBody,
+              cursor: "pointer",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              transition: "border-color 0.15s, color 0.15s",
+            }}
+            title="Browse, search, and re-deliver past HarchIQ daily briefings"
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textBody; }}
+          >
+            Briefing Archive
+          </button>
+          <button
+            type="button"
+            onClick={() => setModal("compliance")}
+            disabled={userRole !== "admin" && userRole !== "company-admin"}
+            style={{
+              padding: "7px 12px",
+              fontSize: 10,
+              fontFamily: FONT.mono,
+              fontWeight: 700,
+              border: `1px solid ${ACCENT}`,
+              borderRadius: 3,
+              background: ACCENT,
+              color: "#ffffff",
+              cursor: userRole === "admin" || userRole === "company-admin" ? "pointer" : "not-allowed",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              opacity: userRole === "admin" || userRole === "company-admin" ? 1 : 0.4,
+            }}
+            title={
+              userRole === "admin" || userRole === "company-admin"
+                ? "Open the Loi 09-08 / BAM compliance report"
+                : "Compliance reports require the company-admin or admin role"
+            }
+          >
+            Compliance Report
+          </button>
+          <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            {holdings.length} holdings · {dossierTotal} dossiers · {alerts.length} alerts
+          </div>
         </div>
       </div>
 
@@ -3901,6 +3992,12 @@ export function InvestorDeskDashboard({
       {/* ═══ ROW 2 — OVERVIEW: Sanctions + Red Flags Feed ═══ */}
       </section>
       )}
+
+      {/* ─── Crisis indicator (after KPI strip) ──────────────────────
+          Task: dataminr-realtime-crisis — surfaces the real-time
+          crisis score before the user dives into dossiers / red flags. */}
+      <CrisisIndicator />
+
       {viewMode === "overview" && (
       <section data-template-row="2" style={{ display: "contents" }}>
       <div style={{ ...gridCols([6, 18]), marginBottom: "16px" }}>
@@ -3912,7 +4009,38 @@ export function InvestorDeskDashboard({
                 <div style={chartTitleStyle}>11 — Red Flags Feed</div>
                 <div style={chartSubtitleStyle}>Virtualized · real-time signal feed</div>
               </div>
-              <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>{alerts.length} alerts</div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 9,
+                    fontFamily: FONT.mono,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    padding: "2px 6px",
+                    borderRadius: 2,
+                    background: live.isLive ? "rgba(16,185,129,0.12)" : "rgba(115,115,115,0.10)",
+                    color: live.isLive ? C.success : C.textMuted,
+                    border: `1px solid ${live.isLive ? C.success : C.border}`,
+                  }}
+                  title={live.transport === "ws" ? "WebSocket push (port 3003)" : "15s polling fallback"}
+                >
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: live.isLive ? C.success : C.textMuted,
+                      display: "inline-block",
+                      animation: live.isLive ? "harch-crisis-pulse 1.6s infinite" : undefined,
+                    }}
+                  />
+                  {live.isLive ? "LIVE" : live.transport === "poll" ? "POLL" : "CONNECTING"}
+                </span>
+                <span style={{ fontSize: 9, fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{alerts.length} alerts</span>
+              </div>
             </div>
             <RedFlagsFeed holdings={holdings} alerts={alerts} loading={loading} />
           </div>
@@ -4369,6 +4497,68 @@ export function InvestorDeskDashboard({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Task: dataminr-briefings-compliance ───────────────────
+          Full-screen modal overlay for the Briefing Archive and the
+          Compliance Report. Click outside or press Esc to close. */}
+      {modal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={modal === "compliance" ? "Compliance Report" : "Briefing Archive"}
+          onClick={() => setModal(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setModal(null);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+            zIndex: 240,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            padding: "4vh 16px 16px",
+            overflowY: "auto",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 1080,
+              position: "relative",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              aria-label="Close"
+              style={{
+                position: "absolute",
+                top: -12,
+                right: -8,
+                zIndex: 2,
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                width: 28,
+                height: 28,
+                cursor: "pointer",
+                color: C.textMuted,
+                fontSize: 14,
+                lineHeight: 1,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+              }}
+            >
+              {"\u00d7"}
+            </button>
+            {modal === "briefing-archive" && <BriefingArchive />}
+            {modal === "compliance" && <ComplianceReport />}
           </div>
         </div>
       )}

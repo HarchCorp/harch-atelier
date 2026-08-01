@@ -25,6 +25,8 @@ import type { EChartsOption } from "echarts";
 import type { HexagonLayer as HexagonLayerType } from "@deck.gl/aggregation-layers";
 import type { ScatterplotLayer as ScatterplotLayerType } from "@deck.gl/layers";
 import { GeoHeatmap } from "./GeoHeatmap";
+import { CrisisIndicator } from "./CrisisIndicator";
+import { useLiveAlerts } from "./useLiveAlerts";
 import {
   ResponsiveContainer,
   LineChart,
@@ -466,7 +468,10 @@ function Widget({
   style,
 }: {
   title: string;
-  subtitle?: string;
+  // subtitle accepts a ReactNode so callers can compose badges,
+  // counts, and inline status indicators (e.g. the LIVE badge on
+  // the alert feed). Plain strings still work.
+  subtitle?: ReactNode;
   children: ReactNode;
   style?: CSSProperties;
 }) {
@@ -571,6 +576,7 @@ function VirtualTable<T>({
   rowHeight = 32,
   emptyLabel,
   rowKey,
+  getRowStyle,
 }: {
   rows: T[];
   columns: VirtualColumn<T>[];
@@ -581,6 +587,9 @@ function VirtualTable<T>({
   // it for getItemKey so rows keep stable identity across re-renders
   // (essential for >1k row lists where index keys cause remounts).
   rowKey?: (row: T, index: number) => string | number;
+  // Optional per-row style override. Used by the live alert feed to
+  // flash rows whose ID just arrived over the WebSocket.
+  getRowStyle?: (row: T, index: number) => CSSProperties;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -644,6 +653,7 @@ function VirtualTable<T>({
         <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
           {virtualizer.getVirtualItems().map((vi) => {
             const row = rows[vi.index];
+            const extraStyle = getRowStyle ? getRowStyle(row, vi.index) : undefined;
             return (
               <div
                 key={vi.key}
@@ -655,6 +665,7 @@ function VirtualTable<T>({
                   display: "flex",
                   borderBottom: `1px solid ${C.bgSubtle}`,
                   alignItems: "center",
+                  ...extraStyle,
                 }}
               >
                 {columns.map((col) => (
@@ -1017,7 +1028,14 @@ export function BrandMonitorDashboard({
   const [kpis, setKpis] = useState<BrandMonitorKPI | null>(injectedKpis ?? null);
   const [signals, setSignals] = useState<BrandMonitorSignal[]>(injectedSignals ?? []);
   const [sources, setSources] = useState<BrandMonitorSource[]>(injectedSources ?? []);
-  const [alerts, setAlerts] = useState<BrandMonitorAlert[]>([]);
+  // ─── Live alerts via WebSocket (port 3003) ────────────────────
+  // Task: dataminr-realtime-crisis — replaced the static fetch
+  // inside loadData with the live hook so new alerts stream in
+  // sub-second rather than waiting for the next 30-min refresh.
+  // Falls back to 15s polling if the WS handshake fails.
+  const live = useLiveAlerts();
+  const alerts = live.alerts as BrandMonitorAlert[];
+  const liveFlashIds = live.flashIds;
   const [aiEngines, setAiEngines] = useState<BrandMonitorAiPlatform[]>([]);
   const [topics, setTopics] = useState<BrandMonitorTopic[]>([]);
   const [loading, setLoading] = useState(!injectedKpis);
@@ -1081,9 +1099,13 @@ export function BrandMonitorDashboard({
       });
       setSignals(data.todaySignals ?? []);
       setSources(data.mainSources ?? []);
+      // NOTE: alerts now stream in via useLiveAlerts (WebSocket).
+      // The alertsRes fetch is kept only as a one-time bootstrap so
+      // the geoPoints + sentimentTrend memos have data before the
+      // WS handshake completes. The hook itself does the same REST
+      // call on mount, so we silently ignore the result here.
       if (alertsRes.ok) {
-        const aJson = await alertsRes.json();
-        setAlerts((aJson.alerts ?? []) as BrandMonitorAlert[]);
+        await alertsRes.json(); // drain
       }
       if (aiRes.ok) {
         const aiJson = await aiRes.json();
@@ -2178,6 +2200,12 @@ export function BrandMonitorDashboard({
 
             </section>
 
+            {/* ─── Crisis indicator (after KPI strip, before deep widgets) ───
+                Task: dataminr-realtime-crisis — the crisis score is the
+                first thing the user sees after the KPIs, mirroring
+                Dataminr's anomaly-detection signal. */}
+            <CrisisIndicator />
+
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
             <section data-template-row="2" style={{ display: "contents" }}>
 
@@ -2198,13 +2226,59 @@ export function BrandMonitorDashboard({
 
             {/* Widget 6: Virtualized Real-time Alert Feed */}
             <div style={{ gridColumn: "span 12" }}>
-              <Widget title="Real-time Alert Feed" subtitle={`${alerts.length} SIGNALS`} style={{ minHeight: 400 }}>
+              <Widget
+                title="Real-time Alert Feed"
+                subtitle={
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontFamily: FONT.mono,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        padding: "2px 6px",
+                        borderRadius: 2,
+                        background: live.isLive ? "rgba(16,185,129,0.12)" : "rgba(115,115,115,0.10)",
+                        color: live.isLive ? C.success : C.textMuted,
+                        border: `1px solid ${live.isLive ? C.success : C.border}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: live.isLive ? C.success : C.textMuted,
+                          display: "inline-block",
+                          animation: live.isLive ? "harch-crisis-pulse 1.6s infinite" : undefined,
+                        }}
+                      />
+                      {live.isLive ? "LIVE" : live.transport === "poll" ? "POLL" : "CONNECTING"}
+                    </span>
+                    <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.textMuted }}>
+                      {alerts.length} SIGNALS
+                    </span>
+                  </span>
+                }
+                style={{ minHeight: 400 }}
+              >
                 <VirtualTable<BrandMonitorAlert>
                   rows={alerts}
                   height={360}
                   rowHeight={32}
                   emptyLabel="AWAITING ALERT FEED"
                   rowKey={(a) => a.id}
+                  getRowStyle={(a) =>
+                    liveFlashIds.has(a.id)
+                      ? {
+                          background: "rgba(245,158,11,0.18)",
+                          animation: "harch-crisis-flash 1.6s ease-out forwards",
+                        }
+                      : {}
+                  }
                   columns={[
                     {
                       key: "time",

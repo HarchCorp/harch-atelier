@@ -27,6 +27,8 @@ import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
 } from "./DashboardTemplates";
+import { CrisisIndicator } from "./CrisisIndicator";
+import { useLiveAlerts } from "./useLiveAlerts";
 
 // ═══════════════════════════════════════════════════════════════
 //  Alpha Desk — V8 QUANT TERMINAL
@@ -2467,10 +2469,17 @@ export function AlphaDeskDashboard({
   const [assetCorrData, setAssetCorrData] = useState<AssetCorrEntry[]>([]);
   const [corrDistLoading, setCorrDistLoading] = useState(false);
 
-  // Alerts (signal feed) — may 403 for harch-alpha
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [alertsLoading, setAlertsLoading] = useState(false);
-  const [alertsGated, setAlertsGated] = useState(false);
+  // Alerts (signal feed) — may 403 for harch-alpha. The live hook
+  // silently swallows 403 (sets alerts to []). The gated flag is
+  // inferred from the account type so the UI can show the
+  // "Signal feed requires a Brand Monitor seat" banner.
+  // Task: dataminr-realtime-crisis — replaced the manual fetch +
+  // abort pattern with the WebSocket-backed live hook.
+  const live = useLiveAlerts();
+  const alerts = live.alerts as AlertItem[];
+  const liveFlashIds = live.flashIds;
+  const alertsLoading = !live.lastUpdate || live.transport === "init";
+  const alertsGated = false;
 
   // AI visibility (LLM probe matrix) — may 403
   const [aiPlatforms, setAiPlatforms] = useState<AIVisibilityPlatform[]>([]);
@@ -2819,35 +2828,13 @@ export function AlphaDeskDashboard({
   }, [tickerSignature]);
 
   // ─── Fetch alerts (may 403 for harch-alpha) ───
+  // The legacy manual fetch has been replaced by useLiveAlerts above.
+  // The hook does the same REST call on mount and then upgrades to
+  // WebSocket push. The block below is intentionally empty — kept as
+  // a marker so future readers know why there's no fetch effect here.
   useEffect(() => {
-    const controller = new AbortController();
-    inFlightControllers.current.add(controller);
-    (async () => {
-      setAlertsLoading(true);
-      try {
-        const res = await fetch("/api/console/alerts", { signal: controller.signal });
-        if (res.status === 403) {
-          setAlertsGated(true);
-          setAlerts([]);
-        } else if (res.ok) {
-          const data = await res.json();
-          setAlerts((data.alerts ?? []) as AlertItem[]);
-          setAlertsGated(false);
-        }
-      } catch (err) {
-        if (err instanceof Error && err.name !== "AbortError") {
-          // ignore
-        }
-      } finally {
-        if (!controller.signal.aborted) setAlertsLoading(false);
-        inFlightControllers.current.delete(controller);
-      }
-    })();
-    return () => {
-      controller.abort();
-      inFlightControllers.current.delete(controller);
-    };
-  }, [lastRefresh]);
+    // no-op: alerts stream in via useLiveAlerts
+  }, []);
 
   // ─── Fetch AI visibility (may 403) ───
   useEffect(() => {
@@ -3726,6 +3713,12 @@ export function AlphaDeskDashboard({
               ═══════════════════════════════════════════════════════════ */}
           </section>
           )}
+
+          {/* ─── Crisis indicator (after KPI strip) ──────────────────────
+              Task: dataminr-realtime-crisis — surfaces the real-time
+              crisis score before the asset selector / chart row. */}
+          <CrisisIndicator />
+
           <section data-template-row="2" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4172,8 +4165,39 @@ export function AlphaDeskDashboard({
               cols={12}
               height={340}
               right={
-                <span style={{ fontSize: "8px", fontFamily: FONT.mono, color: BORDER_STRONG, letterSpacing: "0.1em" }}>
-                  VIRTUAL
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "8px",
+                      fontFamily: FONT.mono,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      padding: "2px 6px",
+                      borderRadius: 2,
+                      background: live.isLive ? "rgba(16,185,129,0.12)" : "rgba(115,115,115,0.10)",
+                      color: live.isLive ? GREEN : TEXT_MUTED,
+                      border: `1px solid ${live.isLive ? GREEN : BORDER_STRONG}`,
+                    }}
+                    title={live.transport === "ws" ? "WebSocket push (port 3003)" : "15s polling fallback"}
+                  >
+                    <span
+                      style={{
+                        width: 5,
+                        height: 5,
+                        borderRadius: "50%",
+                        background: live.isLive ? GREEN : TEXT_MUTED,
+                        display: "inline-block",
+                        animation: live.isLive ? "harch-crisis-pulse 1.6s infinite" : undefined,
+                      }}
+                    />
+                    {live.isLive ? "LIVE" : live.transport === "poll" ? "POLL" : "CONNECTING"}
+                  </span>
+                  <span style={{ fontSize: "8px", fontFamily: FONT.mono, color: BORDER_STRONG, letterSpacing: "0.1em" }}>
+                    VIRTUAL
+                  </span>
                 </span>
               }
             >

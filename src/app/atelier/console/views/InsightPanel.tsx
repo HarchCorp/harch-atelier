@@ -249,6 +249,8 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  // Task: dataminr-briefings-compliance — alert id whose detail modal is open.
+  const [openAlertId, setOpenAlertId] = useState<string | null>(null);
 
   // Load the cached insights on mount.
   const load = useCallback(
@@ -508,11 +510,19 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
                 accentBg={persona.accentBg}
                 read={readIds.has(insight.id)}
                 onMarkAsRead={handleMarkAsRead}
+                onOpenAlert={setOpenAlertId}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* ─── Alert detail modal (Dataminr-parity clickable citations) ─── */}
+      <AlertDetailModal
+        alertId={openAlertId}
+        accent={persona.accent}
+        onClose={() => setOpenAlertId(null)}
+      />
 
       {/* ─── Custom scrollbar styling ─── */}
       <style>{`
@@ -543,9 +553,10 @@ interface InsightCardProps {
   accentBg: string;
   read: boolean;
   onMarkAsRead: (id: string) => void;
+  onOpenAlert: (id: string) => void;
 }
 
-function InsightCard({ insight, accent, accentBg, read, onMarkAsRead }: InsightCardProps) {
+function InsightCard({ insight, accent, accentBg, read, onMarkAsRead, onOpenAlert }: InsightCardProps) {
   const sevColor = severityColor(insight.severity, accent);
   const FONT = { sans: C.fontSans, mono: C.fontMono };
 
@@ -724,7 +735,7 @@ function InsightCard({ insight, accent, accentBg, read, onMarkAsRead }: InsightC
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {insight.sources.map((s) => (
-              <SourceRow key={s.id} source={s} accent={accent} />
+              <SourceRow key={s.id} source={s} accent={accent} onOpenDetail={onOpenAlert} />
             ))}
           </div>
         </div>
@@ -734,8 +745,23 @@ function InsightCard({ insight, accent, accentBg, read, onMarkAsRead }: InsightC
 }
 
 // ─── SourceRow ─────────────────────────────────────────────────
+//
+//  Task: dataminr-briefings-compliance — source rows are now clickable
+//  chips that open a modal with the full alert details. The chip
+//  shows the kind tag + the alert title + the source name + the
+//  published date (e.g. "[Alert #1234 — Hespress — Jul 31]"). For
+//  articles with a URL we still offer an "open in new tab" affordance
+//  via the secondary ⤴ icon.
 
-function SourceRow({ source, accent }: { source: InsightSourceRef; accent: string }) {
+function SourceRow({
+  source,
+  accent,
+  onOpenDetail,
+}: {
+  source: InsightSourceRef;
+  accent: string;
+  onOpenDetail: (id: string) => void;
+}) {
   const FONT = { sans: C.fontSans, mono: C.fontMono };
 
   const rowStyle: CSSProperties = {
@@ -745,7 +771,7 @@ function SourceRow({ source, accent }: { source: InsightSourceRef; accent: strin
     padding: "4px 6px",
     background: C.bgSubtle,
     borderRadius: 2,
-    borderLeft: `2px solid ${C.border}`,
+    borderLeft: `2px solid ${accent}`,
     fontSize: 11,
   };
 
@@ -769,11 +795,45 @@ function SourceRow({ source, accent }: { source: InsightSourceRef; accent: strin
     minWidth: 0,
   };
 
-  const content = (
-    <>
+  // Build the chip label — "[Alert #<id-suffix> — <source> — <Mon DD>]"
+  const idSuffix = source.id.slice(-4);
+
+  const chip = (
+    <button
+      type="button"
+      onClick={() => onOpenDetail(source.id)}
+      style={{
+        ...rowStyle,
+        cursor: "pointer",
+        border: "none",
+        textAlign: "left",
+        width: "100%",
+        background: C.bgSubtle,
+        transition: "background 0.15s ease, border-color 0.15s ease",
+      }}
+      title={`View alert details: ${source.title}`}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = C.bgHover;
+        (e.currentTarget as HTMLButtonElement).style.borderLeftColor = accent;
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = C.bgSubtle;
+      }}
+    >
       <span style={kindTagStyle}>{kindLabel(source.kind)}</span>
       <span style={titleStyle} title={source.title}>
         {source.title}
+      </span>
+      <span
+        style={{
+          fontSize: 9,
+          fontFamily: FONT.mono,
+          color: C.textMuted,
+          letterSpacing: "0.04em",
+          flexShrink: 0,
+        }}
+      >
+        #{idSuffix}
       </span>
       {source.severity && (
         <span
@@ -795,30 +855,412 @@ function SourceRow({ source, accent }: { source: InsightSourceRef; accent: strin
           {source.severity}
         </span>
       )}
-    </>
+      {source.url && (
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            fontSize: 10,
+            color: accent,
+            textDecoration: "none",
+            flexShrink: 0,
+            padding: "0 2px",
+          }}
+          title={`Open source URL: ${source.url}`}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.opacity = "0.7";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+          }}
+        >
+          {"\u2197"}
+        </a>
+      )}
+    </button>
   );
 
-  if (source.url) {
-    return (
-      <a
-        href={source.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ ...rowStyle, cursor: "pointer", textDecoration: "none" }}
-        title={`Open: ${source.url}`}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLAnchorElement).style.background = C.bgHover;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLAnchorElement).style.background = C.bgSubtle;
+  return chip;
+}
+
+// ─── AlertDetailModal ──────────────────────────────────────────
+//
+//  Fetches the full alert record from /api/console/alert-detail?id=
+//  and renders it inside a modal. Supports Article + RiskAssessment
+//  + AIVisibility kinds (the API returns a `kind` discriminator).
+
+interface AlertDetail {
+  id: string;
+  title: string;
+  source: string;
+  url: string | null;
+  summary: string | null;
+  content: string | null;
+  language: string | null;
+  sentimentLabel: string | null;
+  sentimentScore: number | null;
+  relevanceScore: number | null;
+  publishedAt: string | null;
+  scrapedAt: string | null;
+  severity: string;
+  category?: string;
+  riskLevel?: string;
+  riskScore?: number;
+  trajectory?: string | null;
+  articleCount?: number | null;
+  mitigation?: string | null;
+  platform?: string;
+  cited?: boolean;
+  position?: string | null;
+}
+
+interface AlertDetailResponse {
+  kind: "article" | "risk_assessment" | "ai_visibility";
+  alert: AlertDetail;
+}
+
+function AlertDetailModal({
+  alertId,
+  accent,
+  onClose,
+}: {
+  alertId: string | null;
+  accent: string;
+  onClose: () => void;
+}) {
+  const [data, setData] = useState<AlertDetailResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const FONT = { sans: C.fontSans, mono: C.fontMono };
+
+  useEffect(() => {
+    if (!alertId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setData(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setError(null);
+    fetch(`/api/console/alert-detail?id=${encodeURIComponent(alertId)}`, { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error || `HTTP ${res.status}`);
+        }
+        return res.json() as Promise<AlertDetailResponse>;
+      })
+      .then((j) => {
+        if (!cancelled) setData(j);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load alert");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [alertId]);
+
+  // Esc to close.
+  useEffect(() => {
+    if (!alertId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [alertId, onClose]);
+
+  if (!alertId) return null;
+
+  const kindLabelStr = data
+    ? data.kind === "article"
+      ? "ARTICLE"
+      : data.kind === "risk_assessment"
+        ? "RISK ASSESSMENT"
+        : "AI VISIBILITY"
+    : "SOURCE";
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Alert detail"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(4px)",
+        zIndex: 250,
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: "5vh 16px 16px",
+        overflowY: "auto",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: 6,
+          padding: 20,
+          width: "100%",
+          maxWidth: 640,
+          boxShadow: "0 16px 48px rgba(0,0,0,0.18)",
+          fontFamily: FONT.sans,
+          position: "relative",
         }}
       >
-        {content}
-      </a>
-    );
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+            paddingBottom: 10,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              fontFamily: FONT.mono,
+              color: accent,
+              letterSpacing: "0.14em",
+              fontWeight: 700,
+            }}
+          >
+            {kindLabelStr}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              borderRadius: 3,
+              width: 24,
+              height: 24,
+              cursor: "pointer",
+              color: C.textMuted,
+              fontSize: 12,
+              lineHeight: 1,
+            }}
+          >
+            {"\u00d7"}
+          </button>
+        </div>
+
+        {loading && (
+          <div style={{ fontSize: 12, color: C.textMuted, fontFamily: FONT.mono, padding: 24, textAlign: "center" }}>
+            Loading alert…
+          </div>
+        )}
+        {error && (
+          <div
+            style={{
+              borderLeft: `3px solid #ef4444`,
+              padding: "10px 12px",
+              background: "rgba(239,68,68,0.04)",
+              fontSize: 12,
+              color: C.textBody,
+              borderRadius: 3,
+            }}
+          >
+            {error}
+          </div>
+        )}
+        {data && !loading && !error && (
+          <AlertDetailBody data={data} accent={accent} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AlertDetailBody({ data, accent }: { data: AlertDetailResponse; accent: string }) {
+  const FONT = { sans: C.fontSans, mono: C.fontMono };
+  const a = data.alert;
+
+  const meta: Array<[string, string]> = [];
+  if (a.publishedAt) {
+    meta.push([
+      "Published",
+      new Date(a.publishedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+    ]);
+  }
+  if (a.scrapedAt) {
+    meta.push([
+      "Ingested",
+      new Date(a.scrapedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+    ]);
+  }
+  meta.push(["Source", a.source]);
+  if (a.language) meta.push(["Language", a.language]);
+  if (a.sentimentLabel) meta.push(["Sentiment", a.sentimentLabel]);
+  if (a.sentimentScore !== null && a.sentimentScore !== undefined) {
+    meta.push(["Sentiment score", a.sentimentScore.toFixed(3)]);
+  }
+  if (a.relevanceScore !== null && a.relevanceScore !== undefined) {
+    meta.push(["Relevance", a.relevanceScore.toFixed(3)]);
+  }
+  if (a.severity) meta.push(["Severity", a.severity.toUpperCase()]);
+  if (data.kind === "risk_assessment") {
+    if (a.category) meta.push(["Category", a.category]);
+    if (a.riskScore !== null && a.riskScore !== undefined) meta.push(["Risk score", `${a.riskScore}/100`]);
+    if (a.trajectory) meta.push(["Trajectory", a.trajectory]);
+    if (a.articleCount !== null && a.articleCount !== undefined) meta.push(["Articles", String(a.articleCount)]);
+  }
+  if (data.kind === "ai_visibility") {
+    if (a.platform) meta.push(["Platform", a.platform]);
+    if (a.cited !== undefined) meta.push(["Cited", a.cited ? "Yes" : "No"]);
+    if (a.position) meta.push(["Position", a.position]);
   }
 
-  return <div style={rowStyle}>{content}</div>;
+  return (
+    <div>
+      {/* Title */}
+      <h3
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: C.text,
+          margin: "0 0 8px 0",
+          lineHeight: 1.3,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {a.title}
+      </h3>
+
+      {/* Meta grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gap: "6px 12px",
+          marginBottom: 14,
+          padding: 10,
+          background: C.bgSubtle,
+          borderRadius: 4,
+          border: `1px solid ${C.border}`,
+        }}
+      >
+        {meta.map(([k, v]) => (
+          <div key={k} style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 8,
+                fontFamily: FONT.mono,
+                color: C.textMuted,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              {k}
+            </div>
+            <div style={{ fontSize: 12, color: C.textBody, marginTop: 2, wordBreak: "break-word" }}>
+              {v}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Summary */}
+      {a.summary && (
+        <div style={{ marginBottom: 12 }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontFamily: FONT.mono,
+              color: accent,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 4,
+            }}
+          >
+            Summary
+          </div>
+          <p style={{ fontSize: 13, color: C.textBody, lineHeight: 1.55, margin: 0 }}>
+            {a.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Content (articles) or Mitigation (risk assessments) */}
+      {a.content && (
+        <div style={{ marginBottom: 12 }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontFamily: FONT.mono,
+              color: accent,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 4,
+            }}
+          >
+            {data.kind === "risk_assessment" ? "Mitigation" : "Content"}
+          </div>
+          <p
+            style={{
+              fontSize: 12,
+              color: C.textBody,
+              lineHeight: 1.55,
+              margin: 0,
+              whiteSpace: "pre-wrap",
+              maxHeight: 320,
+              overflowY: "auto",
+            }}
+          >
+            {a.content}
+          </p>
+        </div>
+      )}
+
+      {/* Footer — open original */}
+      {a.url && (
+        <a
+          href={a.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11,
+            fontFamily: FONT.mono,
+            color: accent,
+            textDecoration: "none",
+            border: `1px solid ${accent}`,
+            padding: "6px 10px",
+            borderRadius: 3,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+          title={`Open: ${a.url}`}
+        >
+          Open original {"\u2197"}
+        </a>
+      )}
+    </div>
+  );
 }
 
 // ─── Skeleton + error states ───────────────────────────────────

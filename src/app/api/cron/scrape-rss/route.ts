@@ -47,6 +47,37 @@ export async function POST(req: Request) {
 
   try {
     const summary = await runRssScrape();
+
+    // ── Fan out new negative articles to the WS alert service ──
+    // Task: dataminr-realtime-crisis — every scrape cycle pushes the
+    // negative articles it just ingested to the WebSocket mini-service
+    // (port 3003) so connected console clients see them in real-time,
+    // not on the next 30-min refresh. Best-effort: a WS push failure
+    // never masks a successful scrape.
+    if (summary.articlesNew > 0) {
+      try {
+        const pushSecret =
+          process.env.ALERT_PUSH_SECRET ??
+          process.env.CRON_SECRET ??
+          process.env.SETUP_TOKEN ??
+          "";
+        await fetch(`${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/console/alerts/push`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: pushSecret ? `Bearer ${pushSecret}` : "",
+          },
+          body: JSON.stringify({ sinceMinutes: 5 }),
+          signal: AbortSignal.timeout(8000),
+        });
+      } catch (pushErr) {
+        logWarn(
+          "cron.scrape-rss",
+          `WS push failed (non-fatal): ${(pushErr as Error).message}`,
+        );
+      }
+    }
+
     return NextResponse.json({ success: true, ...summary });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

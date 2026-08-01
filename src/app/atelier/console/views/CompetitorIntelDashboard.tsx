@@ -40,6 +40,8 @@ import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
 } from "./DashboardTemplates";
+import { CrisisIndicator } from "./CrisisIndicator";
+import { useLiveAlerts } from "./useLiveAlerts";
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 const SHADOW = { card: C.shadowSm, deep: C.shadowMd };
@@ -1571,7 +1573,14 @@ export function CompetitorIntelDashboard({
   const [competitors, setCompetitors] = useState<CompetitorEntry[]>(injectedCompetitors ?? []);
   const [moves, setMoves] = useState<CompetitorMove[]>(injectedMoves ?? []);
   const [extNeighbors, setExtNeighbors] = useState<NeighborExtended[]>([]);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  // ─── Live alerts via WebSocket (port 3003) ────────────────────
+  // Task: dataminr-realtime-crisis — the tactical alert terminal now
+  // streams in real-time. The REST fetch below is kept only as a
+  // one-time bootstrap; the hook itself does the same call on mount
+  // and then upgrades to WebSocket push.
+  const live = useLiveAlerts();
+  const alerts = live.alerts as AlertItem[];
+  const liveFlashIds = live.flashIds;
   const [topics, setTopics] = useState<RawTopic[]>([]);
   const [trend, setTrend] = useState<"up" | "down" | "stable">("stable");
   const [breakdown, setBreakdown] = useState<{ positive: number; neutral: number; negative: number } | null>(null);
@@ -1643,12 +1652,12 @@ export function CompetitorIntelDashboard({
       let neighborList: CompetitorEntry[] = [];
       let extList: NeighborExtended[] = [];
       let competitorsTracked = 0;
-      let rawAlerts: AlertItem[] = [];
 
+      // NOTE: alerts now stream in via useLiveAlerts (WebSocket).
+      // We still drain alertsRes so the Promise.allSettled pattern
+      // doesn't leak, but the alerts state is owned by the hook.
       if (alertsRes.ok) {
-        const a = await alertsRes.json();
-        rawAlerts = (a.alerts ?? []) as AlertItem[];
-        setAlerts(rawAlerts);
+        await alertsRes.json();
       }
 
       if (neighborsRes.ok) {
@@ -3293,6 +3302,11 @@ export function CompetitorIntelDashboard({
       </div>
       </section>
 
+      {/* ─── Crisis indicator (after KPI strip) ────────────────────
+          Task: dataminr-realtime-crisis — surfaces the real-time
+          crisis score before the user dives into competitor moves. */}
+      <CrisisIndicator />
+
       {/* ─── View Mode Tabs ─── */}
       <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
         <button onClick={() => setViewMode("overview")} style={{ padding: "10px 20px", fontSize: 12, fontFamily: FONT.sans, fontWeight: 600, border: "none", borderBottom: viewMode === "overview" ? `2px solid ${ACCENT}` : "2px solid transparent", background: "transparent", color: viewMode === "overview" ? ACCENT : C.textMuted, cursor: "pointer", transition: "all 0.15s" }}>Overview</button>
@@ -4287,7 +4301,38 @@ export function CompetitorIntelDashboard({
           flexWrap: "wrap",
           gap: "8px",
         }}>
-          <span>{"\u25A0"} Executive Module 3 {"\u2014"} Tactical Alert Terminal ({filteredTacticalRows.length} signals)</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span>{"\u25A0"} Executive Module 3 {"\u2014"} Tactical Alert Terminal ({filteredTacticalRows.length} signals)</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontFamily: FONT.mono,
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                padding: "2px 6px",
+                borderRadius: 2,
+                background: live.isLive ? "rgba(16,185,129,0.12)" : "rgba(115,115,115,0.10)",
+                color: live.isLive ? C.success : C.textMuted,
+                border: `1px solid ${live.isLive ? C.success : C.border}`,
+              }}
+              title={live.transport === "ws" ? "WebSocket push (port 3003)" : "15s polling fallback"}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: live.isLive ? C.success : C.textMuted,
+                  display: "inline-block",
+                  animation: live.isLive ? "harch-crisis-pulse 1.6s infinite" : undefined,
+                }}
+              />
+              {live.isLive ? "LIVE" : live.transport === "poll" ? "POLL" : "CONNECTING"}
+            </span>
+          </span>
           <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "9px", color: C.textMuted, textTransform: "uppercase", fontWeight: 600 }}>
             <input
               type="checkbox"
