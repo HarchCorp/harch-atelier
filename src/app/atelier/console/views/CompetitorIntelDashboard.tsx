@@ -3836,11 +3836,14 @@ export function CompetitorIntelDashboard({
         </div>
       </div>
       </DashboardErrorBoundary>
-
-      {/* ═══════════════════════════════════════════════════════════
-          BOTTOM STRIP — 24-col cross-cutting widgets
-          ═══════════════════════════════════════════════════════════ */}
       </section>
+
+      </>
+      )}
+
+      {/* ═══ DEEP DIVE: Bottom Strip + Executive Modules ═══ */}
+      {viewMode === "deep" && (
+      <>
       <section data-template-row="3">
       <DashboardErrorBoundary title="Bottom Strip — Cross-Cutting Widgets" accent={ACCENT} subtitle="Alert timeline, sentiment matrix, movers, network graph, scorecard">
       <div
@@ -3953,13 +3956,7 @@ export function CompetitorIntelDashboard({
         </WarRoomCard>
       </div>
       </DashboardErrorBoundary>
-
-      </>
-      )}
-
-      {/* ═══ DEEP DIVE: Executive Modules + Bottom Strip ═══ */}
-      {viewMode === "deep" && (
-      <>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════
           EXECUTIVE MODULES — Radar Prédateur d'Offensive
