@@ -24,6 +24,7 @@ import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import type { HexagonLayer as HexagonLayerType } from "@deck.gl/aggregation-layers";
 import type { ScatterplotLayer as ScatterplotLayerType } from "@deck.gl/layers";
+import { GeoHeatmap } from "./GeoHeatmap";
 import {
   ResponsiveContainer,
   LineChart,
@@ -727,124 +728,6 @@ const SentimentBadge = memo(function SentimentBadge({ sentiment, score }: { sent
   );
 });
 
-// ─── Geo Heatmap (deck.gl + maplibre, dynamic import) ───────────
-// The alerts API currently carries no geo coordinates. When it does,
-// this widget will render a 3D hexagon layer over a Maplibre base map.
-// Until then it shows AWAITING GEO TELEMETRY (zero mock data).
-
-interface GeoPoint {
-  position: [number, number]; // [lng, lat]
-  weight: number;
-}
-
-function extractGeoPoints(alerts: BrandMonitorAlert[]): GeoPoint[] {
-  // The real API does not yet return coordinates on alerts.
-  // We scan for any future geo field; if absent, return [].
-  const points: GeoPoint[] = [];
-  for (const a of alerts) {
-    const rec = a as unknown as Record<string, unknown>;
-    const lat = rec["lat"] ?? rec["latitude"];
-    const lng = rec["lng"] ?? rec["longitude"] ?? rec["lon"];
-    if (typeof lat === "number" && typeof lng === "number") {
-      points.push({ position: [lng, lat], weight: 1 });
-    }
-  }
-  return points;
-}
-
-const GeoHeatmap = memo(function GeoHeatmap({ alerts }: { alerts: BrandMonitorAlert[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const geoPoints = useMemo(() => extractGeoPoints(alerts), [alerts]);
-  const instancesRef = useRef<{ deck: DeckGL | null; map: MaplibreMap | null }>({ deck: null, map: null });
-
-  useEffect(() => {
-    if (geoPoints.length === 0 || !containerRef.current) return;
-    let cancelled = false;
-
-    (async () => {
-      const [{ Deck }, aggregationMod, maplibreMod] = await Promise.all([
-        import("@deck.gl/core"),
-        import("@deck.gl/aggregation-layers"),
-        import("maplibre-gl"),
-      ]);
-      if (cancelled || !containerRef.current) return;
-
-      const HexagonLayer = aggregationMod.HexagonLayer as typeof HexagonLayerType;
-      const Map = maplibreMod.Map;
-      const map = new Map({
-        container: containerRef.current,
-        style: "https://demotiles.maplibre.org/style.json",
-        center: [0, 20],
-        zoom: 1.5,
-        interactive: false,
-      });
-
-      // Adaptive hexagon radius: under 10k points use the standard
-      // 200km radius; above 10k points shrink to 120km to avoid
-      // overdraw and GPU stalls from overlapping hex columns.
-      const hexRadius = geoPoints.length > 10000 ? 120000 : 200000;
-
-      const layer = new HexagonLayer({
-        id: "reputation-heatmap",
-        data: geoPoints,
-        getPosition: (d: { position: [number, number] }) => d.position,
-        getElevationWeight: (d: { weight: number }) => d.weight,
-        radius: hexRadius,
-        elevationScale: 100,
-        extruded: true,
-        opacity: 0.85,
-        coverage: 0.9,
-        // updateTriggers: only re-aggregate when the data array changes.
-        // getPosition / getElevationWeight are stable closures over a
-        // stable record shape, so a data change is the only trigger.
-        updateTriggers: {
-          getPosition: 1,
-          getElevationWeight: 1,
-        },
-        colorRange: [
-          [5, 150, 105],
-          [16, 185, 129],
-          [52, 211, 153],
-          [110, 231, 183],
-          [167, 243, 208],
-          [209, 250, 229],
-        ],
-      });
-
-      const deck = new Deck({
-        canvas: containerRef.current.querySelector("canvas") ?? undefined,
-        width: "100%",
-        height: "100%",
-        initialViewState: { longitude: 0, latitude: 20, zoom: 1.5 },
-        layers: [layer],
-        controller: false,
-      });
-
-      instancesRef.current = { deck, map };
-    })().catch(() => {
-      // silent — telemetry state already shown
-    });
-
-    return () => {
-      cancelled = true;
-      const { deck, map } = instancesRef.current;
-      if (deck) {
-        deck.finalize();
-      }
-      if (map) {
-        map.remove();
-      }
-      instancesRef.current = { deck: null, map: null };
-    };
-  }, [geoPoints]);
-
-  if (geoPoints.length === 0) {
-    return <AwaitingTelemetry label="AWAITING GEO TELEMETRY" />;
-  }
-
-  return <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 360, position: "relative" }} />;
-});
-
 // ─── 3D Geographic Cartography (deck.gl + maplibre, interactive) ─
 // Module 2 — interactive hexagon + scatterplot layer. Maplibre base
 // map is non-interactive (renders tiles only); deck.gl handles pan,
@@ -1284,12 +1167,6 @@ export function BrandMonitorDashboard({
     link.click();
     URL.revokeObjectURL(url);
   }, [filteredSources]);
-
-  // ─── Top-level geoPoints (derived from alerts via extractGeoPoints) ──
-  // Memoized so downstream consumers (the GeoHeatmap widget already
-  // memoizes its own copy, but exposing it here lets future widgets
-  // reuse the same computation without re-deriving).
-  const geoPoints = useMemo(() => extractGeoPoints(alerts), [alerts]);
 
   // ═══ CHART DATASETS (all from real API responses, zero mock) ═══
 
@@ -2304,12 +2181,16 @@ export function BrandMonitorDashboard({
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
             <section data-template-row="2" style={{ display: "contents" }}>
 
-            {/* Widget 5: Geographic Heatmap (deck.gl) */}
+            {/* Widget 5: Geographic Heatmap (SVG Morocco map) */}
             <div style={{ gridColumn: "span 12" }}>
-              <Widget title="Geographic Intelligence" subtitle="DECK.GL · HEXAGON LAYER" style={{ minHeight: 400 }}>
+              <Widget title="Geographic Intelligence" subtitle="MOROCCO · ALERT HEATMAP" style={{ minHeight: 400 }}>
                 <div style={{ height: 360 }}>
                   <DashboardErrorBoundary accent={ACCENT}>
-                    <GeoHeatmap alerts={alerts} />
+                    <GeoHeatmap
+                      onSelectCity={(c) => setGeoDrillDownCity((prev) => (prev === c ? null : c))}
+                      selectedCity={geoDrillDownCity}
+                      height={360}
+                    />
                   </DashboardErrorBoundary>
                 </div>
               </Widget>

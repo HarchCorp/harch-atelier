@@ -444,6 +444,46 @@ export function detectLanguage(text: string): "ar" | "fr" | "en" {
   return "en";
 }
 
+// ─── ENHANCED SENTIMENT ANALYSIS (Task: dataminr-geo-multimodal) ──
+//
+//  The legacy Darija sentiment analyzer was a small lexicon (60 words
+//  per language). We now ship a much larger multilingual lexicon
+//  (FR 432 / AR 218 / EN 606 words) with proper negation handling
+//  ("pas bon" → negative) and intensity modifiers ("très bon" → 1.5×
+//  positive). The new analyzer lives in
+//  `src/lib/harchiq/sentiment-analyzer.ts`.
+//
+//  This wrapper exposes a per-article entry point that the run-scrape
+//  pipeline calls to populate `Article.sentimentScore` /
+//  `Article.sentimentLabel` with the enhanced read.
+
+import {
+  analyzeArticleSentiment as analyzeArticleSentimentEnhanced,
+  type SentimentAnalysis,
+} from "@/lib/harchiq/sentiment-analyzer";
+
+/**
+ * Analyse a scraped article's sentiment using the enhanced
+ * multilingual lexicon (FR/AR/EN).
+ *
+ * Operates on the combined title + description (and content when
+ * present). Returns:
+ *   • score      ∈ [-1, +1]  → stored in `Article.sentimentScore`
+ *   • label      ∈ { positive, neutral, negative }
+ *                              → stored in `Article.sentimentLabel`
+ *   • confidence ∈ [0, 1]
+ *   • language   ∈ { fr, ar, en }
+ *   • keyPhrases — top 5 n-grams that drove the score
+ *
+ * Cost: ~1ms per KB of text. No I/O, no LLM round-trip.
+ */
+export function analyzeArticleSentiment(article: ScrapedArticle): SentimentAnalysis {
+  return analyzeArticleSentimentEnhanced(
+    article.title || "",
+    article.description || article.content || "",
+  );
+}
+
 /**
  * Detect language via the Darija NLP module — returns the rich label
  * (darija | arabic | french | english | mixed) plus confidence and

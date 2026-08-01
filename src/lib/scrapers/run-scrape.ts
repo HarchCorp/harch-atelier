@@ -21,12 +21,12 @@ import { logInfo, logWarn, logError } from "@/lib/logger";
 import {
   MOROCCAN_FEEDS,
   scrapeFeed,
+  analyzeArticleSentiment as analyzeArticleSentimentEnhanced,
   type RSSFeed,
   type ScrapedArticle,
 } from "@/lib/scrapers/rss-scraper";
 import { matchArticleToCompanies } from "@/lib/scrapers/company-matcher";
 import {
-  analyzeSentiment,
   extractEntities,
   detectLanguage as detectDarijaLanguage,
 } from "@/lib/harchiq/darija";
@@ -151,9 +151,20 @@ export async function runRssScrape(): Promise<ScrapeSummary> {
         try {
           const nlpInput = `${article.title} ${article.description}`;
 
-          // ── NLP: detectLanguage → analyzeSentiment → extractEntities ──
+          // ── NLP: detectLanguage → enhancedSentiment → extractEntities ──
+          //
+          //  Task: dataminr-geo-multimodal — the sentiment read now
+          //  uses the enhanced multilingual lexicon (FR 432 / AR 218 /
+          //  EN 606 words) with negation + intensity handling, defined
+          //  in src/lib/harchiq/sentiment-analyzer.ts. The wrapper in
+          //  rss-scraper.ts accepts a ScrapedArticle and returns the
+          //  enhanced SentimentAnalysis.
+          //
+          //  The Darija module is still used for language detection
+          //  (it knows about Arabizi / Darija variants) and entity
+          //  extraction (Moroccan-specific entity gazetteer).
           const detected = detectDarijaLanguage(nlpInput);
-          const sentiment = analyzeSentiment(nlpInput, detected.language);
+          const sentiment = analyzeArticleSentimentEnhanced(article);
           const entities = extractEntities(nlpInput, detected.language);
 
           // ── COMPANY MATCHING ──
