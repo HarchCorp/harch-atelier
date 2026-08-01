@@ -2110,7 +2110,7 @@ const AssetRow = memo(function AssetRow({
       >
         {asset.assetType}
       </span>
-      <span style={{ textAlign: "right", color: TEXT_BODY, fontWeight: 600, flex: "1 1 auto", marginLeft: "auto", whiteSpace: "nowrap" }}>
+      <span style={{ textAlign: "right", color: TEXT_BODY, fontWeight: 600, flex: "1 1 auto", marginLeft: "auto", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
         {livePrice !== null
           ? livePrice.toLocaleString("en-US", { maximumFractionDigits: 2 })
           : "—"}
