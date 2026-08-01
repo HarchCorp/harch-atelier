@@ -3253,6 +3253,7 @@ export function InvestorDeskDashboard({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [sortField, setSortField] = useState<"companyName" | "weight" | "reputationScore" | "highRiskCount">("companyName");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"overview" | "deep">("overview");
 
   // ─── Real sanctions screening state ───────────────────────────
   //  `screening` holds the aggregate screening result for every
@@ -3616,7 +3617,46 @@ export function InvestorDeskDashboard({
         <div style={{ marginBottom: "20px" }}><ErrorState accent={ACCENT} message="Cannot reach forensic data feeds. Retrying on next refresh." /></div>
       )}
 
-      {/* ═══ ROW 1 — RISK STRIP (5 KPI tiles, 24 cols) ═══ */}
+      {/* ─── View Mode Tabs ─── */}
+      <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+        <button
+          onClick={() => setViewMode("overview")}
+          style={{
+            padding: "10px 20px",
+            fontSize: 12,
+            fontFamily: FONT.sans,
+            fontWeight: 600,
+            border: "none",
+            borderBottom: viewMode === "overview" ? `2px solid ${ACCENT}` : "2px solid transparent",
+            background: "transparent",
+            color: viewMode === "overview" ? ACCENT : C.textMuted,
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setViewMode("deep")}
+          style={{
+            padding: "10px 20px",
+            fontSize: 12,
+            fontFamily: FONT.sans,
+            fontWeight: 600,
+            border: "none",
+            borderBottom: viewMode === "deep" ? `2px solid ${ACCENT}` : "2px solid transparent",
+            background: "transparent",
+            color: viewMode === "deep" ? ACCENT : C.textMuted,
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+        >
+          Deep Dive
+        </button>
+      </div>
+
+      {/* ═══ ROW 1 — RISK STRIP (5 KPI tiles, 24 cols) — OVERVIEW ═══ */}
+      {viewMode === "overview" && (
       <section data-template-row="1" style={{ display: "contents" }}>
       <div style={{ ...gridCols([5, 5, 5, 5, 4]), marginBottom: "16px" }}>
         <div style={colSpan(5)}><KpiTile index={1} label="Adverse Media Hits" value={kpis?.adverseMediaHits ?? 0} color={adverseColor} sublabel={adverseColor === RED ? "Threshold breached" : "Within tolerance"} loading={loading} /></div>
@@ -3626,51 +3666,14 @@ export function InvestorDeskDashboard({
         <div style={colSpan(4)}><KpiTile index={5} label="Holdings Watch" value={kpis?.totalHoldings ?? 0} color={ACCENT} sublabel="Tracked positions" loading={loading} /></div>
       </div>
 
-      {/* ═══ ROW 2 — DD Checklist (6) · Entity Graph (12) · Red Flags (6) ═══ */}
+      {/* ═══ ROW 2 — OVERVIEW: Sanctions + Red Flags Feed ═══ */}
       </section>
+      )}
+      {viewMode === "overview" && (
       <section data-template-row="2" style={{ display: "contents" }}>
-      <div style={{ ...gridCols([6, 12, 6]), marginBottom: "16px" }}>
-        {/* LEFT — DD Checklist column */}
+      <div style={{ ...gridCols([6, 18]), marginBottom: "16px" }}>
         <div style={colSpan(6)}>
-          <div style={chartCardStyle}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-              <div>
-                <div style={chartTitleStyle}>07 — Due Diligence Checklist</div>
-                <div style={chartSubtitleStyle}>Virtualized · {holdings.length * 18} checks queued</div>
-              </div>
-              <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>OFAC · Sanctions · Litig · ESG · Labor · Reg</div>
-            </div>
-            <DdChecklist holdings={holdings} loading={loading} />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
-            <OfacCard holdings={holdings} />
-            <LitigationCard holdings={holdings} />
-            <EsgGauge avgReputation={kpis?.avgReputation ?? null} />
-          </div>
-        </div>
-
-        {/* CENTER — Entity Graph (React Flow) */}
-        <div style={colSpan(12)}>
-          <div style={chartCardStyle}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-              <div>
-                <div style={chartTitleStyle}>06 — Entity Resolution Graph</div>
-                <div style={chartSubtitleStyle}>React Flow · ownership / control topology</div>
-              </div>
-              <div style={{ display: "flex", gap: 12, fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                <span><span style={{ display: "inline-block", width: 8, height: 8, background: ACCENT, marginRight: 4, verticalAlign: "middle" }} />Book</span>
-                <span><span style={{ display: "inline-block", width: 8, height: 8, background: "#3b6ea5", marginRight: 4, verticalAlign: "middle" }} />Company</span>
-                <span><span style={{ display: "inline-block", width: 8, height: 8, background: C.borderStrong, marginRight: 4, verticalAlign: "middle" }} />Asset</span>
-              </div>
-            </div>
-            <DashboardErrorBoundary title="06 — Entity Resolution Graph" accent={ACCENT}>
-              <EntityGraph holdings={holdings} portfoliosCount={kpis?.portfoliosManaged ?? 0} loading={loading} />
-            </DashboardErrorBoundary>
-          </div>
-        </div>
-
-        {/* RIGHT — Red Flags Feed column */}
-        <div style={colSpan(6)}>
+          <OfacCard holdings={holdings} />
           <div style={chartCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
               <div>
@@ -3688,9 +3691,56 @@ export function InvestorDeskDashboard({
           </div>
         </div>
       </div>
-
-      {/* ═══ ROW 3 — Adverse Media Timeline (24 cols, ECharts) ═══ */}
       </section>
+      )}
+
+      {/* ═══ ROW 2 — DEEP: DD Checklist + Entity Graph ═══ */}
+      {viewMode === "deep" && (
+      <section data-template-row="2" style={{ display: "contents" }}>
+      <div style={{ ...gridCols([6, 18]), marginBottom: "16px" }}>
+        {/* LEFT — DD Checklist column */}
+        <div style={colSpan(6)}>
+          <div style={chartCardStyle}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <div>
+                <div style={chartTitleStyle}>07 — Due Diligence Checklist</div>
+                <div style={chartSubtitleStyle}>Virtualized · {holdings.length * 18} checks queued</div>
+              </div>
+              <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>OFAC · Sanctions · Litig · ESG · Labor · Reg</div>
+            </div>
+            <DdChecklist holdings={holdings} loading={loading} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+            <LitigationCard holdings={holdings} />
+            <EsgGauge avgReputation={kpis?.avgReputation ?? null} />
+          </div>
+        </div>
+
+        {/* CENTER — Entity Graph (React Flow) */}
+        <div style={colSpan(18)}>
+          <div style={chartCardStyle}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <div>
+                <div style={chartTitleStyle}>06 — Entity Resolution Graph</div>
+                <div style={chartSubtitleStyle}>React Flow · ownership / control topology</div>
+              </div>
+              <div style={{ display: "flex", gap: 12, fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                <span><span style={{ display: "inline-block", width: 8, height: 8, background: ACCENT, marginRight: 4, verticalAlign: "middle" }} />Book</span>
+                <span><span style={{ display: "inline-block", width: 8, height: 8, background: "#3b6ea5", marginRight: 4, verticalAlign: "middle" }} />Company</span>
+                <span><span style={{ display: "inline-block", width: 8, height: 8, background: C.borderStrong, marginRight: 4, verticalAlign: "middle" }} />Asset</span>
+              </div>
+            </div>
+            <DashboardErrorBoundary title="06 — Entity Resolution Graph" accent={ACCENT}>
+              <EntityGraph holdings={holdings} portfoliosCount={kpis?.portfoliosManaged ?? 0} loading={loading} />
+            </DashboardErrorBoundary>
+          </div>
+        </div>
+      </div>
+      </section>
+      )}
+
+      {/* ═══ ROW 3 — Adverse Media Timeline (24 cols, ECharts) — OVERVIEW ═══ */}
+      {viewMode === "overview" && (
       <section data-template-row="3" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
@@ -3709,8 +3759,10 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 4 — Cross-Border Heatmap (12) · Dossier Pipeline Funnel (12) ═══ */}
+      {/* ═══ ROW 4 — Cross-Border Heatmap (12) · Dossier Pipeline Funnel (12) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="4" style={{ display: "contents" }}>
       <div style={{ ...gridCols([12, 12]), marginBottom: "16px" }}>
         <div style={colSpan(12)}>
@@ -3741,8 +3793,10 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 5 — Preserved 6 Recharts (8/8/8) ═══ */}
+      {/* ═══ ROW 5 — Preserved 6 Recharts (8/8/8) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="5" style={{ display: "contents" }}>
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "12px", marginBottom: "16px" }}>
@@ -3845,8 +3899,10 @@ export function InvestorDeskDashboard({
         </div>
       )}
 
-      {/* ═══ ROW 6 — Preserved 6 Recharts (8/8/8, second row) ═══ */}
+      {/* ═══ ROW 6 — Preserved 6 Recharts (8/8/8, second row) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="6" style={{ display: "contents" }}>
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "12px", marginBottom: "16px" }}>
@@ -3925,8 +3981,10 @@ export function InvestorDeskDashboard({
         </div>
       )}
 
-      {/* ═══ ROW 7 — Threat Network Graph (24 cols, ECharts force-directed) ═══ */}
+      {/* ═══ ROW 7 — Threat Network Graph (24 cols, ECharts force-directed) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="7" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
@@ -3945,8 +4003,10 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 7.5 — Module 1: Moteur de Due Diligence UBO (24 cols, 10k+ nodes) ═══ */}
+      {/* ═══ ROW 7.5 — Module 1: Moteur de Due Diligence UBO (24 cols, 10k+ nodes) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="8" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
@@ -3977,8 +4037,10 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 7.6 — Module 2: Registre de Conformité Globale (24 cols, REAL OFAC/EU/UN) ═══ */}
+      {/* ═══ ROW 7.6 — Module 2: Registre de Conformité Globale (24 cols, REAL OFAC/EU/UN) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="9" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
@@ -4013,8 +4075,10 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 7.7 — Module 3: Timeline Adverse Media 15 Ans (24 cols, ECharts) ═══ */}
+      {/* ═══ ROW 7.7 — Module 3: Timeline Adverse Media 15 Ans (24 cols, ECharts) — DEEP ═══ */}
       </section>
+      )}
+      {viewMode === "deep" && (
       <section data-template-row="10" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
@@ -4033,8 +4097,10 @@ export function InvestorDeskDashboard({
         </div>
       </div>
 
-      {/* ═══ ROW 8 — Virtualized Holdings Table (24 cols, preserved features) ═══ */}
+      {/* ═══ ROW 8 — Virtualized Holdings Table (24 cols, preserved features) — OVERVIEW ═══ */}
       </section>
+      )}
+      {viewMode === "overview" && (
       <section data-template-row="11" style={{ display: "contents" }}>
       <div style={{ ...gridCols([24]), marginBottom: "16px" }}>
         <div style={colSpan(24)}>
@@ -4061,6 +4127,7 @@ export function InvestorDeskDashboard({
 
       {/* ─── Injected red flags (preserved for backward compatibility) ─── */}
       </section>
+      )}
       {injectedRedFlags && injectedRedFlags.length > 0 && (
         <div>
           <div style={{ ...labelStyle, color: RED, marginBottom: "12px" }}>

@@ -2460,6 +2460,7 @@ export function AlphaDeskDashboard({
   const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "stock" | "crypto" | "fx" | "commodity">("all");
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"overview" | "deep">("overview");
 
   // All-asset correlation data (includes alignedData for heatmaps + sparklines)
   const [assetCorrData, setAssetCorrData] = useState<AssetCorrEntry[]>([]);
@@ -3614,9 +3615,48 @@ export function AlphaDeskDashboard({
         </div>
       ) : (
         <>
+          {/* ─── View Mode Tabs ─── */}
+          <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <button
+              onClick={() => setViewMode("overview")}
+              style={{
+                padding: "10px 20px",
+                fontSize: 12,
+                fontFamily: FONT.sans,
+                fontWeight: 600,
+                border: "none",
+                borderBottom: viewMode === "overview" ? `2px solid ${ACCENT}` : "2px solid transparent",
+                background: "transparent",
+                color: viewMode === "overview" ? ACCENT : C.textMuted,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setViewMode("deep")}
+              style={{
+                padding: "10px 20px",
+                fontSize: 12,
+                fontFamily: FONT.sans,
+                fontWeight: 600,
+                border: "none",
+                borderBottom: viewMode === "deep" ? `2px solid ${ACCENT}` : "2px solid transparent",
+                background: "transparent",
+                color: viewMode === "deep" ? ACCENT : C.textMuted,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              Deep Dive
+            </button>
+          </div>
+
           {/* ═══════════════════════════════════════════════════════════
-              ROW 1 — PRE-MARKET STRIP (24 cols, 6 KPI tiles × 4 cols each)
+              ROW 1 — PRE-MARKET STRIP (24 cols, 6 KPI tiles × 4 cols each) — OVERVIEW
               ═══════════════════════════════════════════════════════════ */}
+          {viewMode === "overview" && (
           <section data-template-row="1" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -3674,6 +3714,7 @@ export function AlphaDeskDashboard({
               ROW 2 — ASSET SELECTOR (6) | MAIN CHART (12) | ORDER BOOK (6)
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
           <section data-template-row="2" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -3683,7 +3724,8 @@ export function AlphaDeskDashboard({
               marginBottom: "8px",
             }}
           >
-            {/* 9. Virtualized Asset List */}
+            {/* 9. Virtualized Asset List — OVERVIEW */}
+            {viewMode === "overview" && (
             <DashboardErrorBoundary title="Asset Selector" accent={ACCENT}>
             <WidgetCard
               title={`Asset Selector · ${filteredAssets.length}`}
@@ -3732,8 +3774,10 @@ export function AlphaDeskDashboard({
               )}
             </WidgetCard>
             </DashboardErrorBoundary>
+            )}
 
-            {/* 7. Candlestick + Z-Score Overlay */}
+            {/* 7. Candlestick + Z-Score Overlay — OVERVIEW */}
+            {viewMode === "overview" && (
             <DashboardErrorBoundary title="Candlestick + Z-Score" accent={ACCENT}>
             <WidgetCard
               title={`Candlestick + Z-Score · ${selectedTicker ?? "—"}`}
@@ -3842,8 +3886,10 @@ export function AlphaDeskDashboard({
               )}
             </WidgetCard>
             </DashboardErrorBoundary>
+            )}
 
-            {/* 10. NLP Order-Book Depth */}
+            {/* 10. NLP Order-Book Depth — DEEP */}
+            {viewMode === "deep" && (
             <DashboardErrorBoundary title="Order-Book Depth" accent={ACCENT}>
             <WidgetCard
               title="NLP Order-Book Depth"
@@ -3868,12 +3914,14 @@ export function AlphaDeskDashboard({
               )}
             </WidgetCard>
             </DashboardErrorBoundary>
+            )}
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 3 — LLM PROBE (8) | CORRELATION GRID (8) | VOLATILITY (8)
+              ROW 3 — LLM PROBE (8) | CORRELATION GRID (8) | VOLATILITY (8) — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          {viewMode === "deep" && (
           <section data-template-row="3" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4011,9 +4059,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 4 — MULTI-ASSET DASHBOARD (24 cols, 8 sparkline cards)
+              ROW 4 — MULTI-ASSET DASHBOARD (24 cols, 8 sparkline cards) — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="4" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4089,9 +4139,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 5 — SIGNAL FEED (12) | ALPHA SCORECARD (12)
+              ROW 5 — SIGNAL FEED (12) | ALPHA SCORECARD (12) — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="5" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4194,9 +4246,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 6 — Correlation quick-view (preserved from V7, full width)
+              ROW 6 — Correlation quick-view (preserved from V7, full width) — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="6" className="alpha-row" style={{ display: "contents" }}>
           {selectedTicker && correlation && (
             <div
@@ -4246,9 +4300,11 @@ export function AlphaDeskDashboard({
           )}
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 7 — Dual Axis (12) | Pearson r Distribution (12)
+              ROW 7 — Dual Axis (12) | Pearson r Distribution (12) — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="7" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4331,9 +4387,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 8 — Sentiment Pie (6) | Top Movers (6) | Heatmap (6) | Latency (6)
+              ROW 8 — Sentiment Pie (6) | Top Movers (6) | Heatmap (6) | Latency (6) — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="8" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4481,10 +4539,12 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              ROW 9 — Asset Performance Comparison (full width, Recharts)
+              ROW 9 — Asset Performance Comparison (full width, Recharts) — DEEP
               Preserved from V7 (chart 2)
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="9" className="alpha-row" style={{ display: "contents" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(24, 1fr)", gap: "8px" }}>
             <DashboardErrorBoundary title="Asset Performance" accent={ACCENT}>
@@ -4575,9 +4635,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              EXECUTIVE MODULE 1 — Sélecteur de Marché Global & Régional
+              EXECUTIVE MODULE 1 — Sélecteur de Marché Global & Régional — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="10" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -4886,9 +4948,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              EXECUTIVE MODULE 2 — Multi-Devises & Settlement Ledger
+              EXECUTIVE MODULE 2 — Multi-Devises & Settlement Ledger — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="11" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -5029,9 +5093,11 @@ export function AlphaDeskDashboard({
           </div>
 
           {/* ═══════════════════════════════════════════════════════════
-              EXECUTIVE MODULE 3 — Matrice Multi-Asset Z-Score & Order-Book
+              EXECUTIVE MODULE 3 — Matrice Multi-Asset Z-Score & Order-Book — DEEP
               ═══════════════════════════════════════════════════════════ */}
           </section>
+          )}
+          {viewMode === "deep" && (
           <section data-template-row="12" className="alpha-row" style={{ display: "contents" }}>
           <div
             style={{
@@ -5212,6 +5278,7 @@ export function AlphaDeskDashboard({
 
           {/* ─── Footer signature ─── */}
           </section>
+          )}
           <div
             style={{
               marginTop: "16px",
