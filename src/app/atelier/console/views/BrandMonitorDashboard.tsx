@@ -1142,6 +1142,7 @@ export function BrandMonitorDashboard({
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "positive" | "negative" | "neutral">("all");
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"overview" | "deep">("overview");
 
   // ─── Executive module state (Modules 1-3) ─────────────────────
   const [languageFilter, setLanguageFilter] = useState<"all" | LangCode>("all");
@@ -2204,7 +2205,46 @@ export function BrandMonitorDashboard({
         <ErrorState accent={ACCENT} message="Can't reach reputation sources. Retrying..." />
       ) : (
         <>
-          {/* ═══ 24-COLUMN COMMAND GRID ═══ */}
+          {/* ─── View Mode Tabs ─── */}
+          <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <button
+              onClick={() => setViewMode("overview")}
+              style={{
+                padding: "10px 20px",
+                fontSize: 12,
+                fontFamily: FONT.sans,
+                fontWeight: 600,
+                border: "none",
+                borderBottom: viewMode === "overview" ? `2px solid ${ACCENT}` : "2px solid transparent",
+                background: "transparent",
+                color: viewMode === "overview" ? ACCENT : C.textMuted,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setViewMode("deep")}
+              style={{
+                padding: "10px 20px",
+                fontSize: 12,
+                fontFamily: FONT.sans,
+                fontWeight: 600,
+                border: "none",
+                borderBottom: viewMode === "deep" ? `2px solid ${ACCENT}` : "2px solid transparent",
+                background: "transparent",
+                color: viewMode === "deep" ? ACCENT : C.textMuted,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              Deep Dive
+            </button>
+          </div>
+
+          {/* ═══ OVERVIEW MODE: 5 key widgets ═══ */}
+          {viewMode === "overview" && (
           <div className="bm-grid" style={gridWrapStyle}>
 
             {/* ─── ROW 1: Executive Strip (4 × span-6) ─── */}
@@ -2553,6 +2593,14 @@ export function BrandMonitorDashboard({
             </div>
 
             </section>
+
+          </div>
+          )}
+
+          {/* ═══ DEEP DIVE MODE: full analytics ═══ */}
+          {viewMode === "deep" && (
+          <>
+          <div className="bm-grid" style={gridWrapStyle}>
 
             {/* ─── ROW 6: Topic Intelligence (12 + 6 + 6) ─── */}
             <section data-template-row="6" style={{ display: "contents" }}>
@@ -3902,6 +3950,8 @@ export function BrandMonitorDashboard({
                 </div>
               </div>
             </div>
+          )}
+          </>
           )}
         </>
       )}
