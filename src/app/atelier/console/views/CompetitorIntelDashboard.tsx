@@ -307,46 +307,52 @@ function AwaitingTelemetry({ label }: { label: string }) {
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-        minHeight: 160,
-        gap: 8,
+        minHeight: 140,
+        gap: 6,
+        border: `1px dashed ${C.border}`,
+        borderRadius: "4px",
+        background: C.bgSubtle,
       }}
     >
       <div
         style={{
-          width: 8,
-          height: 8,
+          width: 20,
+          height: 20,
           borderRadius: "50%",
-          background: C.textMuted,
-          animation: "war-room-pulse 1.5s infinite",
+          border: `1.5px solid ${C.border}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: C.textMuted,
+          fontSize: 10,
         }}
-      />
+      >
+        —
+      </div>
       <div
         style={{
           fontFamily: FONT.mono,
           fontSize: 10,
           color: C.textMuted,
-          letterSpacing: "0.14em",
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
+          fontWeight: 600,
         }}
       >
         {label}
       </div>
       <div
         style={{
-          fontFamily: FONT.mono,
-          fontSize: 9,
+          fontFamily: FONT.sans,
+          fontSize: 11,
           color: C.border,
-          letterSpacing: "0.1em",
+          maxWidth: 200,
+          textAlign: "center" as const,
+          lineHeight: 1.4,
         }}
       >
-        AWAITING TELEMETRY
+        Data will populate as sources are ingested.
       </div>
-      <style>{`
-        @keyframes war-room-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(0.7); }
-        }
-      `}</style>
     </div>
   );
 }

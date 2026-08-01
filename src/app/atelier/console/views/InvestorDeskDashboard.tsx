@@ -318,11 +318,10 @@ const labelStyle: React.CSSProperties = {
 
 function AwaitingTelemetry({ label, minHeight = 200 }: { label: string; minHeight?: number }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight, gap: 8 }}>
-      <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.textMuted, animation: "ftpulse 1.5s ease-in-out infinite" }} />
-      <div style={{ fontFamily: FONT.mono, fontSize: 10, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase" }}>{label}</div>
-      <div style={{ fontFamily: FONT.mono, fontSize: 9, color: C.border, letterSpacing: "0.1em" }}>AWAITING TELEMETRY</div>
-      <style>{`@keyframes ftpulse { 0%, 100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.1); } }`}</style>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight, gap: 6, border: `1px dashed ${C.border}`, borderRadius: "4px", background: C.bgSubtle }}>
+      <div style={{ width: 20, height: 20, borderRadius: "50%", border: `1.5px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.textMuted, fontSize: 10 }}>—</div>
+      <div style={{ fontFamily: FONT.mono, fontSize: 10, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>{label}</div>
+      <div style={{ fontFamily: FONT.sans, fontSize: 11, color: C.border, maxWidth: 200, textAlign: "center" as const, lineHeight: 1.4 }}>Data will populate as sources are ingested.</div>
     </div>
   );
 }
