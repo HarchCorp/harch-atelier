@@ -473,38 +473,47 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
   const iconColor = (id: NavId) => activeId === id ? C.sage : C.textMuted;
 
   if (accountType === "harch-alpha") {
+    // The Quant Cockpit — fast, dense, terminal-style
     return [
-      { id: "watchlist",       label: "Watchlist",       icon: <IconMonitor size={16} color={iconColor("watchlist")} /> },
-      { id: "sentiment-price", label: "Sentiment→Price", icon: <IconChart size={16}  color={iconColor("sentiment-price")} /> },
-      { id: "ai-alpha",        label: "AI Alpha",        icon: <IconUsers size={16}  color={iconColor("ai-alpha")} /> },
-      { id: "alerts",          label: "Alerts",          icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
-      { id: "pre-market",      label: "Pre-Market",      icon: <IconReport size={16} color={iconColor("pre-market")} /> },
+      { id: "watchlist",       label: "Pulse",            icon: <IconMonitor size={16} color={iconColor("watchlist")} /> },
+      { id: "sentiment-price", label: "Signal",           icon: <IconChart size={16}  color={iconColor("sentiment-price")} /> },
+      { id: "ai-alpha",        label: "Depth",            icon: <IconUsers size={16}  color={iconColor("ai-alpha")} /> },
+      { id: "alerts",          label: "Alerts",           icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
+      { id: "pre-market",      label: "Positions",        icon: <IconReport size={16} color={iconColor("pre-market")} /> },
     ];
   }
 
   if (accountType === "investment-bank") {
+    // The Forensic Terminal — cold, institutional, compliance-driven
     return [
-      { id: "portfolios", label: "Portfolios", icon: <IconMonitor size={16} color={iconColor("portfolios")} /> },
-      { id: "dossiers",   label: "DD Dossiers", icon: <IconReport size={16} color={iconColor("dossiers")} /> },
-      { id: "esg",        label: "ESG Screen",  icon: <IconChart size={16}  color={iconColor("esg")} /> },
+      { id: "portfolios", label: "Screening",   icon: <IconMonitor size={16} color={iconColor("portfolios")} /> },
+      { id: "dossiers",   label: "Dossiers",    icon: <IconReport size={16} color={iconColor("dossiers")} /> },
+      { id: "esg",        label: "Compliance",  icon: <IconChart size={16}  color={iconColor("esg")} /> },
       { id: "risks",      label: "Risk Map",    icon: <IconUsers size={16}  color={iconColor("risks")} /> },
-      { id: "alerts",     label: "Alerts",      icon: <BellIcon size={16}   color={iconColor("alerts")} /> },
+      { id: "alerts",     label: "Red Flags",   icon: <BellIcon size={16}   color={iconColor("alerts")} /> },
     ];
   }
 
-  // enterprise (default — Brand Monitor + Market & Competitor)
+  if (accountType === "market-competitor") {
+    // The Predator Radar — aggressive, tactical, war-room
+    return [
+      { id: "monitoring",   label: "Battlefield",   icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
+      { id: "competitors",  label: "Intel",         icon: <IconUsers size={16}  color={iconColor("competitors")} /> },
+      { id: "sentiment",    label: "Weapons",       icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
+      { id: "narratives",   label: "Campaigns",     icon: <IconNarrative size={16} color={iconColor("narratives")} /> },
+      { id: "influencers",  label: "Influencers",   icon: <IconInfluencer size={16} color={iconColor("influencers")} /> },
+      { id: "alerts",       label: "Bad Buzz",      icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
+    ];
+  }
+
+  // Brand Monitor — The Calm Shield
   return [
-    { id: "monitoring",   label: "Monitoring",   icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
-    { id: "sentiment",    label: "Sentiment",    icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
-    { id: "competitors",  label: "Competitors",  icon: <IconUsers size={16}  color={iconColor("competitors")} /> },
-    { id: "narratives",   label: "Narratives",   icon: <IconNarrative size={16} color={iconColor("narratives")} /> },
-    { id: "influencers",  label: "Influencers",  icon: <IconInfluencer size={16} color={iconColor("influencers")} /> },
-    { id: "influencers-db", label: "Influencers DB", icon: <IconInfluencerDB size={16} color={iconColor("influencers-db")} /> },
-    { id: "broadcast",    label: "Broadcast",    icon: <IconBroadcast size={16} color={iconColor("broadcast")} /> },
-    { id: "darija",       label: "Darija Analyzer", icon: <IconDarija size={16} color={iconColor("darija")} /> },
+    { id: "monitoring",   label: "Weather",       icon: <IconMonitor size={16} color={iconColor("monitoring")} /> },
+    { id: "alerts",       label: "Signals",       icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
+    { id: "sentiment",    label: "Sentiment",     icon: <IconChart size={16}  color={iconColor("sentiment")} /> },
     { id: "ai-visibility", label: "AI Visibility", icon: <IconAiVisibility size={16} color={iconColor("ai-visibility")} /> },
-    { id: "alerts",       label: "Alerts",       icon: <BellIcon size={16}   color={iconColor("alerts")} />, badge: "3" },
-    { id: "reports",      label: "Reports",      icon: <IconReport size={16} color={iconColor("reports")} /> },
+    { id: "influencers",  label: "Influencers",   icon: <IconInfluencer size={16} color={iconColor("influencers")} /> },
+    { id: "reports",      label: "Reports",       icon: <IconReport size={16} color={iconColor("reports")} /> },
   ];
 }
 
@@ -512,7 +521,8 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
 function defaultNavOrder(accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavId[] {
   if (accountType === "harch-alpha") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
   if (accountType === "investment-bank") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
-  return ["monitoring", "sentiment", "competitors", "narratives", "influencers", "influencers-db", "broadcast", "darija", "ai-visibility", "alerts", "reports"];
+  if (accountType === "market-competitor") return ["monitoring", "competitors", "sentiment", "narratives", "influencers", "alerts"];
+  return ["monitoring", "alerts", "sentiment", "ai-visibility", "influencers", "reports"];
 }
 
 // Default active nav per accountType
