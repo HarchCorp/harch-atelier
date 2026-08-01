@@ -3900,7 +3900,7 @@ export function AlphaDeskDashboard({
                     <span style={{ textAlign: "right" }}>Conf</span>
                   </div>
                   {llmMatrix.map((row) => {
-                    const sColor = row.sentiment !== null
+                    const sColor = row.sentiment != null && typeof row.sentiment === "number"
                       ? row.sentiment > 0.1 ? GREEN : row.sentiment < -0.1 ? RED : TEXT_MUTED
                       : BORDER_STRONG;
                     return (
@@ -3919,7 +3919,7 @@ export function AlphaDeskDashboard({
                       >
                         <span style={{ color: TEXT, fontWeight: 600 }}>{row.engine}</span>
                         <span style={{ textAlign: "right", color: sColor, fontWeight: 700 }}>
-                          {row.sentiment !== null ? row.sentiment.toFixed(2) : "—"}
+                          {row.sentiment != null && typeof row.sentiment === "number" ? row.sentiment.toFixed(2) : "—"}
                         </span>
                         <span style={{ textAlign: "right", fontSize: "9px", color: row.cited ? GREEN : TEXT_MUTED, fontWeight: 700 }}>
                           {row.cited ? "YES" : "NO"}
