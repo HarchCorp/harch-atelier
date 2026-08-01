@@ -64,50 +64,248 @@ export interface ScrapedArticle {
 }
 
 /**
- * RSSFeed — a single Moroccan media RSS feed to scrape on schedule.
+ * RSSFeed — a single Moroccan / African media RSS feed to scrape on
+ * schedule.
+ *
+ * Task: signal-media-monitoring
+ *  • `fetchKind` distinguishes direct publisher feeds from Google News
+ *    RSS proxies (used for Cloudflare-protected publishers).
+ *  • `isActive: false` makes scrapeFeed() skip the feed silently —
+ *    used for known-dead sources kept in the registry for history.
+ *  • `region` and `notes` power the admin source-health dashboard.
  */
 export interface RSSFeed {
   /** Human-readable publisher / feed name. */
   name: string;
-  /** RSS or Atom endpoint URL. */
+  /** RSS or Atom endpoint URL (or Google News RSS URL for proxy feeds). */
   url: string;
   /** Primary feed language. */
   language: "ar" | "fr" | "en";
-  /** Editorial category. */
-  category: "news" | "business" | "tech";
+  /** Editorial category. `regulatory` covers central bank / AMMC / BVC. */
+  category: "news" | "business" | "tech" | "finance" | "regulatory";
+  /** Geographic region the feed covers. */
+  region?: "Morocco" | "Africa" | "France" | "Global";
+  /** Whether the URL points directly to the publisher's RSS endpoint
+   *  or to a Google News RSS search proxy. Defaults to "direct". */
+  fetchKind?: "direct" | "google-news";
+  /** When false, scrapeFeed() returns [] immediately — used to keep
+   *  dead sources in the registry without wasting fetch budget. */
+  isActive?: boolean;
+  /** Free-form ops notes (known 403s, anti-bot notes, etc.). */
+  notes?: string;
 }
 
-// ─── 10 REAL MOROCCAN MEDIA FEEDS ────────────────────────────────
+// ─── 20 MOROCCAN + AFRICAN MEDIA FEEDS ───────────────────────────
 //
-//  Curated list of working Moroccan media RSS feeds. Each entry was
-//  verified to return a parseable XML body at the time of writing.
-//  Feeds that 403 / 404 silently are skipped by scrapeFeed() — the
-//  cron never crashes on a single broken feed.
+//  Task: signal-media-monitoring — verified 2026.
 //
-//  Language coverage: Arabic (Hespress), French (the bulk), English
-//  (Morocco World News). Category coverage: general news + business.
-//  This is the real data source — no simulated seeds.
+//  Two flavours of feeds in this registry:
+//
+//  DIRECT FEEDS (8) — publisher exposes a working RSS endpoint:
+//    TelQuel, Medias24, Aujourd'hui, LesEco, Africa News,
+//    Financial Afrik, Infomediaire, Le Site Info.
+//
+//  GOOGLE NEWS RSS PROXIES (12) — publisher is behind Cloudflare and
+//  403s any non-browser UA. We use the Google News RSS aggregator,
+//  which:
+//    • Already fetched and cached the article
+//    • Returns valid RSS XML that the same parser handles
+//    • Carries the real publisher in the <source> tag
+//  Used for: Hespress, Le360, L'Economiste, MWN, Yabiladi, L'Opinion,
+//  Le Desk, MAP, AMMC, BAM, BVC, Jeune Afrique.
+//
+//  Every URL below was probed from the sandbox with a real browser UA
+//  before being added — see scripts/test-rss-feeds.ts for the live
+//  health check.
 
 export const MOROCCAN_FEEDS: RSSFeed[] = [
-  // Hespress (Arabic — the largest Moroccan news site by traffic)
-  { name: "Hespress", url: "https://www.hespress.com/rss", language: "ar", category: "news" },
-  { name: "Hespress - Economy", url: "https://www.hespress.com/rss/index.xml", language: "ar", category: "business" },
-  // Le360 (French — high-volume general news)
-  { name: "Le360", url: "https://fr.le360.ma/rss", language: "fr", category: "news" },
-  // TelQuel (French — independent weekly)
-  { name: "TelQuel", url: "https://telquel.ma/feed", language: "fr", category: "news" },
-  // Medias24 (French — business / economy)
-  { name: "Medias24", url: "https://www.medias24.com/feed", language: "fr", category: "business" },
-  // L'Economiste (French — daily business paper)
-  { name: "L'Economiste", url: "https://www.leconomiste.com/rss", language: "fr", category: "business" },
-  // Aujourd'hui Le Maroc (French — daily general news)
-  { name: "Aujourdhui Le Maroc", url: "https://aujourdhui.ma/feed", language: "fr", category: "news" },
-  // Morocco World News (English — Morocco-focused, international audience)
-  { name: "Morocco World News", url: "https://www.moroccoworldnews.com/feed", language: "en", category: "news" },
-  // Yabiladi (French — community + news portal)
-  { name: "Yabiladi", url: "https://www.yabiladi.com/rss.xml", language: "fr", category: "news" },
-  // LesEco (French — business / markets)
-  { name: "LesEco", url: "https://leseco.ma/feed", language: "fr", category: "business" },
+  // ─── DIRECT FEEDS (verified 200 + parseable XML) ───────────────
+  {
+    name: "TelQuel",
+    url: "https://telquel.ma/feed",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "direct",
+    notes: "Independent weekly — high-volume feed (~100 items).",
+  },
+  {
+    name: "Medias24",
+    url: "https://www.medias24.com/feed",
+    language: "fr",
+    category: "business",
+    region: "Morocco",
+    fetchKind: "direct",
+    notes: "Business / financial news — high signal for listed companies.",
+  },
+  {
+    name: "Aujourdhui Le Maroc",
+    url: "https://aujourdhui.ma/feed",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "direct",
+    notes: "Daily general news.",
+  },
+  {
+    name: "LesEco",
+    url: "https://leseco.ma/feed",
+    language: "fr",
+    category: "business",
+    region: "Morocco",
+    fetchKind: "direct",
+    notes: "Business / markets — ~50 items per fetch.",
+  },
+  {
+    name: "Le Site Info",
+    url: "https://www.lesiteinfo.com/feed",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "direct",
+    notes: "General news — redirects /feed/ → /feed (followed).",
+  },
+  {
+    name: "Infomediaire",
+    url: "https://www.infomediaire.net/feed/",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "direct",
+    notes: "General + business news.",
+  },
+  {
+    name: "Financial Afrik",
+    url: "https://www.financialafrik.com/feed/",
+    language: "fr",
+    category: "finance",
+    region: "Africa",
+    fetchKind: "direct",
+    notes: "Pan-African financial coverage — good for cross-listed groups.",
+  },
+  {
+    name: "Africa News",
+    url: "https://www.africanews.com/feed/",
+    language: "en",
+    category: "news",
+    region: "Africa",
+    fetchKind: "direct",
+    notes: "English-language pan-African coverage (Euronews-backed).",
+  },
+
+  // ─── GOOGLE NEWS RSS PROXIES (Cloudflare-protected publishers) ──
+  //  URL format: news.google.com/rss/search?q=site:publisher.com
+  //  Google News returns valid RSS XML with the real publisher in
+  //  <source url="…">Publisher Name</source> — our parser handles it.
+  {
+    name: "Hespress",
+    url: "https://news.google.com/rss/search?q=site:hespress.com&hl=ar&gl=MA&ceid=MA:ar",
+    language: "ar",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Direct hespress.com/rss returns 403 (Cloudflare). Google News proxy carries the real publisher in <source>.",
+  },
+  {
+    name: "Le360",
+    url: "https://news.google.com/rss/search?q=site:le360.ma&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Direct fr.le360.ma/rss returns 404. Google News proxy used.",
+  },
+  {
+    name: "L'Economiste",
+    url: "https://news.google.com/rss/search?q=site:leconomiste.com&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "business",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Direct leconomiste.com/rss returns 403 (Cloudflare). Google News proxy used.",
+  },
+  {
+    name: "Morocco World News",
+    url: "https://news.google.com/rss/search?q=site:moroccoworldnews.com&hl=en&gl=MA&ceid=MA:en",
+    language: "en",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Direct MWN /feed returns 403 (Cloudflare). Google News proxy used.",
+  },
+  {
+    name: "Yabiladi",
+    url: "https://news.google.com/rss/search?q=site:yabiladi.com&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Direct yabiladi.com/rss.xml returns 403. Google News proxy used.",
+  },
+  {
+    name: "L'Opinion",
+    url: "https://news.google.com/rss/search?q=site:lopinion.ma&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Direct lopinion.ma/feed redirects to /fr/feed which 404s. Google News proxy used.",
+  },
+  {
+    name: "Le Desk",
+    url: "https://news.google.com/rss/search?q=site:edesk.ma&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "news",
+    region: "Morocco",
+    fetchKind: "google-news",
+    isActive: false,
+    notes: "edesk.ma DNS does not resolve (site defunct). Kept in registry as inactive — scraper skips it.",
+  },
+  {
+    name: "MAP (Maroc Arabe Presse)",
+    url: "https://news.google.com/rss/search?q=site:mapnews.ma&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "regulatory",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Official Moroccan news agency. Direct mapnews.ma returns 403 (Cloudflare). Google News proxy returns limited coverage (few articles indexed).",
+  },
+  {
+    name: "AMMC",
+    url: "https://news.google.com/rss/search?q=%22AMMC%22+Maroc&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "regulatory",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Autorité Marocaine du Marché des Capitaux — capital-markets regulatory filings. Direct ammc.ma times out; using a topical Google News query.",
+  },
+  {
+    name: "Bank Al-Maghrib",
+    url: "https://news.google.com/rss/search?q=%22Bank+Al-Maghrib%22&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "regulatory",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Moroccan central bank. Direct bkam.ma returns 403 (Cloudflare). Topical Google News query used.",
+  },
+  {
+    name: "BVC (Bourse de Casablanca)",
+    url: "https://news.google.com/rss/search?q=%22Bourse+de+Casablanca%22&hl=fr&gl=MA&ceid=MA:fr",
+    language: "fr",
+    category: "regulatory",
+    region: "Morocco",
+    fetchKind: "google-news",
+    notes: "Casablanca Stock Exchange. bvc.ma does not expose RSS. Topical Google News query used.",
+  },
+  {
+    name: "Jeune Afrique",
+    url: "https://news.google.com/rss/search?q=site:jeuneafrique.com&hl=fr&gl=FR&ceid=FR:fr",
+    language: "fr",
+    category: "news",
+    region: "Africa",
+    fetchKind: "google-news",
+    notes: "Pan-African weekly. Direct jeuneafrique.com/feed returns 403. Google News proxy used (gl=FR — main audience).",
+  },
 ];
 
 // ─── POLITE BOT USER-AGENT ───────────────────────────────────────
@@ -311,6 +509,11 @@ function extractCDATA(xml: string, tag: string): string | null {
  *  • Uses the Darija NLP module to detect language per article.
  */
 export async function scrapeFeed(feed: RSSFeed): Promise<ScrapedArticle[]> {
+  // Skip inactive feeds silently — they're kept in the registry for
+  // history but shouldn't waste fetch budget (Task: signal-media-monitoring).
+  if (feed.isActive === false) {
+    return [];
+  }
   try {
     const res = await fetch(feed.url, {
       headers: {
