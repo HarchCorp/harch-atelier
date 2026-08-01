@@ -850,7 +850,7 @@ function RedFlagsFeed({
                 onMouseLeave={(e) => { e.currentTarget.style.background = C.bg; }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFamily: FONT.sans, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFamily: FONT.sans, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }} title={f.title}>
                     {f.title}
                   </div>
                   <span style={{ fontSize: 9, fontFamily: FONT.mono, padding: "1px 5px", borderRadius: "2px", background: `${sevColor}15`, color: sevColor, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, flexShrink: 0 }}>
