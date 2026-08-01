@@ -573,46 +573,51 @@ function AwaitingTelemetry({ label }: { label: string }) {
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-        minHeight: 150,
+        minHeight: 120,
         gap: 6,
+        border: `1px dashed ${BORDER_STRONG}`,
+        borderRadius: "4px",
+        background: "rgba(0,0,0,0.02)",
       }}
     >
       <div
         style={{
-          width: 6,
-          height: 6,
+          width: 20,
+          height: 20,
           borderRadius: "50%",
-          background: TEXT_MUTED,
-          animation: "alpha-pulse 1.5s infinite",
+          border: `1.5px solid ${BORDER_STRONG}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: TEXT_MUTED,
+          fontSize: 10,
         }}
-      />
+      >
+        —
+      </div>
       <div
         style={{
           fontFamily: FONT.mono,
           fontSize: 9,
           color: TEXT_MUTED,
-          letterSpacing: "0.14em",
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
+          fontWeight: 600,
         }}
       >
         {label}
       </div>
       <div
         style={{
-          fontFamily: FONT.mono,
-          fontSize: 8,
+          fontFamily: FONT.sans,
+          fontSize: 10,
           color: BORDER_STRONG,
-          letterSpacing: "0.1em",
+          maxWidth: 180,
+          textAlign: "center" as const,
         }}
       >
-        AWAITING TELEMETRY
+        Loading market data...
       </div>
-      <style>{`
-        @keyframes alpha-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(1.4); }
-        }
-      `}</style>
     </div>
   );
 }
