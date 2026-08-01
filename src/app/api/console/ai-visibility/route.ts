@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
+  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
   if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
     return NextResponse.json(
       { error: "Forbidden — this data is for brand-monitor, market-competitor and investment-bank accounts only" },
