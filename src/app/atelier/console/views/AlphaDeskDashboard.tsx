@@ -21,6 +21,7 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import { InsightPanel } from "./InsightPanel";
 import { usePriceStream, type PriceTick } from "./usePriceStream";
 import {
   useDashboardTemplate,
@@ -3652,6 +3653,16 @@ export function AlphaDeskDashboard({
               Deep Dive
             </button>
           </div>
+
+          {/* ═══════════════════════════════════════════════════════════
+              HARCHIQ INSIGHT PANEL — pre-generated, LLM-grounded,
+              15-min cached. Surfaces sentiment-price divergences +
+              correlation breakdowns before the KPI strip.
+              Task: signal-aiq-engine
+              ═══════════════════════════════════════════════════════════ */}
+          {viewMode === "overview" && (
+            <InsightPanel accountType="harch-alpha" />
+          )}
 
           {/* ═══════════════════════════════════════════════════════════
               ROW 1 — PRE-MARKET STRIP (24 cols, 6 KPI tiles × 4 cols each) — OVERVIEW

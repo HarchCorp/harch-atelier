@@ -18,6 +18,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import { InsightPanel } from "./InsightPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -3449,7 +3450,11 @@ export function InvestorDeskDashboard({
     }
   }, []);
 
-  const firstName = userName.split(" ")[0] || "there";
+  // firstName removed — the welcome banner was replaced by the
+  // HarchIQ Insight Panel (Task: signal-aiq-engine). The panel
+  // surfaces LLM-grounded risk-concentration insights, replacing
+  // the static "{firstName}, N holdings crossed the risk threshold" line.
+  void userName;
 
   const toggleSort = useCallback((field: typeof sortField) => {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -3588,15 +3593,11 @@ export function InvestorDeskDashboard({
       `}</style>
       {/* Dev-only FPS overlay — hidden in production builds. */}
       {process.env.NODE_ENV === "development" && <PerformanceMonitor accent={ACCENT} />}
-      {/* ─── Welcome banner — cold, institutional ─── */}
-      <div style={{ padding: "16px 20px", background: ACCENT_BG, borderRadius: "4px", marginBottom: "20px", borderLeft: `3px solid ${ACCENT}` }}>
-        <div style={{ fontSize: "15px", fontWeight: 600, color: C.text, lineHeight: 1.5 }}>
-          {firstName}, {(kpis?.totalHighRisks ?? 0) > 0 ? `${kpis?.totalHighRisks} holdings crossed the risk threshold. Review required.` : "No risk thresholds breached. All holdings nominal."}
-        </div>
-        <div style={{ fontSize: "12px", color: SLATE_MID, fontFamily: FONT.mono, marginTop: "6px" }}>
-          {kpis?.portfoliosManaged ?? 0} portfolios · {kpis?.totalHoldings ?? 0} holdings under management
-        </div>
-      </div>
+      {/* ─── HarchIQ Insight Panel (replaces the static welcome banner) ─── */}
+      {/*  Task: signal-aiq-engine — pre-generated, LLM-grounded, 15-min cached
+          insights per persona. The CRO sees risk-concentration insights
+          before the KPI strip and Sankey diagram. */}
+      <InsightPanel accountType="investment-bank" />
 
       {/* ─── Page title + forensic terminal marker ─── */}
       <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "12px" }}>

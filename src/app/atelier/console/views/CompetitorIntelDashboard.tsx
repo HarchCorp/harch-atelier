@@ -35,6 +35,7 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import { InsightPanel } from "./InsightPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -1847,7 +1848,11 @@ export function CompetitorIntelDashboard({
     setBasketInitialized(true);
   }, [extNeighbors, basketInitialized]);
 
-  const firstName = userName.split(" ")[0] || "there";
+  // firstName removed — the welcome banner was replaced by the
+  // HarchIQ Insight Panel (Task: signal-aiq-engine). The panel
+  // surfaces LLM-grounded rival-vulnerability insights, replacing
+  // the static "{firstName}, your competitors moved overnight" line.
+  void userName;
 
   // Filter competitors: ahead (higher score than you), behind (lower), all
   // Memoized — re-runs only when competitors list or rankFilter changes
@@ -3090,23 +3095,11 @@ export function CompetitorIntelDashboard({
           }
         }
       `}</style>
-      {/* ─── Welcome banner — aggressive tone ─── */}
-      <div
-        style={{
-          padding: "12px 16px",
-          background: ACCENT_BG,
-          borderRadius: "4px",
-          marginBottom: "16px",
-          borderLeft: `3px solid ${ACCENT}`,
-        }}
-      >
-        <div style={{ fontSize: "13px", fontWeight: 600, color: "#0a0a0a", lineHeight: 1.4 }}>
-          {firstName}, your competitors moved overnight. Here's the delta.
-        </div>
-        <div style={{ fontSize: "11px", color: "#737373", fontFamily: FONT.mono, marginTop: "4px" }}>
-          Tracking {kpis?.competitorsTracked ?? 0} competitors in {sector} {"\u00B7"} Last refresh {lastRefresh.toLocaleTimeString("en-US")}
-        </div>
-      </div>
+      {/* ─── HarchIQ Insight Panel (replaces the static welcome banner) ─── */}
+      {/*  Task: signal-aiq-engine — pre-generated, LLM-grounded, 15-min cached
+          insights per persona. The CMO sees rival-vulnerability insights
+          before the raw war-room grid. */}
+      <InsightPanel accountType="market-competitor" />
 
       {/* ─── Page title + controls ─── */}
       <div

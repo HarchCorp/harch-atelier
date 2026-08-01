@@ -14,6 +14,7 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import { InsightPanel } from "./InsightPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -1222,7 +1223,11 @@ export function BrandMonitorDashboard({
     loadData();
   }, [injectedKpis, timeRange, loadData]);
 
-  const firstName = userName.split(" ")[0] || "there";
+  // firstName removed — the welcome banner was replaced by the
+  // HarchIQ Insight Panel (Task: signal-aiq-engine). The panel
+  // generates persona-driven, LLM-grounded insights that update on
+  // refresh, replacing the static "Good morning" banner.
+  void userName;
   const score = kpis?.reputationScore ?? 67;
   const skyColor = score >= 70 ? ACCENT : score >= 50 ? COL_WARN : COL_NEG;
 
@@ -2094,23 +2099,12 @@ export function BrandMonitorDashboard({
         }
       `}</style>
 
-      {/* ─── Welcome banner ─── */}
-      <div
-        style={{
-          padding: "14px 16px",
-          background: ACCENT_BG,
-          borderRadius: "4px",
-          marginBottom: "12px",
-          borderLeft: `3px solid ${ACCENT}`,
-        }}
-      >
-        <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, lineHeight: 1.5 }}>
-          Good morning, {firstName}. Here's what they're saying about {companyName} today.
-        </div>
-        <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "4px" }}>
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-        </div>
-      </div>
+      {/* ─── HarchIQ Insight Panel (replaces the generic "Good morning" banner) ─── */}
+      {/*  Task: signal-aiq-engine — pre-generated, LLM-grounded, 15-min cached
+          insights per persona. The panel sits at the TOP of the Overview tab,
+          above the KPI strip, so the Dircom sees AI-generated intelligence
+          before the raw metrics. */}
+      <InsightPanel accountType="brand-monitor" />
 
       {/* ─── Page title + toolbar ─── */}
       <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>

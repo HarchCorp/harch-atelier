@@ -37,7 +37,8 @@ export type AuditAction =
   | "login_failed"
   | "onboarding_complete"
   | "ai_probe"
-  | "briefing_generate";
+  | "briefing_generate"
+  | "insights_generate";
 
 export type AuditResult = "success" | "denied" | "error";
 
