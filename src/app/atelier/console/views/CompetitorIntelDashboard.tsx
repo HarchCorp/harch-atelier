@@ -1579,6 +1579,7 @@ export function CompetitorIntelDashboard({
   const [rankFilter, setRankFilter] = useState<"all" | "ahead" | "behind">("all");
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"overview" | "deep">("overview");
   const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
   const [sparkHistory, setSparkHistory] = useState<number[]>([]);
 
@@ -3298,9 +3299,15 @@ export function CompetitorIntelDashboard({
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════
-          SPLIT-SCREEN — Macro (12) | Micro (12)
-          ═══════════════════════════════════════════════════════════ */}
+      {/* ─── View Mode Tabs ─── */}
+      <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+        <button onClick={() => setViewMode("overview")} style={{ padding: "10px 20px", fontSize: 12, fontFamily: FONT.sans, fontWeight: 600, border: "none", borderBottom: viewMode === "overview" ? `2px solid ${ACCENT}` : "2px solid transparent", background: "transparent", color: viewMode === "overview" ? ACCENT : C.textMuted, cursor: "pointer", transition: "all 0.15s" }}>Overview</button>
+        <button onClick={() => setViewMode("deep")} style={{ padding: "10px 20px", fontSize: 12, fontFamily: FONT.sans, fontWeight: 600, border: "none", borderBottom: viewMode === "deep" ? `2px solid ${ACCENT}` : "2px solid transparent", background: "transparent", color: viewMode === "deep" ? ACCENT : C.textMuted, cursor: "pointer", transition: "all 0.15s" }}>Deep Dive</button>
+      </div>
+
+      {/* ═══ OVERVIEW: Competitive landscape + Recent moves ═══ */}
+      {viewMode === "overview" && (
+      <>
       </section>
       <section data-template-row="2">
       <DashboardErrorBoundary title="Macro + Micro Split-Screen Widgets" accent={ACCENT} subtitle="SOV area, Sankey, scatter, treemap, network graph + virtualized feeds">
@@ -3947,6 +3954,13 @@ export function CompetitorIntelDashboard({
       </div>
       </DashboardErrorBoundary>
 
+      </>
+      )}
+
+      {/* ═══ DEEP DIVE: Executive Modules + Bottom Strip ═══ */}
+      {viewMode === "deep" && (
+      <>
+
       {/* ═══════════════════════════════════════════════════════════
           EXECUTIVE MODULES — Radar Prédateur d'Offensive
           Module 1: Multi-Entity Competitor Tracking (25-50)
@@ -4366,6 +4380,13 @@ export function CompetitorIntelDashboard({
       </DashboardErrorBoundary>
       </section>
 
+      </>
+      )}
+
+      {/* ═══ OVERVIEW (continued): Competitive landscape + Recent moves + CTA ═══ */}
+      {viewMode === "overview" && (
+      <>
+
       {/* ─── Competitive landscape (ranked, preserved V1) ─── */}
       <DashboardErrorBoundary title="Competitive Landscape" accent={ACCENT} subtitle="Ranked list with hover effects">
       <div style={{ marginBottom: "16px" }}>
@@ -4477,8 +4498,11 @@ export function CompetitorIntelDashboard({
           Full Intel
         </strong>
         <br />
-        Click "Competitors" in the sidebar to see detailed moves, impact levels, and the Neighbor Index for each rival.
+        Click "Deep Dive" to see detailed moves, impact levels, and the Neighbor Index for each rival.
       </div>
+
+      </>
+      )}
 
       {/* Responsive split-screen grid: stack on mobile, 2-col on desktop */}
       <style>{`
