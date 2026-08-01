@@ -110,8 +110,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ range, buckets: [] });
     }
 
-    const since = cfg.days !== null ? new Date() : null;
-    if (since) since.setDate(since.getDate() - cfg.days);
+    const days = cfg.days;
+    const since = days !== null ? new Date() : null;
+    if (since && days !== null) since.setDate(since.getDate() - days);
 
     const articles = await prisma.article.findMany({
       where: {

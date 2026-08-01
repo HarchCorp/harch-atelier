@@ -25,6 +25,7 @@ import { prisma } from "@/lib/db";
 
 export type AuditAction =
   | "sanctions_screen"
+  | "entity_graph_view"
   | "dossier_view"
   | "report_export"
   | "data_export_csv"

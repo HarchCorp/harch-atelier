@@ -148,6 +148,163 @@ function monthsSince(date: Date): number {
   return Math.max(0, Math.floor(diff / (30 * 24 * 60 * 60 * 1000)));
 }
 
+// ─── Per-relationship loaders ────────────────────────────────────
+//
+//  Each loader is a standalone async function that returns a
+//  RelatedEntity[] array. Extracted from the IIFE pattern so
+//  TypeScript can correctly infer the prisma return type (the IIFE
+//  version was tripping the compiler into thinking `articles.map`
+//  was being called on the IIFE's return value).
+
+async function loadArticleRelationships(companyId: string, limit: number): Promise<RelatedEntity[]> {
+  const articles = await prisma.article.findMany({
+    where: { companyId },
+    orderBy: { publishedAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      source: true,
+      url: true,
+      publishedAt: true,
+      sentimentScore: true,
+    },
+  });
+  const out: RelatedEntity[] = [];
+  for (const a of articles) {
+    const months = a.publishedAt ? monthsSince(a.publishedAt) : 0;
+    const strength = Math.min(1, 0.3 + 0.7 * (1 / (1 + months)));
+    out.push({
+      entityId: a.id,
+      entity: a.title,
+      relationship: "mentioned_in_article",
+      strength: Math.round(strength * 1000) / 1000,
+      meta: {
+        detectedAt: a.publishedAt?.toISOString() ?? undefined,
+        source: a.source,
+        url: a.url,
+      },
+    });
+  }
+  return out;
+}
+
+async function loadRiskAssessmentRelationships(companyId: string, limit: number): Promise<RelatedEntity[]> {
+  const risks = await prisma.riskAssessment.findMany({
+    where: { companyId },
+    orderBy: { riskScore: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      category: true,
+      riskLevel: true,
+      riskScore: true,
+      assessedAt: true,
+    },
+  });
+  const out: RelatedEntity[] = [];
+  for (const r of risks) {
+    const score = Math.max(0, Math.min(100, r.riskScore));
+    const strength = 0.5 + 0.5 * (score / 100);
+    out.push({
+      entityId: r.id,
+      entity: `${r.category} risk — ${r.riskLevel}`,
+      relationship: "has_risk_assessment",
+      strength: Math.round(strength * 1000) / 1000,
+      meta: {
+        detectedAt: r.assessedAt.toISOString(),
+        source: "HarchIQ Risk Engine",
+        riskLevel: r.riskLevel,
+        riskScore: score,
+      },
+    });
+  }
+  return out;
+}
+
+async function loadPortfolioRelationships(companyId: string, limit: number): Promise<RelatedEntity[]> {
+  const holdings = await prisma.portfolioHolding.findMany({
+    where: { companyId },
+    take: limit,
+    select: {
+      id: true,
+      weight: true,
+      addedAt: true,
+      portfolio: { select: { name: true } },
+    },
+  });
+  const out: RelatedEntity[] = [];
+  for (const h of holdings) {
+    out.push({
+      entityId: h.id,
+      entity: `Holding in ${h.portfolio.name}`,
+      relationship: "in_portfolio",
+      strength: Math.max(0, Math.min(1, h.weight)),
+      meta: {
+        detectedAt: h.addedAt.toISOString(),
+        weight: h.weight,
+      },
+    });
+  }
+  return out;
+}
+
+async function loadSameSectorRelationships(companyId: string, sector: string, limit: number): Promise<RelatedEntity[]> {
+  const peers = await prisma.company.findMany({
+    where: {
+      sector,
+      id: { not: companyId },
+    },
+    take: limit,
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      sector: true,
+    },
+  });
+  // Same-sector is a weak peer signal — constant 0.4 strength.
+  return peers.map((p) => ({
+    entityId: p.id,
+    entity: p.name,
+    relationship: "same_sector" as const,
+    strength: 0.4,
+    meta: {
+      sector: p.sector,
+    },
+  }));
+}
+
+async function loadSanctionsRelationships(
+  name: string,
+  limit: number,
+  warnings: string[],
+): Promise<RelatedEntity[]> {
+  const cachedLists = await getSanctionsLists();
+  const allEntries = flattenLists(cachedLists);
+  if (allEntries.length === 0) {
+    warnings.push("Sanctions lists unavailable — skipping sanctions_match (run /api/cron/refresh-sanctions to populate).");
+    return [];
+  }
+  const result = screenName(name, allEntries, {
+    threshold: 0.7,
+    typeFilter: "entity",
+  });
+  warnings.push(...cachedLists.warnings);
+  return result.matches.slice(0, limit).map((m) => ({
+    entityId: `${m.list}:${m.name}`,
+    entity: m.name,
+    relationship: "sanctions_match" as const,
+    strength: Math.round(m.similarity * 1000) / 1000,
+    meta: {
+      list: m.list,
+      similarity: m.similarity,
+      matchedName: m.name,
+      source: `${m.list} Sanctions List`,
+    },
+  }));
+}
+
 // ─── Main resolver ───────────────────────────────────────────────
 
 /**
@@ -183,133 +340,22 @@ export async function resolveEntityRelationships(
   if (company) {
     // ── mentioned_in_article ──
     if (!skip.has("mentioned_in_article")) {
-      tasks.push(
-        (async () => {
-          const articles = await prisma.article.findMany({
-            where: { companyId: company.id },
-            orderBy: { publishedAt: "desc" },
-            take: limit,
-            select: {
-              id: true,
-              title: true,
-              source: true,
-              url: true,
-              publishedAt: true,
-              sentimentScore: true,
-            },
-          });
-          return articles.map((a) => {
-            const months = a.publishedAt ? monthsSince(a.publishedAt) : 0;
-            const strength = Math.min(1, 0.3 + 0.7 * (1 / (1 + months)));
-            return {
-              entityId: a.id,
-              entity: a.title,
-              relationship: "mentioned_in_article" as const,
-              strength: Math.round(strength * 1000) / 1000,
-              meta: {
-                detectedAt: a.publishedAt?.toISOString() ?? undefined,
-                source: a.source,
-                url: a.url,
-              },
-            };
-          })();
-        })(),
-      );
+      tasks.push(loadArticleRelationships(company.id, limit));
     }
 
     // ── has_risk_assessment ──
     if (!skip.has("has_risk_assessment")) {
-      tasks.push(
-        (async () => {
-          const risks = await prisma.riskAssessment.findMany({
-            where: { companyId: company.id },
-            orderBy: { riskScore: "desc" },
-            take: limit,
-            select: {
-              id: true,
-              category: true,
-              riskLevel: true,
-              riskScore: true,
-              assessedAt: true,
-            },
-          });
-          return risks.map((r) => {
-            const score = Math.max(0, Math.min(100, r.riskScore));
-            const strength = 0.5 + 0.5 * (score / 100);
-            return {
-              entityId: r.id,
-              entity: `${r.category} risk — ${r.riskLevel}`,
-              relationship: "has_risk_assessment" as const,
-              strength: Math.round(strength * 1000) / 1000,
-              meta: {
-                detectedAt: r.assessedAt.toISOString(),
-                source: "HarchIQ Risk Engine",
-                riskLevel: r.riskLevel,
-                riskScore: score,
-              },
-            };
-          })();
-        })(),
-      );
+      tasks.push(loadRiskAssessmentRelationships(company.id, limit));
     }
 
     // ── in_portfolio ──
     if (!skip.has("in_portfolio")) {
-      tasks.push(
-        (async () => {
-          const holdings = await prisma.portfolioHolding.findMany({
-            where: { companyId: company.id },
-            take: limit,
-            select: {
-              id: true,
-              weight: true,
-              addedAt: true,
-              portfolio: { select: { name: true } },
-            },
-          });
-          return holdings.map((h) => ({
-            entityId: h.id,
-            entity: `Holding in ${h.portfolio.name}`,
-            relationship: "in_portfolio" as const,
-            strength: Math.max(0, Math.min(1, h.weight)),
-            meta: {
-              detectedAt: h.addedAt.toISOString(),
-              weight: h.weight,
-            },
-          }));
-        })(),
-      );
+      tasks.push(loadPortfolioRelationships(company.id, limit));
     }
 
     // ── same_sector ──
     if (!skip.has("same_sector") && company.sector) {
-      tasks.push(
-        (async () => {
-          const peers = await prisma.company.findMany({
-            where: {
-              sector: company.sector,
-              id: { not: company.id },
-            },
-            take: limit,
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              sector: true,
-            },
-          });
-          // Same-sector is a weak peer signal — constant 0.4 strength.
-          return peers.map((p) => ({
-            entityId: p.id,
-            entity: p.name,
-            relationship: "same_sector" as const,
-            strength: 0.4,
-            meta: {
-              sector: p.sector,
-            },
-          }));
-        })(),
-      );
+      tasks.push(loadSameSectorRelationships(company.id, company.sector, limit));
     }
   } else {
     // Company not found — we still try sanctions_match (which is
@@ -322,33 +368,7 @@ export async function resolveEntityRelationships(
   //    Always run (even when company is null) — the screening is
   //    name-based, not id-based.
   if (!skip.has("sanctions_match")) {
-    tasks.push(
-      (async () => {
-        const cachedLists = await getSanctionsLists();
-        const allEntries = flattenLists(cachedLists);
-        if (allEntries.length === 0) {
-          warnings.push("Sanctions lists unavailable — skipping sanctions_match (run /api/cron/refresh-sanctions to populate).");
-          return [];
-        }
-        const result = screenName(name, allEntries, {
-          threshold: 0.7,
-          typeFilter: "entity",
-        });
-        warnings.push(...cachedLists.warnings);
-        return result.matches.slice(0, limit).map((m) => ({
-          entityId: `${m.list}:${m.name}`,
-          entity: m.name,
-          relationship: "sanctions_match" as const,
-          strength: Math.round(m.similarity * 1000) / 1000,
-          meta: {
-            list: m.list,
-            similarity: m.similarity,
-            matchedName: m.name,
-            source: `${m.list} Sanctions List`,
-          },
-        }));
-      })(),
-    );
+    tasks.push(loadSanctionsRelationships(name, limit, warnings));
   }
 
   // 3. Await all tasks in parallel and flatten.

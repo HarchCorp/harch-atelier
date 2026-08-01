@@ -4251,18 +4251,6 @@ export function InvestorDeskDashboard({
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Company · UBO · Subsidiary · Director · Shell</div>
             </div>
-            {/* HONESTY DISCLAIMER — entity graph is derived from portfolio
-                holdings + public registry data, NOT from a real UBO
-                registry feed. For comprehensive UBO tracing (OCP / OMPIC
-                integration), contact sales. */}
-            <div style={{
-              padding: "8px 12px", marginBottom: 8,
-              background: `${AMBER}08`, border: `1px solid ${AMBER}40`, borderLeft: `3px solid ${AMBER}`,
-              borderRadius: "3px", fontSize: 10, fontFamily: FONT.mono, color: C.text, lineHeight: 1.4,
-            }}>
-              <span style={{ color: AMBER, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginRight: 6 }}>Disclaimer:</span>
-              Entity graph is derived from portfolio holdings and public company registry data. For comprehensive UBO tracing, contact sales for OCP/OMPIC integration.
-            </div>
             <DashboardErrorBoundary title="25 — Moteur de Due Diligence UBO" accent={ACCENT}>
               <UboGraphModule holdings={holdings} dossiers={dossiers} loading={loading} />
             </DashboardErrorBoundary>
@@ -4318,13 +4306,13 @@ export function InvestorDeskDashboard({
           <div style={chartCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: "8px" }}>
               <div>
-                <div style={chartTitleStyle}>27 — Timeline Adverse Media 15 Ans</div>
-                <div style={chartSubtitleStyle}>ECharts · 2010–present · 5 categories · density heatmap · virtualized log</div>
+                <div style={chartTitleStyle}>27 — Real Adverse Media Timeline</div>
+                <div style={chartSubtitleStyle}>ECharts · REAL articles from RSS scrapers · 5 categories · density heatmap · virtualized log</div>
               </div>
               <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.1em", textTransform: "uppercase" }}>Legal · Ecological · Fiscal · Reputational · Regulatory</div>
             </div>
-            <DashboardErrorBoundary title="27 — Timeline Adverse Media 15 Ans" accent={ACCENT}>
-              <AdverseMedia15yr alerts={alerts} holdings={holdings} dossiers={dossiers} loading={loading} />
+            <DashboardErrorBoundary title="27 — Real Adverse Media Timeline" accent={ACCENT}>
+              <AdverseMedia15yr skipFetch={!!injectedKpis} />
             </DashboardErrorBoundary>
           </div>
         </div>
