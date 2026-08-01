@@ -73,6 +73,7 @@ export function WebhooksPanel() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchWebhooks();
   }, [fetchWebhooks]);
 

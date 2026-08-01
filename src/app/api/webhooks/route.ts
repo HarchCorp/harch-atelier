@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
-import { dispatchWebhook } from "@/lib/harchiq/webhook-dispatcher";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/webhooks
@@ -237,9 +236,3 @@ export async function GET() {
     total: annotated.length,
   });
 }
-
-// ─── Export the dispatcher for the test endpoint ─────────────────
-// (kept here so the route file is the single import surface for the
-// webhook subsystem; the actual implementation lives in
-// src/lib/harchiq/webhook-dispatcher.ts)
-export { dispatchWebhook };
