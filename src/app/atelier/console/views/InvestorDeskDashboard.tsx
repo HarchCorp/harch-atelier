@@ -1041,6 +1041,19 @@ function AdverseMediaTimeline({
   const option = useMemo(() => {
     // Build a 20-year timeline. Real events plotted at their detectedAt / derived
     // dates. If empty, the chart's dataZoom spans 20 years but renders no events.
+    //
+    // V13 fix: the previous version clustered all 22 alerts (which arrive in
+    // the last 7 days per the /api/console/alerts filter) onto the y=1 line
+    // at the very right edge of a 20-year axis. The dataZoom at start:70
+    // showed 6 years of empty space with all alerts compressing into one
+    // visible dot, so the chart *looked* empty. Fix:
+    //   1. Spread alerts vertically with a deterministic jitter (0.4–1.6)
+    //      so multiple events at the same timestamp don't overlap.
+    //   2. Default the dataZoom to start:90 (last 2 years) so recent
+    //      alerts fill the visible window instead of being a single dot.
+    //   3. Bump symbolSize 12 → 14 and drop the large/progressive flags
+    //      which were tuned for 10k-point datasets and silently swallowed
+    //      small ones.
     const now = Date.now();
     const twentyYearsAgo = new Date();
     twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
@@ -1048,18 +1061,31 @@ function AdverseMediaTimeline({
     type Plot = { value: [number, number]; name: string; severity: string; source: string; itemStyle: { color: string } };
     const data: Plot[] = [];
 
-    for (const a of alerts) {
-      if (!a.detectedAt) continue;
-      const ts = new Date(a.detectedAt).getTime();
-      if (Number.isNaN(ts)) continue;
+    const hashStr = (s: string) => {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    };
+
+    alerts.forEach((a) => {
+      // Fall back to `now` for risk-assessment alerts (detectedAt is null
+      // in the API response for those) — better to render them at the
+      // right edge than silently drop them.
+      const ts = a.detectedAt ? new Date(a.detectedAt).getTime() : now;
+      if (Number.isNaN(ts)) return;
       const sevColor = a.severity === "critical" ? CRITICAL : RED;
-      data.push({ value: [ts, 1], name: a.title, severity: a.severity, source: a.source, itemStyle: { color: sevColor } });
-    }
+      // Deterministic vertical jitter on the alert lane (0.4–1.6) so
+      // multiple alerts at the same timestamp fan out vertically instead
+      // of stacking on top of each other.
+      const jitter = 0.4 + (hashStr(a.id) % 120) / 100;
+      data.push({ value: [ts, jitter], name: a.title, severity: a.severity, source: a.source, itemStyle: { color: sevColor } });
+    });
     // Add derived flags from real holdings (high-risk assessments).
     holdings.forEach((h, idx) => {
       if (h.highRiskCount > 0) {
         const ts = now - idx * 36e5;
-        data.push({ value: [ts, 2], name: `${h.companyName} — ${h.highRiskCount} risk signals`, severity: h.uboFlag === "red" ? "critical" : "high", source: "Risk Engine", itemStyle: { color: h.uboFlag === "red" ? CRITICAL : AMBER } });
+        const jitter = 2.4 + (hashStr(h.id) % 120) / 100;
+        data.push({ value: [ts, jitter], name: `${h.companyName} — ${h.highRiskCount} risk signals`, severity: h.uboFlag === "red" ? "critical" : "high", source: "Risk Engine", itemStyle: { color: h.uboFlag === "red" ? CRITICAL : AMBER } });
       }
     });
 
@@ -1089,26 +1115,22 @@ function AdverseMediaTimeline({
       yAxis: {
         type: "value",
         min: 0,
-        max: 3,
+        max: 4,
         axisLabel: {
           color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10, hideOverlap: true,
-          formatter: (v: number) => v === 1 ? "Alert" : v === 2 ? "Risk" : v === 3 ? "UBO" : "",
+          formatter: (v: number) => v <= 1 ? "Alert" : v >= 2 && v <= 3 ? "Risk" : v >= 3 ? "UBO" : "",
         },
         splitLine: { lineStyle: { color: C.bgHover } },
       },
       dataZoom: [
-        { type: "inside", start: 70, end: 100, throttle: 100 },
-        { type: "slider", start: 70, end: 100, height: 18, bottom: 12, borderColor: C.border, fillerColor: `${ACCENT}15`, handleStyle: { color: ACCENT }, textStyle: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 } },
+        { type: "inside", start: 90, end: 100, throttle: 100 },
+        { type: "slider", start: 90, end: 100, height: 18, bottom: 12, borderColor: C.border, fillerColor: `${ACCENT}15`, handleStyle: { color: ACCENT }, textStyle: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 9 } },
       ],
       series: [
         {
           type: "scatter",
-          symbolSize: 12,
+          symbolSize: 14,
           data,
-          large: true,
-          largeThreshold: 2000,
-          progressive: 5000,
-          progressiveThreshold: 3000,
           emphasis: { focus: "self", itemStyle: { borderColor: ACCENT, borderWidth: 2 } },
         },
       ],
@@ -1278,10 +1300,12 @@ function ThreatNetworkGraph({ holdings, dossiers }: { holdings: InvestorHolding[
     const links: GLink[] = [];
 
     // Center node = portfolio book.
-    nodes.push({ id: "book", name: "Portfolio", symbolSize: 40, category: 0, value: "Hub", itemStyle: { color: ACCENT } });
+    nodes.push({ id: "book", name: "Portfolio", symbolSize: 48, category: 0, value: "Hub", itemStyle: { color: ACCENT } });
 
     holdings.forEach((h) => {
-      const size = 16 + Math.min(28, h.weight * 100);
+      // V13 fix: bigger nodes (was 16+min(28, weight*100), now 22+min(36, weight*100))
+      // so labels are legible and the hub-vs-holding hierarchy is clearer.
+      const size = 22 + Math.min(36, h.weight * 100);
       const cat = h.uboFlag === "red" ? 1 : h.uboFlag === "watch" ? 2 : 3;
       const color = h.uboFlag === "red" ? RED : h.uboFlag === "watch" ? AMBER : GREEN;
       nodes.push({
@@ -1311,7 +1335,8 @@ function ThreatNetworkGraph({ holdings, dossiers }: { holdings: InvestorHolding[
         nodes.push({
           id: targetId,
           name: d.target,
-          symbolSize: 14,
+          // V13 fix: dossier node size 14 → 18 so the label is legible.
+          symbolSize: 18,
           category: 4,
           value: `Dossier · ${d.riskBand}`,
           itemStyle: { color: RISK_BAND_COLORS[d.riskBand] ?? SLATE_LIGHT },
@@ -1356,7 +1381,7 @@ function ThreatNetworkGraph({ holdings, dossiers }: { holdings: InvestorHolding[
           roam: true,
           draggable: true,
           force: { repulsion: 220, edgeLength: [80, 180], gravity: 0.1 },
-          label: { show: true, position: "right", color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 10 },
+          label: { show: true, position: "right", color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 600, backgroundColor: C.bg, padding: [2, 4], borderRadius: 2 },
           lineStyle: { color: C.border, width: 1, curveness: 0.1 },
           emphasis: { focus: "adjacency", lineStyle: { width: 2, color: ACCENT } },
           categories,
@@ -2044,19 +2069,19 @@ function UboGraphModule({ holdings, dossiers, loading }: {
   }, [graph, visibleIds, filterType, search, selectedId]);
 
   if (loading) {
-    return <div style={{ height: 560, padding: 24 }}><SkeletonLoader accent={ACCENT} lines={3} height={120} /></div>;
+    return <div style={{ height: 500, padding: 24 }}><SkeletonLoader accent={ACCENT} lines={3} height={120} /></div>;
   }
 
   if (graph.nodes.size < 2) {
     return (
-      <div style={{ height: 560, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ height: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <AwaitingTelemetry label="UBO Entity Telemetry" minHeight={300} />
       </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "12px", height: 560 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "12px", height: 500, overflow: "hidden" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
         {/* Toolbar: search + type filter + depth selector */}
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
@@ -2140,7 +2165,7 @@ function UboGraphModule({ holdings, dossiers, loading }: {
         </div>
       </div>
       {/* Node detail panel */}
-      <div style={{ ...chartCardStyle, padding: "12px", overflowY: "auto", maxHeight: 560 }}>
+      <div style={{ ...chartCardStyle, padding: "12px", overflowY: "auto", maxHeight: 500 }}>
         <div style={chartTitleStyle}>25a — Node Inspector</div>
         {selected ? (
           <div style={{ marginTop: 12 }}>

@@ -803,7 +803,9 @@ function buildCandlestickOption(
     xAxis: {
       type: "category",
       data: dates,
-      axisLabel: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9, formatter: (v: string) => formatDateTick(v) },
+      // V13 fix: rotated + auto-skipped labels so candlestick dates don't
+      // pile on top of each other when the chart is narrow.
+      axisLabel: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9, rotate: 30, interval: "auto", hideOverlap: true, formatter: (v: string) => formatDateTick(v) },
       axisLine: ECHART_AXIS_LINE,
       splitLine: { show: false },
       boundaryGap: true,
@@ -892,7 +894,8 @@ function buildDualAxisOption(
     xAxis: {
       type: "category",
       data: dates,
-      axisLabel: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9, formatter: (v: string) => formatDateTick(v) },
+      // V13 fix: rotated + auto-skipped labels for the dual-axis price/sentiment chart.
+      axisLabel: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 9, rotate: 30, interval: "auto", hideOverlap: true, formatter: (v: string) => formatDateTick(v) },
       axisLine: ECHART_AXIS_LINE,
       splitLine: { show: false },
     },
@@ -1272,7 +1275,8 @@ function buildLatencyOption(samples: { t: string; ms: number }[]): EChartsOption
     xAxis: {
       type: "category",
       data: samples.map((s) => s.t),
-      axisLabel: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 8 },
+      // V13 fix: latency timeline labels were overlapping — auto-skip + rotated.
+      axisLabel: { fontFamily: FONT.mono, color: TEXT_MUTED, fontSize: 8, rotate: 30, interval: "auto", hideOverlap: true },
       axisLine: ECHART_AXIS_LINE,
       splitLine: { show: false },
     },
@@ -2038,12 +2042,17 @@ const AssetRow = memo(function AssetRow({
         width: "100%",
         height: size,
         transform: `translateY(${start}px)`,
-        display: "grid",
-        gridTemplateColumns: "56px 1fr 64px 56px 48px",
+        // V13 fix: switched from grid to flex+gap. The grid template forced
+        // 5 fixed-width columns which clipped the asset-type badge and let
+        // the ticker wrap onto a second line, visually overlapping the
+        // price column at 28px row height. Flex with explicit widths +
+        // gap gives the ticker room to breathe and prevents the inline-
+        // flex badge from being pushed under the price.
+        display: "flex",
         alignItems: "center",
-        gap: "4px",
-        padding: "0 6px",
-        fontSize: "10px",
+        gap: "8px",
+        padding: "0 8px",
+        fontSize: "11px",
         cursor: "pointer",
         background: flashBg,
         borderLeft: isSelected ? `2px solid ${ACCENT}` : "2px solid transparent",
@@ -2055,10 +2064,15 @@ const AssetRow = memo(function AssetRow({
         style={{
           fontWeight: 700,
           color: isSelected ? ACCENT : TEXT,
-          fontSize: "10px",
+          fontSize: "11px",
           display: "inline-flex",
           alignItems: "center",
           gap: "4px",
+          flex: "0 0 72px",
+          minWidth: 0,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
         title={sv.title}
       >
@@ -2074,7 +2088,7 @@ const AssetRow = memo(function AssetRow({
             boxShadow: source === "live" ? `0 0 4px ${sv.dot}` : "none",
           }}
         />
-        {asset.ticker}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{asset.ticker}</span>
       </span>
       <span
         style={{
@@ -2085,20 +2099,21 @@ const AssetRow = memo(function AssetRow({
           borderRadius: "2px",
           textTransform: "uppercase",
           letterSpacing: "0.05em",
-          justifySelf: "start",
+          flex: "0 0 auto",
+          whiteSpace: "nowrap",
         }}
       >
         {asset.assetType}
       </span>
-      <span style={{ textAlign: "right", color: TEXT_BODY, fontWeight: 600 }}>
+      <span style={{ textAlign: "right", color: TEXT_BODY, fontWeight: 600, flex: "1 1 auto", marginLeft: "auto", whiteSpace: "nowrap" }}>
         {livePrice !== null
           ? livePrice.toLocaleString("en-US", { maximumFractionDigits: 2 })
           : "—"}
       </span>
-      <span style={{ textAlign: "right", color: changeColor, fontWeight: 700 }}>
+      <span style={{ textAlign: "right", color: changeColor, fontWeight: 700, flex: "0 0 52px", whiteSpace: "nowrap" }}>
         {liveChange !== null ? `${liveChange > 0 ? "+" : ""}${liveChange.toFixed(1)}%` : "—"}
       </span>
-      <span style={{ textAlign: "right", color: sentColor, fontWeight: 700 }}>
+      <span style={{ textAlign: "right", color: sentColor, fontWeight: 700, flex: "0 0 40px", whiteSpace: "nowrap" }}>
         {liveSent !== null ? liveSent.toFixed(2) : "—"}
       </span>
     </div>
@@ -2124,10 +2139,15 @@ function VirtualizedAssetList({
   ticks: Record<string, PriceTick>;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
+  // Row height bumped 28 → 36 (V13 fix: ticker + asset-type badge + price
+  // were overlapping at 28px because the inline-flex ticker wrapped onto
+  // two lines and crashed into the price column. 36px gives the 10px font
+  // enough vertical breathing room and lets the data-source pip + ticker
+  // sit cleanly next to the type badge.
   const virtualizer = useVirtualizer({
     count: assets.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 28,
+    estimateSize: () => 36,
     overscan: 8,
     getItemKey: (i) => assets[i]?.ticker ?? i,
   });
