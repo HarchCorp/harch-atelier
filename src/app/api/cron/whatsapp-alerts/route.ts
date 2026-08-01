@@ -38,6 +38,10 @@ import {
   type AlertPayload,
   type Severity,
 } from "@/lib/whatsapp/twilio";
+import {
+  dispatchAlertEvent,
+  type AlertEventPayload,
+} from "@/lib/harchiq/webhook-dispatcher";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +114,7 @@ export async function GET(req: NextRequest) {
     detectedAt: Date | null;
     severity: Severity;
     kind: "article" | "risk";
+    companyId: string | null;
   };
 
   let rawAlerts: RawAlert[] = [];
@@ -122,6 +127,10 @@ export async function GET(req: NextRequest) {
           // Use scrapedAt as the freshness signal because publishedAt
           // can be null for some sources; scrapedAt is always set.
           scrapedAt: { gte: fifteenMinAgo },
+          // Only alert on company-tagged articles — orphan articles
+          // (no companyId) belong to the global news feed and have
+          // no company to alert about.
+          companyId: { not: null },
         },
         orderBy: { scrapedAt: "desc" },
         take: 50,
@@ -133,6 +142,8 @@ export async function GET(req: NextRequest) {
           sentimentScore: true,
           publishedAt: true,
           scrapedAt: true,
+          companyId: true,
+          url: true,
         },
       }),
       prisma.riskAssessment.findMany({
@@ -148,6 +159,7 @@ export async function GET(req: NextRequest) {
           riskLevel: true,
           riskScore: true,
           assessedAt: true,
+          companyId: true,
         },
       }),
     ]);
@@ -162,6 +174,7 @@ export async function GET(req: NextRequest) {
         detectedAt: a.publishedAt ?? a.scrapedAt,
         severity: severityFromScore(a.sentimentScore),
         kind: "article",
+        companyId: a.companyId,
       })),
       ...risks.map<RawAlert>((r) => ({
         id: r.id,
@@ -172,6 +185,7 @@ export async function GET(req: NextRequest) {
         detectedAt: r.assessedAt,
         severity: severityFromRiskLevel(r.riskLevel),
         kind: "risk",
+        companyId: r.companyId,
       })),
     ];
   } catch (err) {
@@ -282,6 +296,87 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── 4. Fan out webhooks for high/critical alerts ───────────────
+  //
+  //  Task: signal-enterprise-platform
+  //  For every (companyId, alert) pair where severity is high or
+  //  critical, dispatch the alert to every active webhook registered
+  //  for that company and subscribed to alert.critical or alert.high.
+  //  The fan-out is best-effort: failures are logged into the
+  //  WebhookDelivery table by dispatchAlertEvent, never thrown here.
+  //
+  //  We only fan out high/critical alerts — medium and low are noisy
+  //  and almost never warrant an outbound webhook.
+  const webhookResults: Array<{
+    companyId: string;
+    alertId: string;
+    event: string;
+    dispatched: number;
+    succeeded: number;
+  }> = [];
+
+  try {
+    // Pre-fetch company names once per company to avoid N+1 queries
+    // during dispatch (the dispatcher only needs id+slug+name).
+    const companyIds = Array.from(
+      new Set(
+        rawAlerts
+          .filter((a) => a.companyId && (a.severity === "high" || a.severity === "critical"))
+          .map((a) => a.companyId as string),
+      ),
+    );
+    const companies =
+      companyIds.length === 0
+        ? []
+        : await prisma.company.findMany({
+            where: { id: { in: companyIds } },
+            select: { id: true, name: true, slug: true },
+          });
+    const companyMap = new Map(companies.map((c) => [c.id, c]));
+
+    for (const alert of rawAlerts) {
+      if (!alert.companyId) continue;
+      if (alert.severity !== "high" && alert.severity !== "critical") continue;
+
+      const company = companyMap.get(alert.companyId);
+      if (!company) continue;
+
+      const eventPayload: AlertEventPayload = {
+        id: alert.id,
+        title: alert.title,
+        severity: alert.severity,
+        source: alert.source,
+        url: null,
+        detectedAt: alert.detectedAt ? alert.detectedAt.toISOString() : null,
+        sentimentScore: alert.sentimentScore,
+        details: alert.kind === "risk" ? alert.title : undefined,
+        company: {
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+        },
+      };
+
+      const results = await dispatchAlertEvent({
+        companyId: alert.companyId,
+        company,
+        alert: eventPayload,
+      });
+
+      webhookResults.push({
+        companyId: alert.companyId,
+        alertId: alert.id,
+        event: alert.severity === "critical" ? "alert.critical" : "alert.high",
+        dispatched: results.length,
+        succeeded: results.filter((r) => r.status === "success").length,
+      });
+    }
+  } catch (err) {
+    // Best-effort: a webhook dispatch failure must never mask the
+    // WhatsApp summary above. Log and continue.
+    console.error("[whatsapp-alerts] webhook dispatch failed:", err);
+  }
+
   const finishedAt = new Date();
   return NextResponse.json({
     ok: true,
@@ -295,6 +390,10 @@ export async function GET(req: NextRequest) {
       sent: totalSent,
       failed: totalFailed,
       skipped: totalSkipped,
+    },
+    webhooks: {
+      dispatchedAlerts: webhookResults.length,
+      results: webhookResults,
     },
     log,
   });

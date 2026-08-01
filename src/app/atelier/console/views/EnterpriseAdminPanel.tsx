@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { C } from "../../components/tokens";
+import { ApiKeysPanel } from "./ApiKeysPanel";
+import { WebhooksPanel } from "./WebhooksPanel";
 
 // ═══════════════════════════════════════════════════════════════
 //  ENTERPRISE ADMIN PANEL
@@ -100,7 +102,7 @@ interface InvitationInfo {
   acceptedById: string | null;
 }
 
-type Tab = "team" | "company" | "settings" | "hierarchy";
+type Tab = "team" | "company" | "settings" | "hierarchy" | "api-keys" | "webhooks";
 
 const TYPE_LABELS: Record<string, string> = {
   "brand-monitor": "Brand Monitor",
@@ -273,6 +275,8 @@ export function EnterpriseAdminPanel() {
             { id: "company", label: "Company" },
             { id: "settings", label: "Settings" },
             { id: "hierarchy", label: "Hierarchy" },
+            { id: "api-keys", label: "API Keys" },
+            { id: "webhooks", label: "Webhooks" },
           ] as Array<{ id: Tab; label: string }>
         ).map((t) => (
           <button
@@ -319,8 +323,12 @@ export function EnterpriseAdminPanel() {
             companyId={company?.id}
             onChanged={fetchAll}
           />
-        ) : (
+        ) : tab === "hierarchy" ? (
           <HierarchyTab company={company} onChanged={fetchAll} />
+        ) : tab === "api-keys" ? (
+          <ApiKeysPanel />
+        ) : (
+          <WebhooksPanel />
         )}
       </main>
     </div>

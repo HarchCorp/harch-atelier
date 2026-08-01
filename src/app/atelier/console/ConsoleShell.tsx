@@ -8,6 +8,7 @@ import { BrandMonitorDashboard } from "./views/BrandMonitorDashboard";
 import { CompetitorIntelDashboard } from "./views/CompetitorIntelDashboard";
 import { InvestorDeskDashboard } from "./views/InvestorDeskDashboard";
 import { AlphaDeskDashboard } from "./views/AlphaDeskDashboard";
+import { RegulatoryFeed } from "./views/RegulatoryFeed";
 import { NarrativePanel } from "./views/NarrativePanel";
 import { InfluencerPanel } from "./views/InfluencerPanel";
 import { InfluencerDatabase } from "./views/InfluencerDatabase";
@@ -250,6 +251,26 @@ function IconAiVisibility({ size = 18, color = C.textMuted }: { size?: number; c
   );
 }
 
+// Regulatory icon — a courthouse / institution pediment (a triangle
+// roof + 3 columns + a base). Signals the AMMC + BAM + BVC feed.
+// Task: signal-regulatory-feed
+function IconRegulatory({ size = 18, color = C.textMuted }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      {/* Roof / pediment */}
+      <path d="M3 9L12 3l9 6" />
+      {/* Three columns */}
+      <line x1="6" y1="9" x2="6" y2="18" />
+      <line x1="10" y1="9" x2="10" y2="18" />
+      <line x1="14" y1="9" x2="14" y2="18" />
+      <line x1="18" y1="9" x2="18" y2="18" />
+      {/* Base */}
+      <line x1="4" y1="18" x2="20" y2="18" />
+      <line x1="3" y1="21" x2="21" y2="21" />
+    </svg>
+  );
+}
+
 // ─── MOCKUP SUB-COMPONENTS (copied verbatim from AtelierHome.tsx) ──
 
 function ChartLegend({ color, label }: { color: string; label: string }) {
@@ -460,7 +481,8 @@ type NavId = "monitoring" | "sentiment" | "competitors" | "alerts" | "reports"
   | "watchlist" | "sentiment-price" | "ai-alpha" | "pre-market"
   | "portfolios" | "dossiers" | "esg" | "risks"
   | "narratives" | "influencers" | "darija" | "ai-visibility"
-  | "influencers-db" | "broadcast";
+  | "influencers-db" | "broadcast"
+  | "regulatory";
 
 interface NavItem {
   id: NavId;
@@ -490,6 +512,7 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
       { id: "dossiers",   label: "Dossiers",    icon: <IconReport size={16} color={iconColor("dossiers")} /> },
       { id: "esg",        label: "Compliance",  icon: <IconChart size={16}  color={iconColor("esg")} /> },
       { id: "risks",      label: "Risk Map",    icon: <IconUsers size={16}  color={iconColor("risks")} /> },
+      { id: "regulatory", label: "Regulatory",  icon: <IconRegulatory size={16} color={iconColor("regulatory")} /> },
       { id: "alerts",     label: "Red Flags",   icon: <BellIcon size={16}   color={iconColor("alerts")} /> },
     ];
   }
@@ -520,7 +543,7 @@ function buildNavItems(activeId: NavId, accountType: "brand-monitor" | "market-c
 // Default nav order per accountType
 function defaultNavOrder(accountType: "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha"): NavId[] {
   if (accountType === "harch-alpha") return ["watchlist", "sentiment-price", "ai-alpha", "alerts", "pre-market"];
-  if (accountType === "investment-bank") return ["portfolios", "dossiers", "esg", "risks", "alerts"];
+  if (accountType === "investment-bank") return ["portfolios", "dossiers", "esg", "risks", "regulatory", "alerts"];
   if (accountType === "market-competitor") return ["monitoring", "competitors", "sentiment", "narratives", "influencers", "alerts"];
   return ["monitoring", "alerts", "sentiment", "ai-visibility", "influencers", "reports"];
 }
@@ -2399,6 +2422,14 @@ function DashboardMain({
 
   // Investment Bank — investor console (cold, institutional)
   if (accountType === "investment-bank") {
+    // Regulatory feed panel — AMMC + BAM + BVC. Dedicated nav item so
+    // the banker can scan regulatory announcements that could affect
+    // portfolio holdings. Renders RegulatoryFeed instead of the
+    // InvestorDeskDashboard when "Regulatory" is active.
+    // Task: signal-regulatory-feed
+    if (activeNav === "regulatory") {
+      return <RegulatoryFeed />;
+    }
     return <InvestorDeskDashboard userName={displayName} userEmail={null} companyName={companyName} />;
   }
 

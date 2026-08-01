@@ -66,6 +66,7 @@ model Company {
   users            User[]
   invitations      Invitation[]
   settings         CompanySettings?
+  webhooks         Webhook[]
 
   @@unique([iceNumber]) // ICE must be unique if provided
   @@index([sector])
@@ -100,11 +101,23 @@ model Article {
   // alerts never pollute a real company's reputation console.
   isDemo        Boolean  @default(false)
 
+  // ─── Task: signal-regulatory-feed ──────────────────────────────────
+  // sourceType discriminates between regular media articles and the
+  // dedicated regulatory feed (AMMC / BAM / BVC press releases scraped
+  // daily by /api/cron/scrape-regulatory).
+  //   • "media"        — default — generic news / RSS feed articles.
+  //   • "regulatory"   — AMMC / BAM / BVC press release / circular.
+  //   • "market"       — BVC listing notice / corporate action.
+  //   • "financial"    — BAM monetary policy / banking regulation.
+  // Older rows (inserted before this field existed) default to "media".
+  sourceType    String   @default("media")
+
   @@index([companyId, publishedAt])
   @@index([source])
   @@index([sentimentLabel])
   @@index([processed])
   @@index([isDemo])
+  @@index([sourceType])
 }
 
 // ─── ANALYTICS ──────────────────────────────────────────────────
@@ -403,6 +416,7 @@ model User {
 
   sessions      Session[]
   apiKeys       ApiKey[]
+  webhooks      Webhook[]
   accounts      Account[]
   portfolios    Portfolio[]
   dossiers      Dossier[]
@@ -457,8 +471,91 @@ model ApiKey {
   expiresAt     DateTime?
   createdAt     DateTime @default(now())
 
+  // ─── Task: signal-enterprise-platform ────────────────────────────────
+  // keyPrefix: first 12 chars of the plaintext key (e.g. "harch_ab12cd34").
+  // Stored unhashed so the API-key management UI can show a recognisable
+  // suffix next to each key (like GitHub's "last used" tokens list) without
+  // ever exposing the full secret. The full secret is only shown ONCE at
+  // creation time.
+  keyPrefix     String?
+  // revokedAt: set when the user clicks "Revoke". Soft-delete so audit
+  // logs that reference the key id stay intact. authenticateApiKey()
+  // rejects any key with revokedAt != null.
+  revokedAt     DateTime?
+
+  webhooks      Webhook[]
+
   @@index([userId])
   @@index([keyHash])
+}
+
+// ─── WEBHOOKS (Task: signal-enterprise-platform) ─────────────────────
+// Registered by company admins to receive outbound POST callbacks when
+// critical/high alerts fire, reports become ready, or other subscribed
+// events occur. Dispatched by src/lib/harchiq/webhook-dispatcher.ts.
+//
+// A Webhook is owned by a User (and transitively a Company). The
+// dispatcher filters webhooks by companyId so a single alert fans out
+// to every endpoint registered for that company.
+//
+// `events` is a JSON-encoded string array because Prisma on Neon does
+// not allow scalar list columns in the schema policy we follow. The
+// dispatcher parses it via JSON.parse before matching.
+//
+// `secret` is an optional HMAC signing secret the client can verify on
+// receipt (X-Harch-Signature = hex(HMAC-SHA256(secret, body))). When
+// null, the request is unsigned.
+
+model Webhook {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  url           String
+  events        String   @default("[]")   // JSON array: ["alert.critical","alert.high","report.ready"]
+  secret        String?                     // optional HMAC signing secret
+  description   String?
+  isActive      Boolean  @default(true)
+  lastDeliveryAt DateTime?
+  lastDeliveryStatus String?               // success | failed | pending
+  lastDeliveryMessage String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // The API key used to register the webhook (provenance / audit).
+  apiKeyId      String?
+  apiKey        ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  deliveries    WebhookDelivery[]
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([isActive])
+}
+
+// ─── WEBHOOK DELIVERY LOG ────────────────────────────────────────────
+// One row per delivery attempt. The dispatcher writes one row per
+// retry so the admin UI can show the full delivery history per
+// webhook (success/failure timeline, latency, response status).
+
+model WebhookDelivery {
+  id            String   @id @default(cuid())
+  webhookId     String
+  webhook       Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event         String                       // e.g. "alert.critical"
+  payload       String                       // JSON string of the body sent
+  attempt       Int                          // 1, 2, 3 (retry number)
+  status        String   @default("pending") // pending | success | failed
+  httpStatus    Int?
+  responseSnippet String?                    // first 500 chars of the response body (debug)
+  errorMessage  String?
+  durationMs    Int?
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  @@index([webhookId, startedAt])
+  @@index([status])
 }
 
 model VerificationToken {

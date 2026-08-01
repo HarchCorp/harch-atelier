@@ -205,13 +205,96 @@ interface FeedFlag {
   source: string;
 }
 
-interface EntityNodeData {
+// ─── Section 4 types: real entity graph + adverse media events ──
+//
+//  Mirrors the JSON shape returned by:
+//    • /api/investor/entity-graph      (real OFAC-screened React Flow graph)
+//    • /api/console/alert-timeline     (includeEvents=1 → real articles)
+//
+//  Task ID: signal-entity-graph
+
+type OfacStatus = "clean" | "watch" | "flagged";
+
+interface EntityGraphMatch {
+  list: "OFAC" | "EU" | "UN";
+  name: string;
+  matchedField: "name" | "alias";
+  type: "individual" | "entity" | "vessel" | "unknown";
+  similarity: number;
+  program?: string;
+  regulation?: string;
+  remarks?: string;
+}
+
+interface EntityGraphNodeData {
   label: string;
-  sector?: string;
-  repScore?: number | null;
-  holdings?: number;
-  ticker?: string;
+  kind: "portfolio" | "company";
   weight?: number;
+  sector?: string;
+  reputationScore?: number | null;
+  riskScore?: number | null;
+  ofacStatus: OfacStatus;
+  topSimilarity: number;
+  matchCount: number;
+  matches: EntityGraphMatch[];
+  propagatedRisk: boolean;
+  holdingId?: string;
+  companySlug?: string;
+  articleCount?: number;
+  screenedAt: string;
+}
+
+interface EntityGraphMeta {
+  totalScreened: number;
+  flaggedCount: number;
+  watchCount: number;
+  cleanCount: number;
+  propagatedCount: number;
+  totalEntriesScreened: number;
+  screenedAt: string;
+  stale: boolean;
+  warnings: string[];
+}
+
+interface EntityGraphResponse {
+  nodes: Array<{
+    id: string;
+    type: "portfolio" | "company";
+    position: { x: number; y: number };
+    data: EntityGraphNodeData;
+  }>;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    label?: string;
+    labelStyle?: Record<string, unknown>;
+    labelBgStyle?: Record<string, unknown>;
+    labelBgPadding?: [number, number];
+    labelBgBorderRadius?: number;
+    style?: Record<string, unknown>;
+    animated?: boolean;
+  }>;
+  meta: EntityGraphMeta;
+}
+
+interface TimelineEvent {
+  id: string;
+  date: string;
+  source: string;
+  title: string;
+  sentiment: number | null;
+  sentimentLabel: string | null;
+  severity: "critical" | "high" | "medium" | "low";
+  url: string;
+  companyId: string | null;
+}
+
+interface TimelineEventsResponse {
+  range: string;
+  company: { name: string; slug: string };
+  events: TimelineEvent[];
+  eventCount: number;
 }
 
 // ─── Color tokens (zero hardcoded beyond C tokens + ACCENT/RED/AMBER/GREEN) ───
@@ -434,9 +517,64 @@ function KpiTile({
   );
 }
 
-// ─── Entity Graph (React Flow, custom nodes) ───────────────────
+// ─── Entity Graph (React Flow, REAL OFAC-screened) ──────────────
+//
+//  Section 4 — Task ID: signal-entity-graph
+//
+//  Replaces the previous "derived" UBO topology with a real entity
+//  graph fetched from /api/investor/entity-graph. Every holding
+//  company is screened against the cached OFAC/EU/UN sanctions
+//  lists (27K+ entries) server-side, and only the matches above
+//  0.7 similarity are returned. Nodes are coloured:
+//
+//    green  — clean (no matches above 0.7)
+//    amber  — watch  (top similarity 0.7..0.86)
+//    red    — flagged (top similarity ≥ 0.86)
+//
+//  Risk propagation: any holding that is directly linked (same
+//  sector or shared portfolio) to a flagged entity gets an amber
+//  dashed border — this is how compliance officers visualise
+//  contagion risk. Click a node to open the detail panel with
+//  company name, sector, OFAC status, risk score, linked articles.
 
-function portfolioNode({ data }: { data: EntityNodeData }) {
+function useEntityGraph(skip: boolean) {
+  const [data, setData] = useState<EntityGraphResponse | null>(null);
+  const [loading, setLoading] = useState(!skip);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/investor/entity-graph", { signal });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        setError(errBody.error ?? `HTTP ${res.status}`);
+        setData(null);
+      } else {
+        const json = (await res.json()) as EntityGraphResponse;
+        setData(json);
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      setError((err as Error).message);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (skip) return;
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [skip, load]);
+
+  return { data, loading, error, reload: load };
+}
+
+function realPortfolioNode({ data }: { data: EntityGraphNodeData }) {
   return (
     <div style={{
       padding: "10px 14px", background: ACCENT, border: `2px solid ${ACCENT}`,
@@ -445,186 +583,265 @@ function portfolioNode({ data }: { data: EntityNodeData }) {
     }}>
       <Handle type="source" position={Position.Bottom} style={{ background: "#ffffff", width: 8, height: 8 }} />
       <div style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{data.label}</div>
-      <div style={{ fontSize: 9, opacity: 0.75, marginTop: 2 }}>{data.holdings ?? 0} holdings</div>
+      <div style={{ fontSize: 9, opacity: 0.75, marginTop: 2 }}>portfolio book</div>
     </div>
   );
 }
 
-function companyNode({ data }: { data: EntityNodeData }) {
-  const repColor = data.repScore === null || data.repScore === undefined ? SLATE_MID : data.repScore >= 70 ? GREEN : data.repScore >= 50 ? AMBER : RED;
+function realCompanyNode({ data }: { data: EntityGraphNodeData }) {
+  // OFAC status → border colour.
+  const statusColor =
+    data.ofacStatus === "flagged" ? RED :
+    data.ofacStatus === "watch"   ? AMBER :
+    GREEN;
+  // Propagated risk → amber dashed border (contagion indicator).
+  const borderStyle = data.propagatedRisk
+    ? `2px dashed ${AMBER}`
+    : `2px solid ${statusColor}`;
+  const bgColor =
+    data.ofacStatus === "flagged" ? `${RED}08` :
+    data.ofacStatus === "watch"   ? `${AMBER}08` :
+    data.propagatedRisk           ? `${AMBER}04` :
+    C.bg;
+  const repColor = data.reputationScore === null || data.reputationScore === undefined
+    ? SLATE_MID
+    : data.reputationScore >= 70 ? GREEN : data.reputationScore >= 50 ? AMBER : RED;
   return (
     <div style={{
-      padding: "8px 12px", background: C.bg, border: `2px solid ${ACCENT}`,
+      padding: "8px 12px", background: bgColor, border: borderStyle,
       borderRadius: "4px", fontSize: "11px", fontFamily: FONT.mono, color: C.text,
-      minWidth: 130,
+      minWidth: 140, maxWidth: 180,
+      boxShadow: data.ofacStatus === "flagged" ? `0 0 0 1px ${RED}30` : "none",
     }}>
-      <Handle type="target" position={Position.Top} style={{ background: ACCENT, width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: ACCENT, width: 8, height: 8 }} />
-      <div style={{ fontWeight: 700, color: ACCENT }}>{data.label}</div>
+      <Handle type="target" position={Position.Top} style={{ background: statusColor, width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: statusColor, width: 8, height: 8 }} />
+      <div style={{ fontWeight: 700, color: statusColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.label}</div>
       <div style={{ fontSize: 9, color: SLATE_MID, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{data.sector ?? "—"}</div>
-      {data.repScore !== null && data.repScore !== undefined && (
-        <div style={{ fontSize: 9, color: repColor, marginTop: 4, fontWeight: 700 }}>REP {data.repScore}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, gap: 6 }}>
+        <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: "2px", background: `${statusColor}15`, color: statusColor, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          {data.ofacStatus}
+        </span>
+        {data.reputationScore !== null && data.reputationScore !== undefined && (
+          <span style={{ fontSize: 9, color: repColor, fontWeight: 700 }}>REP {data.reputationScore}</span>
+        )}
+      </div>
+      {data.propagatedRisk && (
+        <div style={{ fontSize: 8, color: AMBER, fontWeight: 700, marginTop: 3, letterSpacing: "0.05em" }}>PROPAGATED</div>
       )}
     </div>
   );
 }
 
-function assetNode({ data }: { data: EntityNodeData }) {
-  return (
-    <div style={{
-      padding: "6px 10px", background: C.bgSubtle, border: `1px solid ${C.borderStrong}`,
-      borderRadius: "4px", fontSize: "10px", fontFamily: FONT.mono, color: C.textBody,
-      minWidth: 90,
-    }}>
-      <Handle type="target" position={Position.Top} style={{ background: C.borderStrong, width: 6, height: 6 }} />
-      <div style={{ fontWeight: 700, color: ACCENT }}>{data.ticker ?? data.label}</div>
-      <div style={{ fontSize: 9, color: SLATE_MID }}>{data.label}</div>
-    </div>
-  );
-}
-
-const entityNodeTypes: NodeTypes = {
-  portfolio: portfolioNode,
-  company: companyNode,
-  asset: assetNode,
+const realEntityNodeTypes: NodeTypes = {
+  portfolio: realPortfolioNode,
+  company: realCompanyNode,
 };
 
-function EntityGraph({
-  holdings, portfoliosCount, loading,
-}: {
-  holdings: InvestorHolding[];
-  portfoliosCount: number;
-  loading: boolean;
-}) {
-  const { nodes, edges, totalNodeCount, capped } = useMemo(() => {
-    const nodes: Node<EntityNodeData>[] = [];
-    const edges: Edge[] = [];
+function EntityGraph({ skipFetch }: { skipFetch: boolean }) {
+  const { data, loading, error, reload } = useEntityGraph(skipFetch);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    if (holdings.length === 0 && portfoliosCount === 0) {
-      return { nodes, edges, totalNodeCount: 0, capped: false };
-    }
+  // Debounced selection — prevents setSelectedId storms when the user
+  // rapidly clicks across the graph.
+  const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSelectionChange = useCallback((params: { nodes: Array<{ id: string }> }) => {
+    if (selectionTimer.current) clearTimeout(selectionTimer.current);
+    selectionTimer.current = setTimeout(() => {
+      setSelectedId(params.nodes[0]?.id ?? null);
+    }, 80);
+  }, []);
+  useEffect(() => {
+    return () => { if (selectionTimer.current) clearTimeout(selectionTimer.current); };
+  }, []);
 
-    // Portfolio nodes (top row). We don't have portfolio-level data here (holdings
-    // are flattened across portfolios), so we render a single synthetic "Book" node
-    // only if at least one holding exists.
-    const bookCount = Math.max(1, portfoliosCount);
-    const bookSpacing = 220;
-    const bookStartX = -((bookCount - 1) * bookSpacing) / 2;
-    for (let i = 0; i < bookCount; i++) {
-      nodes.push({
-        id: `book-${i}`,
-        type: "portfolio",
-        position: { x: bookStartX + i * bookSpacing, y: 0 },
-        data: { label: portfoliosCount > 0 ? `Book ${i + 1}` : "Portfolio", holdings: holdings.length },
-        draggable: true,
-      });
-    }
-
-    // Company / asset nodes (bottom row).
-    const total = holdings.length;
-    const spacing = 180;
-    const startX = -((total - 1) * spacing) / 2;
-    holdings.forEach((h, i) => {
-      const isCompany = h.sector !== "—" && h.companyName !== "—";
-      const nodeType = isCompany ? "company" : "asset";
-      nodes.push({
-        id: `h-${h.id}`,
-        type: nodeType,
-        position: { x: startX + i * spacing, y: 220 },
-        data: isCompany
-          ? { label: h.companyName, sector: h.sector, repScore: h.reputationScore }
-          : { label: h.companyName, ticker: h.companyName.slice(0, 4).toUpperCase() },
-        draggable: true,
-      });
-      // Edge from each book to each holding with ownership weight %.
-      edges.push({
-        id: `e-${i}`,
-        source: `book-${i % bookCount}`,
-        target: `h-${h.id}`,
-        label: `${(h.weight * 100).toFixed(0)}%`,
-        labelStyle: { fontSize: 9, fontFamily: "'Space Mono', monospace", fill: SLATE_MID },
-        labelBgStyle: { fill: C.bg, fillOpacity: 0.85 },
-        labelBgPadding: [4, 2] as [number, number],
-        labelBgBorderRadius: 2,
-        style: { stroke: ACCENT, strokeWidth: 1.2, strokeOpacity: 0.55 },
-        animated: h.uboFlag === "red",
-      });
-    });
-
-    // React Flow hardening — cap visible nodes at 2000 (React Flow cannot
-    // realistically render more than that) and edges at 1000. Keep all
-    // portfolio (book) nodes first, then fill with holdings.
-    const NODE_CAP = 2000;
-    const EDGE_CAP = 1000;
-    const totalNodeCount = nodes.length;
-    const capped = totalNodeCount > NODE_CAP;
-    const bookNodes = nodes.filter((n) => n.type === "portfolio");
-    const holdingNodes = nodes.filter((n) => n.type !== "portfolio");
-    const keptNodes = capped
-      ? [...bookNodes, ...holdingNodes.slice(0, Math.max(0, NODE_CAP - bookNodes.length))]
-      : nodes;
-    const keptIds = new Set(keptNodes.map((n) => n.id));
-    const keptEdges = edges
-      .filter((e) => keptIds.has(e.source) && keptIds.has(e.target))
-      .slice(0, EDGE_CAP);
-
-    return { nodes: keptNodes, edges: keptEdges, totalNodeCount, capped };
-  }, [holdings, portfoliosCount]);
+  const nodes = data?.nodes ?? [];
+  const edges = data?.edges ?? [];
+  const meta = data?.meta ?? null;
+  const selected = selectedId ? nodes.find((n) => n.id === selectedId) ?? null : null;
 
   if (loading) {
-    return <div style={{ height: 500, padding: 24 }}><SkeletonLoader accent={ACCENT} lines={3} height={120} /></div>;
+    return <div style={{ height: 540, padding: 24 }}><SkeletonLoader accent={ACCENT} lines={3} height={120} /></div>;
   }
 
-  if (nodes.length < 2) {
+  if (error) {
     return (
-      <div style={{ height: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <AwaitingTelemetry label="Entity Resolution" minHeight={300} />
+      <div style={{ height: 540, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <ErrorState accent={RED} message={`Entity graph error: ${error}`} />
       </div>
     );
   }
 
+  if (nodes.length === 0) {
+    return (
+      <div style={{ height: 540, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <AwaitingTelemetry label="Entity Resolution — awaiting portfolio holdings" minHeight={300} />
+      </div>
+    );
+  }
+
+  // React Flow hardening — cap visible nodes at 2000.
+  const NODE_CAP = 2000;
+  const capped = nodes.length > NODE_CAP;
+  const keptNodes = capped ? nodes.slice(0, NODE_CAP) : nodes;
+  const keptIds = new Set(keptNodes.map((n) => n.id));
+  const keptEdges = edges.filter((e) => keptIds.has(e.source) && keptIds.has(e.target));
+
   return (
-    <div style={{ height: 500, background: C.bgSubtle, borderRadius: "4px", overflow: "hidden", position: "relative" }}>
-      {capped && (
-        <div style={{
-          position: "absolute", top: 8, left: 8, zIndex: 10,
-          padding: "4px 10px", fontSize: 9, fontFamily: FONT.mono, fontWeight: 700,
-          background: `${AMBER}10`, color: AMBER, border: `1px solid ${AMBER}40`,
-          borderRadius: "3px", letterSpacing: "0.05em", textTransform: "uppercase",
-        }}>
-          Graph capped at 2000 visible nodes ({totalNodeCount} total). Use search to focus.
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "12px", height: 540, overflow: "hidden" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
+        {/* Stats bar — real screening meta */}
+        {meta && (
+          <div style={{ display: "flex", gap: 12, fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 0", flexWrap: "wrap" }}>
+            <span>{meta.totalScreened} screened</span>
+            <span style={{ color: GREEN, fontWeight: 700 }}>{meta.cleanCount} clean</span>
+            <span style={{ color: AMBER, fontWeight: 700 }}>{meta.watchCount} watch</span>
+            <span style={{ color: RED, fontWeight: 700 }}>{meta.flaggedCount} flagged</span>
+            <span style={{ color: AMBER, fontWeight: 700 }}>{meta.propagatedCount} propagated</span>
+            <span>{meta.totalEntriesScreened.toLocaleString()} entries</span>
+            {meta.stale && <span style={{ color: AMBER, fontWeight: 700 }}>STALE LISTS</span>}
+            {capped && <span style={{ color: AMBER, fontWeight: 700 }}>CAPPED AT 2000 NODES</span>}
+          </div>
+        )}
+        {/* Warnings */}
+        {meta && meta.warnings.length > 0 && (
+          <div style={{ padding: "4px 8px", background: `${AMBER}08`, border: `1px solid ${AMBER}40`, borderLeft: `3px solid ${AMBER}`, borderRadius: "3px", fontSize: 9, fontFamily: FONT.mono, color: AMBER }}>
+            {meta.warnings.slice(0, 2).map((w, i) => (
+              <div key={i}>{w}</div>
+            ))}
+          </div>
+        )}
+        {/* React Flow canvas */}
+        <div style={{ flex: 1, background: C.bgSubtle, borderRadius: "4px", overflow: "hidden", minHeight: 0, position: "relative" }}>
+          <ReactFlow
+            nodes={keptNodes}
+            edges={keptEdges}
+            nodeTypes={realEntityNodeTypes}
+            onNodeClick={(_event, node) => setSelectedId(node.id)}
+            onSelectionChange={handleSelectionChange}
+            onlyRenderVisibleElements
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
+            minZoom={0.1}
+            maxZoom={2}
+            defaultViewport={{ zoom: 0.5, x: 0, y: 0 }}
+            translateExtent={[[-20000, -2000], [20000, 2000]]}
+            proOptions={{ hideAttribution: true }}
+            style={{ background: C.bgSubtle, fontFamily: FONT.mono }}
+            elevateNodesOnSelect={false}
+          >
+            <Background color={C.border} gap={16} size={1} />
+            <Controls showInteractive={false} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4 }} />
+            <MiniMap
+              nodeColor={(n) => {
+                const data = n.data as EntityGraphNodeData;
+                if (data?.kind === "portfolio") return ACCENT;
+                if (data?.ofacStatus === "flagged") return RED;
+                if (data?.ofacStatus === "watch") return AMBER;
+                if (data?.propagatedRisk) return AMBER;
+                return GREEN;
+              }}
+              maskColor="rgba(255,255,255,0.65)"
+              style={{ background: C.bgSubtle, border: `1px solid ${C.border}` }}
+            />
+          </ReactFlow>
         </div>
-      )}
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={entityNodeTypes}
-        onlyRenderVisibleElements
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={true}
-        minZoom={0.1}
-        maxZoom={2}
-        defaultViewport={{ zoom: 0.5, x: 0, y: 0 }}
-        translateExtent={[[-20000, -2000], [20000, 2000]]}
-        proOptions={{ hideAttribution: true }}
-        style={{ background: C.bgSubtle, fontFamily: FONT.mono }}
-      >
-        <Background color={C.border} gap={16} size={1} />
-        <Controls showInteractive={false} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4 }} />
-        <MiniMap
-          nodeColor={(n) => {
-            if (n.type === "portfolio") return ACCENT;
-            if (n.type === "company") return "#3b6ea5";
-            return C.borderStrong;
-          }}
-          maskColor="rgba(255,255,255,0.65)"
-          style={{ background: C.bgSubtle, border: `1px solid ${C.border}` }}
-        />
-      </ReactFlow>
+        {/* Legend + re-screen button */}
+        <div style={{ display: "flex", gap: 12, fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.05em", textTransform: "uppercase", alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 8, height: 8, background: GREEN, borderRadius: "1px" }} />Clean
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 8, height: 8, background: AMBER, borderRadius: "1px" }} />Watch
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 8, height: 8, background: RED, borderRadius: "1px" }} />Flagged
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 10, height: 0, borderTop: `2px dashed ${AMBER}` }} />Propagated
+          </span>
+          <button
+            onClick={() => { const c = new AbortController(); reload(c.signal); }}
+            style={{
+              marginLeft: "auto", padding: "3px 10px", fontSize: 9, fontFamily: FONT.mono, fontWeight: 700,
+              border: `1px solid ${ACCENT}`, borderRadius: "3px", background: ACCENT, color: "#ffffff",
+              cursor: "pointer", letterSpacing: "0.05em", textTransform: "uppercase",
+            }}
+          >
+            Re-screen
+          </button>
+        </div>
+      </div>
+      {/* Node detail panel */}
+      <div style={{ ...chartCardStyle, padding: "12px", overflowY: "auto", maxHeight: 540 }}>
+        <div style={chartTitleStyle}>06a — Node Inspector</div>
+        {selected && selected.data.kind === "company" ? (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, fontFamily: FONT.sans, lineHeight: 1.3 }}>{selected.data.label}</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "2px", background: `${selected.data.ofacStatus === "flagged" ? RED : selected.data.ofacStatus === "watch" ? AMBER : GREEN}15`, color: selected.data.ofacStatus === "flagged" ? RED : selected.data.ofacStatus === "watch" ? AMBER : GREEN, fontSize: 9, fontFamily: FONT.mono, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+                OFAC {selected.data.ofacStatus}
+              </span>
+              {selected.data.propagatedRisk && (
+                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "2px", background: `${AMBER}15`, color: AMBER, fontSize: 9, fontFamily: FONT.mono, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+                  Propagated
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <DetailRow label="Sector" value={selected.data.sector ?? "—"} />
+              <DetailRow label="Reputation" value={selected.data.reputationScore !== null && selected.data.reputationScore !== undefined ? String(selected.data.reputationScore) : "—"} valueColor={selected.data.reputationScore !== null && selected.data.reputationScore !== undefined ? (selected.data.reputationScore >= 70 ? GREEN : selected.data.reputationScore >= 50 ? AMBER : RED) : SLATE_MID} />
+              <DetailRow label="Risk Score" value={selected.data.riskScore !== null && selected.data.riskScore !== undefined ? String(selected.data.riskScore) : "—"} valueColor={selected.data.riskScore !== null && selected.data.riskScore !== undefined ? (selected.data.riskScore >= 60 ? RED : selected.data.riskScore >= 40 ? AMBER : GREEN) : SLATE_MID} />
+              <DetailRow label="Top Similarity" value={selected.data.topSimilarity > 0 ? `${Math.round(selected.data.topSimilarity * 100)}%` : "—"} valueColor={selected.data.topSimilarity >= 0.86 ? RED : selected.data.topSimilarity >= 0.7 ? AMBER : SLATE_MID} />
+              <DetailRow label="Match Count" value={String(selected.data.matchCount)} />
+              <DetailRow label="Linked Articles" value={String(selected.data.articleCount ?? 0)} />
+              <DetailRow label="Holding Weight" value={selected.data.weight !== undefined ? `${Math.round(selected.data.weight * 100)}%` : "—"} />
+              <DetailRow label="Screened At" value={new Date(selected.data.screenedAt).toLocaleString("en-US", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })} />
+            </div>
+            {selected.data.matches.length > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontWeight: 700 }}>Sanctions Matches</div>
+                <MatchDetailList matches={selected.data.matches} />
+              </div>
+            )}
+            {selected.data.ofacStatus === "flagged" && (
+              <div style={{ marginTop: 10, padding: "6px 8px", background: `${RED}10`, borderLeft: `3px solid ${RED}`, fontSize: 10, fontFamily: FONT.mono, color: RED, fontWeight: 700, letterSpacing: "0.05em" }}>
+                FLAGGED — ENHANCED DUE DILIGENCE REQUIRED
+              </div>
+            )}
+            {selected.data.propagatedRisk && (
+              <div style={{ marginTop: 8, padding: "6px 8px", background: `${AMBER}10`, borderLeft: `3px solid ${AMBER}`, fontSize: 10, fontFamily: FONT.mono, color: AMBER, fontWeight: 700, letterSpacing: "0.05em" }}>
+                PROPAGATED — linked to a flagged entity in the same sector / portfolio
+              </div>
+            )}
+            {selected.data.companySlug && (
+              <a
+                href={`/atelier/companies/${selected.data.companySlug}`}
+                style={{
+                  display: "block", marginTop: 10, padding: "6px 10px", fontSize: 10, fontFamily: FONT.mono, fontWeight: 700,
+                  border: `1px solid ${ACCENT}`, borderRadius: "3px", background: C.bg, color: ACCENT,
+                  textAlign: "center", textDecoration: "none", letterSpacing: "0.05em", textTransform: "uppercase",
+                }}
+              >
+                Open company dossier →
+              </a>
+            )}
+          </div>
+        ) : selected && selected.data.kind === "portfolio" ? (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, fontFamily: FONT.sans }}>{selected.data.label}</div>
+            <div style={{ fontSize: 10, color: SLATE_MID, fontFamily: FONT.mono, marginTop: 4 }}>Portfolio book — click a holding to inspect</div>
+          </div>
+        ) : (
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
+            <AwaitingTelemetry label="Select a node" minHeight={120} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
 
 // ─── Virtualized DD Checklist (left rail, 6 cols) ──────────────
 
@@ -2809,23 +3026,30 @@ function ComplianceRegistry({
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  MODULE 3 — Timeline Adverse Media 15 Ans
+//  MODULE 3 — Real Adverse Media Timeline (Section 4)
 //
-//  ECharts scatter timeline (2010–present), xAxis = time, yAxis =
-//  category index (Legal / Ecological / Fiscal / Reputational /
-//  Regulatory). Zoomable via dataZoom slider + inside (brush-style).
-//  Click event -> drill-down panel with date/company/category/source/
-//  summary. Density heatmap below (year x category). Virtualized
-//  chronological event log (28px rows, 500+ capacity).
+//  ECharts scatter timeline of REAL articles fetched from
+//  /api/console/alert-timeline?includeEvents=1&range=all. No
+//  fabricated events — every dot on the chart is a real article
+//  ingested by the RSS scrapers. If no real articles exist, the
+//  widget shows a clean AwaitingTelemetry state.
 //
-//  Event categorization by keyword (real alerts + dossier summaries):
+//  xAxis = time (auto-scaled to the article date range, with a
+//  90-day backstop so a single recent article doesn't collapse the
+//  chart to a point). yAxis = category index derived from keyword
+//  matching on the article title:
 //    court/lawsuit/litigation/tribunal -> Legal (red)
 //    pollution/environment/ecology/emission -> Ecological (green)
 //    tax/fiscal/audit/fraud -> Fiscal (amber)
 //    scandal/crisis/backlash -> Reputational (navy ACCENT)
-//    regulator/ammc/sanction/fine -> Regulatory (C.accent stone)
-//  Historical events spread deterministically across 2010-2024 by
-//  hashing company name -> year. Labeled "HISTORICAL (DERIVED)".
+//    regulator/ammc/sanction/fine -> Regulatory (stone)
+//  Click event -> drill-down panel with date/source/category/
+//  sentiment/severity. Density heatmap below (year x category).
+//  Virtualized chronological event log (28px rows, 500+ capacity).
+//
+//  Task ID: signal-entity-graph — replaces the previous
+//  "HISTORICAL (DERIVED)" placeholder which spread synthetic events
+//  across 2010-2024 by hashing the company name.
 // ═══════════════════════════════════════════════════════════════
 
 type AdverseCategory = "Legal" | "Ecological" | "Fiscal" | "Reputational" | "Regulatory";
@@ -2834,12 +3058,12 @@ interface AdverseEvent {
   id: string;
   date: string;
   year: number;
-  company: string;
-  category: AdverseCategory;
-  title: string;
   source: string;
-  summary: string;
-  derived: boolean;
+  title: string;
+  sentiment: number | null;
+  severity: "critical" | "high" | "medium" | "low";
+  url: string;
+  category: AdverseCategory;
 }
 
 const ADVERSE_CATEGORY_LIST: AdverseCategory[] = ["Legal", "Ecological", "Fiscal", "Reputational", "Regulatory"];
@@ -2869,114 +3093,64 @@ function categorizeAdverse(text: string): AdverseCategory {
   return ADVERSE_CATEGORY_LIST[h % ADVERSE_CATEGORY_LIST.length];
 }
 
-const ADVERSE_TITLES: Record<AdverseCategory, (c: string) => string> = {
-  Legal: (c) => `${c} faces regulatory tribunal hearing`,
-  Ecological: (c) => `${c} cited for environmental emission breach`,
-  Fiscal: (c) => `${c} tax audit dispute resurfaces`,
-  Reputational: (c) => `${c} scandal draws media backlash`,
-  Regulatory: (c) => `${c} sanctioned by AMMC over disclosure`,
-};
-
-function deriveAdverseEvents(
-  alerts: Array<{ id: string; title: string; source: string; severity: string; detectedAt: string | null }>,
-  holdings: InvestorHolding[],
-  dossiers: InvestorDossier[],
-): AdverseEvent[] {
-  const events: AdverseEvent[] = [];
-  const now = new Date();
-
-  // Real alerts (recent)
-  for (const a of alerts) {
-    const dt = a.detectedAt ?? new Date().toISOString();
-    const d = new Date(dt);
-    if (Number.isNaN(d.getTime())) continue;
-    events.push({
-      id: `alert-${a.id}`,
-      date: dt,
+function mapTimelineEvents(events: TimelineEvent[]): AdverseEvent[] {
+  return events.map((e) => {
+    const d = new Date(e.date);
+    return {
+      id: e.id,
+      date: e.date,
       year: d.getFullYear(),
-      company: "Portfolio Target",
-      category: categorizeAdverse(a.title),
-      title: a.title,
-      source: a.source,
-      summary: `Alert severity: ${a.severity}. Source: ${a.source}. Detected ${d.toLocaleDateString("en-US")}.`,
-      derived: false,
-    });
-  }
-
-  // Holdings-derived historical events: spread across 15 years by hash
-  for (const h of holdings) {
-    if (h.highRiskCount === 0 && h.adverseMediaCount === 0 && h.uboFlag === "clear") continue;
-    const hHash = hashString(h.companyName);
-    const eventCount = Math.min(8, Math.max(1, h.highRiskCount + (h.uboFlag === "red" ? 3 : 0)));
-    for (let i = 0; i < eventCount; i++) {
-      const yr = 2010 + ((hHash + i * 7) % 15);
-      const month = (hHash + i * 3) % 12;
-      const day = 1 + ((hHash + i * 5) % 28);
-      const d = new Date(yr, month, day);
-      if (d > now) continue;
-      const cat = categorizeAdverse(`${h.companyName}-${i}-${h.sector}`);
-      events.push({
-        id: `hist-${h.id}-${i}`,
-        date: d.toISOString(),
-        year: yr,
-        company: h.companyName,
-        category: cat,
-        title: ADVERSE_TITLES[cat](h.companyName),
-        source: "HarchIQ Historical Archive",
-        summary: `HISTORICAL (DERIVED) — ${cat} event on ${h.companyName} (${h.sector}). Risk profile: ${h.highRiskCount} high-risk signals, UBO flag ${h.uboFlag}.`,
-        derived: true,
-      });
-    }
-    if (h.adverseMediaCount > 0) {
-      const recentDate = new Date(now.getTime() - (hHash % 30) * 86400000);
-      events.push({
-        id: `cur-${h.id}`,
-        date: recentDate.toISOString(),
-        year: recentDate.getFullYear(),
-        company: h.companyName,
-        category: categorizeAdverse(h.companyName),
-        title: `${h.companyName}: ${h.adverseMediaCount} adverse media hit${h.adverseMediaCount === 1 ? "" : "s"} in current cycle`,
-        source: "Media Monitor",
-        summary: `Current-cycle adverse media cluster on ${h.companyName}. Reputation score: ${h.reputationScore ?? "n/a"}.`,
-        derived: false,
-      });
-    }
-  }
-
-  // Dossier-derived threat events
-  for (const d of dossiers) {
-    if (d.threats === 0) continue;
-    const dHash = hashString(d.target + d.id);
-    const yr = 2010 + (dHash % 15);
-    const month = dHash % 12;
-    const day = 1 + (dHash % 28);
-    const dt = new Date(yr, month, day);
-    if (dt > now) continue;
-    events.push({
-      id: `dos-${d.id}`,
-      date: dt.toISOString(),
-      year: yr,
-      company: d.target,
-      category: categorizeAdverse(d.summary || d.title),
-      title: `${d.target}: ${d.title}`,
-      source: "Diligence Dossier",
-      summary: `Dossier-derived threat event. Risk band: ${d.riskBand}. Threats identified: ${d.threats}.`,
-      derived: true,
-    });
-  }
-
-  events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  return events;
+      source: e.source,
+      title: e.title,
+      sentiment: e.sentiment,
+      severity: e.severity,
+      url: e.url,
+      category: categorizeAdverse(`${e.title} ${e.source}`),
+    };
+  });
 }
 
-function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
-  alerts: Array<{ id: string; title: string; source: string; severity: string; detectedAt: string | null }>;
-  holdings: InvestorHolding[];
-  dossiers: InvestorDossier[];
-  loading: boolean;
-}) {
+// Fetcher hook for real article events.
+function useTimelineEvents(skip: boolean) {
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [loading, setLoading] = useState(!skip);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/console/alert-timeline?includeEvents=1&range=all&eventLimit=500", { signal });
+      if (!res.ok) {
+        setError(`HTTP ${res.status}`);
+        setEvents([]);
+        return;
+      }
+      const data = (await res.json()) as TimelineEventsResponse;
+      setEvents(data.events ?? []);
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      setError((err as Error).message);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (skip) return;
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [skip, load]);
+
+  return { events, loading, error, reload: load };
+}
+
+function AdverseMedia15yr({ skipFetch }: { skipFetch: boolean }) {
+  const { events: rawEvents, loading, error, reload } = useTimelineEvents(skipFetch);
   const [selectedEvent, setSelectedEvent] = useState<AdverseEvent | null>(null);
-  const events = useMemo(() => deriveAdverseEvents(alerts, holdings, dossiers), [alerts, holdings, dossiers]);
+  const events = useMemo(() => mapTimelineEvents(rawEvents), [rawEvents]);
 
   const timelineOption = useMemo(() => {
     const seriesData: Record<AdverseCategory, Array<{ value: [string, number]; eventId: string; itemStyle: { color: string } }>> = {
@@ -2984,11 +3158,37 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
     };
     for (const e of events) {
       const catIdx = ADVERSE_CATEGORY_LIST.indexOf(e.category);
+      // Color intensity scales with severity (critical=full opacity, low=faded).
+      const severityAlpha =
+        e.severity === "critical" ? 1 :
+        e.severity === "high"     ? 0.9 :
+        e.severity === "medium"   ? 0.75 :
+        0.55;
+      const color = ADVERSE_CATEGORY_COLORS[e.category];
+      const rgba = color.startsWith("#")
+        ? `${color}${Math.round(severityAlpha * 255).toString(16).padStart(2, "0")}`
+        : color;
       seriesData[e.category].push({
         value: [e.date, catIdx],
         eventId: e.id,
-        itemStyle: { color: e.derived ? `${ADVERSE_CATEGORY_COLORS[e.category]}90` : ADVERSE_CATEGORY_COLORS[e.category] },
+        itemStyle: { color: rgba },
       });
+    }
+
+    // Auto-scale the x-axis to the article date range, with a 90-day
+    // backstop so a single recent article doesn't collapse the chart.
+    let minTime = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    let maxTime = Date.now();
+    if (events.length > 0) {
+      const timestamps = events.map((e) => new Date(e.date).getTime()).filter((t) => !Number.isNaN(t));
+      if (timestamps.length > 0) {
+        minTime = Math.min(...timestamps);
+        maxTime = Math.max(...timestamps, maxTime);
+        // Add 5% padding on each side.
+        const span = maxTime - minTime;
+        minTime -= span * 0.05;
+        maxTime += span * 0.05;
+      }
     }
 
     return {
@@ -2999,14 +3199,14 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
         formatter: (p: { data: { eventId: string } }) => {
           const ev = events.find((x) => x.id === p.data.eventId);
           if (!ev) return "";
-          return `<div style="font-weight:700;margin-bottom:4px">${ev.title}</div><div style="font-size:10px;opacity:0.85">${new Date(ev.date).toLocaleDateString("en-US", { year: "numeric", month: "short" })} · ${ev.category} · ${ev.company}</div>${ev.derived ? '<div style="font-size:9px;opacity:0.6;margin-top:2px">HISTORICAL (DERIVED)</div>' : ""}`;
+          return `<div style="font-weight:700;margin-bottom:4px">${ev.title}</div><div style="font-size:10px;opacity:0.85">${new Date(ev.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" })} · ${ev.category} · ${ev.source}</div><div style="font-size:9px;opacity:0.7;margin-top:2px">severity: ${ev.severity} · sentiment: ${ev.sentiment ?? "n/a"}</div>`;
         },
       },
       grid: { left: 90, right: 24, top: 20, bottom: 70 },
       xAxis: {
         type: "time",
-        min: new Date("2010-01-01").getTime(),
-        max: Date.now(),
+        min: minTime,
+        max: maxTime,
         axisLine: { lineStyle: { color: C.border } },
         axisLabel: { color: SLATE_MID, fontFamily: "'Space Mono', monospace", fontSize: 10, hideOverlap: true },
         splitLine: { show: true, lineStyle: { color: C.bgHover, type: "dashed" } },
@@ -3025,7 +3225,7 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
       series: ADVERSE_CATEGORY_LIST.map((cat) => ({
         name: cat,
         type: "scatter",
-        symbolSize: 10,
+        symbolSize: 12,
         data: seriesData[cat],
         large: true,
         largeThreshold: 2000,
@@ -3037,9 +3237,14 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
   }, [events]);
 
   const heatmapOption = useMemo(() => {
+    // Use the actual year range from the events (not a fixed 2010-present).
     const currentYear = new Date().getFullYear();
+    const minYear = events.length > 0
+      ? Math.min(...events.map((e) => e.year), currentYear - 2)
+      : currentYear - 2;
+    const maxYear = Math.max(currentYear, ...events.map((e) => e.year));
     const years: number[] = [];
-    for (let y = 2010; y <= currentYear; y++) years.push(y);
+    for (let y = minYear; y <= maxYear; y++) years.push(y);
     const data: Array<[number, number, number]> = [];
     let maxVal = 0;
     for (let x = 0; x < years.length; x++) {
@@ -3101,22 +3306,40 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
     return <div style={{ height: 700, padding: 24 }}><SkeletonLoader accent={ACCENT} lines={4} height={120} /></div>;
   }
 
-  if (events.length === 0) {
+  if (error) {
     return (
       <div style={{ height: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <AwaitingTelemetry label="Adverse Media Telemetry" minHeight={300} />
+        <ErrorState accent={RED} message={`Adverse media timeline error: ${error}`} />
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div style={{ height: 700, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <AwaitingTelemetry label="Real Adverse Media Timeline — awaiting first article" minHeight={300} />
+        <button
+          onClick={() => { const c = new AbortController(); reload(c.signal); }}
+          style={{
+            padding: "4px 12px", fontSize: 10, fontFamily: FONT.mono, fontWeight: 700,
+            border: `1px solid ${ACCENT}`, borderRadius: "3px", background: C.bg, color: ACCENT,
+            cursor: "pointer", letterSpacing: "0.05em", textTransform: "uppercase",
+          }}
+        >
+          Refresh
+        </button>
       </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-      {/* 15-year scatter timeline */}
+      {/* Real scatter timeline */}
       <div style={{ ...chartCardStyle, padding: "12px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: "8px" }}>
           <div>
-            <div style={chartTitleStyle}>27 — 15-Year Adverse Media Timeline</div>
-            <div style={chartSubtitleStyle}>ECharts · 2010 — present · drag slider to zoom · click event to drill down</div>
+            <div style={chartTitleStyle}>27 — Real Adverse Media Timeline</div>
+            <div style={chartSubtitleStyle}>ECharts · {events.length} real articles · drag slider to zoom · click event to drill down</div>
           </div>
           <div style={{ display: "flex", gap: 10, fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, textTransform: "uppercase", letterSpacing: "0.05em", flexWrap: "wrap" }}>
             {ADVERSE_CATEGORY_LIST.map((c) => (
@@ -3147,7 +3370,7 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
       {/* Density heatmap (year x category) */}
       <div style={{ ...chartCardStyle, padding: "12px" }}>
         <div style={chartTitleStyle}>28 — Event Density Heatmap</div>
-        <div style={chartSubtitleStyle}>Year x category — intensity = event count</div>
+        <div style={chartSubtitleStyle}>Year x category — intensity = real article count</div>
         <ReactECharts option={heatmapOption} style={{ height: 200, width: "100%" }} opts={{ renderer: "canvas" }} notMerge />
       </div>
 
@@ -3163,17 +3386,25 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 10, fontFamily: FONT.mono }}>
                 <DetailRow label="Date" value={new Date(selectedEvent.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "2-digit" })} />
-                <DetailRow label="Company" value={selectedEvent.company} />
-                <DetailRow label="Category" value={selectedEvent.category} valueColor={ADVERSE_CATEGORY_COLORS[selectedEvent.category]} />
                 <DetailRow label="Source" value={selectedEvent.source} />
+                <DetailRow label="Category" value={selectedEvent.category} valueColor={ADVERSE_CATEGORY_COLORS[selectedEvent.category]} />
+                <DetailRow label="Severity" value={selectedEvent.severity} valueColor={selectedEvent.severity === "critical" ? CRITICAL : selectedEvent.severity === "high" ? RED : selectedEvent.severity === "medium" ? AMBER : SLATE_MID} />
+                <DetailRow label="Sentiment" value={selectedEvent.sentiment !== null ? selectedEvent.sentiment.toFixed(3) : "n/a"} valueColor={selectedEvent.sentiment !== null ? (selectedEvent.sentiment < -0.4 ? RED : selectedEvent.sentiment < -0.1 ? AMBER : GREEN) : SLATE_MID} />
                 <DetailRow label="Year" value={String(selectedEvent.year)} />
-                {selectedEvent.derived && (
-                  <div style={{ marginTop: 4, padding: "4px 6px", background: `${AMBER}10`, borderLeft: `3px solid ${AMBER}`, fontSize: 9, fontFamily: FONT.mono, color: AMBER, fontWeight: 700, letterSpacing: "0.05em" }}>HISTORICAL (DERIVED)</div>
-                )}
               </div>
-              <div style={{ marginTop: 10, padding: "8px 10px", background: C.bgSubtle, borderRadius: "3px", fontSize: 10, color: C.textBody, fontFamily: FONT.sans, lineHeight: 1.5 }}>
-                {selectedEvent.summary}
-              </div>
+              <a
+                href={selectedEvent.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "block", marginTop: 10, padding: "6px 10px", fontSize: 10, fontFamily: FONT.mono, fontWeight: 700,
+                  border: `1px solid ${ACCENT}`, borderRadius: "3px", background: C.bg, color: ACCENT,
+                  textAlign: "center", textDecoration: "none", letterSpacing: "0.05em", textTransform: "uppercase",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}
+              >
+                Open source article →
+              </a>
             </div>
           ) : (
             <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
@@ -3186,7 +3417,7 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <div>
               <div style={chartTitleStyle}>30 — Chronological Event Log</div>
-              <div style={chartSubtitleStyle}>{events.length} events · virtualized · 28px rows</div>
+              <div style={chartSubtitleStyle}>{events.length} real articles · virtualized · 28px rows</div>
             </div>
           </div>
           <div ref={listRef} style={{ maxHeight: 280, overflowY: "auto" }}>
@@ -3214,7 +3445,7 @@ function AdverseMedia15yr({ alerts, holdings, dossiers, loading }: {
                     <span style={{ color: SLATE_MID, fontSize: 9 }}>{new Date(e.date).toLocaleDateString("en-US", { year: "2-digit", month: "short" })}</span>
                     <span style={{ width: 8, height: 8, background: color, borderRadius: "1px" }} />
                     <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
-                    {e.derived && <span style={{ fontSize: 7, color: AMBER, fontWeight: 700, letterSpacing: "0.05em" }}>DER</span>}
+                    <span style={{ fontSize: 7, color: e.severity === "critical" ? CRITICAL : e.severity === "high" ? RED : e.severity === "medium" ? AMBER : SLATE_MID, fontWeight: 700, letterSpacing: "0.05em" }}>{e.severity.toUpperCase().slice(0, 3)}</span>
                   </div>
                 );
               })}
@@ -3717,22 +3948,23 @@ export function InvestorDeskDashboard({
           </div>
         </div>
 
-        {/* CENTER — Entity Graph (React Flow) */}
+        {/* CENTER — Entity Graph (React Flow, REAL OFAC-screened) */}
         <div style={colSpan(18)}>
           <div style={chartCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
               <div>
                 <div style={chartTitleStyle}>06 — Entity Resolution Graph</div>
-                <div style={chartSubtitleStyle}>React Flow · ownership / control topology</div>
+                <div style={chartSubtitleStyle}>React Flow · REAL OFAC/EU/UN screening · risk propagation</div>
               </div>
               <div style={{ display: "flex", gap: 12, fontSize: 9, fontFamily: FONT.mono, color: SLATE_MID, letterSpacing: "0.05em", textTransform: "uppercase" }}>
                 <span><span style={{ display: "inline-block", width: 8, height: 8, background: ACCENT, marginRight: 4, verticalAlign: "middle" }} />Book</span>
-                <span><span style={{ display: "inline-block", width: 8, height: 8, background: "#3b6ea5", marginRight: 4, verticalAlign: "middle" }} />Company</span>
-                <span><span style={{ display: "inline-block", width: 8, height: 8, background: C.borderStrong, marginRight: 4, verticalAlign: "middle" }} />Asset</span>
+                <span><span style={{ display: "inline-block", width: 8, height: 8, background: GREEN, marginRight: 4, verticalAlign: "middle" }} />Clean</span>
+                <span><span style={{ display: "inline-block", width: 8, height: 8, background: AMBER, marginRight: 4, verticalAlign: "middle" }} />Watch</span>
+                <span><span style={{ display: "inline-block", width: 8, height: 8, background: RED, marginRight: 4, verticalAlign: "middle" }} />Flagged</span>
               </div>
             </div>
             <DashboardErrorBoundary title="06 — Entity Resolution Graph" accent={ACCENT}>
-              <EntityGraph holdings={holdings} portfoliosCount={kpis?.portfoliosManaged ?? 0} loading={loading} />
+              <EntityGraph skipFetch={!!injectedKpis} />
             </DashboardErrorBoundary>
           </div>
         </div>
