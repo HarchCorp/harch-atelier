@@ -3380,7 +3380,7 @@ function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accoun
           AI Visibility
         </div>
         <div style={{ fontSize: "13px", color: C.textSecondary, marginBottom: "12px" }}>
-          <strong style={{ color: C.textPrimary }}>4 / 8 engines cite you</strong>
+          <strong style={{ color: C.textPrimary }}>{aiData.filter(a => a.cited).length} / {aiData.length} engines cite you</strong>
         </div>
         {aiLoading ? (
           <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, padding: "8px 0" }}>Loading…</div>

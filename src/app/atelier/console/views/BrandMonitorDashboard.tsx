@@ -1478,11 +1478,12 @@ export function BrandMonitorDashboard({
 
   // 13. AI engine matrix (8 engines × 4 metrics)
   const aiEngineMatrix = useMemo(() => {
+    const citedCount = aiEngines.filter(e => e.cited).length || 1;
     const knownEngines = aiEngines.map((e) => ({
       engine: e.platform,
       rank: e.position ?? "\u2014",
       mentions: e.cited ? 1 : 0,
-      share: e.confidence != null ? Math.round(e.confidence * 100) : 0,
+      share: e.cited ? Math.round((1 / citedCount) * 100) : 0,
       sentiment: e.sentiment ?? "neutral",
       cited: e.cited,
     }));
@@ -1935,7 +1936,7 @@ export function BrandMonitorDashboard({
         indicator: radarData.map((d) => ({ name: d.name, max: 100 })),
         radius: "62%",
         center: ["50%", "52%"],
-        axisName: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 8 },
+        axisName: { color: C.textMuted, fontFamily: FONT.mono, fontSize: 10, padding: [3, 5] },
         splitLine: { lineStyle: { color: C.border } },
         splitArea: { areaStyle: { color: [C.bg, C.bgSubtle] } },
         axisLine: { lineStyle: { color: C.border } },
@@ -2359,7 +2360,7 @@ export function BrandMonitorDashboard({
                     {
                       key: "title",
                       header: "Title",
-                      width: "calc(100% - 320px)",
+                      width: "calc(100% - 350px)",
                       render: (a) => (
                         <span style={{ fontSize: "11px", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.title}>
                           {a.title}
