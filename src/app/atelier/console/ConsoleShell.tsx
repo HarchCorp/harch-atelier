@@ -3365,6 +3365,8 @@ function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accoun
         background: C.surfaceAlt,
         borderLeft: `1px solid ${C.border}`,
         padding: "24px 20px",
+        overflow: "hidden",
+        minWidth: 0,
       }}
     >
       <div
@@ -3419,6 +3421,8 @@ function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accoun
             letterSpacing: "0.1em",
             textTransform: "uppercase",
             marginBottom: "10px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
           }}
         >
           AI Visibility
