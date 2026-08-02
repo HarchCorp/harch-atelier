@@ -323,48 +323,134 @@ const clauses: Array<{
     },
   },
 
-  // ─── CLAUSE-W01: Tests automatisés (WARNING) ────────────────
+  // ─── CLAUSE-013: Tests automatisés (BLOCKING — palier 2) ────
   {
-    id: "CLAUSE-W01",
-    type: "WARNING",
-    description: "Le projet devrait avoir au moins 1 test automatisé",
+    id: "CLAUSE-013",
+    type: "BLOCKING",
+    description: "Le projet doit avoir au moins 2 fichiers de test (unit + integration)",
     fn: () => {
-      const result = exec(`find . -name "*.test.ts" -o -name "*.spec.ts" -o -name "*.test.tsx" -o -name "*.spec.tsx" 2>/dev/null | grep -v node_modules | grep -v .next | wc -l`, 10000);
+      const result = exec(`find tests -name "*.test.ts" -o -name "*.spec.ts" 2>/dev/null | wc -l`, 10000);
       const count = parseInt(result.stdout, 10) || 0;
       return {
-        status: count >= 1 ? "PASS" : "FAIL",
+        status: count >= 2 ? "PASS" : "FAIL",
         actual: `${count} fichiers de test`,
-        expected: ">= 1 fichier de test",
+        expected: ">= 2 fichiers (unit + integration)",
       };
     },
   },
 
-  // ─── CLAUSE-W02: Monitoring/observability (WARNING) ─────────
+  // ─── CLAUSE-014: Logger structuré (BLOCKING — palier 2) ─────
   {
-    id: "CLAUSE-W02",
-    type: "WARNING",
-    description: "Le projet devrait avoir un logger structuré",
+    id: "CLAUSE-014",
+    type: "BLOCKING",
+    description: "Le projet doit avoir un logger structuré",
     fn: () => {
-      const exists = fileExists("src/lib/logger.ts");
+      const exists = fileExists("src/lib/logger.ts") || fileExists("src/lib/logger/index.ts");
       return {
         status: exists ? "PASS" : "FAIL",
-        actual: exists ? "src/lib/logger.ts présent" : "MANQUANT",
-        expected: "src/lib/logger.ts existe",
+        actual: exists ? "logger présent" : "MANQUANT",
+        expected: "src/lib/logger.ts ou src/lib/logger/index.ts",
       };
     },
   },
 
-  // ─── CLAUSE-W03: CI/CD pipeline (WARNING) ───────────────────
+  // ─── CLAUSE-015: CI/CD pipeline (BLOCKING — palier 2) ───────
   {
-    id: "CLAUSE-W03",
-    type: "WARNING",
-    description: "Le projet devrait avoir un workflow GitHub Actions",
+    id: "CLAUSE-015",
+    type: "BLOCKING",
+    description: "Le projet doit avoir un workflow GitHub Actions",
     fn: () => {
-      const exists = fileExists(".github/workflows") || exec(`ls .github/workflows/*.yml 2>/dev/null | wc -l`).stdout !== "0";
+      const exists = fileExists(".github/workflows/ci.yml");
       return {
         status: exists ? "PASS" : "FAIL",
-        actual: exists ? ".github/workflows présent" : "MANQUANT",
-        expected: ".github/workflows/*.yml existe",
+        actual: exists ? ".github/workflows/ci.yml présent" : "MANQUANT",
+        expected: ".github/workflows/ci.yml existe",
+      };
+    },
+  },
+
+  // ─── CLAUSE-016: Master Spec Sheet Loop 2 (BLOCKING) ────────
+  {
+    id: "CLAUSE-016",
+    type: "BLOCKING",
+    description: "Master Spec Sheet doit contenir pgvector + Kafka + LLM gateway",
+    fn: () => {
+      // Read the file directly and count matches (avoids shell escaping issues)
+      const content = readFileSync(resolve(PROJECT_ROOT, "competitive-reports/10-MASTER-SPEC-SHEET.md"), "utf-8");
+      const lower = content.toLowerCase();
+      const pgvector = (lower.match(/pgvector/g) || []).length;
+      const kafka = (lower.match(/kafka/g) || []).length;
+      const llmRouter = (lower.match(/llm router|llm gateway/g) || []).length;
+      const total = pgvector + kafka + llmRouter;
+      return {
+        status: total >= 3 ? "PASS" : "FAIL",
+        actual: `${total} mentions (pgvector: ${pgvector}, kafka: ${kafka}, llm: ${llmRouter})`,
+        expected: ">= 3 (pgvector, Kafka, LLM Router/Gateway)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-017: Rapports concurrentiels complets (BLOCKING) ─
+  {
+    id: "CLAUSE-017",
+    type: "BLOCKING",
+    description: "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
+    fn: () => {
+      const result = exec(`ls competitive-reports/*.md 2>/dev/null | wc -l`, 5000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 8 ? "PASS" : "FAIL",
+        actual: `${count} fichiers .md`,
+        expected: ">= 8 fichiers",
+      };
+    },
+  },
+
+  // ─── CLAUSE-018: Lignes de code palier 2 — 100K (BLOCKING) ───
+  {
+    id: "CLAUSE-018",
+    type: "BLOCKING",
+    description: "Le projet doit contenir au moins 100,000 lignes de code TypeScript",
+    fn: () => {
+      const result = exec(`find src -name "*.ts" -o -name "*.tsx" | xargs wc -l 2>/dev/null | tail -1`, 15000);
+      const match = result.stdout.match(/(\d+)/);
+      const lines = match ? parseInt(match[1], 10) : 0;
+      return {
+        status: lines >= 100000 ? "PASS" : "FAIL",
+        actual: `${lines.toLocaleString()} lignes`,
+        expected: ">= 100,000 lignes (palier 2)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-019: Vitest config présent (BLOCKING) ───────────
+  {
+    id: "CLAUSE-019",
+    type: "BLOCKING",
+    description: "Le projet doit avoir un fichier de configuration Vitest",
+    fn: () => {
+      const exists = fileExists("vitest.config.ts");
+      return {
+        status: exists ? "PASS" : "FAIL",
+        actual: exists ? "vitest.config.ts présent" : "MANQUANT",
+        expected: "vitest.config.ts existe",
+      };
+    },
+  },
+
+  // ─── CLAUSE-020: Test count >= 40 (BLOCKING) ────────────────
+  {
+    id: "CLAUSE-020",
+    type: "BLOCKING",
+    description: "Le projet doit avoir au moins 40 tests automatisés",
+    fn: () => {
+      // Count "it(" occurrences in test files as a proxy for test count
+      const result = exec(`grep -r "it(" tests/ 2>/dev/null | wc -l`, 10000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 40 ? "PASS" : "FAIL",
+        actual: `${count} tests (approx)`,
+        expected: ">= 40 tests",
       };
     },
   },

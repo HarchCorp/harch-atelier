@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-08-02T19:47:55.620Z",
-  "totalClauses": 15,
-  "passed": 12,
-  "failed": 3,
+  "timestamp": "2026-08-02T20:06:40.952Z",
+  "totalClauses": 20,
+  "passed": 20,
+  "failed": 0,
   "skipped": 0,
   "blockingFailed": 0,
-  "warningFailed": 3,
+  "warningFailed": 0,
   "sessionCanEnd": true,
   "results": [
     {
@@ -24,7 +24,7 @@
       "id": "CLAUSE-002",
       "type": "BLOCKING",
       "description": "Le cahier des charges technique doit faire au moins 1500 lignes",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -33,7 +33,7 @@
       "id": "CLAUSE-003",
       "type": "BLOCKING",
       "description": "L'API /api/flagship-report doit retourner 200 OK",
-      "durationMs": 3985
+      "durationMs": 4323
     },
     {
       "status": "PASS",
@@ -42,16 +42,16 @@
       "id": "CLAUSE-004",
       "type": "BLOCKING",
       "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
-      "durationMs": 3382
+      "durationMs": 3226
     },
     {
       "status": "PASS",
-      "actual": "223,508 lignes",
+      "actual": "224,399 lignes",
       "expected": ">= 50,000 lignes (palier 1)",
       "id": "CLAUSE-005",
       "type": "BLOCKING",
       "description": "Le projet doit contenir au moins 50,000 lignes de code TypeScript",
-      "durationMs": 18
+      "durationMs": 20
     },
     {
       "status": "PASS",
@@ -60,7 +60,7 @@
       "id": "CLAUSE-006",
       "type": "BLOCKING",
       "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
-      "durationMs": 8679
+      "durationMs": 7612
     },
     {
       "status": "PASS",
@@ -69,7 +69,7 @@
       "id": "CLAUSE-007",
       "type": "BLOCKING",
       "description": "Les 5 pages company profiles doivent retourner 200 OK",
-      "durationMs": 523
+      "durationMs": 432
     },
     {
       "status": "PASS",
@@ -78,16 +78,16 @@
       "id": "CLAUSE-008",
       "type": "BLOCKING",
       "description": "Le rapport AlphaSense doit faire au moins 600 lignes",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
-      "actual": "213 lignes, entrée 2026-08-02 présente",
+      "actual": "260 lignes, entrée 2026-08-02 présente",
       "expected": ">= 150 lignes + entrée du jour",
       "id": "CLAUSE-009",
       "type": "BLOCKING",
       "description": "Worklog >= 150 lignes avec entrée du jour",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -96,7 +96,7 @@
       "id": "CLAUSE-010",
       "type": "BLOCKING",
       "description": "La page /atelier/flagship-report doit retourner 200 OK",
-      "durationMs": 43
+      "durationMs": 49
     },
     {
       "status": "PASS",
@@ -105,7 +105,7 @@
       "id": "CLAUSE-011",
       "type": "BLOCKING",
       "description": "Classes utilitaires overflow protection dans globals.css",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -114,33 +114,78 @@
       "id": "CLAUSE-012",
       "type": "BLOCKING",
       "description": "Le serveur de développement doit répondre sur port 3000",
-      "durationMs": 85
+      "durationMs": 91
     },
     {
-      "status": "FAIL",
-      "actual": "0 fichiers de test",
-      "expected": ">= 1 fichier de test",
-      "id": "CLAUSE-W01",
-      "type": "WARNING",
-      "description": "Le projet devrait avoir au moins 1 test automatisé",
-      "durationMs": 247
+      "status": "PASS",
+      "actual": "3 fichiers de test",
+      "expected": ">= 2 fichiers (unit + integration)",
+      "id": "CLAUSE-013",
+      "type": "BLOCKING",
+      "description": "Le projet doit avoir au moins 2 fichiers de test (unit + integration)",
+      "durationMs": 18
     },
     {
-      "status": "FAIL",
-      "actual": "MANQUANT",
-      "expected": "src/lib/logger.ts existe",
-      "id": "CLAUSE-W02",
-      "type": "WARNING",
-      "description": "Le projet devrait avoir un logger structuré",
+      "status": "PASS",
+      "actual": "logger présent",
+      "expected": "src/lib/logger.ts ou src/lib/logger/index.ts",
+      "id": "CLAUSE-014",
+      "type": "BLOCKING",
+      "description": "Le projet doit avoir un logger structuré",
+      "durationMs": 0
+    },
+    {
+      "status": "PASS",
+      "actual": ".github/workflows/ci.yml présent",
+      "expected": ".github/workflows/ci.yml existe",
+      "id": "CLAUSE-015",
+      "type": "BLOCKING",
+      "description": "Le projet doit avoir un workflow GitHub Actions",
+      "durationMs": 0
+    },
+    {
+      "status": "PASS",
+      "actual": "40 mentions (pgvector: 9, kafka: 23, llm: 8)",
+      "expected": ">= 3 (pgvector, Kafka, LLM Router/Gateway)",
+      "id": "CLAUSE-016",
+      "type": "BLOCKING",
+      "description": "Master Spec Sheet doit contenir pgvector + Kafka + LLM gateway",
       "durationMs": 1
     },
     {
-      "status": "FAIL",
-      "actual": "MANQUANT",
-      "expected": ".github/workflows/*.yml existe",
-      "id": "CLAUSE-W03",
-      "type": "WARNING",
-      "description": "Le projet devrait avoir un workflow GitHub Actions",
+      "status": "PASS",
+      "actual": "9 fichiers .md",
+      "expected": ">= 8 fichiers",
+      "id": "CLAUSE-017",
+      "type": "BLOCKING",
+      "description": "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
+      "durationMs": 16
+    },
+    {
+      "status": "PASS",
+      "actual": "224,399 lignes",
+      "expected": ">= 100,000 lignes (palier 2)",
+      "id": "CLAUSE-018",
+      "type": "BLOCKING",
+      "description": "Le projet doit contenir au moins 100,000 lignes de code TypeScript",
+      "durationMs": 43
+    },
+    {
+      "status": "PASS",
+      "actual": "vitest.config.ts présent",
+      "expected": "vitest.config.ts existe",
+      "id": "CLAUSE-019",
+      "type": "BLOCKING",
+      "description": "Le projet doit avoir un fichier de configuration Vitest",
+      "durationMs": 0
+    },
+    {
+      "status": "PASS",
+      "actual": "81 tests (approx)",
+      "expected": ">= 40 tests",
+      "id": "CLAUSE-020",
+      "type": "BLOCKING",
+      "description": "Le projet doit avoir au moins 40 tests automatisés",
       "durationMs": 2
     }
   ],
