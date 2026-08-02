@@ -40,6 +40,7 @@ const routes: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "/insight-reports/reputation", priority: 0.9, changeFrequency: "monthly" },
   { path: "/insight-reports/media-impact", priority: 0.9, changeFrequency: "monthly" },
   { path: "/insight-reports/deep-dive", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/flagship-report", priority: 1.0, changeFrequency: "weekly" },
   { path: "/industries/banking", priority: 0.9, changeFrequency: "weekly" },
   { path: "/industries/telecom", priority: 0.9, changeFrequency: "weekly" },
   { path: "/industries/mining", priority: 0.9, changeFrequency: "weekly" },

@@ -135,6 +135,7 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
         {
           heading: "Insight Reports",
           links: [
+            { label: "★ Flagship Report 2026", href: "/atelier/flagship-report", desc: "The biggest report — 8 companies, 20 people, 1-year analysis" },
             { label: "Risk Reports", href: "/atelier/insight-reports/risk", desc: "32-category risk assessment + mitigation plan" },
             { label: "Reputation Risk Reports", href: "/atelier/insight-reports/reputation-risk", desc: "Reputation exposure analysis & narrative detection" },
             { label: "Reputation Reports", href: "/atelier/insight-reports/reputation", desc: "Full reputation audit with score & pillars" },
@@ -177,6 +178,7 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
         {
           heading: "Content hub",
           links: [
+            { label: "★ Flagship Report 2026", href: "/atelier/flagship-report", desc: "8 companies · 20 people · 1,858 articles · 365-day analysis" },
             { label: "All Insights", href: "/atelier/insights", desc: "Whitepapers, reports, case studies, methodology" },
             { label: "Blog", href: "/atelier/blog", desc: "15+ articles on Moroccan & African reputation intelligence" },
             { label: "Live News Feed", href: "/atelier/news", desc: "Real-time media monitoring with filters" },
@@ -260,6 +262,7 @@ export const ATELIER_FOOTER_LINKS = {
     { href: "/atelier/products", label: "Newsletters & Briefings" },
   ],
   outils: [
+    { href: "/atelier/flagship-report", label: "★ Flagship Report 2026" },
     { href: "/atelier/harch-100", label: "Harch 100 Ranking" },
     { href: "/atelier/risk-tracker", label: "Risk Tracker" },
     { href: "/atelier/console", label: "Console" },
@@ -268,6 +271,7 @@ export const ATELIER_FOOTER_LINKS = {
   ],
   ressources: [
     { href: "/atelier/resources", label: "All resources" },
+    { href: "/atelier/flagship-report", label: "Flagship Report 2026" },
     { href: "/atelier/media-intelligence", label: "2026 Media Report" },
     { href: "/atelier/customers", label: "Case studies" },
     { href: "/atelier/method", label: "Methodology" },

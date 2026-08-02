@@ -2605,6 +2605,67 @@ function Harch100() {
           </a>
         </div>
       </div>
+
+      {/* Flagship Report CTA */}
+      <div style={{
+        marginTop: "32px",
+        padding: "32px",
+        background: `linear-gradient(135deg, #0A0A0A 0%, #1a1a1a 100%)`,
+        borderRadius: "12px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+          backgroundSize: "32px 32px",
+          opacity: 0.5,
+        }} />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              padding: "4px 12px", background: "rgba(5,150,105,0.15)",
+              border: "1px solid rgba(5,150,105,0.3)", borderRadius: "100px",
+              fontSize: "10px", fontFamily: FONT.mono, color: "#10B981",
+              letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 700,
+              marginBottom: "16px",
+            }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10B981", animation: "pulse 2s infinite" }} />
+              New · Flagship Report
+            </div>
+            <h3 style={{
+              fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 800,
+              color: "#FAFAFA", letterSpacing: "-0.02em", lineHeight: 1.1,
+              margin: "0 0 8px",
+            }}>
+              Morocco Reputation Intelligence Report 2026
+            </h3>
+            <p style={{
+              fontSize: "14px", color: "#A3A3A3", lineHeight: 1.5,
+              margin: 0, maxWidth: "520px",
+            }}>
+              The most comprehensive analysis ever produced. 8 companies, 20 real people,
+              1,858 articles, 416 weekly sentiment snapshots, 3,726 BVC prices — across 365 days.
+            </p>
+          </div>
+          <a
+            href="/atelier/flagship-report"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              padding: "14px 28px", background: "#059669", color: "#FFFFFF",
+              fontSize: "14px", fontWeight: 600, fontFamily: FONT.sans,
+              textDecoration: "none", borderRadius: "6px", border: "1px solid #059669",
+              whiteSpace: "nowrap", transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#10B981"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#059669"; }}
+          >
+            Read the report
+            <IconArrow dir="right" size={14} color="#FFFFFF" />
+          </a>
+        </div>
+      </div>
     </section>
   );
 }

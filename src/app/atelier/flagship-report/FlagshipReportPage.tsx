@@ -389,7 +389,7 @@ function CoverHero({ report }: { report: ReportData }) {
         {/* Big stats */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: "24px",
         }}>
           <BigStat value={report.summary.totalCompanies} label="Companies tracked" />
@@ -399,6 +399,18 @@ function CoverHero({ report }: { report: ReportData }) {
           <BigStat value={report.summary.totalBvcPrices.toLocaleString()} label="BVC price records" />
           <BigStat value={report.summary.totalRiskAssessments} label="Risk assessments" />
         </div>
+        <style>{`
+          @media (max-width: 768px) {
+            div[style*="repeat(3, 1fr)"] {
+              grid-template-columns: repeat(2, 1fr) !important;
+            }
+          }
+          @media (max-width: 480px) {
+            div[style*="repeat(3, 1fr)"] {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
       </div>
     </section>
   );
