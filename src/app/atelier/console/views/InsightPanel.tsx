@@ -1287,6 +1287,8 @@ function InsightSkeleton({ accent }: { accent: string }) {
               color: C.border,
               letterSpacing: "0.14em",
               marginBottom: 8,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
             }}
           >
             ANALYSING…
