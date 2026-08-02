@@ -1382,15 +1382,30 @@ export function BrandMonitorDashboard({
 
   // 13. AI engine matrix (8 engines × 4 metrics)
   const aiEngineMatrix = useMemo(() => {
-    const citedCount = aiEngines.filter(e => e.cited).length || 1;
-    const knownEngines = aiEngines.map((e) => ({
-      engine: e.platform,
-      rank: e.position ?? "\u2014",
-      mentions: e.cited ? 1 : 0,
-      share: e.cited ? Math.round((1 / citedCount) * 100) : 0,
-      sentiment: e.sentiment ?? "neutral",
-      cited: e.cited,
-    }));
+    const citedEngines = aiEngines.filter(e => e.cited);
+    const citedCount = citedEngines.length || 1;
+    // Sort cited engines by confidence (descending) to assign ranks
+    const sortedCited = [...citedEngines].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+    const rankMap = new Map<string, number>();
+    sortedCited.forEach((e, i) => rankMap.set(e.platform, i + 1));
+
+    const knownEngines = aiEngines.map((e) => {
+      const rank = rankMap.get(e.platform);
+      const confidence = e.confidence ?? 0;
+      // Derive a realistic mention count from confidence (1-5 range)
+      const mentions = e.cited ? Math.max(1, Math.round(confidence * 5)) : 0;
+      // Derive share from confidence weight
+      const totalConfidence = citedEngines.reduce((s, c) => s + (c.confidence ?? 0), 0) || 1;
+      const share = e.cited ? Math.round(((e.confidence ?? 0) / totalConfidence) * 100) : 0;
+      return {
+        engine: e.platform,
+        rank: rank ? `#${rank}` : "\u2014",
+        mentions,
+        share,
+        sentiment: e.sentiment ?? "neutral",
+        cited: e.cited,
+      };
+    });
     return knownEngines;
   }, [aiEngines]);
 

@@ -361,7 +361,7 @@ export const CrisisIndicator = memo(function CrisisIndicator({
               }}
             />
           ) : null}
-          {level}
+          {level === "normal" ? "SAFE" : level.toUpperCase()}
         </span>
       </div>
 

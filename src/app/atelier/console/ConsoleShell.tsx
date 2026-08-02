@@ -3375,6 +3375,9 @@ function DashboardRightPanel({ theme, accountType }: { theme: OfferTheme; accoun
           letterSpacing: "0.1em",
           textTransform: "uppercase",
           marginBottom: "16px",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
       >
         Top 5 Topics
