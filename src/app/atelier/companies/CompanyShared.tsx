@@ -6,6 +6,7 @@
 //  14 sections · 8+ chart components · ~2000 words per page
 // ═══════════════════════════════════════════════════════════════
 
+import { useState, useEffect } from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { ScrollProgress, CursorGlow, BackToTop, PhaseDisclaimer } from "../components/shared";
@@ -196,11 +197,221 @@ const bodyTextStyle: React.CSSProperties = {
   maxWidth: "820px",
 };
 
+// ─── DB ARTICLE TYPE (from /api/companies/[slug]/articles) ───────
+interface DBArticle {
+  id: string;
+  title: string;
+  source: string;
+  url?: string;
+  sentimentLabel?: string | null;
+  sentimentScore?: number | null;
+  relevanceScore?: number | null;
+  publishedAt?: string | null;
+  language?: string | null;
+  sourceType?: string | null;
+}
+
+// ─── LIVE INTELLIGENCE FEED COMPONENT ────────────────────────────
+function LiveIntelligenceFeed({
+  slug,
+  articles,
+  loading,
+}: {
+  slug: string;
+  articles: DBArticle[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <section style={{
+        padding: "40px 0",
+        borderTop: "1px solid #e5e5e5",
+      }}>
+        <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "8px" }}>
+          Live intelligence feed
+        </div>
+        <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0a0a0a", marginBottom: "8px", letterSpacing: "-0.03em" }}>
+          Loading recent coverage from our database…
+        </h2>
+        <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{
+              height: "48px",
+              background: "linear-gradient(90deg, #f5f5f5 25%, #eee 50%, #f5f5f5 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.5s infinite",
+              borderRadius: "4px",
+            }} />
+          ))}
+        </div>
+        <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      </section>
+    );
+  }
+
+  if (articles.length === 0) {
+    return null; // Don't render the section if no live articles
+  }
+
+  const formatDate = (iso?: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const sentColor = (label?: string | null) =>
+    label === "positive" ? "#059669" : label === "negative" ? "#dc2626" : "#737373";
+
+  const sentBg = (label?: string | null) =>
+    label === "positive" ? "rgba(5,150,105,0.08)" : label === "negative" ? "rgba(220,38,38,0.08)" : "rgba(115,115,115,0.08)";
+
+  return (
+    <section style={{
+      padding: "40px 0",
+      borderTop: "1px solid #e5e5e5",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+        <div style={{
+          width: "8px", height: "8px", borderRadius: "50%",
+          background: "#059669", display: "inline-block",
+          animation: "live-pulse 1.5s ease-in-out infinite",
+        }} />
+        <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#666", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+          Live intelligence feed · trailing 12 months
+        </div>
+      </div>
+      <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0a0a0a", marginBottom: "8px", letterSpacing: "-0.03em" }}>
+        Real-time coverage from our database.
+      </h2>
+      <p style={{ fontSize: "15px", color: "#666", lineHeight: 1.6, marginBottom: "24px", maxWidth: "720px" }}>
+        Articles scraped from Moroccan and African media, classified by sentiment, and tracked
+        across our 1-year telemetry window. This feed updates automatically as new coverage is detected.
+      </p>
+      <div style={{
+        border: "1px solid #e5e5e5",
+        borderRadius: "8px",
+        overflow: "hidden",
+        background: "#fff",
+      }}>
+        {articles.map((a, i) => (
+          <div
+            key={a.id || i}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: "16px",
+              padding: "16px 20px",
+              borderBottom: i < articles.length - 1 ? "1px solid #f0f0f0" : "none",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div className="text-clamp-2" style={{
+                fontSize: "14px", fontWeight: 600, color: "#0a0a0a",
+                fontFamily: "'Inter', sans-serif", lineHeight: 1.4,
+                marginBottom: "6px",
+              }}>
+                {a.title}
+              </div>
+              <div style={{
+                display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center",
+                fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#888",
+              }}>
+                <span style={{ color: "#444", fontWeight: 600 }}>{a.source}</span>
+                <span>·</span>
+                <span>{formatDate(a.publishedAt)}</span>
+                {a.sourceType && a.sourceType !== "media" && (
+                  <>
+                    <span>·</span>
+                    <span style={{
+                      padding: "1px 6px", borderRadius: "2px",
+                      background: "rgba(133,120,20,0.1)", color: "#856914",
+                      textTransform: "uppercase", fontSize: "9px", fontWeight: 700,
+                    }}>
+                      {a.sourceType}
+                    </span>
+                  </>
+                )}
+                {a.language && (
+                  <span style={{ textTransform: "uppercase", fontSize: "9px", color: "#aaa" }}>
+                    {a.language}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px",
+              flexShrink: 0,
+            }}>
+              {a.sentimentLabel && (
+                <span style={{
+                  padding: "3px 8px", borderRadius: "3px",
+                  background: sentBg(a.sentimentLabel),
+                  color: sentColor(a.sentimentLabel),
+                  fontSize: "9px", fontWeight: 700,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                  whiteSpace: "nowrap",
+                }}>
+                  {a.sentimentLabel}
+                </span>
+              )}
+              {a.relevanceScore != null && (
+                <span style={{
+                  fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#aaa",
+                }}>
+                  {(a.relevanceScore * 100).toFixed(0)}%
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{
+        marginTop: "12px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
+        color: "#999", textAlign: "center",
+      }}>
+        Showing {articles.length} most recent articles ·{" "}
+        <a href={`/api/companies/${slug}/articles?limit=50`} style={{ color: "#059669", textDecoration: "none" }}>
+          View full feed →
+        </a>
+      </div>
+    </section>
+  );
+}
+
 // ─── MAIN LAYOUT COMPONENT ───────────────────────────────────────
 export function CompanyPageLayout({ data }: { data: CompanyData }) {
   const D = data;
   const trendArrow = D.trend === "up" ? "▲" : D.trend === "down" ? "▼" : "—";
   const trendColor = D.trend === "up" ? C.sage : D.trend === "down" ? C.red : C.textMuted;
+
+  // ─── LIVE INTELLIGENCE FEED ───────────────────────────────────
+  // Fetches real articles from the DB via /api/companies/[slug]/articles
+  // Shows the 5 most recent real articles with sentiment + source.
+  // Falls back to the hardcoded editorial articles if the API fails.
+  const [liveArticles, setLiveArticles] = useState<DBArticle[]>([]);
+  const [liveLoading, setLiveLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchLive() {
+      try {
+        const res = await fetch(`/api/companies/${D.slug}/articles?limit=8&page=1`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        const articles = (json.data || json.articles || []).slice(0, 8);
+        setLiveArticles(articles);
+      } catch {
+        // Silent fail — editorial articles will be used as fallback
+      } finally {
+        if (!cancelled) setLiveLoading(false);
+      }
+    }
+    fetchLive();
+    return () => { cancelled = true; };
+  }, [D.slug]);
 
   return (
     <>
@@ -892,6 +1103,13 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
           </div>
         </div>
       </section>
+
+      {/* 10.5. LIVE INTELLIGENCE FEED (real DB articles) ────────────── */}
+      <LiveIntelligenceFeed
+        slug={D.slug}
+        articles={liveArticles}
+        loading={liveLoading}
+      />
 
       {/* 11. RECENT ARTICLES ────────────────────────────────────── */}
       <section style={sectionStyle}>
