@@ -1,0 +1,148 @@
+{
+  "timestamp": "2026-08-02T19:47:55.620Z",
+  "totalClauses": 15,
+  "passed": 12,
+  "failed": 3,
+  "skipped": 0,
+  "blockingFailed": 0,
+  "warningFailed": 3,
+  "sessionCanEnd": true,
+  "results": [
+    {
+      "status": "PASS",
+      "actual": "37 modèles",
+      "expected": ">= 37 modèles",
+      "id": "CLAUSE-001",
+      "type": "BLOCKING",
+      "description": "Le schéma Prisma doit contenir au moins 37 modèles",
+      "durationMs": 4
+    },
+    {
+      "status": "PASS",
+      "actual": "1558 lignes",
+      "expected": ">= 1500 lignes",
+      "id": "CLAUSE-002",
+      "type": "BLOCKING",
+      "description": "Le cahier des charges technique doit faire au moins 1500 lignes",
+      "durationMs": 1
+    },
+    {
+      "status": "PASS",
+      "actual": "HTTP 200",
+      "expected": "HTTP 200",
+      "id": "CLAUSE-003",
+      "type": "BLOCKING",
+      "description": "L'API /api/flagship-report doit retourner 200 OK",
+      "durationMs": 3985
+    },
+    {
+      "status": "PASS",
+      "actual": "20 personnes, 1750 articles",
+      "expected": ">= 20 personnes ET >= 1000 articles",
+      "id": "CLAUSE-004",
+      "type": "BLOCKING",
+      "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
+      "durationMs": 3382
+    },
+    {
+      "status": "PASS",
+      "actual": "223,508 lignes",
+      "expected": ">= 50,000 lignes (palier 1)",
+      "id": "CLAUSE-005",
+      "type": "BLOCKING",
+      "description": "Le projet doit contenir au moins 50,000 lignes de code TypeScript",
+      "durationMs": 18
+    },
+    {
+      "status": "PASS",
+      "actual": "Aucune erreur TS",
+      "expected": "0 erreur TS",
+      "id": "CLAUSE-006",
+      "type": "BLOCKING",
+      "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
+      "durationMs": 8679
+    },
+    {
+      "status": "PASS",
+      "actual": "ocp-group: 200, attijariwafa-bank: 200, bank-of-africa: 200, maroc-telecom: 200, royal-air-maroc: 200",
+      "expected": "Toutes 200 OK",
+      "id": "CLAUSE-007",
+      "type": "BLOCKING",
+      "description": "Les 5 pages company profiles doivent retourner 200 OK",
+      "durationMs": 523
+    },
+    {
+      "status": "PASS",
+      "actual": "663 lignes",
+      "expected": ">= 600 lignes",
+      "id": "CLAUSE-008",
+      "type": "BLOCKING",
+      "description": "Le rapport AlphaSense doit faire au moins 600 lignes",
+      "durationMs": 0
+    },
+    {
+      "status": "PASS",
+      "actual": "213 lignes, entrée 2026-08-02 présente",
+      "expected": ">= 150 lignes + entrée du jour",
+      "id": "CLAUSE-009",
+      "type": "BLOCKING",
+      "description": "Worklog >= 150 lignes avec entrée du jour",
+      "durationMs": 1
+    },
+    {
+      "status": "PASS",
+      "actual": "HTTP 200",
+      "expected": "HTTP 200",
+      "id": "CLAUSE-010",
+      "type": "BLOCKING",
+      "description": "La page /atelier/flagship-report doit retourner 200 OK",
+      "durationMs": 43
+    },
+    {
+      "status": "PASS",
+      "actual": "4/4 classes présentes",
+      "expected": "4/4 (text-truncate, cell-truncate, clip-container, console-shell)",
+      "id": "CLAUSE-011",
+      "type": "BLOCKING",
+      "description": "Classes utilitaires overflow protection dans globals.css",
+      "durationMs": 1
+    },
+    {
+      "status": "PASS",
+      "actual": "HTTP 200",
+      "expected": "HTTP 200",
+      "id": "CLAUSE-012",
+      "type": "BLOCKING",
+      "description": "Le serveur de développement doit répondre sur port 3000",
+      "durationMs": 85
+    },
+    {
+      "status": "FAIL",
+      "actual": "0 fichiers de test",
+      "expected": ">= 1 fichier de test",
+      "id": "CLAUSE-W01",
+      "type": "WARNING",
+      "description": "Le projet devrait avoir au moins 1 test automatisé",
+      "durationMs": 247
+    },
+    {
+      "status": "FAIL",
+      "actual": "MANQUANT",
+      "expected": "src/lib/logger.ts existe",
+      "id": "CLAUSE-W02",
+      "type": "WARNING",
+      "description": "Le projet devrait avoir un logger structuré",
+      "durationMs": 1
+    },
+    {
+      "status": "FAIL",
+      "actual": "MANQUANT",
+      "expected": ".github/workflows/*.yml existe",
+      "id": "CLAUSE-W03",
+      "type": "WARNING",
+      "description": "Le projet devrait avoir un workflow GitHub Actions",
+      "durationMs": 2
+    }
+  ],
+  "nextSteps": []
+}

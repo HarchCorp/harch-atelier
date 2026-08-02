@@ -937,3 +937,41 @@ model CompanySettings {
 
   @@index([companyId])
 }
+
+// ═══ MULTI-TENANT ISOLATION (Master Spec Sheet — LOOP 2) ═════════
+// Tenant = the customer company that owns the tracked entities.
+// Enables hard multi-tenant isolation via RLS-style filtering.
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String                              // "OCP Group" (the customer)
+  plan        String   @default("starter")        // starter | pro | enterprise
+  isDemo      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isDemo])
+}
+
+// ═══ ALERT ENGINE (Master Spec Sheet — real-time alerts) ════════
+// Stores triggered alerts from the alert engine (threshold breaches,
+// sentiment drops, risk events). Feeds the notification dispatcher.
+
+model Alert {
+  id              String   @id @default(cuid())
+  tenantId        String?
+  type            String                                 // sentiment_drop | risk_breach | volume_spike | ai_visibility | regulatory
+  severity        String                                 // info | low | medium | high | critical
+  title           String
+  body            String
+  companyId       String?
+  articleId       String?
+  threshold       String?                                // JSON: {metric, operator, value}
+  triggeredAt     DateTime @default(now())
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+
+  @@index([tenantId, triggeredAt])
+  @@index([severity, triggeredAt])
+  @@index([companyId])
+}

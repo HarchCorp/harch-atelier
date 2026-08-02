@@ -1786,7 +1786,9 @@ function DashboardTopBar({
           e.currentTarget.style.background = C.surfaceAlt;
         }}
       >
-        <IconSearch size={14} color={C.textMuted} style={{ flexShrink: 0 }} />
+        <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+          <IconSearch size={14} color={C.textMuted} />
+        </span>
         <span style={{
           fontSize: "12px",
           color: C.textFaint,

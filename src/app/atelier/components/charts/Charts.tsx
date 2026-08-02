@@ -143,7 +143,7 @@ export function LineChart({
         <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
           Awaiting telemetry
         </div>
-        <div style={{ fontSize: "10px", color: C.textFaint }}>
+        <div style={{ fontSize: "10px", color: C.textMuted }}>
           Data will populate as coverage is detected
         </div>
       </div>

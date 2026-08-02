@@ -47,11 +47,13 @@ export async function GET() {
     });
 
     // ─── 2. ARTICLES (last 365 days, real only) ───────────────────
+    const articleWhere = {
+      isDemo: false,
+      publishedAt: { gte: oneYearAgo },
+    };
+    const totalArticleCount = await prisma.article.count({ where: articleWhere });
     const articles = await prisma.article.findMany({
-      where: {
-        isDemo: false,
-        publishedAt: { gte: oneYearAgo },
-      },
+      where: articleWhere,
       select: {
         id: true,
         title: true,
@@ -265,12 +267,12 @@ export async function GET() {
       const current = prices[prices.length - 1].price;
       const first = prices[0].price;
       const yearChange = ((current - first) / first) * 100;
-      const volumes = prices.map(p => p.volume);
-      const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+      const volumes = prices.map(p => p.volume ?? 0);
+      const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
       return {
         ticker: a.ticker,
         name: a.name,
-        sector: a.sector,
+        sector: a.exchange ?? "BVC",
         currentPrice: current,
         yearStartPrice: first,
         yearChangePct: yearChange,
@@ -295,7 +297,7 @@ export async function GET() {
       summary: {
         totalCompanies: companies.length,
         totalPeople: people.length,
-        totalArticles: articles.length,
+        totalArticles: totalArticleCount,
         totalSentimentSnapshots: sentimentSnapshots.length,
         totalBvcPrices: assets.reduce((sum, a) => sum + a.prices.length, 0),
         totalRiskAssessments: risks.length,
