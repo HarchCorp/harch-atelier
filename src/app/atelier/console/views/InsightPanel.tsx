@@ -1365,7 +1365,7 @@ function InsightError({
       >
         INSIGHT ENGINE ERROR
       </div>
-      <div style={{ fontSize: 13, color: C.textBody, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 13, color: C.textBody, lineHeight: 1.5, overflow: "hidden", wordBreak: "break-word", overflowWrap: "anywhere", minWidth: 0 }}>
         {message}
       </div>
       <button

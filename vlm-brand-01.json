@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the provided image of the Brand Monitor dashboard, here is a list of all visible visual problems:\n\n**Problem** | **Element** | **Severity**\n--- | --- | ---\nVertical text overflow / Watermark bleeding through | Main content area (behind \"Reputation intelligence\" header) | **High**\nText truncation / Content spilling out | Sidebar \"PLAN\" section description (\"Your reputation, monitored 24/7...\") | **Medium**\nOverlapping elements / Z-index issue | Red \"1 Issue\" notification badge overlapping the bottom of the sidebar container | **Medium**\nMisalignment / Awkward spacing | Top navigation bar (uneven vertical alignment between logo, search bar, and action buttons) | **Low**\nBroken layout / Skeleton state rendering | Main content cards (Skeleton loaders appear misaligned with the left border and lack proper padding) | **Low**\nText overflow / Truncation | Breadcrumb text (\"HARCHIQ INSIGHT ENGINE · BRAND MONITOR\") appears slightly cramped against the left edge | **Low**",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1785672917,
+  "id": "202608022015117945fa2d5a954432",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "202608022015117945fa2d5a954432",
+  "usage": {
+    "completion_tokens": 212,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 986,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 1198
+  }
+}

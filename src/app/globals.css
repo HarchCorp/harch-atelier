@@ -1498,3 +1498,212 @@
     display: flex !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   OVERFLOW PROTECTION UTILITIES — Preventive mechanism
+   Stops text/elements from spilling out of containers.
+   Apply these classes to any container that may receive
+   variable-length content. Solves the recurring "vertical
+   text rendering" bug caused by flex children without
+   minWidth:0 + nowrap + ellipsis.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Truncate text to a single line with ellipsis.
+   Use on inline spans inside flex parents. */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
+}
+
+/* Clamp text to N lines (multi-line ellipsis).
+   Use on block elements with variable content. */
+.text-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  min-width: 0;
+}
+.text-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* Flex child that should shrink to fit (the missing min-width: 0 fix).
+   Apply to flex children that contain text and tend to overflow. */
+.flex-shrink-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+/* Container that clips overflowing children.
+   Use on cards, panels, table cells. */
+.clip-container {
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Table cell that should never push layout.
+   Forces break-word + ellipsis fallback. */
+.cell-truncate {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-word;
+}
+.cell-wrap {
+  max-width: 0;
+  overflow: hidden;
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* Card body — protects inner content from overflow */
+.card-body-safe {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+/* Sidebar label protection */
+.sidebar-label-safe {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Inline metric value (prevents numbers from breaking layout) */
+.metric-value-safe {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Badge that should never wrap */
+.badge-nowrap {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Horizontal scroll container (for tables/lists that must scroll
+   rather than overflow their parent) */
+.scroll-x-safe {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.scroll-y-safe {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Custom thin scrollbar styling for scroll-safe containers */
+.scroll-x-safe::-webkit-scrollbar,
+.scroll-y-safe::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scroll-x-safe::-webkit-scrollbar-track,
+.scroll-y-safe::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-x-safe::-webkit-scrollbar-thumb,
+.scroll-y-safe::-webkit-scrollbar-thumb {
+  background: var(--border, hsl(240 5% 80%));
+  border-radius: 3px;
+}
+.scroll-x-safe::-webkit-scrollbar-thumb:hover,
+.scroll-y-safe::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground, hsl(240 4% 50%));
+}
+
+/* Console shell — global safety net for any text node inside the
+   dashboard. Prevents the vertical-text-character-stacking bug. */
+.console-shell * {
+  max-width: 100%;
+}
+.console-shell button > span,
+.console-shell [role="button"] > span,
+.console-shell .truncate-safe {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Auto-fix: any span with inline nowrap+overflow+ellipsis styles
+   gets display:block + min-width:0 so the ellipsis actually works
+   inside flex containers. This is a safety net for legacy inline
+   styles that forgot minWidth:0. */
+.console-shell span[style*="white-space: nowrap"],
+.console-shell span[style*="whiteSpace: nowrap"],
+.console-shell span[style*="white-space:nowrap"],
+.console-shell td[style*="white-space: nowrap"],
+.console-shell td[style*="whiteSpace: nowrap"] {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
+}
+
+/* Auto-fix: any div with inline flex+nowrap that contains text */
+.console-shell div[style*="display: flex"][style*="overflow: hidden"],
+.console-shell div[style*="display:flex"][style*="overflow:hidden"] {
+  min-width: 0;
+}
+
+/* Word-break safety for long URLs, emails, tokens, hashes */
+.break-all-safe {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Image fit safety — prevents images from breaking their container */
+.img-fit-safe {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Print/prevent layout shift for loading skeletons */
+.skeleton-safe {
+  min-width: 0;
+  overflow: hidden;
+  contain: content;
+}
+

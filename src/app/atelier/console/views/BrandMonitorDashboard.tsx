@@ -681,7 +681,9 @@ function VirtualTable<T>({
                       justifyContent: alignFlex[col.align ?? "left"],
                       alignItems: "center",
                       minHeight: 0,
+                      minWidth: 0,
                       overflow: "hidden",
+                      flexShrink: 0,
                     }}
                   >
                     {col.render(row, vi.index)}
@@ -2938,10 +2940,11 @@ export function BrandMonitorDashboard({
                         width: "110px",
                         render: (r) => (
                           <span
-                            style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                            className="cell-truncate"
+                            style={{ fontFamily: FONT.mono, fontSize: "10px", color: ACCENT, display: "block" }}
                             title={r.source}
                           >
-                            {r.source.length > 16 ? r.source.slice(0, 14) + "\u2026" : r.source}
+                            {r.source}
                           </span>
                         ),
                       },
@@ -3009,7 +3012,8 @@ export function BrandMonitorDashboard({
                         width: "calc(100% - 425px)",
                         render: (r) => (
                           <span
-                            style={{ fontSize: "11px", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                            className="cell-truncate"
+                            style={{ fontSize: "11px", color: C.text, display: "block" }}
                             title={r.title}
                           >
                             {r.title}

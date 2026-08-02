@@ -1315,7 +1315,7 @@ export function ConsoleShell({
   }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: C.surfaceAlt, fontFamily: FONT.sans }}>
+    <div className="console-shell" style={{ minHeight: "100vh", background: C.surfaceAlt, fontFamily: FONT.sans }}>
       {/* Mobile overlay for drawer */}
       {mobileMenuOpen && (
         <div
@@ -1761,6 +1761,7 @@ function DashboardTopBar({
         title="Open global search (Cmd+Shift+F)"
         style={{
           flex: 1,
+          minWidth: 0,
           maxWidth: "320px",
           height: "32px",
           background: C.surfaceAlt,
@@ -1774,6 +1775,7 @@ function DashboardTopBar({
           textAlign: "left",
           transition: "border-color 0.15s, background 0.15s",
           fontFamily: FONT.sans,
+          overflow: "hidden",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = theme.accent;
@@ -1784,8 +1786,17 @@ function DashboardTopBar({
           e.currentTarget.style.background = C.surfaceAlt;
         }}
       >
-        <IconSearch size={14} color={C.textMuted} />
-        <span style={{ fontSize: "12px", color: C.textFaint, fontFamily: FONT.sans }}>
+        <IconSearch size={14} color={C.textMuted} style={{ flexShrink: 0 }} />
+        <span style={{
+          fontSize: "12px",
+          color: C.textFaint,
+          fontFamily: FONT.sans,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          minWidth: 0,
+          flex: "1 1 auto",
+        }}>
           Search mentions, topics, competitors…
         </span>
         <span
@@ -2247,6 +2258,13 @@ function DashboardSidebar(props: SidebarProps) {
         background: C.surfaceAlt,
         borderRight: `1px solid ${C.border}`,
         padding: "20px 0",
+        position: "sticky",
+        top: 56,
+        height: "calc(100vh - 56px)",
+        overflowY: "auto",
+        overflowX: "hidden",
+        scrollbarWidth: "thin",
+        minWidth: 0,
       }}
     >
       <div
@@ -2346,6 +2364,7 @@ function DashboardSidebar(props: SidebarProps) {
       {/* Sidebar footer — Plan card (matches mockup) */}
       <div style={{ marginTop: "32px", padding: "0 20px" }}>
         <div
+          className="clip-container"
           style={{
             padding: "14px",
             background: C.surface,
@@ -2365,17 +2384,18 @@ function DashboardSidebar(props: SidebarProps) {
           >
             Plan
           </div>
-          <div style={{ fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
+          <div className="text-truncate" style={{ fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
             {props.theme.label}
           </div>
-          <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "4px" }}>
+          <div className="text-clamp-2" style={{ fontSize: "11px", color: C.textMuted, marginTop: "4px", lineHeight: 1.4 }}>
             {props.theme.tagline}
           </div>
-          <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "2px" }}>
+          <div className="text-truncate" style={{ fontSize: "11px", color: C.textMuted, marginTop: "2px" }}>
             28 days remaining
           </div>
           <a
             href="/atelier/pricing"
+            className="badge-nowrap"
             style={{
               display: "block",
               marginTop: "10px",
