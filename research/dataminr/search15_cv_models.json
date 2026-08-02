@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9358372",
+    "name": "Object detection using YOLO: challenges, architectural  - PMC",
+    "snippet": "2022 · Cited by 1984 — A novel OCR system is developed, named as Rosetta, wherein faster-RCNN is utilized for detecting the text characters from millions of Facebook images , however, ...",
+    "host_name": "pmc.ncbi.nlm.nih.gov",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://getyoteam.com/services/computer-vision",
+    "name": "Computer Vision Development Services",
+    "snippet": "Real-time object detection and multi-object tracking using YOLO and ResNet — deployed for security, manufacturing, and retail environments with high mAP and ...",
+    "host_name": "getyoteam.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://blog.roboflow.com/best-computer-vision-models",
+    "name": "Best Computer Vision Models in 2026, Compared by Task",
+    "snippet": "Jul 15, 2026 — Some models are designed for object detection , while others are better for segmentation, image classification, pose estimation, OCR , depth ...",
+    "host_name": "blog.roboflow.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/ComputerVisionGroup/posts/3505871789556997",
+    "name": "Comparing YOLO, DETR, and Faster R-CNN object",
+    "snippet": "I compared the object detection outputs of YOLO, DETR and Fast R-CNN models. Here are my results 👇\n\nImage source: http://images.cocodataset.org/val2017/00000 ...",
+    "host_name": "www.facebook.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://farukalamai.substack.com/p/object-detection-with-multimodal",
+    "name": "Object detection with Multimodal Large Vision-Language",
+    "snippet": "For years, object detection systems have relied on traditional deep learning architectures like YOLO , Faster R-CNN, and Mask R-CNN. These models ...\nFor years, object detection systems have relied on traditional deep learning architectures like YOLO , Faster R-CNN, and Mask R-CNN. These models ... Read more",
+    "host_name": "farukalamai.substack.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/computervision/comments/12hfe71/object_detection_on_a_dataset",
+    "name": "Object detection on a dataset. : r/computervision",
+    "snippet": "train a yolo model and perform object detection on the dataset . Darknet/YOLO requires that each .jpg has a matching .txt file, and the ...",
+    "host_name": "www.reddit.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://wiki.cloudfactory.com/docs/mp-wiki/model-families/object-detector",
+    "name": "Object Detection - Computer Vision Wiki - CloudFactory",
+    "snippet": "Apr 18, 2024 — Object Detection (OD) is a Computer Vision Supervised Learning task that aims to locate and classify every object of the target classes presented in an image .",
+    "host_name": "wiki.cloudfactory.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://samdbrice.medium.com/dcda0c8f6f70",
+    "name": "Choosing the Right Model for Object Detection - Medium",
+    "snippet": "YOLO models tend to be the fastest available, capable of processing 40–90 FPS or 155 FPS on specialized configurations. for RetinaNet, YOLOv2,",
+    "host_name": "samdbrice.medium.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=mD7b4IR2i4U",
+    "name": "Day 14 - Object Detection in Computer Vision | Computer",
+    "snippet": "Unlock the power of Object Detection in Computer Vision! In this video, we dive deep into how machines can detect, classify, and localize ...",
+    "host_name": "www.youtube.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.sciencedirect.com/org/science/article/pii/S1546221825008859",
+    "name": "A Systematic Review of YOLO-Based Object Detection in",
+    "snippet": "2025 · Cited by 38 — By integrating multimodal images , YOLO can leverage the advantages of various imaging techniques to further improve detection comprehensiveness ...",
+    "host_name": "www.sciencedirect.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.fedramp.gov/marketplace/products/F1603047866",
+    "name": "AWS GovCloud | FedRAMP Marketplace",
+    "snippet": "FedRAMP Status Indicates the current stage of this cloud service offering within the FedRAMP Marketplace lifecycle.",
+    "host_name": "www.fedramp.gov",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/compliance/fedramp",
+    "name": "FedRAMP Compliance - Amazon Web Services (AWS)",
+    "snippet": "Yes, AWS has achieved FedRAMP Certification . AWS GovCloud (US) is FedRAMP Certified Class D (formerly High baseline).\nTwo separate FedRAMP Certifications cover AWS environments: AWS GovCloud (US) as Class D (formerly High baseline), and AWS US East-West as Class C (formerly Moderate baseline).",
+    "host_name": "aws.amazon.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/about-aws/whats-new/2026/07/amazon-managed-grafana-fedramp-high",
+    "name": "Amazon Managed Grafana achieves FedRAMP High",
+    "snippet": "Amazon Managed Grafana is now a FedRAMP High authorized service in the AWS GovCloud (US-East) and AWS GovCloud (US-West) regions. Read more",
+    "host_name": "aws.amazon.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fedramp.gov/marketplace",
+    "name": "FedRAMP Marketplace - Products",
+    "snippet": "Effective immediately, \" FedRAMP Authorization \" is now called \" FedRAMP Certification,\" and Impact Levels have been replaced with Classes A-D for package ...",
+    "host_name": "www.fedramp.gov",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/FedRAMP/comments/1jzqr43/do_we_have_to_use_aws_govcloud_for_fedramp_high",
+    "name": "Do We Have to Use AWS GovCloud for FedRAMP High?",
+    "snippet": "Hi everyone,\n\nI’m currently working on FedRAMP authorization activities for my company’s SaaS product. We believe we’ll need to go for FedRAMP ...",
+    "host_name": "www.reddit.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=cQt79xqFTXo",
+    "name": "FedRAMP High & AWS GovCloud(US): Meet FISMA High",
+    "snippet": "AWS GovCloud (US)* has received a Provisional Authority to Operate . Federal Risk and Authorization Management Program (FedRAMP) High baseline.",
+    "host_name": "www.youtube.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://secureframe.com/hub/fedramp/marketplace",
+    "name": "FedRAMP Marketplace: How Listings, Statuses, and 20x",
+    "snippet": "Jul 31, 2025 — The FedRAMP Marketplace is the official directory of cloud products, federal agencies, and Third Party Assessment Organizations (3PAOs) ... Read more",
+    "host_name": "secureframe.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/blogs/apn/6-steps-towards-achieving-fedramp-authorization-on-aws-with-orca-security",
+    "name": "6 Steps Towards Achieving FedRAMP Authorization on",
+    "snippet": "Feb 23, 2024 — In this post, you will learn about the steps needed to deploy a FedRAMP -compliant environment on AWS , and how the Orca Cloud Security Platform can be used. Read more",
+    "host_name": "aws.amazon.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.databricks.com/company/newsroom/press-releases/databricks-achieves-fedramp-high-authorization-aws-govcloud",
+    "name": "Databricks Achieves FedRAMP High Authorization for AWS",
+    "snippet": "Feb 27, 2025 — Databricks, the Data and AI company , announced today that it has received Federal Risk and Authorization Management Program (FedRAMP®) High authorization. Read more",
+    "host_name": "www.databricks.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://marketplace.fedramp.gov/products/F1603047866",
+    "name": "AWS GovCloud | FedRAMP Marketplace",
+    "snippet": "Indicates the current stage of this cloud service offering within the FedRAMP Marketplace lifecycle. Stages include: Initial Implementation, (Legacy) FedRAMP Ready, Agency Authorization In Process, FedRAMP In Process, or FedRAMP Certified.",
+    "host_name": "marketplace.fedramp.gov",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

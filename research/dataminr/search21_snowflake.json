@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://docs.rapids.ai/deployment/stable/examples/rapids-morpheus-pipeline/notebook",
+    "name": "Deploying End-to-End Kafka Streaming SI Detection",
+    "snippet": "This example demonstrates how to build and deploy a production-like, GPU -accelerated streaming pipeline for sensitive information detection using NVIDIA RAPIDS,",
+    "host_name": "docs.rapids.ai",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/developers/guides/kafka-interactive-tables-streaming",
+    "name": "Real-Time Analytics with Kafka, Interactive Tables, and",
+    "snippet": "Jan 15, 2026 — In this quickstart, you will learn how to build a real-time data pipeline that ingests IoT sensor data from Apache Kafka into Snowflake ...",
+    "host_name": "www.snowflake.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/blog/nvidia-gpu-acceleration",
+    "name": "nvidia",
+    "snippet": "Nov 18, 2025 — Snowflake ML now has NVIDIA cuML and cuDF to GPU -accelerate scikit-learn and pandas, offering up to 200x speedups with no code changes ...",
+    "host_name": "www.snowflake.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=x42Yepsx7qI",
+    "name": "Introducing Snowflake Datastream: Real-Time Streaming",
+    "snippet": "Snowflake Datastream is a native, Apache Kafka-compatible streaming service that powers AI applications and decision systems with the freshest  ...",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.feldera.com/connectors/sinks/snowflake",
+    "name": "Snowflake output connector (experimental)",
+    "snippet": "Feldera outputs a stream of changes to a table or view to a Kafka topic . The Snowflake Connector for Kafka reads the changes from Kafka and pushes them to a ...",
+    "host_name": "docs.feldera.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://developer.nvidia.com/blog/beginners-guide-to-gpu-accelerated-event-stream-processing-in-python",
+    "name": "Beginner's Guide to GPU-Accelerated Event Stream",
+    "snippet": "Mar 25, 2021 — Kafka cluster using. In this section, we will show you how to set up your own mini- Kafka cluster using Docker. topics , partitions, replication, ...",
+    "host_name": "developer.nvidia.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/developers/guides/kafka-working-with-iceberg-tables",
+    "name": "Intro to Kafka and Snowflake Managed Iceberg",
+    "snippet": "This guide provides a comprehensive walkthrough for establishing a local data streaming pipeline from open-source Apache Kafka to Snowflake -managed Iceberg ...",
+    "host_name": "www.snowflake.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.integrate.io/blog/building-a-snowflake-data-pipeline",
+    "name": "Building a Real-time Snowflake Data Pipeline",
+    "snippet": "Aug 17, 2023 — This comprehensive guide explores the process of building a real-time data pipeline using Snowflake and Kafka , covering essential topics .",
+    "host_name": "www.integrate.io",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/snowflake/large-scale-machine-learning-with-snowflake-and-rapids-7796b5e979aa",
+    "name": "Large-Scale Machine Learning with Snowflake and RAPIDS",
+    "snippet": "We demonstrate combining NVIDIA GPUs with the Snowflake Data Cloud, to make the end-to-end model training experience significantly faster and more affordable.",
+    "host_name": "medium.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/developers/guides/snowflake-confluent-tableflow-iceberg",
+    "name": "Stream Kafka Data to Snowflake via Confluent Tableflow",
+    "snippet": "May 27, 2025 — In this quickstart, you'll build a real-time data pipeline that connects Apache Kafka with Snowflake , without writing a single custom connector ...",
+    "host_name": "www.snowflake.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

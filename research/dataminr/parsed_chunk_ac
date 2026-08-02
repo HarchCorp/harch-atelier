@@ -1,0 +1,202 @@
+In this paper, we propose Donut-Whisper, an audio-visual ASR model with dual encoder to leverage visual information to improve speech recognition performance in both English and Chinese.
+
+  [2] Multi-Modal Fusion AI for Real-time Event Detection
+      URL: https://www.dataminr.com/resources/blog/multi-modal-fusion-ai-for-real-time-event-detection
+      DATE: 
+      SNIP: Feb 18, 2020 — Dataminr built the leading real-time AI Platform for detecting global events by processing billions of public data inputs per day in a wide range of formats. Read more
+
+  [3] OpenAI Whisper: Robust Speech Recognition via Large-Scale
+      URL: https://www.youtube.com/watch?v=AwJf8aQfChE
+      DATE: 
+      SNIP: In this video I cover Whisper , an ASR system from OpenAI's "Robust Speech Recognition via Large-Scale Weak Supervision" paper. Trained on a ...
+
+  [4] Automatic speech recognition models
+      URL: https://deepinfra.com/models/automatic-speech-recognition
+      DATE: 
+      SNIP: Whisper is a general-purpose speech recognition model . It is trained on a large dataset of diverse audio and is also a multi-task model that can perform ... Read more
+
+  [5] OpenAI Whisper API Integration: Automated Audio
+      URL: https://pixeltable.com/blog/whisper-transcription-pixeltable
+      DATE: 
+      SNIP: Nov 22, 2024 — The declarative data infrastructure for multimodal AI. Build production-ready video , image , and document workflows in minutes, not months. Read more
+
+  [6] OpenAI Whisper
+      URL: https://lablab.ai/tech/openai/whisper
+      DATE: 
+      SNIP: The Whisper models are trained for speech recognition and translation tasks , capable of transcribing speech audio into the text in the language it is spoken. Read more
+
+  [7] openai/whisper: Robust Speech Recognition via Large-
+      URL: https://github.com/openai/whisper
+      DATE: 
+      SNIP: Whisper is a general-purpose speech recognition model . can perform multilingual speech recognition, speech translation, and language identification.
+
+  [8] Unlocking Multimodal Video Transcription with Gemini —
+      URL: https://medium.com/google-cloud/unlocking-multimodal-video-transcription-with-gemini-part1-02dc32118f41
+      DATE: 
+      SNIP: Explore how to transcribe videos with detailed speaker identification in a single prompt.
+
+  [9] GitHub - MinhalHusain/VideoMindAI: AI-powered multimodal
+      URL: https://github.com/MinhalHusain/VideoMindAI
+      DATE: 
+      SNIP: VideoMind AI is a full-stack, multimodal AI application that understands videos by combining speech recognition, computer vision, semantic search, and Retrieval-Augmented Generation (RAG).
+
+
+=== search10_fedramp.json ===
+  [0] FedRAMP Marketplace - Products
+      URL: https://www.fedramp.gov/marketplace
+      DATE: 
+      SNIP: Beginning in January 2027, "Low", " Moderate ", and " High " Impact Levels will be removed and full transition to the class structure will take effect. Products ... Read more
+
+  [1] FedRAMP High Authorization
+      URL: https://www.commvault.com/explore/fedramp-high-authorization
+      DATE: 
+      SNIP: FedRAMP Moderate Impact Level • Involves controlled unclassified information, including personally identifiable information. • Compliance with 325 controls is ...
+
+  [2] FedRAMP Moderate vs. High: Which Level Do You Need?
+      URL: https://knoxsystems.com/resources/fedramp-moderate-vs-high
+      DATE: 
+      SNIP: May 13, 2026 — Moderate covers many common federal cloud use cases , including financial records, HR data, personally identifiable information of citizens, and ... Read more
+What Is FedRAMP High? FedRAMP High is a security authorization level for cloud services handling the government's most sensitive unclassified data. It applies to systems that process, store, or transmit federal data where a co
+
+  [3] FedRAMP | FedRAMP.gov
+      URL: https://www.fedramp.gov
+      DATE: 
+      SNIP: The FedRAMP Marketplace is a searchable database of FedRAMP certified cloud services, authorizing agencies, and FedRAMP recognized assessors. Learn More. Read more
+The Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.
+
+  [4] RFC-0020: FedRAMP Authorization Designations #110
+      URL: https://github.com/FedRAMP/community/discussions/110
+      DATE: 
+      SNIP: FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. This RFC is aligned ... Read more
+
+  [5] What Is FedRAMP? How to Get Certified & Stay Compliant
+      URL: https://onspring.com/resources/blog/what-is-fedramp
+      DATE: 
+      SNIP: Aug 28, 2025 — FedRAMP ensures secure handling of sensitive data for government agencies by standardizing cloud security measures. as low, moderate, or high ...
+
+  [6] FedRAMP Levels Explained: Low vs. Moderate vs. High
+      URL: https://www.workstreet.com/blog/fedramp-levels
+      DATE: 
+      SNIP: Jul 16, 2026 — FedRAMP used to classify every CSP as either Low, Moderate , or High impact. The High baseline requires 410 controls (87 more than Moderate ).  ...
+
+  [7] RFC-0020 FedRAMP Authorization Designations
+      URL: https://www.fedramp.gov/rfcs/0020
+      DATE: 
+      SNIP: Jan 13, 2026 — FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. Read more
+
+  [8] What Is FedRAMP? Authorized vs. Compliant vs. Equivalent
+      URL: https://www.kiteworks.com/risk-compliance-glossary/fedramp
+      DATE: 
+      SNIP: FedRAMP Moderate (Class C ) covers the majority of federal cloud use cases — roughly 80% — involving sensitive but unclassified data where a breach would cause ... Read more
+
+  [9] Understanding FedRAMP Authorization Levels | Forge Cyber Defense
+      URL: https://www.forgecyberdefense.com/knowledge/understanding-fedramp-authorization-levels
+      DATE: 
+      SNIP: Executive Summary The Federal Risk and Authorization Management Program (FedRAMP) establishes the standardized framework through which cloud service providers (CSPs) demonstrate the security of their offerings to federal government agencies. At the core of this framework are three distinct authorization levels — Low, Moderate, and High — each corresponding to the potential impact of a ...
+
+
+=== search11_clients.json ===
+  [0] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://federalnewsnetwork.com/defense-news/2026/07/accenture-wins-821m-pentagon-ai-data-platform-contract
+      DATE: 
+      SNIP: 5 days ago — Accenture won an $821 million contract to mature the Pentagon's War Data Platform , boosting AI-powered battlefield data and decision-making.
+
+  [1] Dataminr Customers
+      URL: https://www.dataminr.com/company/customers/v1
+      DATE: 
+      SNIP: Dataminr serves hundreds of private and public sector client organizations whose users span more than 75 countries.
+
+  [2] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://www.youtube.com/watch?v=a3HD2snqwJo
+      DATE: 
+      SNIP: Accenture won an $821 million task order to expand the Pentagon's War Data Platform, which it views as the backbone of many of its AI efforts.
+
+  [3] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      DATE: 
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...
+Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, we deliver the instant clarity needed for faster, more informed decisions to prote
+
+  [4] Public Data and Advanced AI Mitigate Third-Party Risks
+      URL: https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer
+      DATE: 
+      SNIP: Dataminr partners enable enterprises to manage operational, cyber, business and reputational risks more holistically and effectively.
+
+  [5] Dataminr Announces Intent to Acquire ThreatConnect
+      URL: https://www.prnewswire.com/news-releases/dataminr-announces-intent-to-acquire-threatconnect-302589575.html
+      DATE: 
+      SNIP: Oct 21, 2025 — The transaction values ThreatConnect at $290 million. The fusion of Dataminr's leading AI platform for public data signals with ThreatConnect's ... Read more
+
+  [6] CONTRACT to DATAMINR, INC.
+      URL: https://www.usaspending.gov/award/CONT_AWD_FA701421C0008_9700_-NONE-_-NONE-
+      DATE: 
+      SNIP: 2020 CONTRACT to DATAMINR , INC. from the Department of Defense. Amount $12,360,000.00 Current Award Amount $12,360,000.00 Potential. Computing Infrastructure ...
+
+  [7] Pentagon strikes deals with 8 Big Tech companies after
+      URL: https://www.cnn.com/2026/05/01/tech/pentagon-ai-anthropic
+      DATE: 
+      SNIP: May 1, 2026 — The Department of Defense announced Friday an agreement with eight major technology companies to use their artificial intelligence tools
+
+  [8] CNN
+      URL: https://www.facebook.com/cnn/posts/the-department-of-defense-announced-friday-an-agreement-with-seven-major-technol/1346549610671020
+      DATE: 
+      SNIP: The company's Pentagon contracts are primarily to design AI systems that crunch large amounts of data to come up with strike targets. Meta ... Read more
+
+  [9] Dataminr, Inc. — $9.5B in 37 Federal Contracts
+      URL: https://www.readthegovcontract.com/contractor/dataminr-inc
+      DATE: 
+      SNIP: With a total contract value of $9.48 billion and 37 contracts, DATAMINR has established a significant presence in the federal contracting landscape. However, the absence of recent contracts and the lack of specific agency clients suggest a potentially stable but less dynamic business model.
+
+
+=== search12_layoffs.json ===
+  [0] Dataminr "layoff" Reviews
+      URL: https://www.glassdoor.com/Reviews/Dataminr-layoff-Reviews-EI_IE749857.0,8_KH9,15.htm
+      DATE: 
+      SNIP: The layoffs in 2023 were a challenging time, Decision making and planning by leadership has been poor, leading to multiple rounds of layoffs in 2023 . layoffs ,  ...
+
+  [1] Big data startup Dataminr slashing 20% of staff as part
+      URL: https://stlawyers.ca/blog-news/dataminr-slashing-20-per-cent-staff
+      DATE: 
+      SNIP: Nov 28, 2023 — According to TechCrunch, the New York-based tech company is eliminating approximately 20 per cent of its total workforce, or 150 positions. Read more
+Dozens of jobs are on the chopping block at Dataminr as the big data startup restructures its business. According to TechCrunch, the New York-based tech company is eliminating approximately 20 per cent of its total workforce, or 150 po
+
+  [2] Tech Layoffs Predictions 2024: AI Begins to Flex Its Muscles
+      URL: https://www.tech387.com/blogs/tech-layoffs-predictions-2024-ai-begins-to-flex-its-muscles
+      DATE: 
+      SNIP: Dataminr , a big data startup valued at $4.1 billion, announced a 20% staff cut , amounting to around 150 employees .
+
+  [3] Tech Layoffs 2024: Is AI to Blame?
+      URL: https://www.youtube.com/watch?v=84ngZRKXKM4
+      DATE: 
+      SNIP: In this video, I dive into the complex world of tech layoffs and investigate whether Artificial Intelligence is a major factor.
+
+  [4] Dataminr Layoffs
+      URL: https://layoffs.fyi/company/dataminr
+      DATE: 
+      SNIP: Dataminr has laid off 150 employees across 1 event since March 2020. laid off 20% of its staff , or 150 people, as it prepared to focus on AI.
+
+  [5] Tech Layoffs: US Companies With Job Cuts In 2024, 2025
+      URL: https://news.crunchbase.com/startups/tech-layoffs
+      DATE: 
+      SNIP: In 2024 : At least 95,667 workers at U.S.-based tech companies lost their jobs in 2024 , according to a Crunchbase News tally. In 2023 : More than 191,000 workers ... Read more
+
+  [6] AI Layoffs Tracker 2026 — Companies Cutting Jobs Due to AI
+      URL: https://displaceindex.com/trends/ai-layoffs-tracker
+      DATE: 
+      SNIP: Real-time tracker of layoffs explicitly attributed to AI and automation. 316000+ jobs cut across 43+ companies since 2023 .
+
+  [7] Tech Layoffs Tracker
+      URL: https://www.trueup.io/layoffs
+      DATE: 
+      SNIP: Latest layoffs across big tech companies and tech startups. So far in 2026, there have been 498 layoffs at tech companies with 172488 people impacted (806 ...
+
+  [8] AI Layoffs by Company: A Tracker of Every Major
+      URL: https://founderreports.com/ai-layoffs-tracker
+      DATE: 
+      SNIP: Jul 15, 2026 — The phrase "AI layoff " went from a niche concern in 2023 to the single most-cited reason for U.S. job cuts in both March and April of 2026.
+
+  [9] Dataminr, the $4B big data startup, is laying off 20% of
+      URL: https://techcrunch.com/2023/11/28/dataminr-the-4b-big-data-startup-is-laying-off-20-of-staff-today-or-150-people-as-it-preps-to-double-down-on-ai
+      DATE: 
+      SNIP: Dataminr, the $4B big data startup, is laying off 20% of staff today, or 150 people, as it preps to double down on AI Ingrid Lunden 7:44 AM PST · November 28, 2023
+

@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.fedramp.gov/marketplace",
+    "name": "FedRAMP Marketplace - Products",
+    "snippet": "Beginning in January 2027, \"Low\", \" Moderate \", and \" High \" Impact Levels will be removed and full transition to the class structure will take effect. Products ... Read more",
+    "host_name": "www.fedramp.gov",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.commvault.com/explore/fedramp-high-authorization",
+    "name": "FedRAMP High Authorization",
+    "snippet": "FedRAMP Moderate Impact Level • Involves controlled unclassified information, including personally identifiable information. • Compliance with 325 controls is ...",
+    "host_name": "www.commvault.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://knoxsystems.com/resources/fedramp-moderate-vs-high",
+    "name": "FedRAMP Moderate vs. High: Which Level Do You Need?",
+    "snippet": "May 13, 2026 — Moderate covers many common federal cloud use cases , including financial records, HR data, personally identifiable information of citizens, and ... Read more\nWhat Is FedRAMP High? FedRAMP High is a security authorization level for cloud services handling the government's most sensitive unclassified data. It applies to systems that process, store, or transmit federal data where a compromise could cause \"severe or catastrophic adverse effects\" on an agency's operations, assets, or individuals.",
+    "host_name": "knoxsystems.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fedramp.gov",
+    "name": "FedRAMP | FedRAMP.gov",
+    "snippet": "The FedRAMP Marketplace is a searchable database of FedRAMP certified cloud services, authorizing agencies, and FedRAMP recognized assessors. Learn More. Read more\nThe Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.",
+    "host_name": "www.fedramp.gov",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/FedRAMP/community/discussions/110",
+    "name": "RFC-0020: FedRAMP Authorization Designations #110",
+    "snippet": "FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. This RFC is aligned ... Read more",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://onspring.com/resources/blog/what-is-fedramp",
+    "name": "What Is FedRAMP? How to Get Certified & Stay Compliant",
+    "snippet": "Aug 28, 2025 — FedRAMP ensures secure handling of sensitive data for government agencies by standardizing cloud security measures. as low, moderate, or high ...",
+    "host_name": "onspring.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.workstreet.com/blog/fedramp-levels",
+    "name": "FedRAMP Levels Explained: Low vs. Moderate vs. High",
+    "snippet": "Jul 16, 2026 — FedRAMP used to classify every CSP as either Low, Moderate , or High impact. The High baseline requires 410 controls (87 more than Moderate ).  ...",
+    "host_name": "www.workstreet.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fedramp.gov/rfcs/0020",
+    "name": "RFC-0020 FedRAMP Authorization Designations",
+    "snippet": "Jan 13, 2026 — FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. Read more",
+    "host_name": "www.fedramp.gov",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.kiteworks.com/risk-compliance-glossary/fedramp",
+    "name": "What Is FedRAMP? Authorized vs. Compliant vs. Equivalent",
+    "snippet": "FedRAMP Moderate (Class C ) covers the majority of federal cloud use cases — roughly 80% — involving sensitive but unclassified data where a breach would cause ... Read more",
+    "host_name": "www.kiteworks.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.forgecyberdefense.com/knowledge/understanding-fedramp-authorization-levels",
+    "name": "Understanding FedRAMP Authorization Levels | Forge Cyber Defense",
+    "snippet": "Executive Summary The Federal Risk and Authorization Management Program (FedRAMP) establishes the standardized framework through which cloud service providers (CSPs) demonstrate the security of their offerings to federal government agencies. At the core of this framework are three distinct authorization levels — Low, Moderate, and High — each corresponding to the potential impact of a ...",
+    "host_name": "www.forgecyberdefense.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

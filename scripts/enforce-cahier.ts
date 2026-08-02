@@ -183,19 +183,19 @@ const clauses: Array<{
     },
   },
 
-  // ─── CLAUSE-005: Lignes de code TypeScript ──────────────────
+  // ─── CLAUSE-005: Lignes de code TypeScript — CIBLE RÉELLE ───
   {
     id: "CLAUSE-005",
     type: "BLOCKING",
-    description: "Le projet doit contenir au moins 50,000 lignes de code TypeScript",
+    description: "Le projet doit contenir au moins 250,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC)",
     fn: () => {
       const result = exec(`find src -name "*.ts" -o -name "*.tsx" | xargs wc -l 2>/dev/null | tail -1`, 15000);
       const match = result.stdout.match(/(\d+)/);
       const lines = match ? parseInt(match[1], 10) : 0;
       return {
-        status: lines >= 50000 ? "PASS" : "FAIL",
+        status: lines >= 250000 ? "PASS" : "FAIL",
         actual: `${lines.toLocaleString()} lignes`,
-        expected: ">= 50,000 lignes (palier 1)",
+        expected: ">= 250,000 lignes (5% d'AlphaSense)",
       };
     },
   },
@@ -410,7 +410,7 @@ const clauses: Array<{
   {
     id: "CLAUSE-018",
     type: "BLOCKING",
-    description: "Le projet doit contenir au moins 100,000 lignes de code TypeScript",
+    description: "Le projet doit contenir au moins 100,000 lignes de code TypeScript (palier 2)",
     fn: () => {
       const result = exec(`find src -name "*.ts" -o -name "*.tsx" | xargs wc -l 2>/dev/null | tail -1`, 15000);
       const match = result.stdout.match(/(\d+)/);
@@ -438,20 +438,147 @@ const clauses: Array<{
     },
   },
 
-  // ─── CLAUSE-020: Test count >= 40 (BLOCKING) ────────────────
+  // ─── CLAUSE-020: Test count >= 80 (BLOCKING) ────────────────
   {
     id: "CLAUSE-020",
     type: "BLOCKING",
-    description: "Le projet doit avoir au moins 40 tests automatisés",
+    description: "Le projet doit avoir au moins 80 tests automatisés",
     fn: () => {
-      // Count "it(" occurrences in test files as a proxy for test count
       const result = exec(`grep -r "it(" tests/ 2>/dev/null | wc -l`, 10000);
       const count = parseInt(result.stdout, 10) || 0;
       return {
-        status: count >= 40 ? "PASS" : "FAIL",
+        status: count >= 80 ? "PASS" : "FAIL",
         actual: `${count} tests (approx)`,
-        expected: ">= 40 tests",
+        expected: ">= 80 tests",
       };
+    },
+  },
+
+  // ─── CLAUSE-021: Document count >= 5000 (CIBLE RÉELLE) ──────
+  {
+    id: "CLAUSE-021",
+    type: "BLOCKING",
+    description: "Base de données: >= 5,000 articles réels (cible réelle, AlphaSense a 500M+)",
+    fn: () => {
+      const result = exec(`curl -s --max-time 20 "http://localhost:3000/api/flagship-report"`, 25000);
+      if (result.code !== 0 || !result.stdout) {
+        return { status: "FAIL", actual: "API inaccessible", expected: ">= 5000 articles" };
+      }
+      try {
+        const json = JSON.parse(result.stdout);
+        const articles = json.data?.summary?.totalArticles || 0;
+        return {
+          status: articles >= 5000 ? "PASS" : "FAIL",
+          actual: `${articles.toLocaleString()} articles`,
+          expected: ">= 5,000 articles (AlphaSense: 500M+)",
+        };
+      } catch {
+        return { status: "FAIL", actual: "JSON parse error", expected: ">= 5000 articles" };
+      }
+    },
+  },
+
+  // ─── CLAUSE-022: API latency <= 10s (CIBLE RÉELLE) ──────────
+  {
+    id: "CLAUSE-022",
+    type: "BLOCKING",
+    description: "API /api/flagship-report doit répondre en < 10s (AlphaSense p95 <500ms)",
+    fn: () => {
+      const result = exec(`curl -w "%{time_total}" -o /dev/null -s --max-time 30 "http://localhost:3000/api/flagship-report"`, 35000);
+      const latency = parseFloat(result.stdout) || 999;
+      return {
+        status: latency <= 10.0 ? "PASS" : "FAIL",
+        actual: `${latency.toFixed(2)}s`,
+        expected: "<= 10.0s (cible finale: <500ms comme AlphaSense)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-023: Rapports métriques réelles scrapées ────────
+  {
+    id: "CLAUSE-023",
+    type: "BLOCKING",
+    description: "Dossier competitive-reports doit avoir >= 2 fichiers *real-metrics*.md",
+    fn: () => {
+      const result = exec(`ls competitive-reports/*real-metrics*.md 2>/dev/null | wc -l`, 5000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 2 ? "PASS" : "FAIL",
+        actual: `${count} fichiers real-metrics`,
+        expected: ">= 2 (AlphaSense + Dataminr)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-024: Person count >= 30 (CIBLE RÉELLE) ──────────
+  {
+    id: "CLAUSE-024",
+    type: "BLOCKING",
+    description: "Base de données: >= 30 personnes réelles",
+    fn: () => {
+      const result = exec(`curl -s --max-time 20 "http://localhost:3000/api/flagship-report"`, 25000);
+      if (result.code !== 0 || !result.stdout) {
+        return { status: "FAIL", actual: "API inaccessible", expected: ">= 30 personnes" };
+      }
+      try {
+        const json = JSON.parse(result.stdout);
+        const people = json.data?.summary?.totalPeople || 0;
+        return {
+          status: people >= 30 ? "PASS" : "FAIL",
+          actual: `${people} personnes`,
+          expected: ">= 30 personnes",
+        };
+      } catch {
+        return { status: "FAIL", actual: "JSON parse error", expected: ">= 30 personnes" };
+      }
+    },
+  },
+
+  // ─── CLAUSE-025: Sentiment snapshots >= 500 (CIBLE RÉELLE) ──
+  {
+    id: "CLAUSE-025",
+    type: "BLOCKING",
+    description: "Base de données: >= 500 snapshots de sentiment",
+    fn: () => {
+      const result = exec(`curl -s --max-time 20 "http://localhost:3000/api/flagship-report"`, 25000);
+      if (result.code !== 0 || !result.stdout) {
+        return { status: "FAIL", actual: "API inaccessible", expected: ">= 500 snapshots" };
+      }
+      try {
+        const json = JSON.parse(result.stdout);
+        const snapshots = json.data?.summary?.totalSentimentSnapshots || 0;
+        return {
+          status: snapshots >= 500 ? "PASS" : "FAIL",
+          actual: `${snapshots} snapshots`,
+          expected: ">= 500 snapshots",
+        };
+      } catch {
+        return { status: "FAIL", actual: "JSON parse error", expected: ">= 500 snapshots" };
+      }
+    },
+  },
+
+  // ─── CLAUSE-026: BVC prices >= 4000 (CIBLE RÉELLE) ──────────
+  {
+    id: "CLAUSE-026",
+    type: "BLOCKING",
+    description: "Base de données: >= 4,000 prix BVC",
+    fn: () => {
+      const result = exec(`curl -s --max-time 20 "http://localhost:3000/api/flagship-report"`, 25000);
+      if (result.code !== 0 || !result.stdout) {
+        return { status: "FAIL", actual: "API inaccessible", expected: ">= 4000 prix" };
+      }
+      try {
+        const json = JSON.parse(result.stdout);
+        const prices = json.data?.summary?.totalBvcPrices || 0;
+        return {
+          status: prices >= 4000 ? "PASS" : "FAIL",
+          actual: `${prices.toLocaleString()} prix`,
+          expected: ">= 4,000 prix BVC",
+        };
+      } catch {
+        return { status: "FAIL", actual: "JSON parse error", expected: ">= 4000 prix" };
+      }
     },
   },
 ];

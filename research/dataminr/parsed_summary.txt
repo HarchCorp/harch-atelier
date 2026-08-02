@@ -1,0 +1,642 @@
+=== search01_arr.json ===
+  [0] Dataminr Revenue 2024: $200M ARR, $4.1B Valuation
+      URL: https://getlatka.com/companies/dataminr
+      DATE: 
+      SNIP: Nov 28, 2025 — Dataminr 2024 revenue: $200M ARR (up from $189.5M in 2023). Valuation: $4.1B. Total funding: $1B across 6 rounds. 757 employees
+Dataminr 2024 revenue: $200M ARR (up from $189.5M in 2023). Valuation: $4.1B. Total funding: $1B across 6 rounds. 757 employees Updated Nov 28, 2025.
+
+  [1] AI-Powered Real-Time Information Platform
+      URL: https://www.dataminr.com/press/announcement/dataminr-secures-funding
+      DATE: 
+      SNIP: Mar 19, 2025 — Secures $85M in. Dataminr is approaching $200M in ARR with strong growth across the enterprise, government, and defense markets.
+
+  [2] Dataminr Report
+      URL: https://notice-reports.s3.amazonaws.com/Dataminr%20Report%202024.12.24_16.20.06.pdf
+      DATE: 
+      SNIP: Dec 24, 2024 — Dataminr 2024 valuation is $4.1 B . valuation is unchanged from 2023. Annually recurring revenue (ARR) This revenue estimate represents annually ... 9 pages
+4. Annually recurring revenue (ARR) This revenue estimate represents annually recurring revenue (ARR).
+
+  [3] Dataminr, Discord, and SpaceX: Current Analysis and Key
+      URL: https://regolith.com/news/aktual-nyj-obzor-dataminr-discord-i-spacex-klucevye-metriki-razvitia-69
+      DATE: 
+      SNIP: Dec 5, 2025 — Annual Recurring Revenue ( ARR ) has approached ~$200M, reflecting strong demand for risk intelligence solutions. In 2024 – 2025 , 2024 : ~$13–14B  ...
+
+  [4] Dataminr Valuation
+      URL: https://www.pminsights.com/companies/dataminr
+      DATE: 
+      SNIP: Dataminr generated $200.0 million in revenue as of 2025 , according to PM Insights' market research. Dataminr carries a 7.74x revenue multiple as of Jul 13, 2026 ...
+
+  [5] AI-Powered Real-Time Information Platform Dataminr
+      URL: https://www.prnewswire.com/news-releases/ai-powered-real-time-information-platform-dataminr-secures-85m-in-funding-led-by-nightdragon-hsbc-302405980.html
+      DATE: 
+      SNIP: Mar 19, 2025 — Dataminr is approaching $200M in ARR with strong growth across the enterprise, government, and defense markets.
+
+  [6] Dataminr's Valuation Rises to $4.1B
+      URL: https://www.dataminr.com/press/dataminr-announces-475m-financing-round
+      DATE: 
+      SNIP: Dataminr , the leading real-time information discovery platform, today announced the close of a $475 million financing round at a $4.1 billion valuation.
+
+  [7] Analytics company Dataminr secures $85M to fund growth
+      URL: https://techcrunch.com/2025/03/19/analytics-company-dataminr-secures-85m-to-fund-growth
+      DATE: 
+      SNIP: Mar 19, 2025 — It's approaching $ 200 million in annual recurring revenue , and it has a five-year, $282 million contract with the U.S. Department of Defense.
+It’s approaching $200 million in annual recurring revenue, and it has a five-year, $282 million contract with the U.S. Department of Defense.
+
+  [8] Dataminr Revenue: Annual, Quarterly, and Historic - Zippia
+      URL: https://www.zippia.com/dataminr-careers-1397114/revenue
+      DATE: 
+      SNIP: Dataminr's annual revenue is $77.5M . Zippia's data science team found the following key financial metrics about Dataminr after extensive research and ...
+
+  [9] Dataminr - Overview, News & Similar companies | ZoomInfo.com
+      URL: https://www.zoominfo.com/c/dataminr-inc/347570651
+      DATE: 
+      SNIP: View Dataminr (www.dataminr.com) location in New York, United States , revenue, industry and description. Find related and similar companies as well as employees by title and much more.
+
+
+=== search02_employees.json ===
+  [0] Dataminr
+      URL: https://www.linkedin.com/company/dataminr
+      DATE: 
+      SNIP: View all 887 employees Overview Jobs Life ・ size 501-1,000 employees Headquarters New York, NY Type. Employees at Dataminr ・ more than 3,500 km of fiber- ...
+Powered by more than 50 proprietary large-language models, Dataminr delivers the earliest actionable information to enhance the security and resilience of organizations, infrastructure, and people.
+
+  [1] Coming at you LIVE from the Dataminr SKO in Nashville.
+      URL: https://www.linkedin.com/posts/ddewalt_coming-at-you-live-from-the-dataminr-sko-activity-7291135014035959809--EbX
+      DATE: 
+      SNIP: An organization may have had 1000 employees working from one building. They now have potentially hundreds of remote and hybrid workers ,
+
+  [2] Dataminr: Culture
+      URL: https://www.linkedin.com/company/dataminr/life
+      DATE: 
+      SNIP: View all 892 employees Overview Jobs Life. At Dataminr, we are over 700 talented individuals, spanning ten global offices,
+
+  [3] Dataminr - 2026 Company Profile & Team
+      URL: https://tracxn.com/d/companies/dataminr/__rtpPL9tAjtmnBYhML0uCEFT2x4EHB1dhAfItP0PbELw
+      DATE: 
+      SNIP: Jul 22, 2026 — As of Jun 30, 2026, the latest employee count at Dataminr is 891. How much is Dataminr worth? The latest valuation of Dataminr is $4.1B as of ... Read more
+
+  [4] Working at Dataminr
+      URL: https://www.glassdoor.com/Overview/Working-at-Dataminr-EI_IE749857.11,19.htm
+      DATE: 
+      SNIP: Jun 1, 2026 — $92K - $135K /yr. Dataminr has an employee rating of 3.6 out of 5 stars, Employees rate Dataminr 3.6 out of 5 stars based on 497 anonymous ...
+
+  [5] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      DATE: 
+      SNIP: Dataminr is one of New York's top private technology companies, with employees across six global offices.
+
+  [6] Dataminr Revenue 2024: $200M ARR, $4.1B Valuation
+      URL: https://getlatka.com/companies/dataminr
+      DATE: 
+      SNIP: Nov 28, 2025 — Dataminr employs approximately 757 people as of 2026, down from 764 in 2024 , including 185 sales reps. Reached 757 employees (November 2025 )  ...
+Dataminr 2024 revenue: $200M ARR (up from $189.5M in 2023). Valuation: $4.1B. Total funding: $1B across 6 rounds. 757 employees Updated Nov 28, 2025.
+
+  [7] About Us
+      URL: https://www.dataminr.com/company
+      DATE: 
+      SNIP: Dataminr is one of New York's top private technology companies, with employees across six global offices.
+
+  [8] Ted Bailey - Founder and CEO at Dataminr
+      URL: https://www.linkedin.com/in/ted-bailey-11b3492
+      DATE: 
+      SNIP: Founder and CEO, Chairman · Dataminr Dataminr , recently valued at $4.1B, is one of New York's top private AI companies, with thousands of private and public sector clients in over 70 countries and ... Read more
+
+  [9] How many employees work at Dataminr? | Revelio Labs
+      URL: https://www.reveliolabs.com/companies/dataminr/employees
+      DATE: 
+      SNIP: Interactive chart of Dataminr annual worldwide employee count from 2023 to 2025. Dataminr total number of employees in 2025 was 1,049, a 0.9% increase from 2024.
+
+
+=== search03_funding.json ===
+  [0] Dataminr's Valuation Rises to $4.1B
+      URL: https://www.dataminr.com/press/dataminr-announces-475m-financing-round
+      DATE: 
+      SNIP: Dataminr , the leading real-time information discovery platform, today announced the close of a $475 million financing round at a $4.1 billion valuation .
+Dataminr, the leading real-time information discovery platform, today announced the close of a $475 million financing round at a $4.1 billion valuation.
+
+  [1] Insights: How To Invest In Dataminr Stock Pre-IPO
+      URL: https://forgeglobal.com/insights/how-to-invest-in-dataminr-stock-pre-ipo
+      DATE: 
+      SNIP: Mar 12, 2026 — Dataminr held its most recent primary funding round in 2021 , when its Series F raised $475 million, bringing its valuation all the way to $4.1 ...
+
+  [2] 2026 Funding Rounds & List of Investors - Dataminr
+      URL: https://tracxn.com/d/companies/dataminr/__rtpPL9tAjtmnBYhML0uCEFT2x4EHB1dhAfItP0PbELw/funding-and-investors
+      DATE: 
+      SNIP: Jul 1, 2026 — Dataminr's largest funding round was a Series F round held on Mar 23, 2021 for $475M . What is the valuation of Dataminr? Dataminr's valuation is ...
+
+  [3] Dataminr Announces $475M Financing Round, Raising its
+      URL: https://www.prnewswire.com/news-releases/dataminr-announces-475m-financing-round-raising-its-valuation-to-4-1b-301253429.html
+      DATE: 
+      SNIP: Mar 23, 2021 — Dataminr , the leading real-time information discovery platform, today announced the close of a $475 million financing round at a $4.1 billion  ...
+
+  [4] How Much Did Dataminr Raise? Funding & Key Investors
+      URL: https://www.clay.com/dossier/dataminr-funding
+      DATE: 
+      SNIP: Series F Amount Raised: USD 475,000,000 Date: March 23, 2021. Valuation at Round: USD 4,100,000,000 Motivation. Current Valuation: USD 4,100,000,000 (as of ...
+
+  [5] Dataminr Closes on $475M Series F, Plans to Hire Across
+      URL: https://www.builtinnyc.com/articles/dataminr-raised-475m-series-f-hiring
+      DATE: 
+      SNIP: Mar 23, 2021 — The company announced the completion of its Series F funding round , bringing it up to a $4.1 billion valuation.
+Private tech company Dataminr is working to keep people informed and notified of high-impact events — such as the emergence of the COVID-19 pandemic — as soon as they happen. The company announced the completion of its Series F funding round, bringing it up to a $4.1 bill
+
+  [6] Dataminr Stock for Accredited Investors | Pre-IPO Shares
+      URL: https://www.upmarket.co/private-markets/pre-ipo/dataminr
+      DATE: 
+      SNIP: Data min r announced a $475 million financing round that lifted its valuation to $4.1 billion. The company described itself as a leading real-time information ...
+
+  [7] Dataminr: Funding, Team & Investors
+      URL: https://startupintros.com/orgs/dataminr
+      DATE: 
+      SNIP: Jul 13, 2026 — The business has reached a $1.6 billion valuation . Dataminr has raised $871.0M across 7 funding rounds . 2021 $475M Series F
+
+  [8] Invest in Series Dataminr
+      URL: https://www.startengine.com/offering/dataminr
+      DATE: 
+      SNIP: Past performance and valuations are not indicative of future results, and investors should not assume that investments in Series Dataminr will increase in value ...
+
+  [9] Dataminr raises $475M on a $4.1B valuation for real-time
+      URL: https://techcrunch.com/2021/03/23/dataminr-raises-475m-on-a-4-1b-valuation-for-real-time-insights-based-on-100k-sources-of-public-data
+      DATE: 
+      SNIP: Dataminr has confirmed that this Series F values the company at $4.1 billion as it gears up for an IPO in 2023.
+
+
+=== search04_throughput.json ===
+  [0] Dataminr - Customer story
+      URL: https://aerospike.com/resources/customer-stories/dataminr
+      DATE: 
+      SNIP: Discover how Dataminr replaced DynamoDB and Redis with Aerospike to scale real - time predictive and Generative AI, processing billions of daily signals .
+Discover how Dataminr replaced DynamoDB and Redis with Aerospike to scale real-time predictive and Generative AI, processing billions of daily signals.
+
+  [1] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      DATE: 
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...
+Fuse real-time external intelligence with deep organizational telemetry to contextualize, prioritize, and automate your defense. From first signal to risk-prioritized action.
+
+  [2] What is AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com/resources/ai-powered-real-time-event-threat-risk-intelligence
+      DATE: 
+      SNIP: Sep 30, 2025 — Dataminr's AI-powered real-time event, threat & risk intelligence answers the “what, so what, and now what” behind every security event.
+
+  [3] Dataminr Expands Partnership With NATO
+      URL: https://www.dataminr.com/press/dataminr-expands-partnership-with-nato-to-provide-ai-powered-real-time-alerts-for-global-force-and-infrastructure-protection
+      DATE: 
+      SNIP: Dataminr has created a revolutionary real - time AI platform for detecting events , risks and critical information from public data signals . Read more
+
+  [4] Solution Overview Dataminr Pulse for Corporate Security
+      URL: https://www.dataminr.com/resources/video/protect-your-organization-with-dataminr-for-corporate-security-your-real-time-corporate-security-risk-intelligence-platform
+      DATE: 
+      SNIP: Protect your people and minimize business disruptions with Dataminr Pulse for Corporate Security, a real - time corporate security risk solution.
+
+  [5] How Does Dataminr Company Work?
+      URL: https://businessmodelcanvastemplate.com/blogs/how-it-works/dataminr-how-it-works?srsltid=AfmBOoo3vvE7D016Jx-X7KQ83s6NiPa6NTdbITXEUEEd4edDn2bjq6PO
+      DATE: 
+      SNIP: Mar 16, 2026 — Dataminr turns billions of public signals into split-second, actionable alerts that help newsrooms, traders, and first responders act faster.
+
+  [6] Dataminr Pulse - AWS Marketplace - Amazon.com
+      URL: https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima
+      DATE: 
+      SNIP: Dataminr Pulse for Cyber Risk is a real-time, external cyber event, risk, and threat detection solution that uses AI across public data to proactively ... Read more
+
+  [7] Dataminr | ArcGIS Velocity documentation
+      URL: https://doc.esri.com/en/arcgis-velocity/latest/ingest/dataminr.html
+      DATE: 
+      SNIP: The Dataminr feed type in ArcGIS Velocity creates a built-in HTTP endpoint that can be used to receive real - time alert events from Dataminr . Read more
+
+  [8] Dataminr
+      URL: https://newcomglobal.com/dataminr
+      DATE: 
+      SNIP: Dataminr's AI solution is the leader in generating real - time alerting for both physical and cyber threats. The Dataminr solution provides Public and Private ...
+
+  [9] How Netflix Handles 2 Trillion Events Every Day - recode hive
+      URL: https://www.recodehive.com/blog/netflix-data-engineering
+      DATE: 
+      SNIP: Every single one of these actions is an event. And Netflix captures all of them from 300 million subscribers across 190 countries, continuously, in real time. The scale: 2 trillion events every single day. That's 3 petabytes of data ingested, 7 petabytes output, at a peak rate of 12.5 million events per second.
+
+
+=== search05_latency.json ===
+  [0] Legal - Service Level Agreement ("SLA")
+      URL: https://www.dataminr.com/legal/sla
+      DATE: 
+      SNIP: Dataminr shall provide 24/7 support with a response time of one (1) hour for Downtime. All other support shall be provided on a 24/5 basis with a response time ... Read more
+Dataminr shall provide 24/7 support with a response time of one (1) hour for Downtime. All other support shall be provided on a 24/5 basis with a response time of two (2) to twenty-four (24) hours.
+
+  [1] Data Freshness Monitoring: SLA Management
+      URL: https://www.conduktor.io/glossary/data-freshness-monitoring-sla-management
+      DATE: 
+      SNIP: Jul 22, 2026 — Monitor data freshness and manage SLAs using consumer lag tracking, heartbeat metrics, and automated alerting for pipeline reliability.
+
+  [2] Latency Numbers Every Data Streaming Engineer Should
+      URL: https://streamnative.io/blog/latency-numbers-every-data-streaming-engineer-should-know
+      DATE: 
+      SNIP: Sep 24, 2025 — Latencies from several hundred milliseconds to a few seconds might be acceptable for certain analytics, reporting, or ETL scenarios where “real- ... Read more
+
+  [3] Real-time Alerting 101: How It Works & Why It's Critical
+      URL: https://www.dataminr.com/resources/blog/real-time-alerting-101-how-it-works-and-why-its-a-business-imperative
+      DATE: 
+      SNIP: Nov 14, 2024 — Dataminr's real-time alerts help organizations get the earliest signals of risks and enable the fastest response, thus strengthening ...
+
+  [4] Data Freshness vs Latency: Why Fast Queries Still Return
+      URL: https://tacnode.io/post/data-freshness-vs-latency
+      DATE: 
+      SNIP: Jan 25, 2026 — Data latency measures how fast a query returns. SLAs specify millisecond thresholds. when a query drops from 50ms to 20ms.
+
+  [5] Latency Numbers Every Data Streaming Engineer Should
+      URL: https://dev.to/david_kjerrumgaard_d31d7e/latency-numbers-every-data-streaming-engineer-should-know-h91
+      DATE: 
+      SNIP: Ultra-Low Latency (< 10ms End-to-End) · Low Latency (10-200ms End-to-End) · Latency -Relaxed (200ms - Minutes). Read more
+
+  [6] What is Latency SLA? Meaning, Architecture, Examples,
+      URL: https://dataopsschool.com/blog/latency-sla
+      DATE: 
+      SNIP: Feb 17, 2026 — A Latency SLA is a formal commitment that a service will respond within a specified time bound for a defined percentage of requests.
+
+  [7] Machine Learning for Real-Time SLA Violation Detection in
+      URL: https://www.ijert.org/machine-learning-for-real-time-sla-violation-detection-in-cloud-services
+      DATE: 
+      SNIP: Dec 16, 2025 — In this paper, we propose a machine-learning (ML) based framework for real- time SLA violation detection in cloud services. Our system ... Read more
+
+  [8] Dataminr Pulse for Cyber Risk: Solution Overview
+      URL: https://www.dataminr.com/resources/video/dataminr-pulse-for-cyber-risk-solution-overview
+      DATE: 
+      SNIP: Strengthen resilience with Dataminr Pulse for Cyber Risk, a real-time, external cyber event, risk, and threat de tection solution.
+
+  [9] AI-Powered Real-Time Event, Threat & Risk Intelligence - Dataminr
+      URL: https://www.dataminr.com
+      DATE: 
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, we deliver the instant clarity needed for faster, more informed decisions to protect what matters most.
+
+
+=== search06_infra.json ===
+  [0] Introducing Data on EKS – Modernize Data Workloads
+      URL: https://aws.amazon.com/blogs/containers/introducing-data-on-eks-modernize-data-workloads-on-amazon-eks
+      DATE: 
+      SNIP: Mar 28, 2023 — Data on EKS (DoEKS) provides best practices, examples, and architectures aimed at making it easier to build, deploy, and scale data-intensive ...
+
+  [1] AWS Kafka - Guide to Design & Kafka Deployment
+      URL: https://www.confluent.io/blog/design-and-deployment-considerations-for-deploying-apache-kafka-on-aws
+      DATE: 
+      SNIP: Sep 6, 2023 — Let's take a look at the best practices to follow for deploying, monitoring, and managing your Apache Kafka cluster in AWS .
+
+  [2] Build an AWS EKS Kubernetes Apache Kafka Cluster (HA
+      URL: https://www.youtube.com/watch?v=noVq0i1BaBw&vl=en
+      DATE: 
+      SNIP: In this video, we dive deep into creating a High Availability (HA) Apache Kafka Cluster on AWS EKS using Terraform and Strimzi in just 5 ...
+
+  [3] Exploring Data Engineering Architectures: On-Premises
+      URL: https://medium.com/@sajjadaghapour/exploring-data-engineering-architectures-on-premises-and-aws-882b6a689111
+      DATE: 
+      SNIP: In this post, we'll delve into two distinct architectures as part of Lambda architecture — one rooted in on-premises infrastructure and the other ...
+
+  [4] Apache Kafka on AWS: Self-Managed vs Fully Managed
+      URL: https://www.linkedin.com/posts/thammineni-satish-947b2a283_dataengineering-apachekafka-aws-activity-7468505752429596672-etSh
+      DATE: 
+      SNIP: Jun 4, 2026 — Apache Kafka is the industry standard for distributed event streaming , deploying and managing it on AWS comes with a critical architectural ...
+
+  [5] Deploying and scaling Apache Kafka on Amazon EKS
+      URL: https://aws.amazon.com/blogs/containers/deploying-and-scaling-apache-kafka-on-amazon-eks
+      DATE: 
+      SNIP: Jan 12, 2024 — In this post, we demonstrate how to build and deploy a Kafka cluster with Amazon Elastic Kubernetes Service (Amazon EKS) using Data on EKS (DoEKS).
+In this post, we demonstrate how to build and deploy a Kafka cluster with Amazon Elastic Kubernetes Service (Amazon EKS) using Data on EKS (DoEKS). DoEKS’s open-source project empowers customers to expedite their data platform developmen
+
+  [6] Kafka disaster recovery on Kubernetes using MirrorMaker2
+      URL: https://outshift.cisco.com/blog/in-depth-tech/kafka-disaster-recovery-mm2
+      DATE: 
+      SNIP: Mar 8, 2020 — Discover how Kafka disaster recovery empowers your business resilience. Learn strategies to safeguard data with CISCO Outshift.
+
+  [7] Serverless Kafka on Kubernetes | DevNation Tech Talk
+      URL: https://developers.redhat.com/videos/serverless-kafka-kubernetes-devnation-tech-talk
+      DATE: 
+      SNIP: Apache Kafka has emerged as a leading platform for building real-time data pipelines and for high-throughput/low-latency messaging.
+
+  [8] Building Reusable EKS Blueprints with KRO and ACK
+      URL: https://builder.aws.com/content/38JQW1zJGxUfiAAQXkJGIV6otDu/platform-engineering-at-scale-building-reusable-eks-blueprints-with-kro-and-ack
+      DATE: 
+      SNIP: Feb 9, 2026 — EKS Capabilities transforms platform engineering by enabling reusable blueprints that work across many clusters.
+
+  [9] Fully Managed Apache Kafka – Amazon MSK – Amazon Web Services
+      URL: https://aws.amazon.com/msk
+      DATE: 
+      SNIP: Build resilient Apache Kafka workloads with multi-AZ deployments and automated detection, mitigation, and recovery of infrastructure issues. Amazon MSK safeguards your entire data pipeline, from ingestion and storage to analytics, ensuring both data freshness and optimal query performance.
+
+
+=== search07_twitter.json ===
+  [0] Getting all tweets for research purposes - Standard APIs v1.1
+      URL: https://devcommunity.x.com/t/getting-all-tweets-for-research-purposes/30501
+      DATE: 
+      SNIP: Jan 13, 2015 — This is a massive volume of Tweets per second , and it requires significant infrastructure to process. Firehose access is limited to a very ...
+Jan 13, 2015 — This is a massive volume of Tweets per second , and it requires significant infrastructure to process. Firehose access is limited to a very small ...
+
+  [1] Twitter (X) Firehose API — Developer Guide
+      URL: https://twitterapi.io/blog/twitter-firehose-api-developer-guide
+      DATE: 
+      SNIP: Pricing per twitterapi.io/pricing: $0.00015 per returned tweet . Same volume via X Enterprise = $42,000/month floor plus per - tweet cost. Same volume via X ...
+
+  [2] How much does access to the Twitter firehose cost?
+      URL: https://www.quora.com/How-much-does-access-to-the-Twitter-firehose-cost
+      DATE: 
+      SNIP: How much does access to the Twitter firehose cost?
+
+  [3] FBI Awards Dataminr Contract for Twitter 'Firehose'
+      URL: https://www.nextgov.com/emerging-tech/2016/11/fbi-awards-dataminr-contract-twitter-firehose/133152
+      DATE: 
+      SNIP: Nov 14, 2016 — Twitter's public API only gives users access to about 1 percent of tweets , according to a FedBizOpps posting. » Get the best federal ...
+
+  [4] Twitter/X API Pricing 2026: All Tiers ($0 to $42K) Compared
+      URL: https://www.xpoz.ai/blog/guides/understanding-twitter-api-pricing-tiers-and-alternatives
+      DATE: 
+      SNIP: Every API call now costs money — reading a tweet costs $0.005 ($5 per 1,000), posting costs $0.015, and full-archive search requires an Enterprise contract ...
+
+  [5] Volume returned by counts vs. search endpoint - X API v2
+      URL: https://devcommunity.x.com/t/volume-returned-by-counts-vs-search-endpoint/158870
+      DATE: 
+      SNIP: Sep 1, 2021 — I have recently been using the “counts/recent” endpoint to scope the volume of tweets for a given query before downloading them.
+
+  [6] Twitter Firehose vs. Twitter API: What's the difference and
+      URL: https://brightplanet.com/2013/06/25/twitter-firehose-vs-twitter-api-whats-the-difference-and-why-should-you-care
+      DATE: 
+      SNIP: Jun 25, 2013 — Studies have estimated that using Twitter's Streaming API users can expect to receive anywhere from 1% of the tweets to over 40% of tweets in ...
+
+  [7] How many percent of the tweets does twitter sample API
+      URL: https://stackoverflow.com/questions/13055370/how-many-percent-of-the-tweets-does-twitter-sample-api-give
+      DATE: 
+      SNIP: Does anyone know what's the ratio between the number of tweets we get from twitter sample API over the total number of tweets which the Twitter server receives? ...
+
+  [8] X (Twitter) API Pricing 2026: Tiers, Free Tier & Real Costs
+      URL: https://api.sorsa.io/blog/twitter-api-pricing-2026
+      DATE: 
+      SNIP: Mar 23, 2026 — X API pricing 2026 explained: pay- per -use at $0.005/read, $0.20/URL post, 2M cap, no free tier. Real costs plus flat-rate options from $0.02 ...
+
+  [9] TwitterAPI.io
+      URL: https://twitterapi.io
+      DATE: 
+      SNIP: TwitterAPI.io provides a real-time X ( Twitter ) API alternative at $0.00015 per read — about 33× cheaper than the official X API ($0.005–$0.010 per read).
+
+
+=== search08_llm.json ===
+  [0] Pulse Now Offers AI Risk Management Capabilities
+      URL: https://www.dataminr.com/press/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities
+      DATE: 
+      SNIP: Sep 7, 2023 — Dataminr Pulse for Corporate Security's new Risk Management capabilities enable teams to collaboratively manage risks to their business in one place. Read more
+
+  [1] Dataminr's AI Platform Driven by Predictive Models
+      URL: https://www.dataminr.com/resources/blog/harnessing-the-power-of-llms-and-multi-modal-foundation-models-in-dataminrs-ai-platform
+      DATE: 
+      SNIP: Oct 3, 2023 — Large language models (LLMs ) and multi-modal foundation models serve as the basis of the predictive and generative components in Dataminr's AI ... Read more
+Oct 3, 2023 — Dataminr's AI platform uses Generative AI to automatically create the textual descriptions and real-time summaries that describe the events, ...
+
+  [2] Dataminr Launches ReGenAI
+      URL: https://www.dataminr.com/resources/video/dataminr-ai-platform-the-future-of-real-time-information
+      DATE: 
+      SNIP: ReGenAI distills multidimensional events into concise event briefs that dynamically update. the Power of LLMs and Multi-modal Foundation Models ...
+ReGenAI distills multidimensional events into concise event briefs that dynamically update. Harnessing the Power of LLMs and Multi-modal ...
+
+  [3] What is Retrieval Augmented Generation (RAG)?
+      URL: https://www.databricks.com/blog/what-is-retrieval-augmented-generation
+      DATE: 
+      SNIP: Retrieval augmented generation (RAG ) is a hybrid AI framework that bolsters large language models (LLMs) by combining them with external, up-to-date data ... Read more
+
+  [4] What is RAG (Retrieval-Augmented Generation)?
+      URL: https://aws.amazon.com/what-is/retrieval-augmented-generation
+      DATE: 
+      SNIP: RAG allows developers to provide the latest research, statistics, or news to the generative models. They can use RAG to connect the LLM directly to live social ... Read more
+
+  [5] Dataminr Pulse Expands to Offer AI-powered Risk
+      URL: https://www.prnewswire.com/news-releases/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities-301920508.html
+      DATE: 
+      SNIP: Sep 7, 2023 — Dataminr's generative AI capabilities provide users with textual summaries of events for enhanced risk assessment, situational awareness, and ...
+
+  [6] Dataminr's ReGenAI Expands to Cover Hyperlocal Events
+      URL: https://www.dataminr.com/press/announcement/dataminrs-regenai-expands-to-cover-hyperlocal-events-across-the-globe-delivering-10x-more-dynamically-updating-event-briefs
+      DATE: 
+      SNIP: Sep 18, 2024 — ReGenAI, a new form of Generative AI that automatically updates and regenerates live information briefs as an event unfolds.
+
+  [7] Empowering Artificial Intelligence with RAG: The New Era
+      URL: https://www.linkedin.com/pulse/empowering-artificial-intelligence-rag-new-era-mosaic-ruben-quispe-l--fv6ne
+      DATE: 
+      SNIP: The Retrieval-Augmented Generation (RAG) architecture is revolutionizing generative AI, enabling models to generate more accurate, up-to-date, ... Read more
+
+  [8] What is retrieval-augmented generation?
+      URL: https://www.redhat.com/en/topics/ai/what-is-retrieval-augmented-generation
+      DATE: 
+      SNIP: Apr 15, 2026 — Retrieval-augmented generation (RAG) links external resources to an LLM to enhance a generative AI model's output accuracy.
+
+  [9] Dataminr Pulse - AWS Marketplace - Amazon.com
+      URL: https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima
+      DATE: 
+      SNIP: Dataminr Pulse delivers the earliest actionable intelligence on breaking events, emerging threats, and unexpected risks across the physical, digital, and
+
+
+=== search09_multimodal.json ===
+  [0] Introducing Whisper
+      URL: https://openai.com/index/whisper
+      DATE: 
+      SNIP: Sep 21, 2022 — Whisper is an automatic speech recognition (ASR) system trained on 680,000 hours of multilingual and multitask supervised data collected ... Read more
+
+  [1] OCR-Enhanced Multimodal ASR Can Read While Listening
+      URL: https://arxiv.org/html/2601.18393v1
+      DATE: 
+      SNIP: Jan 26, 2026 — Donut- Whisper , an audio-visual ASR model with dual encoder to leverage visual information to improve speech recognition performance in both ...
+In this paper, we propose Donut-Whisper, an audio-visual ASR model with dual encoder to leverage visual information to improve speech recognition performance in both English and Chinese.
+
+  [2] Multi-Modal Fusion AI for Real-time Event Detection
+      URL: https://www.dataminr.com/resources/blog/multi-modal-fusion-ai-for-real-time-event-detection
+      DATE: 
+      SNIP: Feb 18, 2020 — Dataminr built the leading real-time AI Platform for detecting global events by processing billions of public data inputs per day in a wide range of formats. Read more
+
+  [3] OpenAI Whisper: Robust Speech Recognition via Large-Scale
+      URL: https://www.youtube.com/watch?v=AwJf8aQfChE
+      DATE: 
+      SNIP: In this video I cover Whisper , an ASR system from OpenAI's "Robust Speech Recognition via Large-Scale Weak Supervision" paper. Trained on a ...
+
+  [4] Automatic speech recognition models
+      URL: https://deepinfra.com/models/automatic-speech-recognition
+      DATE: 
+      SNIP: Whisper is a general-purpose speech recognition model . It is trained on a large dataset of diverse audio and is also a multi-task model that can perform ... Read more
+
+  [5] OpenAI Whisper API Integration: Automated Audio
+      URL: https://pixeltable.com/blog/whisper-transcription-pixeltable
+      DATE: 
+      SNIP: Nov 22, 2024 — The declarative data infrastructure for multimodal AI. Build production-ready video , image , and document workflows in minutes, not months. Read more
+
+  [6] OpenAI Whisper
+      URL: https://lablab.ai/tech/openai/whisper
+      DATE: 
+      SNIP: The Whisper models are trained for speech recognition and translation tasks , capable of transcribing speech audio into the text in the language it is spoken. Read more
+
+  [7] openai/whisper: Robust Speech Recognition via Large-
+      URL: https://github.com/openai/whisper
+      DATE: 
+      SNIP: Whisper is a general-purpose speech recognition model . can perform multilingual speech recognition, speech translation, and language identification.
+
+  [8] Unlocking Multimodal Video Transcription with Gemini —
+      URL: https://medium.com/google-cloud/unlocking-multimodal-video-transcription-with-gemini-part1-02dc32118f41
+      DATE: 
+      SNIP: Explore how to transcribe videos with detailed speaker identification in a single prompt.
+
+  [9] GitHub - MinhalHusain/VideoMindAI: AI-powered multimodal
+      URL: https://github.com/MinhalHusain/VideoMindAI
+      DATE: 
+      SNIP: VideoMind AI is a full-stack, multimodal AI application that understands videos by combining speech recognition, computer vision, semantic search, and Retrieval-Augmented Generation (RAG).
+
+
+=== search10_fedramp.json ===
+  [0] FedRAMP Marketplace - Products
+      URL: https://www.fedramp.gov/marketplace
+      DATE: 
+      SNIP: Beginning in January 2027, "Low", " Moderate ", and " High " Impact Levels will be removed and full transition to the class structure will take effect. Products ... Read more
+
+  [1] FedRAMP High Authorization
+      URL: https://www.commvault.com/explore/fedramp-high-authorization
+      DATE: 
+      SNIP: FedRAMP Moderate Impact Level • Involves controlled unclassified information, including personally identifiable information. • Compliance with 325 controls is ...
+
+  [2] FedRAMP Moderate vs. High: Which Level Do You Need?
+      URL: https://knoxsystems.com/resources/fedramp-moderate-vs-high
+      DATE: 
+      SNIP: May 13, 2026 — Moderate covers many common federal cloud use cases , including financial records, HR data, personally identifiable information of citizens, and ... Read more
+What Is FedRAMP High? FedRAMP High is a security authorization level for cloud services handling the government's most sensitive unclassified data. It applies to systems that process, store, or transmit federal data where a co
+
+  [3] FedRAMP | FedRAMP.gov
+      URL: https://www.fedramp.gov
+      DATE: 
+      SNIP: The FedRAMP Marketplace is a searchable database of FedRAMP certified cloud services, authorizing agencies, and FedRAMP recognized assessors. Learn More. Read more
+The Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.
+
+  [4] RFC-0020: FedRAMP Authorization Designations #110
+      URL: https://github.com/FedRAMP/community/discussions/110
+      DATE: 
+      SNIP: FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. This RFC is aligned ... Read more
+
+  [5] What Is FedRAMP? How to Get Certified & Stay Compliant
+      URL: https://onspring.com/resources/blog/what-is-fedramp
+      DATE: 
+      SNIP: Aug 28, 2025 — FedRAMP ensures secure handling of sensitive data for government agencies by standardizing cloud security measures. as low, moderate, or high ...
+
+  [6] FedRAMP Levels Explained: Low vs. Moderate vs. High
+      URL: https://www.workstreet.com/blog/fedramp-levels
+      DATE: 
+      SNIP: Jul 16, 2026 — FedRAMP used to classify every CSP as either Low, Moderate , or High impact. The High baseline requires 410 controls (87 more than Moderate ).  ...
+
+  [7] RFC-0020 FedRAMP Authorization Designations
+      URL: https://www.fedramp.gov/rfcs/0020
+      DATE: 
+      SNIP: Jan 13, 2026 — FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. Read more
+
+  [8] What Is FedRAMP? Authorized vs. Compliant vs. Equivalent
+      URL: https://www.kiteworks.com/risk-compliance-glossary/fedramp
+      DATE: 
+      SNIP: FedRAMP Moderate (Class C ) covers the majority of federal cloud use cases — roughly 80% — involving sensitive but unclassified data where a breach would cause ... Read more
+
+  [9] Understanding FedRAMP Authorization Levels | Forge Cyber Defense
+      URL: https://www.forgecyberdefense.com/knowledge/understanding-fedramp-authorization-levels
+      DATE: 
+      SNIP: Executive Summary The Federal Risk and Authorization Management Program (FedRAMP) establishes the standardized framework through which cloud service providers (CSPs) demonstrate the security of their offerings to federal government agencies. At the core of this framework are three distinct authorization levels — Low, Moderate, and High — each corresponding to the potential impact of a ...
+
+
+=== search11_clients.json ===
+  [0] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://federalnewsnetwork.com/defense-news/2026/07/accenture-wins-821m-pentagon-ai-data-platform-contract
+      DATE: 
+      SNIP: 5 days ago — Accenture won an $821 million contract to mature the Pentagon's War Data Platform , boosting AI-powered battlefield data and decision-making.
+
+  [1] Dataminr Customers
+      URL: https://www.dataminr.com/company/customers/v1
+      DATE: 
+      SNIP: Dataminr serves hundreds of private and public sector client organizations whose users span more than 75 countries.
+
+  [2] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://www.youtube.com/watch?v=a3HD2snqwJo
+      DATE: 
+      SNIP: Accenture won an $821 million task order to expand the Pentagon's War Data Platform, which it views as the backbone of many of its AI efforts.
+
+  [3] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      DATE: 
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...
+Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, we deliver the instant clarity needed for faster, more informed decisions to prote
+
+  [4] Public Data and Advanced AI Mitigate Third-Party Risks
+      URL: https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer
+      DATE: 
+      SNIP: Dataminr partners enable enterprises to manage operational, cyber, business and reputational risks more holistically and effectively.
+
+  [5] Dataminr Announces Intent to Acquire ThreatConnect
+      URL: https://www.prnewswire.com/news-releases/dataminr-announces-intent-to-acquire-threatconnect-302589575.html
+      DATE: 
+      SNIP: Oct 21, 2025 — The transaction values ThreatConnect at $290 million. The fusion of Dataminr's leading AI platform for public data signals with ThreatConnect's ... Read more
+
+  [6] CONTRACT to DATAMINR, INC.
+      URL: https://www.usaspending.gov/award/CONT_AWD_FA701421C0008_9700_-NONE-_-NONE-
+      DATE: 
+      SNIP: 2020 CONTRACT to DATAMINR , INC. from the Department of Defense. Amount $12,360,000.00 Current Award Amount $12,360,000.00 Potential. Computing Infrastructure ...
+
+  [7] Pentagon strikes deals with 8 Big Tech companies after
+      URL: https://www.cnn.com/2026/05/01/tech/pentagon-ai-anthropic
+      DATE: 
+      SNIP: May 1, 2026 — The Department of Defense announced Friday an agreement with eight major technology companies to use their artificial intelligence tools
+
+  [8] CNN
+      URL: https://www.facebook.com/cnn/posts/the-department-of-defense-announced-friday-an-agreement-with-seven-major-technol/1346549610671020
+      DATE: 
+      SNIP: The company's Pentagon contracts are primarily to design AI systems that crunch large amounts of data to come up with strike targets. Meta ... Read more
+
+  [9] Dataminr, Inc. — $9.5B in 37 Federal Contracts
+      URL: https://www.readthegovcontract.com/contractor/dataminr-inc
+      DATE: 
+      SNIP: With a total contract value of $9.48 billion and 37 contracts, DATAMINR has established a significant presence in the federal contracting landscape. However, the absence of recent contracts and the lack of specific agency clients suggest a potentially stable but less dynamic business model.
+
+
+=== search12_layoffs.json ===
+  [0] Dataminr "layoff" Reviews
+      URL: https://www.glassdoor.com/Reviews/Dataminr-layoff-Reviews-EI_IE749857.0,8_KH9,15.htm
+      DATE: 
+      SNIP: The layoffs in 2023 were a challenging time, Decision making and planning by leadership has been poor, leading to multiple rounds of layoffs in 2023 . layoffs ,  ...
+
+  [1] Big data startup Dataminr slashing 20% of staff as part
+      URL: https://stlawyers.ca/blog-news/dataminr-slashing-20-per-cent-staff
+      DATE: 
+      SNIP: Nov 28, 2023 — According to TechCrunch, the New York-based tech company is eliminating approximately 20 per cent of its total workforce, or 150 positions. Read more
+Dozens of jobs are on the chopping block at Dataminr as the big data startup restructures its business. According to TechCrunch, the New York-based tech company is eliminating approximately 20 per cent of its total workforce, or 150 po
+
+  [2] Tech Layoffs Predictions 2024: AI Begins to Flex Its Muscles
+      URL: https://www.tech387.com/blogs/tech-layoffs-predictions-2024-ai-begins-to-flex-its-muscles
+      DATE: 
+      SNIP: Dataminr , a big data startup valued at $4.1 billion, announced a 20% staff cut , amounting to around 150 employees .
+
+  [3] Tech Layoffs 2024: Is AI to Blame?
+      URL: https://www.youtube.com/watch?v=84ngZRKXKM4
+      DATE: 
+      SNIP: In this video, I dive into the complex world of tech layoffs and investigate whether Artificial Intelligence is a major factor.
+
+  [4] Dataminr Layoffs
+      URL: https://layoffs.fyi/company/dataminr
+      DATE: 
+      SNIP: Dataminr has laid off 150 employees across 1 event since March 2020. laid off 20% of its staff , or 150 people, as it prepared to focus on AI.
+
+  [5] Tech Layoffs: US Companies With Job Cuts In 2024, 2025
+      URL: https://news.crunchbase.com/startups/tech-layoffs
+      DATE: 
+      SNIP: In 2024 : At least 95,667 workers at U.S.-based tech companies lost their jobs in 2024 , according to a Crunchbase News tally. In 2023 : More than 191,000 workers ... Read more
+
+  [6] AI Layoffs Tracker 2026 — Companies Cutting Jobs Due to AI
+      URL: https://displaceindex.com/trends/ai-layoffs-tracker
+      DATE: 
+      SNIP: Real-time tracker of layoffs explicitly attributed to AI and automation. 316000+ jobs cut across 43+ companies since 2023 .
+
+  [7] Tech Layoffs Tracker
+      URL: https://www.trueup.io/layoffs
+      DATE: 
+      SNIP: Latest layoffs across big tech companies and tech startups. So far in 2026, there have been 498 layoffs at tech companies with 172488 people impacted (806 ...
+
+  [8] AI Layoffs by Company: A Tracker of Every Major
+      URL: https://founderreports.com/ai-layoffs-tracker
+      DATE: 
+      SNIP: Jul 15, 2026 — The phrase "AI layoff " went from a niche concern in 2023 to the single most-cited reason for U.S. job cuts in both March and April of 2026.
+
+  [9] Dataminr, the $4B big data startup, is laying off 20% of
+      URL: https://techcrunch.com/2023/11/28/dataminr-the-4b-big-data-startup-is-laying-off-20-of-staff-today-or-150-people-as-it-preps-to-double-down-on-ai
+      DATE: 
+      SNIP: Dataminr, the $4B big data startup, is laying off 20% of staff today, or 150 people, as it preps to double down on AI Ingrid Lunden 7:44 AM PST · November 28, 2023
+

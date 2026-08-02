@@ -1,0 +1,220 @@
+      DATE: 
+      SNIP: Dataminr shall provide 24/7 support with a response time of one (1) hour for Downtime. All other support shall be provided on a 24/5 basis with a response time ... Read more
+Dataminr shall provide 24/7 support with a response time of one (1) hour for Downtime. All other support shall be provided on a 24/5 basis with a response time of two (2) to twenty-four (24) hours.
+
+  [1] Data Freshness Monitoring: SLA Management
+      URL: https://www.conduktor.io/glossary/data-freshness-monitoring-sla-management
+      DATE: 
+      SNIP: Jul 22, 2026 — Monitor data freshness and manage SLAs using consumer lag tracking, heartbeat metrics, and automated alerting for pipeline reliability.
+
+  [2] Latency Numbers Every Data Streaming Engineer Should
+      URL: https://streamnative.io/blog/latency-numbers-every-data-streaming-engineer-should-know
+      DATE: 
+      SNIP: Sep 24, 2025 — Latencies from several hundred milliseconds to a few seconds might be acceptable for certain analytics, reporting, or ETL scenarios where “real- ... Read more
+
+  [3] Real-time Alerting 101: How It Works & Why It's Critical
+      URL: https://www.dataminr.com/resources/blog/real-time-alerting-101-how-it-works-and-why-its-a-business-imperative
+      DATE: 
+      SNIP: Nov 14, 2024 — Dataminr's real-time alerts help organizations get the earliest signals of risks and enable the fastest response, thus strengthening ...
+
+  [4] Data Freshness vs Latency: Why Fast Queries Still Return
+      URL: https://tacnode.io/post/data-freshness-vs-latency
+      DATE: 
+      SNIP: Jan 25, 2026 — Data latency measures how fast a query returns. SLAs specify millisecond thresholds. when a query drops from 50ms to 20ms.
+
+  [5] Latency Numbers Every Data Streaming Engineer Should
+      URL: https://dev.to/david_kjerrumgaard_d31d7e/latency-numbers-every-data-streaming-engineer-should-know-h91
+      DATE: 
+      SNIP: Ultra-Low Latency (< 10ms End-to-End) · Low Latency (10-200ms End-to-End) · Latency -Relaxed (200ms - Minutes). Read more
+
+  [6] What is Latency SLA? Meaning, Architecture, Examples,
+      URL: https://dataopsschool.com/blog/latency-sla
+      DATE: 
+      SNIP: Feb 17, 2026 — A Latency SLA is a formal commitment that a service will respond within a specified time bound for a defined percentage of requests.
+
+  [7] Machine Learning for Real-Time SLA Violation Detection in
+      URL: https://www.ijert.org/machine-learning-for-real-time-sla-violation-detection-in-cloud-services
+      DATE: 
+      SNIP: Dec 16, 2025 — In this paper, we propose a machine-learning (ML) based framework for real- time SLA violation detection in cloud services. Our system ... Read more
+
+  [8] Dataminr Pulse for Cyber Risk: Solution Overview
+      URL: https://www.dataminr.com/resources/video/dataminr-pulse-for-cyber-risk-solution-overview
+      DATE: 
+      SNIP: Strengthen resilience with Dataminr Pulse for Cyber Risk, a real-time, external cyber event, risk, and threat de tection solution.
+
+  [9] AI-Powered Real-Time Event, Threat & Risk Intelligence - Dataminr
+      URL: https://www.dataminr.com
+      DATE: 
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, we deliver the instant clarity needed for faster, more informed decisions to protect what matters most.
+
+
+=== search06_infra.json ===
+  [0] Introducing Data on EKS – Modernize Data Workloads
+      URL: https://aws.amazon.com/blogs/containers/introducing-data-on-eks-modernize-data-workloads-on-amazon-eks
+      DATE: 
+      SNIP: Mar 28, 2023 — Data on EKS (DoEKS) provides best practices, examples, and architectures aimed at making it easier to build, deploy, and scale data-intensive ...
+
+  [1] AWS Kafka - Guide to Design & Kafka Deployment
+      URL: https://www.confluent.io/blog/design-and-deployment-considerations-for-deploying-apache-kafka-on-aws
+      DATE: 
+      SNIP: Sep 6, 2023 — Let's take a look at the best practices to follow for deploying, monitoring, and managing your Apache Kafka cluster in AWS .
+
+  [2] Build an AWS EKS Kubernetes Apache Kafka Cluster (HA
+      URL: https://www.youtube.com/watch?v=noVq0i1BaBw&vl=en
+      DATE: 
+      SNIP: In this video, we dive deep into creating a High Availability (HA) Apache Kafka Cluster on AWS EKS using Terraform and Strimzi in just 5 ...
+
+  [3] Exploring Data Engineering Architectures: On-Premises
+      URL: https://medium.com/@sajjadaghapour/exploring-data-engineering-architectures-on-premises-and-aws-882b6a689111
+      DATE: 
+      SNIP: In this post, we'll delve into two distinct architectures as part of Lambda architecture — one rooted in on-premises infrastructure and the other ...
+
+  [4] Apache Kafka on AWS: Self-Managed vs Fully Managed
+      URL: https://www.linkedin.com/posts/thammineni-satish-947b2a283_dataengineering-apachekafka-aws-activity-7468505752429596672-etSh
+      DATE: 
+      SNIP: Jun 4, 2026 — Apache Kafka is the industry standard for distributed event streaming , deploying and managing it on AWS comes with a critical architectural ...
+
+  [5] Deploying and scaling Apache Kafka on Amazon EKS
+      URL: https://aws.amazon.com/blogs/containers/deploying-and-scaling-apache-kafka-on-amazon-eks
+      DATE: 
+      SNIP: Jan 12, 2024 — In this post, we demonstrate how to build and deploy a Kafka cluster with Amazon Elastic Kubernetes Service (Amazon EKS) using Data on EKS (DoEKS).
+In this post, we demonstrate how to build and deploy a Kafka cluster with Amazon Elastic Kubernetes Service (Amazon EKS) using Data on EKS (DoEKS). DoEKS’s open-source project empowers customers to expedite their data platform developmen
+
+  [6] Kafka disaster recovery on Kubernetes using MirrorMaker2
+      URL: https://outshift.cisco.com/blog/in-depth-tech/kafka-disaster-recovery-mm2
+      DATE: 
+      SNIP: Mar 8, 2020 — Discover how Kafka disaster recovery empowers your business resilience. Learn strategies to safeguard data with CISCO Outshift.
+
+  [7] Serverless Kafka on Kubernetes | DevNation Tech Talk
+      URL: https://developers.redhat.com/videos/serverless-kafka-kubernetes-devnation-tech-talk
+      DATE: 
+      SNIP: Apache Kafka has emerged as a leading platform for building real-time data pipelines and for high-throughput/low-latency messaging.
+
+  [8] Building Reusable EKS Blueprints with KRO and ACK
+      URL: https://builder.aws.com/content/38JQW1zJGxUfiAAQXkJGIV6otDu/platform-engineering-at-scale-building-reusable-eks-blueprints-with-kro-and-ack
+      DATE: 
+      SNIP: Feb 9, 2026 — EKS Capabilities transforms platform engineering by enabling reusable blueprints that work across many clusters.
+
+  [9] Fully Managed Apache Kafka – Amazon MSK – Amazon Web Services
+      URL: https://aws.amazon.com/msk
+      DATE: 
+      SNIP: Build resilient Apache Kafka workloads with multi-AZ deployments and automated detection, mitigation, and recovery of infrastructure issues. Amazon MSK safeguards your entire data pipeline, from ingestion and storage to analytics, ensuring both data freshness and optimal query performance.
+
+
+=== search07_twitter.json ===
+  [0] Getting all tweets for research purposes - Standard APIs v1.1
+      URL: https://devcommunity.x.com/t/getting-all-tweets-for-research-purposes/30501
+      DATE: 
+      SNIP: Jan 13, 2015 — This is a massive volume of Tweets per second , and it requires significant infrastructure to process. Firehose access is limited to a very ...
+Jan 13, 2015 — This is a massive volume of Tweets per second , and it requires significant infrastructure to process. Firehose access is limited to a very small ...
+
+  [1] Twitter (X) Firehose API — Developer Guide
+      URL: https://twitterapi.io/blog/twitter-firehose-api-developer-guide
+      DATE: 
+      SNIP: Pricing per twitterapi.io/pricing: $0.00015 per returned tweet . Same volume via X Enterprise = $42,000/month floor plus per - tweet cost. Same volume via X ...
+
+  [2] How much does access to the Twitter firehose cost?
+      URL: https://www.quora.com/How-much-does-access-to-the-Twitter-firehose-cost
+      DATE: 
+      SNIP: How much does access to the Twitter firehose cost?
+
+  [3] FBI Awards Dataminr Contract for Twitter 'Firehose'
+      URL: https://www.nextgov.com/emerging-tech/2016/11/fbi-awards-dataminr-contract-twitter-firehose/133152
+      DATE: 
+      SNIP: Nov 14, 2016 — Twitter's public API only gives users access to about 1 percent of tweets , according to a FedBizOpps posting. » Get the best federal ...
+
+  [4] Twitter/X API Pricing 2026: All Tiers ($0 to $42K) Compared
+      URL: https://www.xpoz.ai/blog/guides/understanding-twitter-api-pricing-tiers-and-alternatives
+      DATE: 
+      SNIP: Every API call now costs money — reading a tweet costs $0.005 ($5 per 1,000), posting costs $0.015, and full-archive search requires an Enterprise contract ...
+
+  [5] Volume returned by counts vs. search endpoint - X API v2
+      URL: https://devcommunity.x.com/t/volume-returned-by-counts-vs-search-endpoint/158870
+      DATE: 
+      SNIP: Sep 1, 2021 — I have recently been using the “counts/recent” endpoint to scope the volume of tweets for a given query before downloading them.
+
+  [6] Twitter Firehose vs. Twitter API: What's the difference and
+      URL: https://brightplanet.com/2013/06/25/twitter-firehose-vs-twitter-api-whats-the-difference-and-why-should-you-care
+      DATE: 
+      SNIP: Jun 25, 2013 — Studies have estimated that using Twitter's Streaming API users can expect to receive anywhere from 1% of the tweets to over 40% of tweets in ...
+
+  [7] How many percent of the tweets does twitter sample API
+      URL: https://stackoverflow.com/questions/13055370/how-many-percent-of-the-tweets-does-twitter-sample-api-give
+      DATE: 
+      SNIP: Does anyone know what's the ratio between the number of tweets we get from twitter sample API over the total number of tweets which the Twitter server receives? ...
+
+  [8] X (Twitter) API Pricing 2026: Tiers, Free Tier & Real Costs
+      URL: https://api.sorsa.io/blog/twitter-api-pricing-2026
+      DATE: 
+      SNIP: Mar 23, 2026 — X API pricing 2026 explained: pay- per -use at $0.005/read, $0.20/URL post, 2M cap, no free tier. Real costs plus flat-rate options from $0.02 ...
+
+  [9] TwitterAPI.io
+      URL: https://twitterapi.io
+      DATE: 
+      SNIP: TwitterAPI.io provides a real-time X ( Twitter ) API alternative at $0.00015 per read — about 33× cheaper than the official X API ($0.005–$0.010 per read).
+
+
+=== search08_llm.json ===
+  [0] Pulse Now Offers AI Risk Management Capabilities
+      URL: https://www.dataminr.com/press/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities
+      DATE: 
+      SNIP: Sep 7, 2023 — Dataminr Pulse for Corporate Security's new Risk Management capabilities enable teams to collaboratively manage risks to their business in one place. Read more
+
+  [1] Dataminr's AI Platform Driven by Predictive Models
+      URL: https://www.dataminr.com/resources/blog/harnessing-the-power-of-llms-and-multi-modal-foundation-models-in-dataminrs-ai-platform
+      DATE: 
+      SNIP: Oct 3, 2023 — Large language models (LLMs ) and multi-modal foundation models serve as the basis of the predictive and generative components in Dataminr's AI ... Read more
+Oct 3, 2023 — Dataminr's AI platform uses Generative AI to automatically create the textual descriptions and real-time summaries that describe the events, ...
+
+  [2] Dataminr Launches ReGenAI
+      URL: https://www.dataminr.com/resources/video/dataminr-ai-platform-the-future-of-real-time-information
+      DATE: 
+      SNIP: ReGenAI distills multidimensional events into concise event briefs that dynamically update. the Power of LLMs and Multi-modal Foundation Models ...
+ReGenAI distills multidimensional events into concise event briefs that dynamically update. Harnessing the Power of LLMs and Multi-modal ...
+
+  [3] What is Retrieval Augmented Generation (RAG)?
+      URL: https://www.databricks.com/blog/what-is-retrieval-augmented-generation
+      DATE: 
+      SNIP: Retrieval augmented generation (RAG ) is a hybrid AI framework that bolsters large language models (LLMs) by combining them with external, up-to-date data ... Read more
+
+  [4] What is RAG (Retrieval-Augmented Generation)?
+      URL: https://aws.amazon.com/what-is/retrieval-augmented-generation
+      DATE: 
+      SNIP: RAG allows developers to provide the latest research, statistics, or news to the generative models. They can use RAG to connect the LLM directly to live social ... Read more
+
+  [5] Dataminr Pulse Expands to Offer AI-powered Risk
+      URL: https://www.prnewswire.com/news-releases/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities-301920508.html
+      DATE: 
+      SNIP: Sep 7, 2023 — Dataminr's generative AI capabilities provide users with textual summaries of events for enhanced risk assessment, situational awareness, and ...
+
+  [6] Dataminr's ReGenAI Expands to Cover Hyperlocal Events
+      URL: https://www.dataminr.com/press/announcement/dataminrs-regenai-expands-to-cover-hyperlocal-events-across-the-globe-delivering-10x-more-dynamically-updating-event-briefs
+      DATE: 
+      SNIP: Sep 18, 2024 — ReGenAI, a new form of Generative AI that automatically updates and regenerates live information briefs as an event unfolds.
+
+  [7] Empowering Artificial Intelligence with RAG: The New Era
+      URL: https://www.linkedin.com/pulse/empowering-artificial-intelligence-rag-new-era-mosaic-ruben-quispe-l--fv6ne
+      DATE: 
+      SNIP: The Retrieval-Augmented Generation (RAG) architecture is revolutionizing generative AI, enabling models to generate more accurate, up-to-date, ... Read more
+
+  [8] What is retrieval-augmented generation?
+      URL: https://www.redhat.com/en/topics/ai/what-is-retrieval-augmented-generation
+      DATE: 
+      SNIP: Apr 15, 2026 — Retrieval-augmented generation (RAG) links external resources to an LLM to enhance a generative AI model's output accuracy.
+
+  [9] Dataminr Pulse - AWS Marketplace - Amazon.com
+      URL: https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima
+      DATE: 
+      SNIP: Dataminr Pulse delivers the earliest actionable intelligence on breaking events, emerging threats, and unexpected risks across the physical, digital, and
+
+
+=== search09_multimodal.json ===
+  [0] Introducing Whisper
+      URL: https://openai.com/index/whisper
+      DATE: 
+      SNIP: Sep 21, 2022 — Whisper is an automatic speech recognition (ASR) system trained on 680,000 hours of multilingual and multitask supervised data collected ... Read more
+
+  [1] OCR-Enhanced Multimodal ASR Can Read While Listening
+      URL: https://arxiv.org/html/2601.18393v1
+      DATE: 
+      SNIP: Jan 26, 2026 — Donut- Whisper , an audio-visual ASR model with dual encoder to leverage visual information to improve speech recognition performance in both ...

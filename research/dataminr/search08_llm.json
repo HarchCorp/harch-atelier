@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.dataminr.com/press/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities",
+    "name": "Pulse Now Offers AI Risk Management Capabilities",
+    "snippet": "Sep 7, 2023 — Dataminr Pulse for Corporate Security's new Risk Management capabilities enable teams to collaboratively manage risks to their business in one place. Read more",
+    "host_name": "www.dataminr.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/blog/harnessing-the-power-of-llms-and-multi-modal-foundation-models-in-dataminrs-ai-platform",
+    "name": "Dataminr's AI Platform Driven by Predictive Models",
+    "snippet": "Oct 3, 2023 — Large language models (LLMs ) and multi-modal foundation models serve as the basis of the predictive and generative components in Dataminr's AI ... Read more\nOct 3, 2023 — Dataminr's AI platform uses Generative AI to automatically create the textual descriptions and real-time summaries that describe the events, ...",
+    "host_name": "www.dataminr.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/video/dataminr-ai-platform-the-future-of-real-time-information",
+    "name": "Dataminr Launches ReGenAI",
+    "snippet": "ReGenAI distills multidimensional events into concise event briefs that dynamically update. the Power of LLMs and Multi-modal Foundation Models ...\nReGenAI distills multidimensional events into concise event briefs that dynamically update. Harnessing the Power of LLMs and Multi-modal ...",
+    "host_name": "www.dataminr.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.databricks.com/blog/what-is-retrieval-augmented-generation",
+    "name": "What is Retrieval Augmented Generation (RAG)?",
+    "snippet": "Retrieval augmented generation (RAG ) is a hybrid AI framework that bolsters large language models (LLMs) by combining them with external, up-to-date data ... Read more",
+    "host_name": "www.databricks.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/what-is/retrieval-augmented-generation",
+    "name": "What is RAG (Retrieval-Augmented Generation)?",
+    "snippet": "RAG allows developers to provide the latest research, statistics, or news to the generative models. They can use RAG to connect the LLM directly to live social ... Read more",
+    "host_name": "aws.amazon.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.prnewswire.com/news-releases/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities-301920508.html",
+    "name": "Dataminr Pulse Expands to Offer AI-powered Risk",
+    "snippet": "Sep 7, 2023 — Dataminr's generative AI capabilities provide users with textual summaries of events for enhanced risk assessment, situational awareness, and ...",
+    "host_name": "www.prnewswire.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/press/announcement/dataminrs-regenai-expands-to-cover-hyperlocal-events-across-the-globe-delivering-10x-more-dynamically-updating-event-briefs",
+    "name": "Dataminr's ReGenAI Expands to Cover Hyperlocal Events",
+    "snippet": "Sep 18, 2024 — ReGenAI, a new form of Generative AI that automatically updates and regenerates live information briefs as an event unfolds.",
+    "host_name": "www.dataminr.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/empowering-artificial-intelligence-rag-new-era-mosaic-ruben-quispe-l--fv6ne",
+    "name": "Empowering Artificial Intelligence with RAG: The New Era",
+    "snippet": "The Retrieval-Augmented Generation (RAG) architecture is revolutionizing generative AI, enabling models to generate more accurate, up-to-date, ... Read more",
+    "host_name": "www.linkedin.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.redhat.com/en/topics/ai/what-is-retrieval-augmented-generation",
+    "name": "What is retrieval-augmented generation?",
+    "snippet": "Apr 15, 2026 — Retrieval-augmented generation (RAG) links external resources to an LLM to enhance a generative AI model's output accuracy.",
+    "host_name": "www.redhat.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima",
+    "name": "Dataminr Pulse - AWS Marketplace - Amazon.com",
+    "snippet": "Dataminr Pulse delivers the earliest actionable intelligence on breaking events, emerging threats, and unexpected risks across the physical, digital, and",
+    "host_name": "aws.amazon.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

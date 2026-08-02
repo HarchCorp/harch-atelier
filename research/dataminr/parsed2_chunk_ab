@@ -1,0 +1,200 @@
+
+  [6] Public Data and Advanced AI Mitigate Third-Party Risks
+      URL: https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer
+      SNIP: At Black Hat 2024, leaders from Citi, NightDragon and Dataminr discuss combining AI models with public data to mitigate third-party risk.
+
+  [7] High performance database for AI applications
+      URL: https://aerospike.com/solutions/use-cases/database-for-ai-applications
+      SNIP: Discover how Aerospike's high-performance database can transform your AI applications , enabling real-time data handling for accurate predictions, ...
+
+  [8] Dataminr in Action: Russia Concert Attack Case Study
+      URL: https://www.dataminr.com/resources/video/dataminr-in-action-russia-concert-attack-case-study
+      SNIP: Dataminr's ReGenAI helped customers to know first and stay up to date during the terrorist attack on a Russian concert hall near Moscow.
+
+  [9] How Dataminr and AppsFlyer deliver real-time AI decisions
+      URL: https://aerospike.com/blog/dataminr-appsflyer-real-time-ai-decisions-at-scale
+      SNIP: At AWS re:Invent 2024, Aerospike joined Dataminr and AppsFlyer to discuss how real-time AI decisioning is transforming industries through millisecond performance and scalable intelligence.
+
+
+=== search15_cv_models.json ===
+  [0] Object detection using YOLO: challenges, architectural  - PMC
+      URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC9358372
+      SNIP: 2022 · Cited by 1984 — A novel OCR system is developed, named as Rosetta, wherein faster-RCNN is utilized for detecting the text characters from millions of Facebook images , however, ...
+
+  [1] Computer Vision Development Services
+      URL: https://getyoteam.com/services/computer-vision
+      SNIP: Real-time object detection and multi-object tracking using YOLO and ResNet — deployed for security, manufacturing, and retail environments with high mAP and ...
+
+  [2] Best Computer Vision Models in 2026, Compared by Task
+      URL: https://blog.roboflow.com/best-computer-vision-models
+      SNIP: Jul 15, 2026 — Some models are designed for object detection , while others are better for segmentation, image classification, pose estimation, OCR , depth ...
+
+  [3] Comparing YOLO, DETR, and Faster R-CNN object
+      URL: https://www.facebook.com/groups/ComputerVisionGroup/posts/3505871789556997
+      SNIP: I compared the object detection outputs of YOLO, DETR and Fast R-CNN models. Here are my results 👇
+
+Image source: http://images.cocodataset.org/val2017/00000 ...
+
+  [4] Object detection with Multimodal Large Vision-Language
+      URL: https://farukalamai.substack.com/p/object-detection-with-multimodal
+      SNIP: For years, object detection systems have relied on traditional deep learning architectures like YOLO , Faster R-CNN, and Mask R-CNN. These models ...
+For years, object detection systems have relied on traditional deep learning architectures like YOLO , Faster R-CNN, and Mask R-CNN. These models ... Read more
+
+  [5] Object detection on a dataset. : r/computervision
+      URL: https://www.reddit.com/r/computervision/comments/12hfe71/object_detection_on_a_dataset
+      SNIP: train a yolo model and perform object detection on the dataset . Darknet/YOLO requires that each .jpg has a matching .txt file, and the ...
+
+  [6] Object Detection - Computer Vision Wiki - CloudFactory
+      URL: https://wiki.cloudfactory.com/docs/mp-wiki/model-families/object-detector
+      SNIP: Apr 18, 2024 — Object Detection (OD) is a Computer Vision Supervised Learning task that aims to locate and classify every object of the target classes presented in an image .
+
+  [7] Choosing the Right Model for Object Detection - Medium
+      URL: https://samdbrice.medium.com/dcda0c8f6f70
+      SNIP: YOLO models tend to be the fastest available, capable of processing 40–90 FPS or 155 FPS on specialized configurations. for RetinaNet, YOLOv2,
+
+  [8] Day 14 - Object Detection in Computer Vision | Computer
+      URL: https://www.youtube.com/watch?v=mD7b4IR2i4U
+      SNIP: Unlock the power of Object Detection in Computer Vision! In this video, we dive deep into how machines can detect, classify, and localize ...
+
+  [9] A Systematic Review of YOLO-Based Object Detection in
+      URL: https://www.sciencedirect.com/org/science/article/pii/S1546221825008859
+      SNIP: 2025 · Cited by 38 — By integrating multimodal images , YOLO can leverage the advantages of various imaging techniques to further improve detection comprehensiveness ...
+
+
+=== search16_dod_contract.json ===
+  [0] Contracts For Apr. 23, 2020
+      URL: https://www.war.gov/News/Contracts/Contract/Article/2162978/contracts-for-apr-23-2020
+      SNIP: Apr 23, 2020 — Dataminr Inc., New York, New York, has been awarded a firm-fixed-price contract for $258,661,096. Department of Defense enterprise capability. ...
+Apr 23, 2020 — Dataminr Inc., been awarded a firm-fixed-price contract for $258,661,096. This contract has a five - year ordering period with a maximum value of ...
+
+  [1] AI firm clinches $258M Air Force push alert contract
+      URL: https://www.washingtontechnology.com/2020/04/ai-firm-clinches-258m-air-force-push-alert-contract/354945
+      SNIP: Apr 27, 2020 — Venture-backed artificial intelligence outfit Dataminr takes a $258 million contract to develop a push alert system for the Air Force.
+Apr 27, 2020 — Dataminr has won a significant piece of government business in a five-year, $258.7 million contract to develop a system of push alerts
+
+  [2] Dataminr Wins $259M Air Force Push Alerts Tech
+      URL: https://www.govconwire.com/articles/dataminr-wins-259m-air-force-push-alerts-tech-development-contract
+      SNIP: Apr 24, 2020 — Dataminr , a New York-based artificial intelligence firm, has won a potential five - year , $258.6M contract from the US Air Force to develop a commercially ...
+Apr 24, 2020 — Dataminr, a New York-based artificial intelligence firm, has won a potential five-year, $258.6M contract from the US Air Force to develop a commercially ... Read more
+
+  [3] CONTRACT to DATAMINR, INC.
+      URL: https://www.usaspending.gov/award/CONT_AWD_FA701421C0008_9700_-NONE-_-NONE-
+      SNIP: 2020 CONTRACT to DATAMINR , INC. from the Department of Defense . Completed Awarding Agency Department of Defense ( DOD ) Recipient DATAMINR , INC. contractual ...
+2020 CONTRACT to DATAMINR , INC. from the Department of Defense . Completed Awarding Agency Department of Defense ( DOD ) contractual agreements . Department of ...
+
+  [4] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://federalnewsnetwork.com/defense-news/2026/07/accenture-wins-821m-pentagon-ai-data-platform-contract
+      SNIP: 5 days ago — Accenture won an $821 million contract to mature the Pentagon's War Data Platform , boosting AI-powered battlefield data and decision-making.
+
+  [5] 'Growing demand' sparks DOD to raise Palantir's Maven
+      URL: https://defensescoop.com/2025/05/23/dod-palantir-maven-smart-system-contract-increase
+      SNIP: May 23, 2025 — The Defense Department inked the initial $480 million , five - year IDIQ contract with Palantir for the program in May 2024. The Army's ...
+
+  [6] Definitive Contract FA701421C0024
+      URL: https://govtribe.com/award/federal-contract-award/definitive-contract-fa701421c0024
+      SNIP: The contract , valued at $282,483,348.00, is for an Enterprise License Subscription for Publicly Available Information Detection and Alerts (PADELS) for the DoD .
+
+  [7] Dataminr Expands Strategic Partnership With Carahsoft
+      URL: https://www.dataminr.com/press/dataminr-expands-strategic-partnership-with-carahsoft
+      SNIP: Mar 14, 2024 — Dataminr expands delivery of First Alert through Carahsoft's NASPO ValuePoint contract , bringing critical real-time alerts to more public sector organizations.
+Mar 14, 2024 — Dataminr expands delivery of First Alert through Carahsoft's NASPO ValuePoint contract , bringing critical real-time alerts to more public sector organizations. Read more
+
+  [8] Dataminr Inc Awarded Air Force Contract to Provide OSINT
+      URL: https://news.clearancejobs.com/2020/08/18/dataminr-inc-awarded-air-force-contract-to-provide-osint-for-force-protection-and-first-response
+      SNIP: Aug 18, 2020 — Dataminr Inc. was awarded a $12.1 million contract to provide web-based mobile and email alerting of events and breaking news based on ...
+Aug 18, 2020 — Dataminr Inc. was awarded a $12.1 million contract . This contract includes a five - year base period … expected to be completed by August 2025.
+
+  [9] Air Force awards $258.7M to Dataminr for push alerts system
+      URL: https://www.upi.com/Defense-News/2020/04/23/Air-Force-awards-2587M-to-Dataminr-for-push-alerts-system/2421587682718
+      SNIP: Apr 23, 2020 — The Air Force has awarded Dataminr with a five-year, $258.7 million contract to develop a system of push alerts, the Pentagon announced Thursday
+
+
+=== search17_pulse_models.json ===
+  [0] Pulse Now Offers AI Risk Management Capabilities
+      URL: https://www.dataminr.com/press/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities
+      SNIP: Sep 7, 2023 — Dataminr has created a broad range of proprietary AI models , spanning multimodal fusion AI , LLM / foundation models for predictive AI ,
+Dataminr has created a broad range of proprietary AI models, spanning multimodal fusion AI, LLM/foundation models for predictive AI,
+
+  [1] Dataminr Pulse Splunk Integration
+      URL: https://www.dataminr.com/resources/video/dataminr-pulse-splunk-integration
+      SNIP: Harnessing the Power of LLMs and Multi- modal Foundation Models in Dataminr's AI Platform
+Dataminr Pulse's Splunk integrations give ... Harnessing the Power of LLMs and Multi-modal Foundation Models in Dataminr's AI Platform.
+
+  [2] Our AI Strategy for Creating Dataminr-unique High
+      URL: https://www.dataminr.com/resources/blog/our-ai-strategy-for-creating-dataminr-unique-high-performance-llms-and-foundation-models
+      SNIP: Oct 3, 2023 — Our AI platform includes more than 35 customized Dataminr Foundation Models operating in production in tandem with an extensive array of specialized AI models.
+
+  [3] Dataminr Pulse Expands to Offer AI-powered Risk
+      URL: https://www.prnewswire.com/news-releases/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities-301920508.html
+      SNIP: Sep 7, 2023 — Dataminr has created a broad range of proprietary AI models , spanning multimodal fusion AI , LLM / foundation models for predictive AI , and ...
+Dataminr has created a broad range of proprietary AI models, spanning multimodal fusion AI, LLM/foundation models for predictive AI, and ...
+
+  [4] Dataminr Pulse - AWS Marketplace - Amazon.com
+      URL: https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima
+      SNIP: The platform leverages 50 large language models and over 12 years of historical data. , Intel Agents, and PreGenAI, Leverages 50 large language models and over ...
+Rating 4.5 (48) The platform leverages 50 large language models and over 12 years of historical data. a real-time, external cyber event, risk, and threat detection. Leverages  ...
+
+  [5] Dataminr Pulse Expands to Offer AI-powered Risk
+      URL: https://www.linkedin.com/posts/emilygates_dataminr-pulse-expands-to-offer-ai-powered-activity-7105571877451902976-WXSL
+      SNIP: Dataminr's world-leading AI platform with a wide range of LLMs and multimodal foundation models now integrated, corporate security groups
+
+  [6] Dataminr pulse
+      URL: https://www.sumologic.com/app-catalog/dataminr-pulse
+      SNIP: Dataminr Pulse's AI-powered real-time intelligence brings faster detection and intelligence into Sumo Logic Cloud Security Analytics.
+
+  [7] Dataminr's AI Platform Driven by Predictive Models
+      URL: https://www.dataminr.com/resources/blog/harnessing-the-power-of-llms-and-multi-modal-foundation-models-in-dataminrs-ai-platform
+      SNIP: Oct 3, 2023 — Large language models (LLMs ) and multi-modal foundation models serve as the basis of the predictive and generative components in Dataminr's ...
+LLMs and Multi-modal Foundation Models serve as the basis of the Predictive and Generative AI components in Dataminr's AI platform.
+
+  [8] Access Investments in Dataminr Pre-IPO - Linqto
+      URL: https://www.linqto.com/products/dataminr
+      SNIP: Dataminr Pulse for Corporate Security 's new Risk Management capabilities enables teams to collaboratively manage risks to their business in one place. This ...
+Dataminr has created a broad range of proprietary AI models, spanning multimodal fusion AI, LLM/foundation models for predictive AI,
+
+  [9] AI Platform - Dataminr
+      URL: https://www.dataminr.com/ai-platform
+      SNIP: Dataminr has developed over 50 proprietary LLMs— all engineered to discover, describe and contextualize events, threats, and risks as they unfold.
+
+
+=== search18_soc2.json ===
+  [0] FedRAMP and SOC 2: An in-depth comparison
+      URL: https://www.vanta.com/collection/fedramp/fedramp-and-soc-2
+      SNIP: FedRAMP authorization is issued by a sponsoring federal agency's Authorizing Official (AO), while SOC 2 reports are issued by accredited third-party auditors.
+
+  [1] FedRAMP Marketplace - Products
+      URL: https://www.fedramp.gov/marketplace
+      SNIP: Effective immediately, " FedRAMP Authorization" is now called "FedRAMP Certification ," and Impact Levels have been replaced with Classes A-D for package ...
+
+  [2] FedRAMP vs. SOC 2: What Are the Differences?
+      URL: https://knoxsystems.com/resources/fedramp-vs-soc-2
+      SNIP: Apr 29, 2026 — Where a SOC 2 assessment ends with a report, FedRAMP authorization begins a permanent relationship with a federal oversight body. The assessment ... Read more
+
+  [3] What is FedRAMP? The Guide to FedRAMP Authorization
+      URL: https://www.a-lign.com/articles/what-is-fedramp
+      SNIP: FedRAMP has three impact levels — Low, Moderate , and High — based on the sensitivity of the federal data your system handles. Most CSPs pursue Moderate , ...
+
+  [4] Trust Services
+      URL: https://www.dataminr.com/dataminr-trust-services
+      SNIP: SOC 2 Type 2: AICPA-sanctioned independent attestation that examines the design and operational effectiveness of a service organization's controls over a ... Read more
+
+  [5] FedRAMP Levels Explained: Low vs. Moderate vs. High
+      URL: https://www.workstreet.com/blog/fedramp-levels
+      SNIP: Jul 16, 2026 — Moderate is the default for most organizations selling to the federal government . It covers controlled unclassified information (CUI), ...
+
+  [6] Fortifying federal data: An analysis of cloud security
+      URL: https://totara.com/us/articles/fortifying-federal-data-analysis-cloud-security-fedramp-totara
+      SNIP: Aug 29, 2024 — FedRAMP certification signifies a cloud service provider's commitment to upholding rigorous security protocols and bolstering trust within the ...
+
+  [7] FedRAMP Certification Enhances Trust, Data Security for
+      URL: https://blog.perceptyx.com/fedramp-certification-enhances-trust-data-security-for-people-analytics
+      SNIP: Aug 1, 2022 — It provides a standardized approach to security assessment, authorization , and continuous monitoring for cloud products and services such as ... Read more
+
+  [8] Choosing the Right FedRAMP Level for Your AI Solution
+      URL: https://elevateconsult.com/insights/choosing-the-right-fedramp-level-for-your-ai-solution
+      SNIP: Feb 16, 2026 — FedRAMP Moderate strikes the best balance between security investment and market opportunities. It makes up almost 73% of all authorized Cloud ... Read more
+
+  [9] FedRAMP | FedRAMP.gov
+      URL: https://www.fedramp.gov
+      SNIP: The Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.
+

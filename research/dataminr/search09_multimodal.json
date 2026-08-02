@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://openai.com/index/whisper",
+    "name": "Introducing Whisper",
+    "snippet": "Sep 21, 2022 — Whisper is an automatic speech recognition (ASR) system trained on 680,000 hours of multilingual and multitask supervised data collected ... Read more",
+    "host_name": "openai.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://arxiv.org/html/2601.18393v1",
+    "name": "OCR-Enhanced Multimodal ASR Can Read While Listening",
+    "snippet": "Jan 26, 2026 — Donut- Whisper , an audio-visual ASR model with dual encoder to leverage visual information to improve speech recognition performance in both ...\nIn this paper, we propose Donut-Whisper, an audio-visual ASR model with dual encoder to leverage visual information to improve speech recognition performance in both English and Chinese.",
+    "host_name": "arxiv.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/blog/multi-modal-fusion-ai-for-real-time-event-detection",
+    "name": "Multi-Modal Fusion AI for Real-time Event Detection",
+    "snippet": "Feb 18, 2020 — Dataminr built the leading real-time AI Platform for detecting global events by processing billions of public data inputs per day in a wide range of formats. Read more",
+    "host_name": "www.dataminr.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=AwJf8aQfChE",
+    "name": "OpenAI Whisper: Robust Speech Recognition via Large-Scale",
+    "snippet": "In this video I cover Whisper , an ASR system from OpenAI's \"Robust Speech Recognition via Large-Scale Weak Supervision\" paper. Trained on a ...",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://deepinfra.com/models/automatic-speech-recognition",
+    "name": "Automatic speech recognition models",
+    "snippet": "Whisper is a general-purpose speech recognition model . It is trained on a large dataset of diverse audio and is also a multi-task model that can perform ... Read more",
+    "host_name": "deepinfra.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://pixeltable.com/blog/whisper-transcription-pixeltable",
+    "name": "OpenAI Whisper API Integration: Automated Audio",
+    "snippet": "Nov 22, 2024 — The declarative data infrastructure for multimodal AI. Build production-ready video , image , and document workflows in minutes, not months. Read more",
+    "host_name": "pixeltable.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://lablab.ai/tech/openai/whisper",
+    "name": "OpenAI Whisper",
+    "snippet": "The Whisper models are trained for speech recognition and translation tasks , capable of transcribing speech audio into the text in the language it is spoken. Read more",
+    "host_name": "lablab.ai",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/openai/whisper",
+    "name": "openai/whisper: Robust Speech Recognition via Large-",
+    "snippet": "Whisper is a general-purpose speech recognition model . can perform multilingual speech recognition, speech translation, and language identification.",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/google-cloud/unlocking-multimodal-video-transcription-with-gemini-part1-02dc32118f41",
+    "name": "Unlocking Multimodal Video Transcription with Gemini —",
+    "snippet": "Explore how to transcribe videos with detailed speaker identification in a single prompt.",
+    "host_name": "medium.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/MinhalHusain/VideoMindAI",
+    "name": "GitHub - MinhalHusain/VideoMindAI: AI-powered multimodal",
+    "snippet": "VideoMind AI is a full-stack, multimodal AI application that understands videos by combining speech recognition, computer vision, semantic search, and Retrieval-Augmented Generation (RAG).",
+    "host_name": "github.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

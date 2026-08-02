@@ -1,0 +1,400 @@
+=== search10_fedramp.json ===
+  [0] FedRAMP Marketplace - Products
+      URL: https://www.fedramp.gov/marketplace
+      SNIP: Beginning in January 2027, "Low", " Moderate ", and " High " Impact Levels will be removed and full transition to the class structure will take effect. Products ... Read more
+
+  [1] FedRAMP High Authorization
+      URL: https://www.commvault.com/explore/fedramp-high-authorization
+      SNIP: FedRAMP Moderate Impact Level • Involves controlled unclassified information, including personally identifiable information. • Compliance with 325 controls is ...
+
+  [2] FedRAMP Moderate vs. High: Which Level Do You Need?
+      URL: https://knoxsystems.com/resources/fedramp-moderate-vs-high
+      SNIP: May 13, 2026 — Moderate covers many common federal cloud use cases , including financial records, HR data, personally identifiable information of citizens, and ... Read more
+What Is FedRAMP High? FedRAMP High is a security authorization level for cloud services handling the government's most sensitive unclassified data. It applies to systems that process, store, or transmit federal data where a co
+
+  [3] FedRAMP | FedRAMP.gov
+      URL: https://www.fedramp.gov
+      SNIP: The FedRAMP Marketplace is a searchable database of FedRAMP certified cloud services, authorizing agencies, and FedRAMP recognized assessors. Learn More. Read more
+The Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.
+
+  [4] RFC-0020: FedRAMP Authorization Designations #110
+      URL: https://github.com/FedRAMP/community/discussions/110
+      SNIP: FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. This RFC is aligned ... Read more
+
+  [5] What Is FedRAMP? How to Get Certified & Stay Compliant
+      URL: https://onspring.com/resources/blog/what-is-fedramp
+      SNIP: Aug 28, 2025 — FedRAMP ensures secure handling of sensitive data for government agencies by standardizing cloud security measures. as low, moderate, or high ...
+
+  [6] FedRAMP Levels Explained: Low vs. Moderate vs. High
+      URL: https://www.workstreet.com/blog/fedramp-levels
+      SNIP: Jul 16, 2026 — FedRAMP used to classify every CSP as either Low, Moderate , or High impact. The High baseline requires 410 controls (87 more than Moderate ).  ...
+
+  [7] RFC-0020 FedRAMP Authorization Designations
+      URL: https://www.fedramp.gov/rfcs/0020
+      SNIP: Jan 13, 2026 — FedRAMP security categories will transition from FIPS 199 security categories (Low, Moderate , High ) to a number-based level system instead. Read more
+
+  [8] What Is FedRAMP? Authorized vs. Compliant vs. Equivalent
+      URL: https://www.kiteworks.com/risk-compliance-glossary/fedramp
+      SNIP: FedRAMP Moderate (Class C ) covers the majority of federal cloud use cases — roughly 80% — involving sensitive but unclassified data where a breach would cause ... Read more
+
+  [9] Understanding FedRAMP Authorization Levels | Forge Cyber Defense
+      URL: https://www.forgecyberdefense.com/knowledge/understanding-fedramp-authorization-levels
+      SNIP: Executive Summary The Federal Risk and Authorization Management Program (FedRAMP) establishes the standardized framework through which cloud service providers (CSPs) demonstrate the security of their offerings to federal government agencies. At the core of this framework are three distinct authorization levels — Low, Moderate, and High — each corresponding to the potential impact of a ...
+
+
+=== search11_clients.json ===
+  [0] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://federalnewsnetwork.com/defense-news/2026/07/accenture-wins-821m-pentagon-ai-data-platform-contract
+      SNIP: 5 days ago — Accenture won an $821 million contract to mature the Pentagon's War Data Platform , boosting AI-powered battlefield data and decision-making.
+
+  [1] Dataminr Customers
+      URL: https://www.dataminr.com/company/customers/v1
+      SNIP: Dataminr serves hundreds of private and public sector client organizations whose users span more than 75 countries.
+
+  [2] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://www.youtube.com/watch?v=a3HD2snqwJo
+      SNIP: Accenture won an $821 million task order to expand the Pentagon's War Data Platform, which it views as the backbone of many of its AI efforts.
+
+  [3] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...
+Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, we deliver the instant clarity needed for faster, more informed decisions to prote
+
+  [4] Public Data and Advanced AI Mitigate Third-Party Risks
+      URL: https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer
+      SNIP: Dataminr partners enable enterprises to manage operational, cyber, business and reputational risks more holistically and effectively.
+
+  [5] Dataminr Announces Intent to Acquire ThreatConnect
+      URL: https://www.prnewswire.com/news-releases/dataminr-announces-intent-to-acquire-threatconnect-302589575.html
+      SNIP: Oct 21, 2025 — The transaction values ThreatConnect at $290 million. The fusion of Dataminr's leading AI platform for public data signals with ThreatConnect's ... Read more
+
+  [6] CONTRACT to DATAMINR, INC.
+      URL: https://www.usaspending.gov/award/CONT_AWD_FA701421C0008_9700_-NONE-_-NONE-
+      SNIP: 2020 CONTRACT to DATAMINR , INC. from the Department of Defense. Amount $12,360,000.00 Current Award Amount $12,360,000.00 Potential. Computing Infrastructure ...
+
+  [7] Pentagon strikes deals with 8 Big Tech companies after
+      URL: https://www.cnn.com/2026/05/01/tech/pentagon-ai-anthropic
+      SNIP: May 1, 2026 — The Department of Defense announced Friday an agreement with eight major technology companies to use their artificial intelligence tools
+
+  [8] CNN
+      URL: https://www.facebook.com/cnn/posts/the-department-of-defense-announced-friday-an-agreement-with-seven-major-technol/1346549610671020
+      SNIP: The company's Pentagon contracts are primarily to design AI systems that crunch large amounts of data to come up with strike targets. Meta ... Read more
+
+  [9] Dataminr, Inc. — $9.5B in 37 Federal Contracts
+      URL: https://www.readthegovcontract.com/contractor/dataminr-inc
+      SNIP: With a total contract value of $9.48 billion and 37 contracts, DATAMINR has established a significant presence in the federal contracting landscape. However, the absence of recent contracts and the lack of specific agency clients suggest a potentially stable but less dynamic business model.
+
+
+=== search12_layoffs.json ===
+  [0] Dataminr "layoff" Reviews
+      URL: https://www.glassdoor.com/Reviews/Dataminr-layoff-Reviews-EI_IE749857.0,8_KH9,15.htm
+      SNIP: The layoffs in 2023 were a challenging time, Decision making and planning by leadership has been poor, leading to multiple rounds of layoffs in 2023 . layoffs ,  ...
+
+  [1] Big data startup Dataminr slashing 20% of staff as part
+      URL: https://stlawyers.ca/blog-news/dataminr-slashing-20-per-cent-staff
+      SNIP: Nov 28, 2023 — According to TechCrunch, the New York-based tech company is eliminating approximately 20 per cent of its total workforce, or 150 positions. Read more
+Dozens of jobs are on the chopping block at Dataminr as the big data startup restructures its business. According to TechCrunch, the New York-based tech company is eliminating approximately 20 per cent of its total workforce, or 150 po
+
+  [2] Tech Layoffs Predictions 2024: AI Begins to Flex Its Muscles
+      URL: https://www.tech387.com/blogs/tech-layoffs-predictions-2024-ai-begins-to-flex-its-muscles
+      SNIP: Dataminr , a big data startup valued at $4.1 billion, announced a 20% staff cut , amounting to around 150 employees .
+
+  [3] Tech Layoffs 2024: Is AI to Blame?
+      URL: https://www.youtube.com/watch?v=84ngZRKXKM4
+      SNIP: In this video, I dive into the complex world of tech layoffs and investigate whether Artificial Intelligence is a major factor.
+
+  [4] Dataminr Layoffs
+      URL: https://layoffs.fyi/company/dataminr
+      SNIP: Dataminr has laid off 150 employees across 1 event since March 2020. laid off 20% of its staff , or 150 people, as it prepared to focus on AI.
+
+  [5] Tech Layoffs: US Companies With Job Cuts In 2024, 2025
+      URL: https://news.crunchbase.com/startups/tech-layoffs
+      SNIP: In 2024 : At least 95,667 workers at U.S.-based tech companies lost their jobs in 2024 , according to a Crunchbase News tally. In 2023 : More than 191,000 workers ... Read more
+
+  [6] AI Layoffs Tracker 2026 — Companies Cutting Jobs Due to AI
+      URL: https://displaceindex.com/trends/ai-layoffs-tracker
+      SNIP: Real-time tracker of layoffs explicitly attributed to AI and automation. 316000+ jobs cut across 43+ companies since 2023 .
+
+  [7] Tech Layoffs Tracker
+      URL: https://www.trueup.io/layoffs
+      SNIP: Latest layoffs across big tech companies and tech startups. So far in 2026, there have been 498 layoffs at tech companies with 172488 people impacted (806 ...
+
+  [8] AI Layoffs by Company: A Tracker of Every Major
+      URL: https://founderreports.com/ai-layoffs-tracker
+      SNIP: Jul 15, 2026 — The phrase "AI layoff " went from a niche concern in 2023 to the single most-cited reason for U.S. job cuts in both March and April of 2026.
+
+  [9] Dataminr, the $4B big data startup, is laying off 20% of
+      URL: https://techcrunch.com/2023/11/28/dataminr-the-4b-big-data-startup-is-laying-off-20-of-staff-today-or-150-people-as-it-preps-to-double-down-on-ai
+      SNIP: Dataminr, the $4B big data startup, is laying off 20% of staff today, or 150 people, as it preps to double down on AI Ingrid Lunden 7:44 AM PST · November 28, 2023
+
+
+=== search13_fedramp2.json ===
+  [0] AWS GovCloud | FedRAMP Marketplace
+      URL: https://www.fedramp.gov/marketplace/products/F1603047866
+      SNIP: FedRAMP Status Indicates the current stage of this cloud service offering within the FedRAMP Marketplace lifecycle.
+
+  [1] FedRAMP Compliance - Amazon Web Services (AWS)
+      URL: https://aws.amazon.com/compliance/fedramp
+      SNIP: Yes, AWS has achieved FedRAMP Certification . AWS GovCloud (US) is FedRAMP Certified Class D (formerly High baseline).
+Two separate FedRAMP Certifications cover AWS environments: AWS GovCloud (US) as Class D (formerly High baseline), and AWS US East-West as Class C (formerly Moderate baseline).
+
+  [2] Amazon Managed Grafana achieves FedRAMP High
+      URL: https://aws.amazon.com/about-aws/whats-new/2026/07/amazon-managed-grafana-fedramp-high
+      SNIP: Amazon Managed Grafana is now a FedRAMP High authorized service in the AWS GovCloud (US-East) and AWS GovCloud (US-West) regions. Read more
+
+  [3] FedRAMP Marketplace - Products
+      URL: https://www.fedramp.gov/marketplace
+      SNIP: Effective immediately, " FedRAMP Authorization " is now called " FedRAMP Certification," and Impact Levels have been replaced with Classes A-D for package ...
+
+  [4] Do We Have to Use AWS GovCloud for FedRAMP High?
+      URL: https://www.reddit.com/r/FedRAMP/comments/1jzqr43/do_we_have_to_use_aws_govcloud_for_fedramp_high
+      SNIP: Hi everyone,
+
+I’m currently working on FedRAMP authorization activities for my company’s SaaS product. We believe we’ll need to go for FedRAMP ...
+
+  [5] FedRAMP High & AWS GovCloud(US): Meet FISMA High
+      URL: https://www.youtube.com/watch?v=cQt79xqFTXo
+      SNIP: AWS GovCloud (US)* has received a Provisional Authority to Operate . Federal Risk and Authorization Management Program (FedRAMP) High baseline.
+
+  [6] FedRAMP Marketplace: How Listings, Statuses, and 20x
+      URL: https://secureframe.com/hub/fedramp/marketplace
+      SNIP: Jul 31, 2025 — The FedRAMP Marketplace is the official directory of cloud products, federal agencies, and Third Party Assessment Organizations (3PAOs) ... Read more
+
+  [7] 6 Steps Towards Achieving FedRAMP Authorization on
+      URL: https://aws.amazon.com/blogs/apn/6-steps-towards-achieving-fedramp-authorization-on-aws-with-orca-security
+      SNIP: Feb 23, 2024 — In this post, you will learn about the steps needed to deploy a FedRAMP -compliant environment on AWS , and how the Orca Cloud Security Platform can be used. Read more
+
+  [8] Databricks Achieves FedRAMP High Authorization for AWS
+      URL: https://www.databricks.com/company/newsroom/press-releases/databricks-achieves-fedramp-high-authorization-aws-govcloud
+      SNIP: Feb 27, 2025 — Databricks, the Data and AI company , announced today that it has received Federal Risk and Authorization Management Program (FedRAMP®) High authorization. Read more
+
+  [9] AWS GovCloud | FedRAMP Marketplace
+      URL: https://marketplace.fedramp.gov/products/F1603047866
+      SNIP: Indicates the current stage of this cloud service offering within the FedRAMP Marketplace lifecycle. Stages include: Initial Implementation, (Legacy) FedRAMP Ready, Agency Authorization In Process, FedRAMP In Process, or FedRAMP Certified.
+
+
+=== search14_aerospike.json ===
+  [0] Dataminr - Customer story
+      URL: https://aerospike.com/resources/customer-stories/dataminr
+      SNIP: Aerospike delivers the throughput required to process billions of signals and millions of label updates per second. High volume ingestion of complex, multiple- ...
+Discover how Dataminr replaced DynamoDB and Redis with Aerospike to scale real-time predictive and Generative AI, processing billions of daily signals.
+
+  [1] Real-time AI Needs High Performance Data Infrastructure
+      URL: https://aerospike.com/blog/real-time-ai-high-performance-data-infrastructure
+      SNIP: Oct 15, 2025 — “ Aerospike is a very high- performance database supporting latencies of sub-millisecond, throughputs of millions of transactions per second at a ...
+
+  [2] Five case studies across key industries
+      URL: https://aerospike.com/files/ebooks/aerospike-in-action-5-case-studies-ebk.pdf
+      SNIP: The company has experienced an annual growth rate of 32% over the past decade and is valued above $200 billion . High performance 2ms latency at the 95th ... 23 pages
+
+  [3] Aerospike: The Key to High-Performance Real-Time Data
+      URL: https://www.researchgate.net/publication/391729602_Aerospike_The_Key_to_High-Performance_Real-Time_Data_Processing
+      SNIP: May 5, 2025 — This study explores how Aerospike solves issues related to transaction latency, data consistency, and scalability in real-time financial data ...
+
+  [4] Aerospike Case Study
+      URL: https://www.starburst.io/resources/aerospike-case-study
+      SNIP: Read this case study about how Aerospike achieved new revenue streams, real-time analytics, and higher customer satisfaction with Starburst.
+
+  [5] Enriching the Signal: A Software Leader's Shift from
+      URL: https://www.dataminr.com/resources/case-study/enriching-the-signal-a-software-leaders-shift-from-volume-based-to-contextual-threat-data
+      SNIP: Dataminr . CASE STUDY . Enriching the Signal : A Software Leader's Shift from Volume-Based to Contextual Threat Data.
+
+  [6] Public Data and Advanced AI Mitigate Third-Party Risks
+      URL: https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer
+      SNIP: At Black Hat 2024, leaders from Citi, NightDragon and Dataminr discuss combining AI models with public data to mitigate third-party risk.
+
+  [7] High performance database for AI applications
+      URL: https://aerospike.com/solutions/use-cases/database-for-ai-applications
+      SNIP: Discover how Aerospike's high-performance database can transform your AI applications , enabling real-time data handling for accurate predictions, ...
+
+  [8] Dataminr in Action: Russia Concert Attack Case Study
+      URL: https://www.dataminr.com/resources/video/dataminr-in-action-russia-concert-attack-case-study
+      SNIP: Dataminr's ReGenAI helped customers to know first and stay up to date during the terrorist attack on a Russian concert hall near Moscow.
+
+  [9] How Dataminr and AppsFlyer deliver real-time AI decisions
+      URL: https://aerospike.com/blog/dataminr-appsflyer-real-time-ai-decisions-at-scale
+      SNIP: At AWS re:Invent 2024, Aerospike joined Dataminr and AppsFlyer to discuss how real-time AI decisioning is transforming industries through millisecond performance and scalable intelligence.
+
+
+=== search15_cv_models.json ===
+  [0] Object detection using YOLO: challenges, architectural  - PMC
+      URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC9358372
+      SNIP: 2022 · Cited by 1984 — A novel OCR system is developed, named as Rosetta, wherein faster-RCNN is utilized for detecting the text characters from millions of Facebook images , however, ...
+
+  [1] Computer Vision Development Services
+      URL: https://getyoteam.com/services/computer-vision
+      SNIP: Real-time object detection and multi-object tracking using YOLO and ResNet — deployed for security, manufacturing, and retail environments with high mAP and ...
+
+  [2] Best Computer Vision Models in 2026, Compared by Task
+      URL: https://blog.roboflow.com/best-computer-vision-models
+      SNIP: Jul 15, 2026 — Some models are designed for object detection , while others are better for segmentation, image classification, pose estimation, OCR , depth ...
+
+  [3] Comparing YOLO, DETR, and Faster R-CNN object
+      URL: https://www.facebook.com/groups/ComputerVisionGroup/posts/3505871789556997
+      SNIP: I compared the object detection outputs of YOLO, DETR and Fast R-CNN models. Here are my results 👇
+
+Image source: http://images.cocodataset.org/val2017/00000 ...
+
+  [4] Object detection with Multimodal Large Vision-Language
+      URL: https://farukalamai.substack.com/p/object-detection-with-multimodal
+      SNIP: For years, object detection systems have relied on traditional deep learning architectures like YOLO , Faster R-CNN, and Mask R-CNN. These models ...
+For years, object detection systems have relied on traditional deep learning architectures like YOLO , Faster R-CNN, and Mask R-CNN. These models ... Read more
+
+  [5] Object detection on a dataset. : r/computervision
+      URL: https://www.reddit.com/r/computervision/comments/12hfe71/object_detection_on_a_dataset
+      SNIP: train a yolo model and perform object detection on the dataset . Darknet/YOLO requires that each .jpg has a matching .txt file, and the ...
+
+  [6] Object Detection - Computer Vision Wiki - CloudFactory
+      URL: https://wiki.cloudfactory.com/docs/mp-wiki/model-families/object-detector
+      SNIP: Apr 18, 2024 — Object Detection (OD) is a Computer Vision Supervised Learning task that aims to locate and classify every object of the target classes presented in an image .
+
+  [7] Choosing the Right Model for Object Detection - Medium
+      URL: https://samdbrice.medium.com/dcda0c8f6f70
+      SNIP: YOLO models tend to be the fastest available, capable of processing 40–90 FPS or 155 FPS on specialized configurations. for RetinaNet, YOLOv2,
+
+  [8] Day 14 - Object Detection in Computer Vision | Computer
+      URL: https://www.youtube.com/watch?v=mD7b4IR2i4U
+      SNIP: Unlock the power of Object Detection in Computer Vision! In this video, we dive deep into how machines can detect, classify, and localize ...
+
+  [9] A Systematic Review of YOLO-Based Object Detection in
+      URL: https://www.sciencedirect.com/org/science/article/pii/S1546221825008859
+      SNIP: 2025 · Cited by 38 — By integrating multimodal images , YOLO can leverage the advantages of various imaging techniques to further improve detection comprehensiveness ...
+
+
+=== search16_dod_contract.json ===
+  [0] Contracts For Apr. 23, 2020
+      URL: https://www.war.gov/News/Contracts/Contract/Article/2162978/contracts-for-apr-23-2020
+      SNIP: Apr 23, 2020 — Dataminr Inc., New York, New York, has been awarded a firm-fixed-price contract for $258,661,096. Department of Defense enterprise capability. ...
+Apr 23, 2020 — Dataminr Inc., been awarded a firm-fixed-price contract for $258,661,096. This contract has a five - year ordering period with a maximum value of ...
+
+  [1] AI firm clinches $258M Air Force push alert contract
+      URL: https://www.washingtontechnology.com/2020/04/ai-firm-clinches-258m-air-force-push-alert-contract/354945
+      SNIP: Apr 27, 2020 — Venture-backed artificial intelligence outfit Dataminr takes a $258 million contract to develop a push alert system for the Air Force.
+Apr 27, 2020 — Dataminr has won a significant piece of government business in a five-year, $258.7 million contract to develop a system of push alerts
+
+  [2] Dataminr Wins $259M Air Force Push Alerts Tech
+      URL: https://www.govconwire.com/articles/dataminr-wins-259m-air-force-push-alerts-tech-development-contract
+      SNIP: Apr 24, 2020 — Dataminr , a New York-based artificial intelligence firm, has won a potential five - year , $258.6M contract from the US Air Force to develop a commercially ...
+Apr 24, 2020 — Dataminr, a New York-based artificial intelligence firm, has won a potential five-year, $258.6M contract from the US Air Force to develop a commercially ... Read more
+
+  [3] CONTRACT to DATAMINR, INC.
+      URL: https://www.usaspending.gov/award/CONT_AWD_FA701421C0008_9700_-NONE-_-NONE-
+      SNIP: 2020 CONTRACT to DATAMINR , INC. from the Department of Defense . Completed Awarding Agency Department of Defense ( DOD ) Recipient DATAMINR , INC. contractual ...
+2020 CONTRACT to DATAMINR , INC. from the Department of Defense . Completed Awarding Agency Department of Defense ( DOD ) contractual agreements . Department of ...
+
+  [4] Accenture wins $821M Pentagon AI data platform contract
+      URL: https://federalnewsnetwork.com/defense-news/2026/07/accenture-wins-821m-pentagon-ai-data-platform-contract
+      SNIP: 5 days ago — Accenture won an $821 million contract to mature the Pentagon's War Data Platform , boosting AI-powered battlefield data and decision-making.
+
+  [5] 'Growing demand' sparks DOD to raise Palantir's Maven
+      URL: https://defensescoop.com/2025/05/23/dod-palantir-maven-smart-system-contract-increase
+      SNIP: May 23, 2025 — The Defense Department inked the initial $480 million , five - year IDIQ contract with Palantir for the program in May 2024. The Army's ...
+
+  [6] Definitive Contract FA701421C0024
+      URL: https://govtribe.com/award/federal-contract-award/definitive-contract-fa701421c0024
+      SNIP: The contract , valued at $282,483,348.00, is for an Enterprise License Subscription for Publicly Available Information Detection and Alerts (PADELS) for the DoD .
+
+  [7] Dataminr Expands Strategic Partnership With Carahsoft
+      URL: https://www.dataminr.com/press/dataminr-expands-strategic-partnership-with-carahsoft
+      SNIP: Mar 14, 2024 — Dataminr expands delivery of First Alert through Carahsoft's NASPO ValuePoint contract , bringing critical real-time alerts to more public sector organizations.
+Mar 14, 2024 — Dataminr expands delivery of First Alert through Carahsoft's NASPO ValuePoint contract , bringing critical real-time alerts to more public sector organizations. Read more
+
+  [8] Dataminr Inc Awarded Air Force Contract to Provide OSINT
+      URL: https://news.clearancejobs.com/2020/08/18/dataminr-inc-awarded-air-force-contract-to-provide-osint-for-force-protection-and-first-response
+      SNIP: Aug 18, 2020 — Dataminr Inc. was awarded a $12.1 million contract to provide web-based mobile and email alerting of events and breaking news based on ...
+Aug 18, 2020 — Dataminr Inc. was awarded a $12.1 million contract . This contract includes a five - year base period … expected to be completed by August 2025.
+
+  [9] Air Force awards $258.7M to Dataminr for push alerts system
+      URL: https://www.upi.com/Defense-News/2020/04/23/Air-Force-awards-2587M-to-Dataminr-for-push-alerts-system/2421587682718
+      SNIP: Apr 23, 2020 — The Air Force has awarded Dataminr with a five-year, $258.7 million contract to develop a system of push alerts, the Pentagon announced Thursday
+
+
+=== search17_pulse_models.json ===
+  [0] Pulse Now Offers AI Risk Management Capabilities
+      URL: https://www.dataminr.com/press/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities
+      SNIP: Sep 7, 2023 — Dataminr has created a broad range of proprietary AI models , spanning multimodal fusion AI , LLM / foundation models for predictive AI ,
+Dataminr has created a broad range of proprietary AI models, spanning multimodal fusion AI, LLM/foundation models for predictive AI,
+
+  [1] Dataminr Pulse Splunk Integration
+      URL: https://www.dataminr.com/resources/video/dataminr-pulse-splunk-integration
+      SNIP: Harnessing the Power of LLMs and Multi- modal Foundation Models in Dataminr's AI Platform
+Dataminr Pulse's Splunk integrations give ... Harnessing the Power of LLMs and Multi-modal Foundation Models in Dataminr's AI Platform.
+
+  [2] Our AI Strategy for Creating Dataminr-unique High
+      URL: https://www.dataminr.com/resources/blog/our-ai-strategy-for-creating-dataminr-unique-high-performance-llms-and-foundation-models
+      SNIP: Oct 3, 2023 — Our AI platform includes more than 35 customized Dataminr Foundation Models operating in production in tandem with an extensive array of specialized AI models.
+
+  [3] Dataminr Pulse Expands to Offer AI-powered Risk
+      URL: https://www.prnewswire.com/news-releases/dataminr-pulse-expands-to-offer-ai-powered-risk-management-capabilities-301920508.html
+      SNIP: Sep 7, 2023 — Dataminr has created a broad range of proprietary AI models , spanning multimodal fusion AI , LLM / foundation models for predictive AI , and ...
+Dataminr has created a broad range of proprietary AI models, spanning multimodal fusion AI, LLM/foundation models for predictive AI, and ...
+
+  [4] Dataminr Pulse - AWS Marketplace - Amazon.com
+      URL: https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima
+      SNIP: The platform leverages 50 large language models and over 12 years of historical data. , Intel Agents, and PreGenAI, Leverages 50 large language models and over ...
+Rating 4.5 (48) The platform leverages 50 large language models and over 12 years of historical data. a real-time, external cyber event, risk, and threat detection. Leverages  ...
+
+  [5] Dataminr Pulse Expands to Offer AI-powered Risk
+      URL: https://www.linkedin.com/posts/emilygates_dataminr-pulse-expands-to-offer-ai-powered-activity-7105571877451902976-WXSL
+      SNIP: Dataminr's world-leading AI platform with a wide range of LLMs and multimodal foundation models now integrated, corporate security groups
+
+  [6] Dataminr pulse
+      URL: https://www.sumologic.com/app-catalog/dataminr-pulse
+      SNIP: Dataminr Pulse's AI-powered real-time intelligence brings faster detection and intelligence into Sumo Logic Cloud Security Analytics.
+
+  [7] Dataminr's AI Platform Driven by Predictive Models
+      URL: https://www.dataminr.com/resources/blog/harnessing-the-power-of-llms-and-multi-modal-foundation-models-in-dataminrs-ai-platform
+      SNIP: Oct 3, 2023 — Large language models (LLMs ) and multi-modal foundation models serve as the basis of the predictive and generative components in Dataminr's ...
+LLMs and Multi-modal Foundation Models serve as the basis of the Predictive and Generative AI components in Dataminr's AI platform.
+
+  [8] Access Investments in Dataminr Pre-IPO - Linqto
+      URL: https://www.linqto.com/products/dataminr
+      SNIP: Dataminr Pulse for Corporate Security 's new Risk Management capabilities enables teams to collaboratively manage risks to their business in one place. This ...
+Dataminr has created a broad range of proprietary AI models, spanning multimodal fusion AI, LLM/foundation models for predictive AI,
+
+  [9] AI Platform - Dataminr
+      URL: https://www.dataminr.com/ai-platform
+      SNIP: Dataminr has developed over 50 proprietary LLMs— all engineered to discover, describe and contextualize events, threats, and risks as they unfold.
+
+
+=== search18_soc2.json ===
+  [0] FedRAMP and SOC 2: An in-depth comparison
+      URL: https://www.vanta.com/collection/fedramp/fedramp-and-soc-2
+      SNIP: FedRAMP authorization is issued by a sponsoring federal agency's Authorizing Official (AO), while SOC 2 reports are issued by accredited third-party auditors.
+
+  [1] FedRAMP Marketplace - Products
+      URL: https://www.fedramp.gov/marketplace
+      SNIP: Effective immediately, " FedRAMP Authorization" is now called "FedRAMP Certification ," and Impact Levels have been replaced with Classes A-D for package ...
+
+  [2] FedRAMP vs. SOC 2: What Are the Differences?
+      URL: https://knoxsystems.com/resources/fedramp-vs-soc-2
+      SNIP: Apr 29, 2026 — Where a SOC 2 assessment ends with a report, FedRAMP authorization begins a permanent relationship with a federal oversight body. The assessment ... Read more
+
+  [3] What is FedRAMP? The Guide to FedRAMP Authorization
+      URL: https://www.a-lign.com/articles/what-is-fedramp
+      SNIP: FedRAMP has three impact levels — Low, Moderate , and High — based on the sensitivity of the federal data your system handles. Most CSPs pursue Moderate , ...
+
+  [4] Trust Services
+      URL: https://www.dataminr.com/dataminr-trust-services
+      SNIP: SOC 2 Type 2: AICPA-sanctioned independent attestation that examines the design and operational effectiveness of a service organization's controls over a ... Read more
+
+  [5] FedRAMP Levels Explained: Low vs. Moderate vs. High
+      URL: https://www.workstreet.com/blog/fedramp-levels
+      SNIP: Jul 16, 2026 — Moderate is the default for most organizations selling to the federal government . It covers controlled unclassified information (CUI), ...
+
+  [6] Fortifying federal data: An analysis of cloud security
+      URL: https://totara.com/us/articles/fortifying-federal-data-analysis-cloud-security-fedramp-totara
+      SNIP: Aug 29, 2024 — FedRAMP certification signifies a cloud service provider's commitment to upholding rigorous security protocols and bolstering trust within the ...
+
+  [7] FedRAMP Certification Enhances Trust, Data Security for
+      URL: https://blog.perceptyx.com/fedramp-certification-enhances-trust-data-security-for-people-analytics
+      SNIP: Aug 1, 2022 — It provides a standardized approach to security assessment, authorization , and continuous monitoring for cloud products and services such as ... Read more
+
+  [8] Choosing the Right FedRAMP Level for Your AI Solution
+      URL: https://elevateconsult.com/insights/choosing-the-right-fedramp-level-for-your-ai-solution
+      SNIP: Feb 16, 2026 — FedRAMP Moderate strikes the best balance between security investment and market opportunities. It makes up almost 73% of all authorized Cloud ... Read more
+
+  [9] FedRAMP | FedRAMP.gov
+      URL: https://www.fedramp.gov
+      SNIP: The Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.
+

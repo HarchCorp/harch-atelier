@@ -1,0 +1,83 @@
+[
+  {
+    "url": "https://www.fedramp.gov/marketplace",
+    "name": "FedRAMP Marketplace - Products",
+    "snippet": "Effective immediately, \"FedRAMP Authorization\" is now called \"FedRAMP Certification,\" and Impact Levels have been replaced with Classes A-D for package ...\nEffective immediately, \" FedRAMP Authorization\" is now called \"FedRAMP Certification ,\" and Impact Levels have been replaced with Classes A-D for package ...",
+    "host_name": "www.fedramp.gov",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/marketplace/pp/prodview-7eav2xsxvnupy",
+    "name": "Dataminr First Alert - AWS Marketplace - Amazon.com",
+    "snippet": "Dataminr First Alert . Single User License. $30,000.00. Vendor refund policy. All fees are non-cancellable and non-refundable except as required by law. Read more",
+    "host_name": "aws.amazon.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/press/announcement/dataminr-solutions-now-available-in-aws-marketplace-through-carahsoft",
+    "name": "Dataminr Solutions Now Available in AWS Marketplace",
+    "snippet": "Feb 9, 2026 — Dataminr's solutions have been added to Carahsoft's CarahCloud Marketplace ® program, making them readily available in AWS Marketplace.",
+    "host_name": "www.dataminr.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/partners/dataminr-pulse-available-in-aws-marketplace",
+    "name": "Dataminr Pulse in AWS Marketplace",
+    "snippet": "When procured through AWS Marketplace, Pulse enables businesses to minimize administrative barriers , including complicated procurement, spending and billing ... Read more",
+    "host_name": "www.dataminr.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/legal/api",
+    "name": "Legal - API License Terms & Conditions",
+    "snippet": "This agreement shall govern Customer's usage of all API Keys, Dataminr APIs, Connectors, and API Services during the term outlined in the Order Form.",
+    "host_name": "www.dataminr.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/video/pulse/cyber-risk/third-party-risk/address-vendor-vulnerabilities",
+    "name": "Dataminr Pulse for Cyber Risk | Address Vendor Vulnerabilities",
+    "snippet": "Data minr partners enable enterprises to manage operational, cyber, business and reputational risks more holistically and effectively.",
+    "host_name": "www.dataminr.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.esri.com/partners/dataminr-a2T5x000008VX7JEAW",
+    "name": "Dataminr | Esri Partner",
+    "snippet": "Dataminr helps organizations know critical information first, respond with confidence, manage risk effectively, and minimize operational and business disruption ... Read more",
+    "host_name": "www.esri.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/Dataminr",
+    "name": "Dataminr | New York NY",
+    "snippet": "Dataminr's AI platform detects the earliest signals of high-impact events and emerging risks from publicly available data sources. Read more",
+    "host_name": "www.facebook.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com",
+    "name": "Dataminr: AI-Powered Real-Time Event, Threat & Risk",
+    "snippet": "Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...",
+    "host_name": "www.dataminr.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  }
+]

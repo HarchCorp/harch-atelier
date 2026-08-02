@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://www.dataminr.com/legal/sla",
+    "name": "Legal - Service Level Agreement (\"SLA\")",
+    "snippet": "Dataminr will make the Services available 99% of the time on a monthly basis . Dataminr will calculate availability per calendar month\nDiscover our Service Level Agreement outlining commitments, guarantees, and expectations. Explore our terms ensuring quality service and support for our offerings.",
+    "host_name": "www.dataminr.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/sre/comments/1nudc9c/when_999_uptime_sounds_good_until_you_do_the_math",
+    "name": "When 99.9% uptime sounds good until you do the math",
+    "snippet": "For legal , vague SLA language that pretty much means we are always up. Our default is 99.9 % in consumer terms … you can claim 100% uptime .",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.siliceum.com/en/blog/post/sla-engagements",
+    "name": "99.9% uptime: what your cloud provider isn't telling you",
+    "snippet": "Feb 19, 2026 — 99.9 % means 43 minutes of allowed downtime per month. An SLA is a bit like your car warranty : If you promise 99.9 % to your clients, aim for 99. ...",
+    "host_name": "www.siliceum.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://jfrog.com/blog/improve-resilience-with-9999-sla",
+    "name": "JFrog Introduces Software Industry's First 99.99% Uptime",
+    "snippet": "Feb 24, 2026 — JFrog introduces Premium Availability : The first in-region 99.99% uptime SLA for software supply chains. Ensure resilience for AI and ...",
+    "host_name": "jfrog.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fivetran.com/legal/sla-effective-date-november-2022",
+    "name": "Archived Service Level Agreement",
+    "snippet": "Nov 1, 2022 — Fivetran guarantees that at least 99.9 % of the time, the Core Services will be available and operational. The Monthly Uptime Percentage for ...",
+    "host_name": "www.fivetran.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.quora.com/What-does-it-mean-to-have-a-99-9-network-uptime-SLA-and-how-do-they-make-sure-it-stays-up-almost-all-the-time",
+    "name": "What does it mean to have a 99.9% network uptime SLA",
+    "snippet": "99.9% uptime means total service outage of less than nine hours in a year . To achieve that, systems generally require redundancy in both ...",
+    "host_name": "www.quora.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://totaluptime.com/kb/what-kind-of-network-uptime-guarantees-or-service-level-agreements-sla-do-you-provide",
+    "name": "What kind of network uptime guarantees or Service Level",
+    "snippet": "If we only set out to achieve 99.9 % uptime (which is the most common guarantee in the industry) we would be content with over 43 minutes of downtime per month.",
+    "host_name": "totaluptime.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://uptime.com/blog/what-is-an-uptime-sla-guarantee",
+    "name": "What is an Uptime SLA Guarantee and Should You Have",
+    "snippet": "Nov 21, 2024 — With a 99.99% guaranteed uptime SLA , the allowable downtime drops to just 4 minutes and 19 seconds per month. This level is ideal for businesses ...",
+    "host_name": "uptime.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

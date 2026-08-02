@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.vanta.com/collection/fedramp/fedramp-and-soc-2",
+    "name": "FedRAMP and SOC 2: An in-depth comparison",
+    "snippet": "FedRAMP authorization is issued by a sponsoring federal agency's Authorizing Official (AO), while SOC 2 reports are issued by accredited third-party auditors.",
+    "host_name": "www.vanta.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fedramp.gov/marketplace",
+    "name": "FedRAMP Marketplace - Products",
+    "snippet": "Effective immediately, \" FedRAMP Authorization\" is now called \"FedRAMP Certification ,\" and Impact Levels have been replaced with Classes A-D for package ...",
+    "host_name": "www.fedramp.gov",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://knoxsystems.com/resources/fedramp-vs-soc-2",
+    "name": "FedRAMP vs. SOC 2: What Are the Differences?",
+    "snippet": "Apr 29, 2026 — Where a SOC 2 assessment ends with a report, FedRAMP authorization begins a permanent relationship with a federal oversight body. The assessment ... Read more",
+    "host_name": "knoxsystems.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.a-lign.com/articles/what-is-fedramp",
+    "name": "What is FedRAMP? The Guide to FedRAMP Authorization",
+    "snippet": "FedRAMP has three impact levels — Low, Moderate , and High — based on the sensitivity of the federal data your system handles. Most CSPs pursue Moderate , ...",
+    "host_name": "www.a-lign.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/dataminr-trust-services",
+    "name": "Trust Services",
+    "snippet": "SOC 2 Type 2: AICPA-sanctioned independent attestation that examines the design and operational effectiveness of a service organization's controls over a ... Read more",
+    "host_name": "www.dataminr.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.workstreet.com/blog/fedramp-levels",
+    "name": "FedRAMP Levels Explained: Low vs. Moderate vs. High",
+    "snippet": "Jul 16, 2026 — Moderate is the default for most organizations selling to the federal government . It covers controlled unclassified information (CUI), ...",
+    "host_name": "www.workstreet.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://totara.com/us/articles/fortifying-federal-data-analysis-cloud-security-fedramp-totara",
+    "name": "Fortifying federal data: An analysis of cloud security",
+    "snippet": "Aug 29, 2024 — FedRAMP certification signifies a cloud service provider's commitment to upholding rigorous security protocols and bolstering trust within the ...",
+    "host_name": "totara.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://blog.perceptyx.com/fedramp-certification-enhances-trust-data-security-for-people-analytics",
+    "name": "FedRAMP Certification Enhances Trust, Data Security for",
+    "snippet": "Aug 1, 2022 — It provides a standardized approach to security assessment, authorization , and continuous monitoring for cloud products and services such as ... Read more",
+    "host_name": "blog.perceptyx.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://elevateconsult.com/insights/choosing-the-right-fedramp-level-for-your-ai-solution",
+    "name": "Choosing the Right FedRAMP Level for Your AI Solution",
+    "snippet": "Feb 16, 2026 — FedRAMP Moderate strikes the best balance between security investment and market opportunities. It makes up almost 73% of all authorized Cloud ... Read more",
+    "host_name": "elevateconsult.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fedramp.gov",
+    "name": "FedRAMP | FedRAMP.gov",
+    "snippet": "The Federal Risk and Authorization Management Program, or FedRAMP, is a government-wide program that provides a standardized approach to security assessment.",
+    "host_name": "www.fedramp.gov",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

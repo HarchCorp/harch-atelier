@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://devcommunity.x.com/t/getting-all-tweets-for-research-purposes/30501",
+    "name": "Getting all tweets for research purposes - Standard APIs v1.1",
+    "snippet": "Jan 13, 2015 — This is a massive volume of Tweets per second , and it requires significant infrastructure to process. Firehose access is limited to a very ...\nJan 13, 2015 — This is a massive volume of Tweets per second , and it requires significant infrastructure to process. Firehose access is limited to a very small ...",
+    "host_name": "devcommunity.x.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://twitterapi.io/blog/twitter-firehose-api-developer-guide",
+    "name": "Twitter (X) Firehose API — Developer Guide",
+    "snippet": "Pricing per twitterapi.io/pricing: $0.00015 per returned tweet . Same volume via X Enterprise = $42,000/month floor plus per - tweet cost. Same volume via X ...",
+    "host_name": "twitterapi.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.quora.com/How-much-does-access-to-the-Twitter-firehose-cost",
+    "name": "How much does access to the Twitter firehose cost?",
+    "snippet": "How much does access to the Twitter firehose cost?",
+    "host_name": "www.quora.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.nextgov.com/emerging-tech/2016/11/fbi-awards-dataminr-contract-twitter-firehose/133152",
+    "name": "FBI Awards Dataminr Contract for Twitter 'Firehose'",
+    "snippet": "Nov 14, 2016 — Twitter's public API only gives users access to about 1 percent of tweets , according to a FedBizOpps posting. » Get the best federal ...",
+    "host_name": "www.nextgov.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.xpoz.ai/blog/guides/understanding-twitter-api-pricing-tiers-and-alternatives",
+    "name": "Twitter/X API Pricing 2026: All Tiers ($0 to $42K) Compared",
+    "snippet": "Every API call now costs money — reading a tweet costs $0.005 ($5 per 1,000), posting costs $0.015, and full-archive search requires an Enterprise contract ...",
+    "host_name": "www.xpoz.ai",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://devcommunity.x.com/t/volume-returned-by-counts-vs-search-endpoint/158870",
+    "name": "Volume returned by counts vs. search endpoint - X API v2",
+    "snippet": "Sep 1, 2021 — I have recently been using the “counts/recent” endpoint to scope the volume of tweets for a given query before downloading them.",
+    "host_name": "devcommunity.x.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://brightplanet.com/2013/06/25/twitter-firehose-vs-twitter-api-whats-the-difference-and-why-should-you-care",
+    "name": "Twitter Firehose vs. Twitter API: What's the difference and",
+    "snippet": "Jun 25, 2013 — Studies have estimated that using Twitter's Streaming API users can expect to receive anywhere from 1% of the tweets to over 40% of tweets in ...",
+    "host_name": "brightplanet.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://stackoverflow.com/questions/13055370/how-many-percent-of-the-tweets-does-twitter-sample-api-give",
+    "name": "How many percent of the tweets does twitter sample API",
+    "snippet": "Does anyone know what's the ratio between the number of tweets we get from twitter sample API over the total number of tweets which the Twitter server receives? ...",
+    "host_name": "stackoverflow.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://api.sorsa.io/blog/twitter-api-pricing-2026",
+    "name": "X (Twitter) API Pricing 2026: Tiers, Free Tier & Real Costs",
+    "snippet": "Mar 23, 2026 — X API pricing 2026 explained: pay- per -use at $0.005/read, $0.20/URL post, 2M cap, no free tier. Real costs plus flat-rate options from $0.02 ...",
+    "host_name": "api.sorsa.io",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://twitterapi.io",
+    "name": "TwitterAPI.io",
+    "snippet": "TwitterAPI.io provides a real-time X ( Twitter ) API alternative at $0.00015 per read — about 33× cheaper than the official X API ($0.005–$0.010 per read).",
+    "host_name": "twitterapi.io",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.dataminr.com/legal/sla",
+    "name": "Legal - Service Level Agreement (\"SLA\")",
+    "snippet": "Dataminr shall provide 24/7 support with a response time of one (1) hour for Downtime. All other support shall be provided on a 24/5 basis with a response time ... Read more\nDataminr shall provide 24/7 support with a response time of one (1) hour for Downtime. All other support shall be provided on a 24/5 basis with a response time of two (2) to twenty-four (24) hours.",
+    "host_name": "www.dataminr.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.conduktor.io/glossary/data-freshness-monitoring-sla-management",
+    "name": "Data Freshness Monitoring: SLA Management",
+    "snippet": "Jul 22, 2026 — Monitor data freshness and manage SLAs using consumer lag tracking, heartbeat metrics, and automated alerting for pipeline reliability.",
+    "host_name": "www.conduktor.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://streamnative.io/blog/latency-numbers-every-data-streaming-engineer-should-know",
+    "name": "Latency Numbers Every Data Streaming Engineer Should",
+    "snippet": "Sep 24, 2025 — Latencies from several hundred milliseconds to a few seconds might be acceptable for certain analytics, reporting, or ETL scenarios where “real- ... Read more",
+    "host_name": "streamnative.io",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/blog/real-time-alerting-101-how-it-works-and-why-its-a-business-imperative",
+    "name": "Real-time Alerting 101: How It Works & Why It's Critical",
+    "snippet": "Nov 14, 2024 — Dataminr's real-time alerts help organizations get the earliest signals of risks and enable the fastest response, thus strengthening ...",
+    "host_name": "www.dataminr.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://tacnode.io/post/data-freshness-vs-latency",
+    "name": "Data Freshness vs Latency: Why Fast Queries Still Return",
+    "snippet": "Jan 25, 2026 — Data latency measures how fast a query returns. SLAs specify millisecond thresholds. when a query drops from 50ms to 20ms.",
+    "host_name": "tacnode.io",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to/david_kjerrumgaard_d31d7e/latency-numbers-every-data-streaming-engineer-should-know-h91",
+    "name": "Latency Numbers Every Data Streaming Engineer Should",
+    "snippet": "Ultra-Low Latency (< 10ms End-to-End) · Low Latency (10-200ms End-to-End) · Latency -Relaxed (200ms - Minutes). Read more",
+    "host_name": "dev.to",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dataopsschool.com/blog/latency-sla",
+    "name": "What is Latency SLA? Meaning, Architecture, Examples,",
+    "snippet": "Feb 17, 2026 — A Latency SLA is a formal commitment that a service will respond within a specified time bound for a defined percentage of requests.",
+    "host_name": "dataopsschool.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.ijert.org/machine-learning-for-real-time-sla-violation-detection-in-cloud-services",
+    "name": "Machine Learning for Real-Time SLA Violation Detection in",
+    "snippet": "Dec 16, 2025 — In this paper, we propose a machine-learning (ML) based framework for real- time SLA violation detection in cloud services. Our system ... Read more",
+    "host_name": "www.ijert.org",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/video/dataminr-pulse-for-cyber-risk-solution-overview",
+    "name": "Dataminr Pulse for Cyber Risk: Solution Overview",
+    "snippet": "Strengthen resilience with Dataminr Pulse for Cyber Risk, a real-time, external cyber event, risk, and threat de tection solution.",
+    "host_name": "www.dataminr.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com",
+    "name": "AI-Powered Real-Time Event, Threat & Risk Intelligence - Dataminr",
+    "snippet": "Dataminr is the leading AI platform for real-time event, threat, and risk intelligence. Trusted by Fortune 50 leaders and over 100 U.S. government agencies, we deliver the instant clarity needed for faster, more informed decisions to protect what matters most.",
+    "host_name": "www.dataminr.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

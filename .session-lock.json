@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-08-02T20:06:40.952Z",
-  "totalClauses": 20,
-  "passed": 20,
-  "failed": 0,
+  "timestamp": "2026-08-02T21:55:42.049Z",
+  "totalClauses": 26,
+  "passed": 25,
+  "failed": 1,
   "skipped": 0,
-  "blockingFailed": 0,
+  "blockingFailed": 1,
   "warningFailed": 0,
-  "sessionCanEnd": true,
+  "sessionCanEnd": false,
   "results": [
     {
       "status": "PASS",
@@ -15,7 +15,7 @@
       "id": "CLAUSE-001",
       "type": "BLOCKING",
       "description": "Le schéma Prisma doit contenir au moins 37 modèles",
-      "durationMs": 4
+      "durationMs": 5
     },
     {
       "status": "PASS",
@@ -33,25 +33,25 @@
       "id": "CLAUSE-003",
       "type": "BLOCKING",
       "description": "L'API /api/flagship-report doit retourner 200 OK",
-      "durationMs": 4323
+      "durationMs": 4558
     },
     {
       "status": "PASS",
-      "actual": "20 personnes, 1750 articles",
+      "actual": "32 personnes, 5350 articles",
       "expected": ">= 20 personnes ET >= 1000 articles",
       "id": "CLAUSE-004",
       "type": "BLOCKING",
       "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
-      "durationMs": 3226
+      "durationMs": 3235
     },
     {
-      "status": "PASS",
-      "actual": "224,399 lignes",
-      "expected": ">= 50,000 lignes (palier 1)",
+      "status": "FAIL",
+      "actual": "240,778 lignes",
+      "expected": ">= 250,000 lignes (5% d'AlphaSense)",
       "id": "CLAUSE-005",
       "type": "BLOCKING",
-      "description": "Le projet doit contenir au moins 50,000 lignes de code TypeScript",
-      "durationMs": 20
+      "description": "Le projet doit contenir au moins 250,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC)",
+      "durationMs": 24
     },
     {
       "status": "PASS",
@@ -60,7 +60,7 @@
       "id": "CLAUSE-006",
       "type": "BLOCKING",
       "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
-      "durationMs": 7612
+      "durationMs": 6810
     },
     {
       "status": "PASS",
@@ -69,7 +69,7 @@
       "id": "CLAUSE-007",
       "type": "BLOCKING",
       "description": "Les 5 pages company profiles doivent retourner 200 OK",
-      "durationMs": 432
+      "durationMs": 549
     },
     {
       "status": "PASS",
@@ -82,7 +82,7 @@
     },
     {
       "status": "PASS",
-      "actual": "260 lignes, entrée 2026-08-02 présente",
+      "actual": "614 lignes, entrée 2026-08-02 présente",
       "expected": ">= 150 lignes + entrée du jour",
       "id": "CLAUSE-009",
       "type": "BLOCKING",
@@ -96,7 +96,7 @@
       "id": "CLAUSE-010",
       "type": "BLOCKING",
       "description": "La page /atelier/flagship-report doit retourner 200 OK",
-      "durationMs": 49
+      "durationMs": 39
     },
     {
       "status": "PASS",
@@ -114,16 +114,16 @@
       "id": "CLAUSE-012",
       "type": "BLOCKING",
       "description": "Le serveur de développement doit répondre sur port 3000",
-      "durationMs": 91
+      "durationMs": 69
     },
     {
       "status": "PASS",
-      "actual": "3 fichiers de test",
+      "actual": "4 fichiers de test",
       "expected": ">= 2 fichiers (unit + integration)",
       "id": "CLAUSE-013",
       "type": "BLOCKING",
       "description": "Le projet doit avoir au moins 2 fichiers de test (unit + integration)",
-      "durationMs": 18
+      "durationMs": 3
     },
     {
       "status": "PASS",
@@ -150,25 +150,25 @@
       "id": "CLAUSE-016",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit contenir pgvector + Kafka + LLM gateway",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
-      "actual": "9 fichiers .md",
+      "actual": "11 fichiers .md",
       "expected": ">= 8 fichiers",
       "id": "CLAUSE-017",
       "type": "BLOCKING",
       "description": "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
-      "durationMs": 16
+      "durationMs": 2
     },
     {
       "status": "PASS",
-      "actual": "224,399 lignes",
+      "actual": "240,778 lignes",
       "expected": ">= 100,000 lignes (palier 2)",
       "id": "CLAUSE-018",
       "type": "BLOCKING",
-      "description": "Le projet doit contenir au moins 100,000 lignes de code TypeScript",
-      "durationMs": 43
+      "description": "Le projet doit contenir au moins 100,000 lignes de code TypeScript (palier 2)",
+      "durationMs": 15
     },
     {
       "status": "PASS",
@@ -181,13 +181,69 @@
     },
     {
       "status": "PASS",
-      "actual": "81 tests (approx)",
-      "expected": ">= 40 tests",
+      "actual": "168 tests (approx)",
+      "expected": ">= 80 tests",
       "id": "CLAUSE-020",
       "type": "BLOCKING",
-      "description": "Le projet doit avoir au moins 40 tests automatisés",
+      "description": "Le projet doit avoir au moins 80 tests automatisés",
       "durationMs": 2
+    },
+    {
+      "status": "PASS",
+      "actual": "5,350 articles",
+      "expected": ">= 5,000 articles (AlphaSense: 500M+)",
+      "id": "CLAUSE-021",
+      "type": "BLOCKING",
+      "description": "Base de données: >= 5,000 articles réels (cible réelle, AlphaSense a 500M+)",
+      "durationMs": 4559
+    },
+    {
+      "status": "PASS",
+      "actual": "3.23s",
+      "expected": "<= 10.0s (cible finale: <500ms comme AlphaSense)",
+      "id": "CLAUSE-022",
+      "type": "BLOCKING",
+      "description": "API /api/flagship-report doit répondre en < 10s (AlphaSense p95 <500ms)",
+      "durationMs": 3234
+    },
+    {
+      "status": "PASS",
+      "actual": "2 fichiers real-metrics",
+      "expected": ">= 2 (AlphaSense + Dataminr)",
+      "id": "CLAUSE-023",
+      "type": "BLOCKING",
+      "description": "Dossier competitive-reports doit avoir >= 2 fichiers *real-metrics*.md",
+      "durationMs": 2
+    },
+    {
+      "status": "PASS",
+      "actual": "32 personnes",
+      "expected": ">= 30 personnes",
+      "id": "CLAUSE-024",
+      "type": "BLOCKING",
+      "description": "Base de données: >= 30 personnes réelles",
+      "durationMs": 3226
+    },
+    {
+      "status": "PASS",
+      "actual": "536 snapshots",
+      "expected": ">= 500 snapshots",
+      "id": "CLAUSE-025",
+      "type": "BLOCKING",
+      "description": "Base de données: >= 500 snapshots de sentiment",
+      "durationMs": 3235
+    },
+    {
+      "status": "PASS",
+      "actual": "4,170 prix",
+      "expected": ">= 4,000 prix BVC",
+      "id": "CLAUSE-026",
+      "type": "BLOCKING",
+      "description": "Base de données: >= 4,000 prix BVC",
+      "durationMs": 3454
     }
   ],
-  "nextSteps": []
+  "nextSteps": [
+    "CORRIGER CLAUSE-005: Le projet doit contenir au moins 250,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC)"
+  ]
 }

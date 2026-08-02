@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://aerospike.com/resources/customer-stories/dataminr",
+    "name": "Dataminr - Customer story",
+    "snippet": "Discover how Dataminr replaced DynamoDB and Redis with Aerospike to scale real - time predictive and Generative AI, processing billions of daily signals .\nDiscover how Dataminr replaced DynamoDB and Redis with Aerospike to scale real-time predictive and Generative AI, processing billions of daily signals.",
+    "host_name": "aerospike.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com",
+    "name": "Dataminr: AI-Powered Real-Time Event, Threat & Risk",
+    "snippet": "Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...\nFuse real-time external intelligence with deep organizational telemetry to contextualize, prioritize, and automate your defense. From first signal to risk-prioritized action.",
+    "host_name": "www.dataminr.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/ai-powered-real-time-event-threat-risk-intelligence",
+    "name": "What is AI-Powered Real-Time Event, Threat & Risk",
+    "snippet": "Sep 30, 2025 — Dataminr's AI-powered real-time event, threat & risk intelligence answers the “what, so what, and now what” behind every security event.",
+    "host_name": "www.dataminr.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/press/dataminr-expands-partnership-with-nato-to-provide-ai-powered-real-time-alerts-for-global-force-and-infrastructure-protection",
+    "name": "Dataminr Expands Partnership With NATO",
+    "snippet": "Dataminr has created a revolutionary real - time AI platform for detecting events , risks and critical information from public data signals . Read more",
+    "host_name": "www.dataminr.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/video/protect-your-organization-with-dataminr-for-corporate-security-your-real-time-corporate-security-risk-intelligence-platform",
+    "name": "Solution Overview Dataminr Pulse for Corporate Security",
+    "snippet": "Protect your people and minimize business disruptions with Dataminr Pulse for Corporate Security, a real - time corporate security risk solution.",
+    "host_name": "www.dataminr.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://businessmodelcanvastemplate.com/blogs/how-it-works/dataminr-how-it-works?srsltid=AfmBOoo3vvE7D016Jx-X7KQ83s6NiPa6NTdbITXEUEEd4edDn2bjq6PO",
+    "name": "How Does Dataminr Company Work?",
+    "snippet": "Mar 16, 2026 — Dataminr turns billions of public signals into split-second, actionable alerts that help newsrooms, traders, and first responders act faster.",
+    "host_name": "businessmodelcanvastemplate.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima",
+    "name": "Dataminr Pulse - AWS Marketplace - Amazon.com",
+    "snippet": "Dataminr Pulse for Cyber Risk is a real-time, external cyber event, risk, and threat detection solution that uses AI across public data to proactively ... Read more",
+    "host_name": "aws.amazon.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://doc.esri.com/en/arcgis-velocity/latest/ingest/dataminr.html",
+    "name": "Dataminr | ArcGIS Velocity documentation",
+    "snippet": "The Dataminr feed type in ArcGIS Velocity creates a built-in HTTP endpoint that can be used to receive real - time alert events from Dataminr . Read more",
+    "host_name": "doc.esri.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://newcomglobal.com/dataminr",
+    "name": "Dataminr",
+    "snippet": "Dataminr's AI solution is the leader in generating real - time alerting for both physical and cyber threats. The Dataminr solution provides Public and Private ...",
+    "host_name": "newcomglobal.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.recodehive.com/blog/netflix-data-engineering",
+    "name": "How Netflix Handles 2 Trillion Events Every Day - recode hive",
+    "snippet": "Every single one of these actions is an event. And Netflix captures all of them from 300 million subscribers across 190 countries, continuously, in real time. The scale: 2 trillion events every single day. That's 3 petabytes of data ingested, 7 petabytes output, at a peak rate of 12.5 million events per second.",
+    "host_name": "www.recodehive.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

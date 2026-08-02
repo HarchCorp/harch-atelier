@@ -1,0 +1,359 @@
+=== search20_volume.json ===
+  [0] The Value of Real-time Information for the Public Sector
+      URL: https://www.dataminr.com/resources/insight/the-value-of-real-time-information-for-the-public-sector
+      SNIP: Jan 14, 2026 — Twelve years ago, about 95 percent of Dataminr's public information sources didn't even exist. Today, we integrate more than 1 million public ... Read more
+
+  [1] Dataminr's ReGenAI Expands to Cover Hyperlocal Events
+      URL: https://www.dataminr.com/press/announcement/dataminrs-regenai-expands-to-cover-hyperlocal-events-across-the-globe-delivering-10x-more-dynamically-updating-event-briefs
+      SNIP: Sep 18, 2024 — Dataminr has created a revolutionary real-time AI platform for detecting events, risks and critical information from public data signals. Read more
+
+  [2] The Total Economic Impact™ Of Dataminr First Alert
+      URL: https://tei.forrester.com/go/dataminr/FirstAlert/?lang=en-us
+      SNIP: Dataminr First Alert automates the collection and filtering of information from multiple public data sources to reduce the manual effort that operations ... Read more
+
+  [3] Dataminr raises $475M on a $4.1B valuation for real-time
+      URL: https://techcrunch.com/2021/03/23/dataminr-raises-475m-on-a-4-1b-valuation-for-real-time-insights-based-on-100k-sources-of-public-data
+      SNIP: Mar 23, 2021 — Dataminr raises $475M on a $4.1B valuation for real-time insights based on 100 k sources of public data. Read more
+
+  [4] Forrester Consulting's Total Economic Impact™ Study
+      URL: https://www.dataminr.com/resources/video/forrester-consultings-total-economic-impact-study-reveals-5-key-advantages-of-dataminr-pulse
+      SNIP: Discover five key advantages organizations can realize by leveraging Dataminr Pulse—including saving time and money when mitigating fast-evolving risks.
+
+  [5] The Big Data Revolution in News
+      URL: https://www.venrock.com/insights/the-big-data-revolution-in-news
+      SNIP: There are half a billion to a billion tweets per day, and Dataminr's algorithms process this stream of data and associated metadata in real-time to discover ... Read more
+
+  [6] Dataminr - AI for Social Media Big Data Mining
+      URL: https://www.nanalyze.com/2018/07/dataminr-ai-social-media-big-data-mining
+      SNIP: Jul 30, 2018 — Dataminr aggregates social media data in real-time , including upwards of 500 million tweets per day, and uses machine learning to identify and ...
+
+  [7] Big data analytics firm Dataminr raises $475M to fund
+      URL: https://venturebeat.com/business/big-data-analytics-firm-dataminr-raises-475m-to-fund-platform-expansion
+      SNIP: Mar 23, 2021 — Dataminr , a company leveraging AI to analyze data from scores of public data sources , has raised $475 million in venture capital.
+
+
+=== search21_snowflake.json ===
+  [0] Deploying End-to-End Kafka Streaming SI Detection
+      URL: https://docs.rapids.ai/deployment/stable/examples/rapids-morpheus-pipeline/notebook
+      SNIP: This example demonstrates how to build and deploy a production-like, GPU -accelerated streaming pipeline for sensitive information detection using NVIDIA RAPIDS,
+
+  [1] Real-Time Analytics with Kafka, Interactive Tables, and
+      URL: https://www.snowflake.com/en/developers/guides/kafka-interactive-tables-streaming
+      SNIP: Jan 15, 2026 — In this quickstart, you will learn how to build a real-time data pipeline that ingests IoT sensor data from Apache Kafka into Snowflake ...
+
+  [2] nvidia
+      URL: https://www.snowflake.com/en/blog/nvidia-gpu-acceleration
+      SNIP: Nov 18, 2025 — Snowflake ML now has NVIDIA cuML and cuDF to GPU -accelerate scikit-learn and pandas, offering up to 200x speedups with no code changes ...
+
+  [3] Introducing Snowflake Datastream: Real-Time Streaming
+      URL: https://www.youtube.com/watch?v=x42Yepsx7qI
+      SNIP: Snowflake Datastream is a native, Apache Kafka-compatible streaming service that powers AI applications and decision systems with the freshest  ...
+
+  [4] Snowflake output connector (experimental)
+      URL: https://docs.feldera.com/connectors/sinks/snowflake
+      SNIP: Feldera outputs a stream of changes to a table or view to a Kafka topic . The Snowflake Connector for Kafka reads the changes from Kafka and pushes them to a ...
+
+  [5] Beginner's Guide to GPU-Accelerated Event Stream
+      URL: https://developer.nvidia.com/blog/beginners-guide-to-gpu-accelerated-event-stream-processing-in-python
+      SNIP: Mar 25, 2021 — Kafka cluster using. In this section, we will show you how to set up your own mini- Kafka cluster using Docker. topics , partitions, replication, ...
+
+  [6] Intro to Kafka and Snowflake Managed Iceberg
+      URL: https://www.snowflake.com/en/developers/guides/kafka-working-with-iceberg-tables
+      SNIP: This guide provides a comprehensive walkthrough for establishing a local data streaming pipeline from open-source Apache Kafka to Snowflake -managed Iceberg ...
+
+  [7] Building a Real-time Snowflake Data Pipeline
+      URL: https://www.integrate.io/blog/building-a-snowflake-data-pipeline
+      SNIP: Aug 17, 2023 — This comprehensive guide explores the process of building a real-time data pipeline using Snowflake and Kafka , covering essential topics .
+
+
+=== search22_regennai.json ===
+  [0] What Is Real-Time AI?
+      URL: https://www.dataminr.com/glossary/what-is-real-time-ai
+      SNIP: Jan 26, 2026 — Real - time AI processes, analyzes, and responds to incoming data with minimal latency , often in milliseconds . often under 100 milliseconds .
+
+  [1] Dataminr's ReGenAI Expands to Cover Hyperlocal Events
+      URL: https://www.dataminr.com/press/announcement/dataminrs-regenai-expands-to-cover-hyperlocal-events-across-the-globe-delivering-10x-more-dynamically-updating-event-briefs
+      SNIP: Sep 18, 2024 — Dataminr has created a revolutionary real-time AI platform for detecting events, risks and critical information from public data signals. Read more
+NEW YORK – September 18, 2024 – Dataminr, one of the world’s leading AI companies, today announced a milestone for ReGenAI, a new form of Generative AI that automatically updates and regenerates live information briefs as an event unfold
+
+  [2] Dataminr Launches ReGenAI
+      URL: https://www.dataminr.com/resources/video/dataminr-ai-platform-the-future-of-real-time-information
+      SNIP: The first Generative AI that automatically regenerates in real-time as events . ReGenAI distills multidimensional events into concise event  ...
+
+  [3] ReGenAI | Automatically Regenerates in Real Time
+      URL: https://www.dataminr.com/press/dataminr-unveils-regenai-the-first-generative-ai-that-automatically-regenerates-in-real-time
+      SNIP: Apr 18, 2024 — Dataminr's ReGenAI transforms rapidly unfolding multidimensional events into dynamically updating event briefs.
+“ReGenAI moves generative AI beyond the ‘prompt’ paradigm, with automatically regenerating event briefs that dynamically update in real time as an event evolves,” said Ted Bailey, Dataminr’s Founder and CEO.
+
+  [4] Dataminr Unveils ReGenAI, the First Generative AI That
+      URL: https://www.prnewswire.com/news-releases/dataminr-unveils-regenai-the-first-generative-ai-that-automatically-regenerates-in-real-time-302120171.html
+      SNIP: Apr 18, 2024 — ReGenAI transforms rapidly unfolding multidimensional events into dynamically updating event briefs . Breakthrough powered by Dataminr's ... Read more
+Using predictive AI to analyze and synthesize key developments detected in more than one million public data sources, ReGenAI distills multidimensional events into concise event briefs that...
+
+  [5] Ted Bailey - dataminr #regenai #genai
+      URL: https://www.linkedin.com/posts/ted-bailey-11b3492_dataminr-regenai-genai-activity-7245870950733201409-Acfb
+      SNIP: Dataminr's products will not only discover and describe events, threats and risks in real - time as they unfold, our AI will predict and describe ...
+
+  [6] AI Platform
+      URL: https://www.dataminr.com/ai-platform
+      SNIP: Dataminr's groundbreaking ReGenAI delivers live, evolving briefs that automatically regenerate in real time as events unfold, with 99.5% accuracy.
+
+  [7] ReGenAI Customer Perspective: Six Flags
+      URL: https://www.dataminr.com/resources/video/regenai-customer-perspective-six-flags
+      SNIP: Six Flags' Corporate Vice President explains how Dataminr's ReGenAI helps his team manage events, risks and threats.
+
+
+=== search23_nato.json ===
+  [0] Dataminr Expands Partnership With NATO
+      URL: https://www.dataminr.com/press/dataminr-expands-partnership-with-nato-to-provide-ai-powered-real-time-alerts-for-global-force-and-infrastructure-protection
+      SNIP: Dataminr Expands Partnership With NATO to Provide AI-powered Real-time Alerts for Global Force and Infrastructure Protection
+“The indications and warnings created by Dataminr’s AI platform are the gold standard for fast and accurate real-time information on breaking events.” “We are thrilled to expand our partnership with NATO and to support their critical global mission,” said Ted Bailey, Founder
+
+  [1] Dataminr and NATO Deepen Partnership to Advance
+      URL: https://www.dataminr.com/press/announcement/dataminr-and-nato-deepen-partnership-to-advance-cyber-defenses
+      SNIP: Feb 14, 2025 — The North Atlantic Treaty Organization ( NATO ) is deploying Dataminr to better protect networks and increase real - time cyber domain awareness using AI. Read more
+This deployment expands on NATO’s existing three-year agreement for Dataminr First Alert, the company’s product for the public sector. Faced with daily hybrid and cyber attacks, NATO and its networks require constant vig
+
+  [2] Dataminr Expands Partnership With NATO to Provide AI-
+      URL: https://www.prnewswire.com/news-releases/dataminr-expands-partnership-with-nato-to-provide-ai-powered-real-time-alerts-for-global-force-and-infrastructure-protection-302104998.html
+      SNIP: Apr 2, 2024 — Dataminr Expands Partnership With NATO to Provide AI-powered Real-time Alerts for Global Force and Infrastructure Protection
+NEW YORK, April 2, 2024 /PRNewswire/ -- Today, Dataminr, one of the world's leading AI companies, and the North Atlantic Treaty Organization (NATO) have announced an expansion of their...
+
+  [3] Ted Bailey's Post - Dataminr
+      URL: https://www.linkedin.com/posts/ted-bailey-11b3492_dataminr-expands-partnership-with-nato-to-activity-7181060837573283840-pKwi
+      SNIP: Dataminr Expands Partnership With NATO to Provide AI-powered Real-time Alerts for Global Force and Infrastructure Protection
+
+  [4] Dataminr Expands Partnership with NATO to Provide AI-
+      URL: https://www.hpcwire.com/bigdatawire/this-just-in/dataminr-expands-partnership-with-nato-to-provide-ai-powered-real-time-alerts-for-global-force-and-infrastructure-protection
+      SNIP: Dataminr Expands Partnership with NATO to Provide AI-powered Real-time Alerts for Global Force and Infrastructure Protection Government April 2, 2024
+
+  [5] Platform Partner Program
+      URL: https://www.dataminr.com/partners/platform-partners
+      SNIP: Transform your supply chain platform by enabling operators to act in real time to keep goods flowing with instant alerts on cargo risks across air, land, and ... Read more
+
+  [6] Dataminr Pulse for Cyber Risk: Solution Overview
+      URL: https://www.dataminr.com/resources/video/dataminr-pulse-for-cyber-risk-solution-overview
+      SNIP: Strengthen resilience with Dataminr Pulse for Cyber Risk, a real-time external cyber event, risk and threat detection solution .
+
+  [7] Dataminr, Inc. First Alert V2 Software
+      URL: https://sam.gov/opp/a9f69c5ef0aa43d48c900c064bf0562d/view
+      SNIP: Jul 18, 2023 — The ADS-B tracked signals provide real - time time-series data for about 150,000 flights within a 24-hour period, at a rate of hundreds of data ... Read more
+
+
+=== search24_engblog.json ===
+  [0] Architectural patterns for real-time analytics using
+      URL: https://aws.amazon.com/blogs/big-data/architectural-patterns-for-real-time-analytics-using-amazon-kinesis-data-streams-part-1
+      SNIP: Jan 8, 2024 — This is the first post to a blog series that offers common architectural patterns in building real-time data streaming infrastructures using Kinesis Data ... Read more
+This is the first post to a blog series that offers common architectural patterns in building real-time data streaming infrastructures using Kinesis Data Streams for a wide range of use cases.
+
+  [1] Serverless real-time architecture on AWS: there is a way !
+      URL: https://blog.octo.com/serverless-real-time-architecture-on-aws-there-is-a-way
+      SNIP: Feb 2, 2016 — Kinesis Stream is a platform devoted to collect and process records in real-time . If you are familiar with Kafka, Kinesis as a messages queue
+
+  [2] Getting Started with Amazon Kinesis for Real-Time Data
+      URL: https://www.cloudoptimo.com/blog/getting-started-with-amazon-kinesis-for-real-time-data
+      SNIP: May 12, 2025 — This architecture supports real-time decision-making and anomaly detection , allowing businesses to act quickly on data from millions of devices.
+
+  [3] Building a real-time API on a Kafka/Kinesis-centric structure
+      URL: https://softwareengineering.stackexchange.com/questions/367883/building-a-real-time-api-on-a-kafka-kinesis-centric-structure
+      SNIP: Mar 19, 2018 — I am a beginner to the event-driven data architecture using Kafka / Kinesis as the centrepiece (currently Kinesis ) and I have some questions ... Read more
+
+  [4] Kinesis vs Kafka for Real-Time Data Ingestion
+      URL: https://www.linkedin.com/posts/ankitpatel27_dataengineering-bestpractices-dataplatform-activity-7481208357945671680-DBqW
+      SNIP: Kafka for Real-Time Data Ingestion. Kinesis Data Streams and Apache Kafka are interchangeable solutions . We use Debezium, Kafka, Flink, Kinesis ...
+
+  [5] Real Time Streaming with Kafka and Flink - Introduction - Cevo
+      URL: https://cevo.com.au/post/real-time-streaming-with-kafka-and-flink-1
+      SNIP: Oct 5, 2023 — This series updates a real time analytics app based on Amazon Kinesis . Kinesis is an AWS workshop that helps users build a streaming analytics ...
+
+  [6] Architectural Patterns for real-time analytics using Amazon
+      URL: https://community.amazonquicksight.com/t/architectural-patterns-for-real-time-analytics-using-amazon-kinesis-data-streams-part-2-ai-applications/30596
+      SNIP: May 28, 2024 — Kinesis Data Streams can ingest data in real time from data stores such as DynamoDB. Kinesis Data Streams, and Lambda
+
+  [7] Real Time Flights Analytics with AWS, Kafka and Metabase
+      URL: https://www.reddit.com/r/dataengineering/comments/17nyeox/first_data_engineering_project_real_time_flights
+      SNIP: The project is an end-to-end pipeline that gets flights over a region every 15 minutes from Flight Radar API, then pushes it using Lambda to a  ...
+
+
+=== search25_watchkeeper.json ===
+  [0] Dataminr Acquires WatchKeeper Geovisualization Platform
+      URL: https://www.dataminr.com/press/dataminr-acquires-watchkeeper-geovisualization-platform
+      SNIP: Jul 7, 2021 — Dataminr, the leading real-time information discovery platform , today announced the acquisition of WatchKeeper, an innovative real-time data geovisualization ... Read more
+Jul 7, 2021 — The acquisition of WatchKeeper comes on the heels of Dataminr's $475M growth capital financing in April 2021 which valued the company at $4.1B. Read more
+
+  [1] New Capabilities Added to Corporate Product Offering
+      URL: https://www.dataminr.com/press/dataminr-bolsters-corporate-product-offering-with-new-capabilities
+      SNIP: Apr 5, 2022 — Dataminr made two strategic acquisitions in 2021, UK-based, WatchKeeper , a data geovisualization platform, and Copenhagen-based, real-time ...
+Apr 5, 2022 — Dataminr made two strategic acquisitions in 2021, UK-based, WatchKeeper , a data geovisualization platform, real-time crisis response platform, ...
+
+  [2] Dataminr Acquires WatchKeeper, A Real-time Data
+      URL: https://www.prnewswire.com/news-releases/dataminr-acquires-watchkeeper-a-real-time-data-geovisualization-platform-for-corporate-enterprises-301326854.html
+      SNIP: Jul 7, 2021 — Combining Dataminr's real-time alerts with WatchKeeper's geo-visualized data layers will provide customers with broader context around real-time ... Read more
+
+  [3] Use Dark Web Data Sources to Protect Your Organization
+      URL: https://www.dataminr.com/resources/insight/use-dark-web-data-sources-to-protect-your-organization-from-cyber-attacks
+      SNIP: Dataminr Pulse . It detects cyber threats as they emerge across the surface, deep and dark web and identifies vulnerabilities in internet-facing networks.
+Dataminr Pulse. It detects cyber threats as they emerge across the surface, deep and dark web and identifies vulnerabilities in internet -facing networks.
+
+  [4] SecurityScorecard and Dataminr Partner to Deliver
+      URL: https://securityscorecard.com/blog/securityscorecard-and-dataminr-partner-to-deliver-preemptive-cyber-defense-for-the-enterprise
+      SNIP: Today, Dataminr and SecurityScorecard entered into a joint MOU to bring a new class of integrated cyber defense to enterprise and public sector organizations. Read more
+
+  [5] Dataminr To Acquire ThreatConnect For $290M, Boost AI
+      URL: https://www.crn.com/news/security/2025/dataminr-to-acquire-threatconnect-for-290m-boost-ai-driven-threat-intel
+      SNIP: Dataminr announced Tuesday it has reached a deal to acquire ThreatConnect for $290 million , in a move aimed at boosting its capabilities around AI-powered ...
+
+  [6] Dataminr Pulse for Cyber Risk: Solution Overview
+      URL: https://www.dataminr.com/resources/video/dataminr-pulse-for-cyber-risk-solution-overview
+      SNIP: Strengthen resilience with Dataminr Pulse for Cyber Risk, a real-time, external cyber event, risk, and threat detection solution.
+Strengthen resilience with Dataminr Pulse for Cyber Risk , a real-time, external cyber event, risk , and threat detection solution.
+
+  [7] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . Dataminr to Acquire ThreatConnect Fusing Internal and External Data for ...
+Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...
+
+
+=== search26_sounder.json ===
+  [0] The Power of Streaming Audio Data for Enhancing
+      URL: https://www.dataminr.com/resources/blog/the-power-of-streaming-audio-data-for-enhancing-emergency-event-detection
+      SNIP: Nov 8, 2019 — Dataminr's AI platform now transforms the live audio transmissions of publicly available emergency dispatch broadcasts into early alerts on active safety ...
+
+  [1] Dataminr CEO Ted Bailey on eyeing an IPO in 2023
+      URL: https://www.youtube.com/watch?v=eIs2ESwCri8
+      SNIP: Dataminr is now valued at over $4 billion . CEO Ted Bailey joins 'Squawk Alley' to discuss the company's future outlook and the big data ...
+
+  [2] Triton Digital acquires Sounder - RedTech
+      URL: https://www.redtech.pro/triton-digital-acquires-sounder
+      SNIP: Triton Digital has announced its acquisition of the audio intelligence platform Sounder . Triton says Sounder will continue to provide advanced contextual ...
+
+  [3] Triton Digital Acquires Audio Brand Safety Startup To Scale
+      URL: https://www.adexchanger.com/audio/triton-digital-acquires-audio-brand-safety-startup-to-scale-programmatic
+      SNIP: Mar 27, 2024 — Triton Digital acquired AI brand safety and suitability startup Sounder in a bid to improve its programmatic chops. for $230 million.
+
+  [4] About Us
+      URL: https://www.dataminr.com/company
+      SNIP: Dataminr is the global leader in AI-powered real-time event, threat & risk intelligence . We first pioneered Multi-Modal Fusion AI, synthesizing text in 150 ...
+
+  [5] Sounder and Urban One Release Groundbreaking
+      URL: https://www.prnewswire.com/news-releases/sounder-and-urban-one-release-groundbreaking-research-on-aiml-driven-brand-safety-and-suitability-for-podcasting-301891342.html
+      SNIP: Aug 2, 2023 — Sounder and Urban One Release Groundbreaking Research on AI /ML-Driven Brand Safety and Suitability for Podcasting. Urban One Inc. / Sounder ( ...
+
+  [6] Sounder - 2026 Company Profile & Team
+      URL: https://tracxn.com/d/companies/sounder/__G_S2IDHPrpb22bbDerucrGEH7i-Y8lF0B1dxDy15KbQ
+      SNIP: Sounder is an acquired company . It operates as an AI based audio intelligence platform. Sounder got acquired by Triton Digital on Mar 26, 2024. has raised a ...
+
+  [7] Triton Digital acquires Sounder, enhancing audio
+      URL: https://podnews.net/press-release/triton-sounder
+      SNIP: Mar 26, 2024 — Triton Digital, the global technology and services leader in the digital audio , podcast, and broadcast radio industries, announced the acquisition of Sounder.
+
+
+=== search27_news_clients.json ===
+  [0] AI Newsgathering for Modern Newsrooms
+      URL: https://www.dataminr.com/products/dataminr-for-news
+      SNIP: Dataminr for News acts as a force multiplier for more than 1,500 newsrooms and 30,000 journalists, enabling them to find stories faster and share information
+Dataminr for News Helps journalists in over 1,500 newsrooms to break news on the stories that matter most to their audiences.
+
+  [1] The Big Data Revolution in News
+      URL: https://www.venrock.com/insights/the-big-data-revolution-in-news
+      SNIP: Data minr, a big data startup based in New York, announced something pretty extraordinary: that it would become the news discovery platform for CNN. Dataminr ...
+Dataminr alerted its clients of the news at 10:20pm. Bloomberg and the New York Times began reporting the news at 10:43pm.
+
+  [2] The Daily Mail
+      URL: https://www.dataminr.com/resources/case-study/daily-mail
+      SNIP: Nearly 650 Daily Mail journalists have been using Dataminr for News to break global and local stories in real time as they unfold.
+
+  [3] Tool Called Dataminr Hunts for News in the Din of Twitter
+      URL: https://www.nytimes.com/2014/09/24/business/media/Dataminr-Scours-Social-Media-for-Hot-Tips.html
+      SNIP: Sep 23, 2014 — Dataminr , a software tool aimed specifically at analyzing billions of Twitter postings for patterns that could indicate breaking news .
+Sep 23, 2014 — Dataminr , a software tool aimed specifically at analyzing billions of Twitter postings for patterns that could indicate breaking news . Read more
+
+  [4] Dataminr Customers
+      URL: https://www.dataminr.com/company/customers/v1
+      SNIP: Dataminr serves hundreds of private and public sector client organizations whose users span more than 75 countries.
+
+  [5] To reach journalists on their home turf, Dataminr launches
+      URL: https://www.poynter.org/tech-tools/2017/seeking-to-reach-journalists-on-their-own-terms-dataminr-launches-a-slack-integration
+      SNIP: Feb 6, 2017 — Dataminr has been used by hundreds of news organizations around the world, including CNN , BBC , USA Today, The Huffington Post and France Info.
+
+  [6] Dataminr For News
+      URL: https://marketplace.microsoft.com/en-us/product/office/wa200004861?tab=overview
+      SNIP: Many newsrooms around the world, including CNN , rely on Dataminr for News . Customer Support Team at support@ dataminr .com
+Many newsrooms around the world, including CNN , The Daily Mail, and The Washington Post, rely on Dataminr for News to be the first to find the story. Read more
+
+  [7] How to Stay on Top of Breaking News
+      URL: https://www.nytimes.com/2018/04/11/technology/personaltech/how-to-stay-on-top-of-breaking-news.html
+      SNIP: Apr 11, 2018 — I use a couple of surfacing tools, most prominently Dataminr . Basically what it does is provide us with a continuously updating feed of tweets ...
+Apr 11, 2018 — Dataminr provides a feed of Twitter posts that contain breaking news .Credit...Mark. It has New York Times journalists who had reported on the ...
+
+
+=== search28_products.json ===
+  [0] Dataminr First Alert
+      URL: https://www.dataminr.com/products/first-alert
+      SNIP: Dataminr First Alert , a real-time critical event discovery solution. Maintain situational awareness and make decisions with confidence. Read more
+
+  [1] Dataminr Expands Strategic Partnership With Carahsoft
+      URL: https://www.dataminr.com/press/dataminr-expands-strategic-partnership-with-carahsoft
+      SNIP: Mar 14, 2024 — Dataminr expands delivery of First Alert through Carahsoft's NASPO ValuePoint contract, bringing critical real-time alerts to more public sector organizations. Read more
+
+  [2] Dataminr Expands Partnership With NATO
+      URL: https://www.dataminr.com/press/dataminr-expands-partnership-with-nato-to-provide-ai-powered-real-time-alerts-for-global-force-and-infrastructure-protection
+      SNIP: The company's First Alert product serves the defense, federal, state and local and NGO markets in both the U.S and across the globe, including the United ... Read more
+
+  [3] Dataminr: AI-Powered Real-Time Event, Threat & Risk
+      URL: https://www.dataminr.com
+      SNIP: Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . First Alert Increase decision-making speed with a real-time critical ...
+Dataminr is the leading AI platform for real-time event, threat, and risk intelligence . Trusted by Fortune 50 leaders and over 100 U.S. government agencies, ...
+
+  [4] Dataminr Pulse - AWS Marketplace - Amazon.com
+      URL: https://aws.amazon.com/marketplace/pp/prodview-3tflfnrcskima
+      SNIP: Dataminr Pulse delivers the earliest actionable intelligence on breaking events, emerging threats, and unexpected risks across the physical, digital, and cyber ... Read more
+
+  [5] Dataminr First Alert vs Finimize Daily News API comparison
+      URL: https://www.peerspot.com/products/comparisons/dataminr-first-alert_vs_finimize-daily-news-api
+      SNIP: Dataminr First Alert provides real-time alerts enabling organizations to detect and respond to events swiftly. It processes information from numerous sources,
+
+  [6] Dataminr First Alert
+      URL: https://www.linkedin.com/products/dataminr-first-alert
+      SNIP: Dataminr First Alert enables public sector organizations to detect breaking events and extract actionable insights faster than ever before so they can maintain ... Read more
+
+  [7] Dataminr Pulse for the Financial Services Sector
+      URL: https://www.dataminr.com/products/pulse/financial-services-sector
+      SNIP: Dataminr Pulse helps financial services organizations mitigate risk by detecting the earliest signals of high-impact events and emerging risks.
+
+
+=== search29_43tb.json ===
+  [0] TEST: Solutions Page
+      URL: https://www.dataminr.com/test-solutions-page
+      SNIP: Dataminr processes over 43 TBs of public data daily , combining information in text, images, audio and video from over 1 million sources in 150 languages
+
+  [1] Delivering Information and Decision Advantage in the
+      URL: https://www.dataminr.com/resources/insight/delivering-information-decision-advantage-defense
+      SNIP: Feb 3, 2026 — Dataminr's AI platform delivers rapid, actionable insights by processing 43TB of global public data daily, enabling faster, more confident ...
+
+  [2] BigDATAwire - Data Science • AI • Advanced Analytics
+      URL: https://www.hpcwire.com/bigdatawire/2025/02/27/the-ai-firm-turning-1m-real-time-data-sources-into-actionable-intelligence
+      SNIP: Feb 27, 2025 — Dataminr's data firehose currently consists of 1 million data sources , which generates 43TB of raw data per day, Dataminr supports 150 ...
+Feb 27, 2025 — Dataminr's data firehose currently consists of 1 million data sources, which generates 43TB of raw data per day , said Dataminr Chief Partner ...
+
+  [3] AI Platform
+      URL: https://www.dataminr.com/ai-platform
+      SNIP: Dataminr's groundbreaking Multi-Modal Fusion AI processes over 1M public data sources—spanning text in 150 languages , images, video, sound, and sensor data . Read more
+
+  [4] Public Data and Advanced AI Mitigate Third-Party Risks
+      URL: https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer
+      SNIP: Dataminr discuss combining AI models with public data to mitigate third-party risk. large volumes of public data are processed to identify ...
+At Black Hat 2024, leaders from Citi, NightDragon and Dataminr discuss combining AI models with public data to mitigate third-party risk.
+
+  [5] Big data analytics firm Dataminr raises $475M to fund
+      URL: https://venturebeat.com/business/big-data-analytics-firm-dataminr-raises-475m-to-fund-platform-expansion
+      SNIP: Mar 23, 2021 — Today Dataminr claims to perform trillions of daily computations across billions of public data inputs in more than 150 languages , drawing on ...
+
+  [6] Dataminr Careers, Perks + Culture
+      URL: https://builtin.com/company/dataminr
+      SNIP: Dataminr processes billions of data units daily from 100,000+ public information sources in 100+ languages and in multiple formats -- including text, images, ...
+
+  [7] Dataminr - News API Provider | Newsoid.org
+      URL: https://newsoid.org/providers/dataminr
+      SNIP: Dataminr processes 43+ TB of text, imagery, video, audio, and sensor data daily from 1M+ public sources in 150+ languages. It provides sub-minute breaking event ...
+

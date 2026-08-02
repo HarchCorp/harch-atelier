@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://aws.amazon.com/blogs/big-data/architectural-patterns-for-real-time-analytics-using-amazon-kinesis-data-streams-part-1",
+    "name": "Architectural patterns for real-time analytics using",
+    "snippet": "Jan 8, 2024 — This is the first post to a blog series that offers common architectural patterns in building real-time data streaming infrastructures using Kinesis Data ... Read more\nThis is the first post to a blog series that offers common architectural patterns in building real-time data streaming infrastructures using Kinesis Data Streams for a wide range of use cases.",
+    "host_name": "aws.amazon.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://blog.octo.com/serverless-real-time-architecture-on-aws-there-is-a-way",
+    "name": "Serverless real-time architecture on AWS: there is a way !",
+    "snippet": "Feb 2, 2016 — Kinesis Stream is a platform devoted to collect and process records in real-time . If you are familiar with Kafka, Kinesis as a messages queue",
+    "host_name": "blog.octo.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.cloudoptimo.com/blog/getting-started-with-amazon-kinesis-for-real-time-data",
+    "name": "Getting Started with Amazon Kinesis for Real-Time Data",
+    "snippet": "May 12, 2025 — This architecture supports real-time decision-making and anomaly detection , allowing businesses to act quickly on data from millions of devices.",
+    "host_name": "www.cloudoptimo.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://softwareengineering.stackexchange.com/questions/367883/building-a-real-time-api-on-a-kafka-kinesis-centric-structure",
+    "name": "Building a real-time API on a Kafka/Kinesis-centric structure",
+    "snippet": "Mar 19, 2018 — I am a beginner to the event-driven data architecture using Kafka / Kinesis as the centrepiece (currently Kinesis ) and I have some questions ... Read more",
+    "host_name": "softwareengineering.stackexchange.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/posts/ankitpatel27_dataengineering-bestpractices-dataplatform-activity-7481208357945671680-DBqW",
+    "name": "Kinesis vs Kafka for Real-Time Data Ingestion",
+    "snippet": "Kafka for Real-Time Data Ingestion. Kinesis Data Streams and Apache Kafka are interchangeable solutions . We use Debezium, Kafka, Flink, Kinesis ...",
+    "host_name": "www.linkedin.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://cevo.com.au/post/real-time-streaming-with-kafka-and-flink-1",
+    "name": "Real Time Streaming with Kafka and Flink - Introduction - Cevo",
+    "snippet": "Oct 5, 2023 — This series updates a real time analytics app based on Amazon Kinesis . Kinesis is an AWS workshop that helps users build a streaming analytics ...",
+    "host_name": "cevo.com.au",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://community.amazonquicksight.com/t/architectural-patterns-for-real-time-analytics-using-amazon-kinesis-data-streams-part-2-ai-applications/30596",
+    "name": "Architectural Patterns for real-time analytics using Amazon",
+    "snippet": "May 28, 2024 — Kinesis Data Streams can ingest data in real time from data stores such as DynamoDB. Kinesis Data Streams, and Lambda",
+    "host_name": "community.amazonquicksight.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/dataengineering/comments/17nyeox/first_data_engineering_project_real_time_flights",
+    "name": "Real Time Flights Analytics with AWS, Kafka and Metabase",
+    "snippet": "The project is an end-to-end pipeline that gets flights over a region every 15 minutes from Flight Radar API, then pushes it using Lambda to a  ...",
+    "host_name": "www.reddit.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.doit.com/blog/data-streaming-in-aws-too-many-choices",
+    "name": "Data Streaming in AWS: Too Many Choices - DoiT",
+    "snippet": "Sep 21, 2021 — Kinesis Data Streams: When you need to perform real-time analytics on EC2, EMR, or Lambda and don't mind some added development complexity ... Read more",
+    "host_name": "www.doit.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dataskew.io/blog/apache-kafka-for-data-engineers",
+    "name": "Apache Kafka for Data Engineers: Architecture, Use Cases",
+    "snippet": "Learn Apache Kafka architecture, key concepts, and practical use cases. Includes Python examples, Docker setup, and comparisons with Pub/Sub and Kinesis.",
+    "host_name": "dataskew.io",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

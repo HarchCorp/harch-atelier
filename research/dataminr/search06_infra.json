@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://aws.amazon.com/blogs/containers/introducing-data-on-eks-modernize-data-workloads-on-amazon-eks",
+    "name": "Introducing Data on EKS – Modernize Data Workloads",
+    "snippet": "Mar 28, 2023 — Data on EKS (DoEKS) provides best practices, examples, and architectures aimed at making it easier to build, deploy, and scale data-intensive ...",
+    "host_name": "aws.amazon.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.confluent.io/blog/design-and-deployment-considerations-for-deploying-apache-kafka-on-aws",
+    "name": "AWS Kafka - Guide to Design & Kafka Deployment",
+    "snippet": "Sep 6, 2023 — Let's take a look at the best practices to follow for deploying, monitoring, and managing your Apache Kafka cluster in AWS .",
+    "host_name": "www.confluent.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=noVq0i1BaBw&vl=en",
+    "name": "Build an AWS EKS Kubernetes Apache Kafka Cluster (HA",
+    "snippet": "In this video, we dive deep into creating a High Availability (HA) Apache Kafka Cluster on AWS EKS using Terraform and Strimzi in just 5 ...",
+    "host_name": "www.youtube.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@sajjadaghapour/exploring-data-engineering-architectures-on-premises-and-aws-882b6a689111",
+    "name": "Exploring Data Engineering Architectures: On-Premises",
+    "snippet": "In this post, we'll delve into two distinct architectures as part of Lambda architecture — one rooted in on-premises infrastructure and the other ...",
+    "host_name": "medium.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/posts/thammineni-satish-947b2a283_dataengineering-apachekafka-aws-activity-7468505752429596672-etSh",
+    "name": "Apache Kafka on AWS: Self-Managed vs Fully Managed",
+    "snippet": "Jun 4, 2026 — Apache Kafka is the industry standard for distributed event streaming , deploying and managing it on AWS comes with a critical architectural ...",
+    "host_name": "www.linkedin.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/blogs/containers/deploying-and-scaling-apache-kafka-on-amazon-eks",
+    "name": "Deploying and scaling Apache Kafka on Amazon EKS",
+    "snippet": "Jan 12, 2024 — In this post, we demonstrate how to build and deploy a Kafka cluster with Amazon Elastic Kubernetes Service (Amazon EKS) using Data on EKS (DoEKS).\nIn this post, we demonstrate how to build and deploy a Kafka cluster with Amazon Elastic Kubernetes Service (Amazon EKS) using Data on EKS (DoEKS). DoEKS’s open-source project empowers customers to expedite their data platform development on Kubernetes.",
+    "host_name": "aws.amazon.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://outshift.cisco.com/blog/in-depth-tech/kafka-disaster-recovery-mm2",
+    "name": "Kafka disaster recovery on Kubernetes using MirrorMaker2",
+    "snippet": "Mar 8, 2020 — Discover how Kafka disaster recovery empowers your business resilience. Learn strategies to safeguard data with CISCO Outshift.",
+    "host_name": "outshift.cisco.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://developers.redhat.com/videos/serverless-kafka-kubernetes-devnation-tech-talk",
+    "name": "Serverless Kafka on Kubernetes | DevNation Tech Talk",
+    "snippet": "Apache Kafka has emerged as a leading platform for building real-time data pipelines and for high-throughput/low-latency messaging.",
+    "host_name": "developers.redhat.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://builder.aws.com/content/38JQW1zJGxUfiAAQXkJGIV6otDu/platform-engineering-at-scale-building-reusable-eks-blueprints-with-kro-and-ack",
+    "name": "Building Reusable EKS Blueprints with KRO and ACK",
+    "snippet": "Feb 9, 2026 — EKS Capabilities transforms platform engineering by enabling reusable blueprints that work across many clusters.",
+    "host_name": "builder.aws.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aws.amazon.com/msk",
+    "name": "Fully Managed Apache Kafka – Amazon MSK – Amazon Web Services",
+    "snippet": "Build resilient Apache Kafka workloads with multi-AZ deployments and automated detection, mitigation, and recovery of infrastructure issues. Amazon MSK safeguards your entire data pipeline, from ingestion and storage to analytics, ensuring both data freshness and optimal query performance.",
+    "host_name": "aws.amazon.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

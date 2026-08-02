@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://aerospike.com/resources/customer-stories/dataminr",
+    "name": "Dataminr - Customer story",
+    "snippet": "Aerospike delivers the throughput required to process billions of signals and millions of label updates per second. High volume ingestion of complex, multiple- ...\nDiscover how Dataminr replaced DynamoDB and Redis with Aerospike to scale real-time predictive and Generative AI, processing billions of daily signals.",
+    "host_name": "aerospike.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aerospike.com/blog/real-time-ai-high-performance-data-infrastructure",
+    "name": "Real-time AI Needs High Performance Data Infrastructure",
+    "snippet": "Oct 15, 2025 — “ Aerospike is a very high- performance database supporting latencies of sub-millisecond, throughputs of millions of transactions per second at a ...",
+    "host_name": "aerospike.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aerospike.com/files/ebooks/aerospike-in-action-5-case-studies-ebk.pdf",
+    "name": "Five case studies across key industries",
+    "snippet": "The company has experienced an annual growth rate of 32% over the past decade and is valued above $200 billion . High performance 2ms latency at the 95th ... 23 pages",
+    "host_name": "aerospike.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net/publication/391729602_Aerospike_The_Key_to_High-Performance_Real-Time_Data_Processing",
+    "name": "Aerospike: The Key to High-Performance Real-Time Data",
+    "snippet": "May 5, 2025 — This study explores how Aerospike solves issues related to transaction latency, data consistency, and scalability in real-time financial data ...",
+    "host_name": "www.researchgate.net",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.starburst.io/resources/aerospike-case-study",
+    "name": "Aerospike Case Study",
+    "snippet": "Read this case study about how Aerospike achieved new revenue streams, real-time analytics, and higher customer satisfaction with Starburst.",
+    "host_name": "www.starburst.io",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/case-study/enriching-the-signal-a-software-leaders-shift-from-volume-based-to-contextual-threat-data",
+    "name": "Enriching the Signal: A Software Leader's Shift from",
+    "snippet": "Dataminr . CASE STUDY . Enriching the Signal : A Software Leader's Shift from Volume-Based to Contextual Threat Data.",
+    "host_name": "www.dataminr.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/video/rising-third-party-risk-public-data-combined-with-advanced-ai-is-the-answer",
+    "name": "Public Data and Advanced AI Mitigate Third-Party Risks",
+    "snippet": "At Black Hat 2024, leaders from Citi, NightDragon and Dataminr discuss combining AI models with public data to mitigate third-party risk.",
+    "host_name": "www.dataminr.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aerospike.com/solutions/use-cases/database-for-ai-applications",
+    "name": "High performance database for AI applications",
+    "snippet": "Discover how Aerospike's high-performance database can transform your AI applications , enabling real-time data handling for accurate predictions, ...",
+    "host_name": "aerospike.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dataminr.com/resources/video/dataminr-in-action-russia-concert-attack-case-study",
+    "name": "Dataminr in Action: Russia Concert Attack Case Study",
+    "snippet": "Dataminr's ReGenAI helped customers to know first and stay up to date during the terrorist attack on a Russian concert hall near Moscow.",
+    "host_name": "www.dataminr.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aerospike.com/blog/dataminr-appsflyer-real-time-ai-decisions-at-scale",
+    "name": "How Dataminr and AppsFlyer deliver real-time AI decisions",
+    "snippet": "At AWS re:Invent 2024, Aerospike joined Dataminr and AppsFlyer to discuss how real-time AI decisioning is transforming industries through millisecond performance and scalable intelligence.",
+    "host_name": "aerospike.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
