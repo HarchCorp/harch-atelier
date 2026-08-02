@@ -117,17 +117,18 @@ input:focus {
   cursor: help;
 }
 
-/* Rule 6: The right panel never lets text bleed out. */
+/* Rule 6: The right panel never lets text bleed out.
+   Apply overflow:hidden to ALL descendants, not just direct children. */
 .dash-right {
   overflow: hidden;
   min-width: 0;
 }
-.dash-right > * {
+.dash-right * {
   min-width: 0;
-  overflow: hidden;
+  max-width: 100%;
 }
-.dash-right > * > * {
-  min-width: 0;
+.dash-right span,
+.dash-right div {
   overflow: hidden;
 }
 

@@ -638,13 +638,13 @@ interface Neighbor {
 
 const pageStyles = `
   .dash-layout {
-    grid-template-columns: 200px 1fr 280px;
+    grid-template-columns: 200px 1fr 300px;
   }
 
-  /* ≤1024px : hide right panel, narrow sidebar */
-  @media (max-width: 1024px) {
-    .dash-layout { grid-template-columns: 180px 1fr; }
-    .dash-right { display: none; }
+  /* ≤1400px : hide right panel (too narrow causes text overflow) */
+  @media (max-width: 1400px) {
+    .dash-layout { grid-template-columns: 200px 1fr; }
+    .dash-right { display: none !important; }
   }
 
   /* ≤900px : single column, hide sidebar */
