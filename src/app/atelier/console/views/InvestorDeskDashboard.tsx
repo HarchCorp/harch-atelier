@@ -384,6 +384,9 @@ const chartTitleStyle: React.CSSProperties = {
   textTransform: "uppercase",
   marginBottom: "2px",
   fontWeight: 600,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const chartSubtitleStyle: React.CSSProperties = {
@@ -391,6 +394,9 @@ const chartSubtitleStyle: React.CSSProperties = {
   color: C.text,
   fontWeight: 600,
   marginBottom: "10px",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const labelStyle: React.CSSProperties = {
@@ -400,6 +406,9 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: "0.1em",
   textTransform: "uppercase",
   fontWeight: 600,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 // ─── AwaitingTelemetry (canonical empty state) ─────────────────

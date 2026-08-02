@@ -371,6 +371,9 @@ const labelStyle: CSSProperties = {
   letterSpacing: "0.1em",
   textTransform: "uppercase",
   fontWeight: 600,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const titleLabelStyle: CSSProperties = {
