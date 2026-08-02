@@ -123,6 +123,33 @@ export function LineChart({
   showDots?: boolean;
   xLabels?: string[];
 }) {
+  // Empty state — no data or all-zero points
+  const hasData = series.length > 0 && series.some(s => s.points.length > 0 && s.points.some(p => p !== 0));
+  if (!hasData) {
+    return (
+      <div style={{
+        width: "100%", height,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        gap: "8px",
+        background: C.surfaceAlt,
+        borderRadius: "8px",
+        border: `1px dashed ${C.borderLight}`,
+      }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.5">
+          <path d="M3 3v18h18" strokeLinecap="round" />
+          <path d="M7 14l4-4 4 4 5-5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+        </svg>
+        <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          Awaiting telemetry
+        </div>
+        <div style={{ fontSize: "10px", color: C.textFaint }}>
+          Data will populate as coverage is detected
+        </div>
+      </div>
+    );
+  }
+
   const allPoints = series.flatMap(s => s.points);
   const max = yMax ?? Math.max(...allPoints, 1);
   const min = yMin;
@@ -134,6 +161,12 @@ export function LineChart({
 
   const xStep = chartW / Math.max(...series.map(s => s.points.length - 1), 1);
 
+  // Truncate x-axis labels to prevent overlap (max 8 chars)
+  const truncateXLabel = (label: string): string => {
+    if (label.length <= 8) return label;
+    return label.slice(0, 7) + "…";
+  };
+
   return (
     <div style={{ width: "100%" }}>
       <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto" }}>
@@ -144,7 +177,7 @@ export function LineChart({
           return (
             <g key={i}>
               <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke={C.borderLight} strokeWidth="1" />
-              <text x={padding.left - 8} y={y + 4} fontSize="10" fill={C.textMuted} fontFamily="'JetBrains Mono', monospace" textAnchor="end">
+              <text x={padding.left - 8} y={y + 4} fontSize="10" fill={C.textSec} fontFamily="'JetBrains Mono', monospace" textAnchor="end" fontWeight={600}>
                 {val}
               </text>
             </g>
@@ -174,9 +207,11 @@ export function LineChart({
         {/* X axis labels */}
         {xLabels && xLabels.map((label, i) => {
           const x = padding.left + i * xStep;
+          const shortLabel = truncateXLabel(label);
           return (
-            <text key={i} x={x} y={height - 8} fontSize="10" fill={C.textMuted} fontFamily="'JetBrains Mono', monospace" textAnchor="middle">
-              {label}
+            <text key={i} x={x} y={height - 8} fontSize="10" fill={C.textSec} fontFamily="'JetBrains Mono', monospace" textAnchor="middle" fontWeight={600}>
+              {shortLabel}
+              {shortLabel !== label && <title>{label}</title>}
             </text>
           );
         })}
@@ -401,13 +436,22 @@ export function RadarChart({
   series: { name: string; color: string; values: number[] }[]; // 0-100 per axis
   size?: number;
 }) {
+  // Truncate long axis labels to fit the available space.
+  // Max 12 chars — keeps "Sustainability" → "Sustainabili…" from
+  // spilling outside the SVG bounds.
+  const truncateLabel = (label: string, max = 12): string => {
+    if (label.length <= max) return label;
+    return label.slice(0, max - 1) + "…";
+  };
+
   const center = size / 2;
-  const radius = size / 2 - 50;
+  // Increase padding from 50 → 64 to give labels more room
+  const radius = size / 2 - 64;
   const angleStep = (2 * Math.PI) / axes.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <svg width={size} height={size}>
+      <svg width={size} height={size} style={{ overflow: "visible" }}>
         {/* Concentric polygons */}
         {[0.25, 0.5, 0.75, 1].map((scale, i) => {
           const points = axes.map((_, j) => {
@@ -426,14 +470,31 @@ export function RadarChart({
           const angle = i * angleStep - Math.PI / 2;
           const x = center + radius * Math.cos(angle);
           const y = center + radius * Math.sin(angle);
-          const labelX = center + (radius + 20) * Math.cos(angle);
-          const labelY = center + (radius + 20) * Math.sin(angle);
+          const labelX = center + (radius + 18) * Math.cos(angle);
+          const labelY = center + (radius + 18) * Math.sin(angle);
+          // Smart text-anchor based on angle position
+          const cosA = Math.cos(angle);
+          const textAnchor = cosA > 0.3 ? "start" : cosA < -0.3 ? "end" : "middle";
+          const shortLabel = truncateLabel(axis, 12);
           return (
             <g key={i}>
               <line x1={center} y1={center} x2={x} y2={y} stroke={C.borderLight} strokeWidth="1" />
-              <text x={labelX} y={labelY} fontSize="10" fill={C.textMuted} fontFamily="'JetBrains Mono', monospace" textAnchor="middle" dominantBaseline="middle">
-                {axis}
+              <text
+                x={labelX}
+                y={labelY}
+                fontSize="10"
+                fill={C.textSec}
+                fontFamily="'JetBrains Mono', monospace"
+                textAnchor={textAnchor}
+                dominantBaseline="middle"
+                style={{ fontWeight: 600 }}
+              >
+                {shortLabel}
               </text>
+              {/* Full label on hover via <title> for accessibility */}
+              {axis !== shortLabel && (
+                <title>{axis}</title>
+              )}
             </g>
           );
         })}

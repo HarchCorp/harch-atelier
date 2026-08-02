@@ -211,6 +211,34 @@ interface DBArticle {
   sourceType?: string | null;
 }
 
+// ─── DB ENTITY TYPE (from /api/companies/[slug]/entities) ────────
+interface DBEntity {
+  entityId: string;
+  mentionCount: number;
+  avgSentiment: number;
+  lastMentionedAt: string | null;
+  entity: {
+    id: string;
+    entityType: string;
+    name: string;
+    aliases: string[];
+    confidence: number;
+    tags: string[];
+    metadata?: { role?: string; companySlug?: string | null } | null;
+  } | null;
+}
+
+// ─── DB SENTIMENT TYPE (from /api/companies/[slug]/sentiment) ────
+interface DBSentiment {
+  id: string;
+  score: number;
+  positivePct: number;
+  neutralPct: number;
+  negativePct: number;
+  articleCount: number;
+  calculatedAt: string;
+}
+
 // ─── LIVE INTELLIGENCE FEED COMPONENT ────────────────────────────
 function LiveIntelligenceFeed({
   slug,
@@ -380,6 +408,349 @@ function LiveIntelligenceFeed({
   );
 }
 
+// ─── KEY PEOPLE & ENTITIES COMPONENT ─────────────────────────────
+function KeyPeoplePanel({
+  people,
+  loading,
+}: {
+  people: DBEntity[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <section style={{ padding: "40px 0" }}>
+        <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "8px" }}>
+          Key people & entities
+        </div>
+        <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0a0a0a", marginBottom: "8px", letterSpacing: "-0.03em" }}>
+          Loading key people…
+        </h2>
+        <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px" }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{
+              height: "80px",
+              background: "linear-gradient(90deg, #f5f5f5 25%, #eee 50%, #f5f5f5 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.5s infinite",
+              borderRadius: "6px",
+            }} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (people.length === 0) {
+    return null;
+  }
+
+  const sentColor = (score: number) =>
+    score > 0.1 ? "#059669" : score < -0.1 ? "#dc2626" : "#737373";
+
+  const sentLabel = (score: number) =>
+    score > 0.1 ? "positive" : score < -0.1 ? "negative" : "neutral";
+
+  const sentBg = (score: number) =>
+    score > 0.1 ? "rgba(5,150,105,0.08)" : score < -0.1 ? "rgba(220,38,38,0.08)" : "rgba(115,115,115,0.08)";
+
+  // Generate initials from name
+  const initials = (name: string): string => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  return (
+    <section style={{ padding: "40px 0" }}>
+      <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#666", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "8px" }}>
+        Key people & entities
+      </div>
+      <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0a0a0a", marginBottom: "8px", letterSpacing: "-0.03em" }}>
+        The people shaping the narrative.
+      </h2>
+      <p style={{ fontSize: "15px", color: "#666", lineHeight: 1.6, marginBottom: "24px", maxWidth: "720px" }}>
+        Executives, regulators, ministers, and journalists whose mentions move the needle on this
+        company's reputation. Mention count and average sentiment are tracked across our 1-year window.
+      </p>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: "12px",
+      }}>
+        {people.map((p, i) => {
+          if (!p.entity) return null;
+          const role = (p.entity.metadata as { role?: string } | null)?.role || "—";
+          const tags = p.entity.tags || [];
+          const isExec = tags.includes("executive");
+          const isMinister = tags.includes("minister");
+          const isRegulator = tags.includes("regulator");
+          const isPress = tags.includes("press");
+          const tagColor = isExec ? "#856914" : isMinister ? "#7c3aed" : isRegulator ? "#0369a1" : isPress ? "#be185d" : "#666";
+          const tagBg = isExec ? "rgba(133,120,20,0.1)" : isMinister ? "rgba(124,58,237,0.1)" : isRegulator ? "rgba(3,105,161,0.1)" : isPress ? "rgba(190,24,93,0.1)" : "rgba(102,102,102,0.1)";
+          const tagLabel = isExec ? "EXEC" : isMinister ? "MINISTER" : isRegulator ? "REGULATOR" : isPress ? "PRESS" : "ENTITY";
+          return (
+            <div key={p.entityId} style={{
+              border: "1px solid #e5e5e5",
+              borderRadius: "8px",
+              padding: "16px",
+              background: "#fff",
+              display: "flex",
+              gap: "12px",
+              alignItems: "flex-start",
+              transition: "border-color 0.15s, box-shadow 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#0a0a0a";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#e5e5e5";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+            >
+              {/* Avatar with initials */}
+              <div style={{
+                width: "40px", height: "40px", borderRadius: "50%",
+                background: `linear-gradient(135deg, ${tagColor}, ${tagColor}dd)`,
+                color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "14px", fontWeight: 700, fontFamily: "'Inter', sans-serif",
+                flexShrink: 0,
+              }}>
+                {initials(p.entity.name)}
+              </div>
+              {/* Info */}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="text-truncate" style={{
+                  fontSize: "14px", fontWeight: 700, color: "#0a0a0a",
+                  fontFamily: "'Inter', sans-serif",
+                  marginBottom: "2px",
+                }}>
+                  {p.entity.name}
+                </div>
+                <div className="text-clamp-2" style={{
+                  fontSize: "11px", color: "#666",
+                  fontFamily: "'Inter', sans-serif", lineHeight: 1.4,
+                  marginBottom: "8px",
+                }}>
+                  {role}
+                </div>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{
+                    padding: "2px 6px", borderRadius: "2px",
+                    background: tagBg, color: tagColor,
+                    fontSize: "8px", fontWeight: 700,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    {tagLabel}
+                  </span>
+                  <span style={{
+                    fontSize: "10px", fontFamily: "'JetBrains Mono', monospace",
+                    color: "#888",
+                  }}>
+                    {p.mentionCount} {p.mentionCount === 1 ? "mention" : "mentions"}
+                  </span>
+                  <span style={{
+                    padding: "1px 6px", borderRadius: "2px",
+                    background: sentBg(p.avgSentiment),
+                    color: sentColor(p.avgSentiment),
+                    fontSize: "8px", fontWeight: 700,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    textTransform: "uppercase",
+                  }}>
+                    {sentLabel(p.avgSentiment)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ─── 1-YEAR SENTIMENT TREND CHART COMPONENT ──────────────────────
+function SentimentTrendChart({
+  data,
+  loading,
+}: {
+  data: DBSentiment[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <section style={{ padding: "40px 0" }}>
+        <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "8px" }}>
+          1-year sentiment trend
+        </div>
+        <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0a0a0a", marginBottom: "8px", letterSpacing: "-0.03em" }}>
+          Loading sentiment trend…
+        </h2>
+        <div style={{ marginTop: "16px", height: "200px", background: "linear-gradient(90deg, #f5f5f5 25%, #eee 50%, #f5f5f5 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: "8px" }} />
+      </section>
+    );
+  }
+
+  if (data.length === 0) {
+    return null;
+  }
+
+  // Build SVG line chart
+  const width = 720;
+  const height = 220;
+  const padding = { top: 20, right: 24, bottom: 32, left: 40 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  const scores = data.map(d => d.score);
+  const maxScore = Math.max(...scores, 0.5);
+  const minScore = Math.min(...scores, -0.5);
+  const range = maxScore - minScore || 1;
+
+  const xStep = chartW / Math.max(data.length - 1, 1);
+
+  // Build the sentiment line path
+  const linePath = data.map((d, i) => {
+    const x = padding.left + i * xStep;
+    const y = padding.top + chartH * (1 - (d.score - minScore) / range);
+    return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+  }).join(" ");
+
+  // Build the area path (fill below the line)
+  const areaPath = `${linePath} L ${padding.left + (data.length - 1) * xStep} ${padding.top + chartH} L ${padding.left} ${padding.top + chartH} Z`;
+
+  // Zero line position
+  const zeroY = padding.top + chartH * (1 - (0 - minScore) / range);
+
+  // X-axis labels (show ~6 labels across the year)
+  const labelStep = Math.max(1, Math.floor(data.length / 6));
+  const xLabels = data.filter((_, i) => i % labelStep === 0).map(d => {
+    const date = new Date(d.calculatedAt);
+    return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  });
+
+  // Current vs 3 months ago comparison
+  const current = scores[scores.length - 1];
+  const threeMonthsAgo = scores[Math.max(0, scores.length - 13)] || scores[0];
+  const delta = current - threeMonthsAgo;
+  const deltaLabel = delta > 0.02 ? `▲ +${delta.toFixed(2)} vs 3 months ago` : delta < -0.02 ? `▼ ${delta.toFixed(2)} vs 3 months ago` : `— Stable vs 3 months ago`;
+  const deltaColor = delta > 0.02 ? "#059669" : delta < -0.02 ? "#dc2626" : "#737373";
+
+  return (
+    <section style={{ padding: "40px 0" }}>
+      <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#666", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "8px" }}>
+        1-year sentiment trend · {data.length} weekly snapshots
+      </div>
+      <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0a0a0a", marginBottom: "8px", letterSpacing: "-0.03em" }}>
+        How the conversation evolved.
+      </h2>
+      <p style={{ fontSize: "15px", color: "#666", lineHeight: 1.6, marginBottom: "16px", maxWidth: "720px" }}>
+        Weekly sentiment score from our NLP pipeline, tracking positive vs negative coverage across
+        Moroccan and African media. The zero line marks the neutral boundary.
+      </p>
+
+      {/* Stats row */}
+      <div style={{ display: "flex", gap: "24px", marginBottom: "16px", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.08em" }}>Current</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: current > 0.1 ? "#059669" : current < -0.1 ? "#dc2626" : "#737373" }}>
+            {current.toFixed(2)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.08em" }}>3-month delta</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: deltaColor, marginTop: "4px" }}>
+            {deltaLabel}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.08em" }}>Peak</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "#059669", marginTop: "4px" }}>
+            ▲ {maxScore.toFixed(2)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#888", textTransform: "uppercase", letterSpacing: "0.08em" }}>Trough</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "#dc2626", marginTop: "4px" }}>
+            ▼ {minScore.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div style={{ border: "1px solid #e5e5e5", borderRadius: "8px", padding: "16px", background: "#fff" }}>
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto" }}>
+          {/* Y-axis grid lines + labels */}
+          {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+            const y = padding.top + chartH * (1 - p);
+            const val = minScore + range * p;
+            return (
+              <g key={i}>
+                <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke={val === 0 ? "#d4d4d4" : "#f0f0f0"} strokeWidth={val === 0 ? "1.5" : "1"} strokeDasharray={val === 0 ? "4 4" : "none"} />
+                <text x={padding.left - 8} y={y + 4} fontSize="10" fill="#444" fontFamily="'JetBrains Mono', monospace" textAnchor="end" fontWeight={600}>
+                  {val.toFixed(1)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Zero line (neutral boundary) */}
+          <line x1={padding.left} y1={zeroY} x2={width - padding.right} y2={zeroY} stroke="#d4d4d4" strokeWidth="1.5" strokeDasharray="4 4" />
+          <text x={width - padding.right + 4} y={zeroY + 4} fontSize="9" fill="#999" fontFamily="'JetBrains Mono', monospace">neutral</text>
+
+          {/* Area fill (green if above zero, red if below) */}
+          <defs>
+            <linearGradient id="sentGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#059669" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#059669" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#sentGradient)" />
+
+          {/* Sentiment line */}
+          <path d={linePath} fill="none" stroke="#059669" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+          {/* Data points (only show every 4th to avoid clutter) */}
+          {data.map((d, i) => {
+            if (i % 4 !== 0 && i !== data.length - 1) return null;
+            const x = padding.left + i * xStep;
+            const y = padding.top + chartH * (1 - (d.score - minScore) / range);
+            const color = d.score > 0.1 ? "#059669" : d.score < -0.1 ? "#dc2626" : "#737373";
+            return <circle key={i} cx={x} cy={y} r="3" fill={color} stroke="#fff" strokeWidth="1.5" />;
+          })}
+
+          {/* X-axis labels */}
+          {data.map((d, i) => {
+            if (i % labelStep !== 0) return null;
+            const x = padding.left + i * xStep;
+            const date = new Date(d.calculatedAt);
+            const label = date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+            return (
+              <text key={i} x={x} y={height - 8} fontSize="10" fill="#444" fontFamily="'JetBrains Mono', monospace" textAnchor="middle" fontWeight={600}>
+                {label}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: "16px", justifyContent: "center", marginTop: "12px", flexWrap: "wrap", fontSize: "11px", color: "#666", fontFamily: "'JetBrains Mono', monospace" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "12px", height: "2px", background: "#059669" }} />
+          Weekly sentiment score
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "12px", height: "2px", background: "#d4d4d4", borderTop: "1px dashed #999" }} />
+          Neutral boundary (0.0)
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── MAIN LAYOUT COMPONENT ───────────────────────────────────────
 export function CompanyPageLayout({ data }: { data: CompanyData }) {
   const D = data;
@@ -392,6 +763,20 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
   // Falls back to the hardcoded editorial articles if the API fails.
   const [liveArticles, setLiveArticles] = useState<DBArticle[]>([]);
   const [liveLoading, setLiveLoading] = useState(true);
+
+  // ─── KEY PEOPLE & ENTITIES ────────────────────────────────────
+  // Fetches real people (CEOs, ministers, journalists) linked to this
+  // company via EntityMention. Shows their mention count, sentiment,
+  // and role.
+  const [keyPeople, setKeyPeople] = useState<DBEntity[]>([]);
+  const [peopleLoading, setPeopleLoading] = useState(true);
+
+  // ─── 1-YEAR SENTIMENT TREND ───────────────────────────────────
+  // Fetches 52 weekly sentiment snapshots from the DB to render a
+  // real 1-year trend chart. Shows the seasonal dip, drift, and
+  // noise that make the data feel alive.
+  const [sentimentTrend, setSentimentTrend] = useState<DBSentiment[]>([]);
+  const [sentimentLoading, setSentimentLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -409,7 +794,38 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
         if (!cancelled) setLiveLoading(false);
       }
     }
+    async function fetchPeople() {
+      try {
+        const res = await fetch(`/api/companies/${D.slug}/entities?top=12`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        const entities = (json.data || []).filter((e: DBEntity) => e.entity?.entityType === "person").slice(0, 8);
+        setKeyPeople(entities);
+      } catch {
+        // Silent fail
+      } finally {
+        if (!cancelled) setPeopleLoading(false);
+      }
+    }
+    async function fetchSentiment() {
+      try {
+        const res = await fetch(`/api/companies/${D.slug}/sentiment?limit=52`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        // Reverse so oldest → newest (chart reads left to right)
+        const scores = (json.data || []).reverse();
+        setSentimentTrend(scores);
+      } catch {
+        // Silent fail
+      } finally {
+        if (!cancelled) setSentimentLoading(false);
+      }
+    }
     fetchLive();
+    fetchPeople();
+    fetchSentiment();
     return () => { cancelled = true; };
   }, [D.slug]);
 
@@ -1109,6 +1525,18 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
         slug={D.slug}
         articles={liveArticles}
         loading={liveLoading}
+      />
+
+      {/* 10.6. KEY PEOPLE & ENTITIES (real DB entities) ─────────────── */}
+      <KeyPeoplePanel
+        people={keyPeople}
+        loading={peopleLoading}
+      />
+
+      {/* 10.7. 1-YEAR SENTIMENT TREND (real DB sentiment) ───────────── */}
+      <SentimentTrendChart
+        data={sentimentTrend}
+        loading={sentimentLoading}
       />
 
       {/* 11. RECENT ARTICLES ────────────────────────────────────── */}
