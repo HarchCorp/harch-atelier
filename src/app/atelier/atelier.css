@@ -55,6 +55,109 @@ input:focus {
 ::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
 
+/* ═══════════════════════════════════════════════════════════════
+   ANTI-OVERFLOW SYSTEM — kills ALL text overflow bugs globally
+   ═══════════════════════════════════════════════════════════════
+
+   ROOT CAUSE: Flexbox/Grid items without minWidth:0 expand beyond
+   their container, pushing text out of cards. Uppercase mono labels
+   with letterSpacing wrap character-by-character in narrow containers.
+
+   FIX: 6 global rules that enforce text containment everywhere.
+   No more individual fixes needed — this handles all cases.
+*/
+
+/* Rule 1: ALL flex children can shrink below content width.
+   This is THE fix for text overflowing flex containers. */
+.dash-main [style*="display: flex"] > *,
+.dash-main [style*="display:flex"] > *,
+.dash-right [style*="display: flex"] > *,
+.dash-right [style*="display:flex"] > *,
+.dash-sidebar [style*="display: flex"] > *,
+.dash-sidebar [style*="display:flex"] > * {
+  min-width: 0 !important;
+  overflow: hidden;
+}
+
+/* Rule 2: ALL grid-column items contain their content. */
+.dash-main [style*="gridColumn"],
+.dash-main [style*="grid-column"] {
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Rule 3: ALL elements with text-transform: uppercase + letter-spacing
+   NEVER wrap character-by-character. They either fit on one line
+   (nowrap + ellipsis) or they don't show the overflow. */
+[style*="text-transform: uppercase"][style*="letter-spacing"],
+[style*="text-transform:uppercase"][style*="letter-spacing"],
+[style*="textTransform"][style*="letterSpacing"] {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100%;
+}
+
+/* Rule 4: Card containers (anything with border-radius + border)
+   never let children overflow. */
+.dash-main [style*="border"][style*="border-radius"],
+.dash-main [style*="border"][style*="borderRadius"],
+.dash-main [style*="borderRadius"] {
+  overflow: hidden;
+}
+
+/* Rule 5: Table cells truncate by default. */
+.dash-main td {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-main td[title] {
+  cursor: help;
+}
+
+/* Rule 6: The right panel never lets text bleed out. */
+.dash-right {
+  overflow: hidden;
+  min-width: 0;
+}
+.dash-right > * {
+  min-width: 0;
+  overflow: hidden;
+}
+.dash-right > * > * {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Utility classes for explicit control */
+.truncate {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+.truncate-2 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+.truncate-3 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   END ANTI-OVERFLOW SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+
 /* ─── Console dashboard mobile responsive (< 768px) ─────────────
    Targets the .dash-main container and its 24-column grids.
    - 24-col grid → 1-col stack
