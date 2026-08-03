@@ -120,6 +120,64 @@ model Article {
   @@index([processed])
   @@index([isDemo])
   @@index([sourceType])
+
+  // ─── Task: BRICK-1-hespress ───────────────────────────────────────
+  // ArticleComment — one row per scraped Hespress comment (or any other
+  // WordPress-backed comment system we add later). Linked back to the
+  // parent Article via articleId. Sentiment + language are pre-computed
+  // at scrape time so the demo console can render a 2,000-comment thread
+  // without re-running the NLP on every page load.
+  comments      ArticleComment[]
+}
+
+// ─── ARTICLE COMMENTS (Hespress + future WP-backed sources) ────
+//
+//  Task ID: BRICK-1-hespress
+//  Why: Hespress is the highest-reach Moroccan digital news outlet
+//  (47-52% weekly reach per Reuters Institute 2025). Its comments
+//  section is the richest source of Darija sentiment on the Moroccan
+//  web — 200-2,000 anonymous comments per article. This model stores
+//  every scraped comment alongside its pre-computed sentiment + language
+//  label so the Brand Monitor can surface "Darija sentiment per article"
+//  without re-running the NLP at view time.
+//
+//  Threading: Hespress supports nested replies (parent → child).
+//  `parentId` is the original Hespress comment ID of the parent (not
+//  our internal cuid). 0 / null = top-level comment.
+//
+//  IMPORTANT: prisma db push is NOT run — the sandbox DB has a known
+//  SQLite/PostgreSQL mismatch (worklog §2, §6, §9). The model is added
+//  to the schema so it materialises the moment a real PostgreSQL is
+//  provisioned. The Hespress scraper + API + demo page work without
+//  this table (they return the scraped comments directly), so the
+//  demo is functional even with the DB still broken.
+
+model ArticleComment {
+  id                String   @id @default(cuid())
+  articleId         String
+  // Original Hespress (or WP) comment ID — the numeric ID from the WP
+  // REST API `id` field. Used for threading (parentId) + dedup.
+  commentId         String
+  author            String?
+  content           String
+  publishedAt       DateTime?
+  parentId          String?
+  likes             Int      @default(0)
+  // darija | arabic | french | mixed — from the Darija NLP detector.
+  language          String
+  // positive | negative | neutral — from the resilience sentiment analyzer.
+  sentimentPolarity String
+  // -1.0 .. +1.0 — from the resilience sentiment analyzer.
+  sentimentScore    Float
+  sarcasmDetected   Boolean  @default(false)
+  scrapedAt         DateTime @default(now())
+
+  article           Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, commentId]) // prevent duplicate imports
+  @@index([articleId])
+  @@index([sentimentPolarity])
+  @@index([language])
 }
 
 // ─── ANALYTICS ──────────────────────────────────────────────────
