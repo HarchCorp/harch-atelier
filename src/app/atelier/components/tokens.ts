@@ -165,6 +165,7 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
             { label: "Our AI", href: "/atelier/approach/our-ai", desc: "Meet HarchIQ — the trainable AI for reputation intelligence" },
             { label: "Our Data", href: "/atelier/approach/our-data", desc: "30+ media sources, 5M+ articles/day, 120+ languages" },
             { label: "Our Commitment", href: "/atelier/approach/our-commitment", desc: "Security, compliance & customer success guarantees" },
+            { label: "Resilience Matrix", href: "/atelier/resilience", desc: "100 stress-cases the system handles — interactive live demos" },
           ],
         },
       ],
@@ -283,6 +284,7 @@ export const ATELIER_FOOTER_LINKS = {
     { href: "/atelier/partners", label: "Partners" },
     { href: "/atelier/contact", label: "Contact" },
     { href: "/atelier/trust", label: "Trust Center" },
+    { href: "/atelier/resilience", label: "Resilience Matrix" },
     { href: "/atelier/legal", label: "Legal" },
   ],
 };
