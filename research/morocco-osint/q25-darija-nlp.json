@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.mdpi.com/2078-2489/16/1/39",
+    "name": "Improving Sentiment Analysis Performance on Imbalanced",
+    "snippet": "by Z Nassr · 2025 · Cited by 7 — In sentiment analysis for Moroccan Darija (MD), comments are often composed in a non-standardized format , presenting challenges for direct ...",
+    "host_name": "www.mdpi.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://link.springer.com/article/10.1007/s13278-023-01129-1",
+    "name": "Contribution to the Moroccan Darija sentiment analysis in",
+    "snippet": "by S El Ouahabi · 2023 · Cited by 11 — In this work, we aim to address this issue by focusing on sentiment analysis for the Moroccan Arabic dialect ( Darija ), by creating a large and high-quality ...",
+    "host_name": "link.springer.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net/publication/386736597_Enhancing_Moroccan_Dialect_Sentiment_Analysis_through_Optimized_Preprocessing_and_transfer_learning_Techniques",
+    "name": "(PDF) Enhancing Moroccan Dialect Sentiment Analysis",
+    "snippet": "Jul 11, 2026 — This work investigates the challenges of sentiment analysis for Moroccan Arabic dialect (MD), where the lack of dialect-specific preprocessing ...",
+    "host_name": "www.researchgate.net",
+    "rank": 2,
+    "date": "Jul 11, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://data.mendeley.com/datasets/kfjztyzztb",
+    "name": "MSA-Moroccan Dialect: A Multimodal Sentiment Analysis",
+    "snippet": "Jan 5, 2026 — This dataset provides the first publicly available multimodal resource for sentiment analysis in Moroccan Arabic ( Darija ).",
+    "host_name": "data.mendeley.com",
+    "rank": 3,
+    "date": "Jan 5, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://dl.acm.org/doi/fullHtml/10.1145/3659677.3659708",
+    "name": "Comparative study of Moroccan Dialect Sentiment analysis",
+    "snippet": "by K Aboukass · 2024 · Cited by 4 — We extensively explore sentiment analysis in Darija , leveraging state-of-the-art pretrained language models. Our study involves fine-tuning various models.",
+    "host_name": "dl.acm.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/issam9/awesome-moroccan-arabic-nlp",
+    "name": "issam9/awesome-moroccan-arabic-nlp",
+    "snippet": "Contains a dataset of 50k tweets labeled for sentiment analysis , topic detection and dialect detection as it contains tweets from 5 countries including Morocco.",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://zenodo.org/records/21154423",
+    "name": "Linguistic Resources and Models for Moroccan Darija",
+    "snippet": "Jul 3, 2026 — This project develops and evaluates NLP models for Darija and Arabic , covering code-switching detection, Darija language modeling, Arabic - Darija ...",
+    "host_name": "zenodo.org",
+    "rank": 6,
+    "date": "Jul 3, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.kaggle.com/competitions/sentiment-analysis-on-moroccan-arabic-dialect",
+    "name": "Sentiment Analysis on Moroccan Arabic Dialect",
+    "snippet": "This competition is about honing our machine learning skills. Given a comment text written in Morrocan Arabic dialect, the task aims at predicting the sentiment ...",
+    "host_name": "www.kaggle.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.sciencedirect.com/science/article/pii/S1877050925022689",
+    "name": "Analysis of Linguistic and Sentimental Variation in",
+    "snippet": "by I Chabbaki · 2025 · Cited by 3 — This paper explores sentiment analysis in Moroccan Arabic (Darija ) using a large corpus of user-generated comments from the Hespress news platform.\nThis study contributes to the growing field of Arabic dialect NLP by providing insights into the interaction between sentiment and sociolinguistic variation in Moroccan Darija.",
+    "host_name": "www.sciencedirect.com",
+    "rank": 8,
+    "date": "Jan 1, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to/ayoub_boutbib_656a1c8df0f/moroccan-darija-in-nlp-challenges-and-opportunities-57d6",
+    "name": "Moroccan Darija in NLP: Challenges and Opportunities",
+    "snippet": "But anyone from Morocco knows the reality: the Arabic spoken in daily life — Darija — is a completely different system from Modern Standard Arabic (MSA). It has different vocabulary, different grammar, different phonology, and no standardized writing system.",
+    "host_name": "dev.to",
+    "rank": 9,
+    "date": "Jun 19, 2026",
+    "favicon": ""
+  }
+]
