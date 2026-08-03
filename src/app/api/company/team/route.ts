@@ -5,6 +5,10 @@ import {
   toErrorResponse,
 } from "@/lib/auth/company-scope";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoCompanyTeamResponse, demoCompanyTeamPatchResponse, demoCompanyTeamDeleteResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/company/team
@@ -30,6 +34,11 @@ import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  const demoSession = await getServerSession(authOptions);
+  if (demoSession?.user?.isDemo || isDemoEmail(demoSession?.user?.email)) {
+    return demoCompanyTeamResponse();
+  }
   try {
     const scope = await requireCompanyAdmin();
 
@@ -70,6 +79,12 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  const demoSession = await getServerSession(authOptions);
+  if (demoSession?.user?.isDemo || isDemoEmail(demoSession?.user?.email)) {
+    const demoBody = await req.json().catch(() => ({}));
+    return demoCompanyTeamPatchResponse(demoBody);
+  }
   try {
     const scope = await requireCompanyAdmin();
 
@@ -183,6 +198,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  const demoSession = await getServerSession(authOptions);
+  if (demoSession?.user?.isDemo || isDemoEmail(demoSession?.user?.email)) {
+    return demoCompanyTeamDeleteResponse();
+  }
   try {
     const scope = await requireCompanyAdmin();
 

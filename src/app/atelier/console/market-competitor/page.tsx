@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { ConsoleShell } from "../ConsoleShell";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { StandbyBanner } from "../StandbyBanner";
 
 export const metadata: Metadata = {
   title: "Market & Competitor Intel — HarchIQ Console",
@@ -13,10 +12,12 @@ export const metadata: Metadata = {
 // ═══════════════════════════════════════════════════════════════
 //  /atelier/console/market-competitor
 //
-//  Auth + onboarding gate. See brand-monitor/page.tsx for full
-//  comment — same pattern.
-//
-//  Task: user-company-onboarding
+//  STANDBY (Task ID: 5-standby). The Market & Competitor Intel desk
+//  is on hold while the team focuses on the core Brand Monitor
+//  console. Authenticated users see a clean banner; anonymous users
+//  are sent to login. No Prisma call — the previous onboarding gate
+//  would crash with PrismaClientInitializationError against the
+//  current SQLite/PostgreSQL schema mismatch.
 // ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
@@ -27,28 +28,5 @@ export default async function MarketCompetitorConsolePage() {
     redirect("/atelier/login?callbackUrl=/atelier/console/market-competitor");
   }
 
-  const email = session.user.email ?? "";
-  const isDemo = email.startsWith("demo-") && email.endsWith("@harch.atelier");
-
-  if (session.user.role !== "admin" && session.user.accountType !== "market-competitor") {
-    redirect(`/atelier/console/${session.user.accountType || "brand-monitor"}`);
-  }
-
-  if (!isDemo && session.user.role !== "admin") {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { onboardingCompleted: true },
-    });
-    if (!user?.onboardingCompleted) {
-      redirect("/atelier/onboarding");
-    }
-  }
-
-  return (
-    <ConsoleShell
-      accountType="market-competitor"
-      userName={session.user.name}
-      userEmail={session.user.email}
-    />
-  );
+  return <StandbyBanner featureName="Market Competitor Intelligence" />;
 }

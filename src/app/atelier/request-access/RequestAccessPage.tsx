@@ -290,9 +290,13 @@ export function RequestAccessPage() {
 
   const accountTypes = [
     { value: "brand-monitor" as const, label: "Brand Monitor", desc: "Monitor your company's reputation across media + AI" },
-    { value: "market-competitor" as const, label: "Market & Competitor", desc: "Brand + up to 10 competitors + sector intelligence" },
-    { value: "investment-bank" as const, label: "Investment Bank", desc: "Due diligence, M&A, portfolio roll-up, ESG screening" },
-    { value: "harch-alpha" as const, label: "Harch Alpha", desc: "Track sentiment-to-price correlation on Moroccan assets" },
+    // Task ID: 5-standby — the 3 offers below are on standby.
+    // They still appear in the list (greyed-out + Standby badge)
+    // so prospects know what's coming back, but they cannot be
+    // selected. Their consoles render a StandbyBanner.
+    { value: "market-competitor" as const, label: "Market & Competitor", desc: "Brand + up to 10 competitors + sector intelligence", standby: true },
+    { value: "investment-bank" as const, label: "Investment Bank", desc: "Due diligence, M&A, portfolio roll-up, ESG screening", standby: true },
+    { value: "harch-alpha" as const, label: "Harch Alpha", desc: "Track sentiment-to-price correlation on Moroccan assets", standby: true },
   ];
 
   const companySizes = [
@@ -490,50 +494,77 @@ export function RequestAccessPage() {
 
                     {/* Account type cards */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
-                      {accountTypes.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => update("accountType", opt.value)}
-                          style={{
-                            padding: "16px 20px",
-                            background: formData.accountType === opt.value ? C.bgSubtle : "transparent",
-                            border: `1px solid ${formData.accountType === opt.value ? C.accent : C.border}`,
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            textAlign: "left",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                            transition: "all 0.15s",
-                          }}
-                        >
-                          <div style={{
-                            width: "16px",
-                            height: "16px",
-                            borderRadius: "50%",
-                            border: `2px solid ${formData.accountType === opt.value ? C.accent : C.border}`,
-                            flexShrink: 0,
-                            position: "relative",
-                          }}>
-                            {formData.accountType === opt.value && (
-                              <div style={{
-                                position: "absolute",
-                                top: "2px",
-                                left: "2px",
-                                width: "8px",
-                                height: "8px",
-                                borderRadius: "50%",
-                                background: C.accent,
-                              }} />
+                      {accountTypes.map((opt) => {
+                        const isStandby = !!(opt as { standby?: boolean }).standby;
+                        const isSelected = formData.accountType === opt.value && !isStandby;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            disabled={isStandby}
+                            onClick={() => !isStandby && update("accountType", opt.value)}
+                            style={{
+                              padding: "16px 20px",
+                              background: isSelected ? C.bgSubtle : "transparent",
+                              border: `1px solid ${isSelected ? C.accent : C.border}`,
+                              borderRadius: "6px",
+                              cursor: isStandby ? "not-allowed" : "pointer",
+                              textAlign: "left",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              transition: "all 0.15s",
+                              opacity: isStandby ? 0.55 : 1,
+                              position: "relative",
+                            }}
+                          >
+                            <div style={{
+                              width: "16px",
+                              height: "16px",
+                              borderRadius: "50%",
+                              border: `2px solid ${isSelected ? C.accent : C.border}`,
+                              flexShrink: 0,
+                              position: "relative",
+                            }}>
+                              {isSelected && (
+                                <div style={{
+                                  position: "absolute",
+                                  top: "2px",
+                                  left: "2px",
+                                  width: "8px",
+                                  height: "8px",
+                                  borderRadius: "50%",
+                                  background: C.accent,
+                                }} />
+                              )}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: "14px", fontWeight: 600, color: isSelected ? C.accent : C.text }}>{opt.label}</div>
+                              <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "2px" }}>{opt.desc}</div>
+                            </div>
+                            {isStandby && (
+                              <span
+                                style={{
+                                  fontFamily: C.fontMono,
+                                  fontSize: "9px",
+                                  fontWeight: 700,
+                                  letterSpacing: "0.14em",
+                                  textTransform: "uppercase",
+                                  color: C.warningText,
+                                  background: C.warningBg,
+                                  border: `1px solid ${C.warningBorder}`,
+                                  borderRadius: "4px",
+                                  padding: "3px 7px",
+                                  lineHeight: 1,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Standby
+                              </span>
                             )}
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "14px", fontWeight: 600, color: formData.accountType === opt.value ? C.accent : C.text }}>{opt.label}</div>
-                            <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "2px" }}>{opt.desc}</div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {/* Email + Name */}

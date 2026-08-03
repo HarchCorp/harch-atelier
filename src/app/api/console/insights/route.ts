@@ -39,6 +39,8 @@ import {
 } from "@/lib/harchiq/insight-engine";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 import { logError } from "@/lib/logger";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoInsightsResponse } from "@/lib/demo-console-api";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -66,6 +68,11 @@ export async function GET(req: NextRequest) {
     );
   }
   const userId = session.user.id;
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoInsightsResponse();
+  }
 
   // 2. Parse query.
   const url = new URL(req.url);

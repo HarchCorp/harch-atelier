@@ -6,6 +6,8 @@ import {
   requireUserCompany,
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoTopicsResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/topics
@@ -30,6 +32,11 @@ export async function GET(req: Request) {
       { error: "Forbidden" },
       { status: 403 }
     );
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoTopicsResponse();
   }
 
   try {

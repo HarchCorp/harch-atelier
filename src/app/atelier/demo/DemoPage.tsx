@@ -49,6 +49,14 @@ interface Offer {
   accent: string;
   accentBg: string;
   bullets: string[];
+  /**
+   * Standby flag (Task ID: 5-standby). When true, the card renders
+   * greyed-out with a "Standby" badge instead of a "Launch demo"
+   * CTA, and clicks are no-ops. The underlying offer still appears
+   * (communicating "coming back" better than hiding) but cannot be
+   * launched.
+   */
+  standby?: boolean;
 }
 
 const OFFERS: Offer[] = [
@@ -77,6 +85,7 @@ const OFFERS: Offer[] = [
       "Sankey sentiment migration",
       "Tactical alert terminal",
     ],
+    standby: true,
   },
   {
     id: "investment-bank",
@@ -90,6 +99,7 @@ const OFFERS: Offer[] = [
       "5 dossiers with UBO graph",
       "OFAC / EU / FATF screening",
     ],
+    standby: true,
   },
   {
     id: "harch-alpha",
@@ -103,6 +113,7 @@ const OFFERS: Offer[] = [
       "Multi-currency settlement ledger",
       "Z-score + order-book matrix",
     ],
+    standby: true,
   },
 ];
 
@@ -111,6 +122,11 @@ export function DemoPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSelect(offer: Offer) {
+    // Standby offers (Task ID: 5-standby) cannot be launched —
+    // their consoles render a StandbyBanner instead of the demo
+    // dashboard. Clicks are no-ops; the card already shows a
+    // "Standby" badge via the DemoCard component.
+    if (offer.standby) return;
     if (loadingId) return;
     setLoadingId(offer.id);
     setError(null);
@@ -284,7 +300,7 @@ export function DemoPage() {
           >
             {OFFERS.map((offer) => {
               const isLoading = loadingId === offer.id;
-              const isDisabled = loadingId !== null && !isLoading;
+              const isDisabled = (loadingId !== null && !isLoading) || !!offer.standby;
               return (
                 <DemoCard
                   key={offer.id}
@@ -392,12 +408,13 @@ function DemoCard({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const isStandby = !!offer.standby;
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={`Launch ${offer.label} demo`}
+      aria-label={isStandby ? `${offer.label} (on standby)` : `Launch ${offer.label} demo`}
       style={{
         position: "relative",
         display: "flex",
@@ -410,7 +427,7 @@ function DemoCard({
         border: `1px solid ${C.border}`,
         borderRadius: "8px",
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1,
+        opacity: disabled ? 0.6 : 1,
         transition:
           "transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
         overflow: "hidden",
@@ -449,6 +466,30 @@ function DemoCard({
           background: offer.accent,
         }}
       />
+
+      {/* Standby badge - top right (Task ID: 5-standby) */}
+      {isStandby && (
+        <span
+          style={{
+            position: "absolute",
+            top: "14px",
+            right: "14px",
+            fontFamily: C.fontMono,
+            fontSize: "9px",
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: C.warningText,
+            background: C.warningBg,
+            border: `1px solid ${C.warningBorder}`,
+            borderRadius: "4px",
+            padding: "3px 7px",
+            lineHeight: 1,
+          }}
+        >
+          Standby
+        </span>
+      )}
 
       {/* Persona badge */}
       <span
@@ -537,12 +578,18 @@ function DemoCard({
           fontFamily: C.fontMono,
           fontSize: "11px",
           fontWeight: 700,
-          color: loading ? C.textMuted : offer.accent,
+          color: isStandby
+            ? C.textMuted
+            : loading
+            ? C.textMuted
+            : offer.accent,
           letterSpacing: "0.08em",
           textTransform: "uppercase",
         }}
       >
-        {loading ? (
+        {isStandby ? (
+          <>Standby — coming back</>
+        ) : loading ? (
           <>
             <Spinner color={offer.accent} />
             Launching demo...

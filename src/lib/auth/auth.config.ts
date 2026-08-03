@@ -17,6 +17,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/harchiq/audit-log";
+import { isDemoEmail, getDemoUser, DEMO_PASSWORD } from "@/lib/demo-session";
 
 // Augment NextAuth JWT & Session types so role/accountType are visible to
 // callers of `getServerSession(authOptions)` and `getToken()`.
@@ -102,6 +103,28 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // ─── DEMO BYPASS ───────────────────────────────────────────
+        // demo-*@harch.atelier accounts authenticate against an in-memory
+        // store, never touching Prisma. This keeps the console + dashboard
+        // + accounts flows working in environments where the PostgreSQL DB
+        // is not provisioned (sandbox, local dev without Neon).
+        if (isDemoEmail(credentials.email)) {
+          if (credentials.password !== DEMO_PASSWORD) {
+            return null;
+          }
+          const demoUser = getDemoUser(credentials.email);
+          return {
+            id: demoUser.id,
+            email: demoUser.email,
+            name: demoUser.name,
+            role: demoUser.role,
+            accountType: demoUser.accountType,
+            companyId: demoUser.companyId,
+            status: demoUser.status,
+            isDemo: true,
+          };
+        }
 
         // ─── Extract IP + UA from the NextAuth request context ─────
         // RequestInternal.headers is a Record<string, string> (or
@@ -224,7 +247,9 @@ export const authOptions: NextAuthOptions = {
       // if token.id is missing but we have an email, look up the user
       // from the DB to backfill the missing claims. This prevents
       // redirect loops where session.user.id is undefined.
-      if (!token.id && token.email) {
+      // Skip the DB lookup for demo accounts — they're backed by the
+      // in-memory demo-session store, not Prisma.
+      if (!token.id && token.email && !isDemoEmail(token.email)) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: token.email },
@@ -248,6 +273,17 @@ export const authOptions: NextAuthOptions = {
         } catch {
           // DB error — leave token as-is (will fail at the route level with 401)
         }
+      }
+      // Demo fallback: if token.id is still missing and the email is a
+      // demo account, backfill from the in-memory store (no Prisma).
+      if (!token.id && token.email && isDemoEmail(token.email)) {
+        const demoUser = getDemoUser(token.email);
+        token.id = demoUser.id;
+        token.role = demoUser.role;
+        token.accountType = demoUser.accountType;
+        token.companyId = demoUser.companyId;
+        token.status = demoUser.status;
+        token.isDemo = true;
       }
       return token;
     },
@@ -276,12 +312,16 @@ export function getConsolePath(accountType?: string, role?: string): string {
   switch (accountType) {
     case "brand-monitor":
       return "/atelier/console/brand-monitor";
+    // The 3 hidden account types below are on STANDBY (Task ID:
+    // 5-standby). Their consoles render a StandbyBanner, but we
+    // never redirect users there from the smart redirector — they
+    // land on the core Brand Monitor console instead. This keeps
+    // legacy DB rows (accountType=trader/investor/competitor)
+    // functional instead of bouncing them to a standby page.
     case "market-competitor":
-      return "/atelier/console/market-competitor";
     case "investment-bank":
-      return "/atelier/console/investment-bank";
     case "harch-alpha":
-      return "/atelier/console/harch-alpha";
+      return "/atelier/console/brand-monitor";
     default:
       return "/atelier/console/brand-monitor";
   }

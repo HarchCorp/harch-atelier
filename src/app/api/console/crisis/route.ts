@@ -32,6 +32,8 @@ import {
   type CrisisDetectorResult,
   type CrisisAlert,
 } from "@/lib/harchiq/crisis-detector";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoCrisisResponse } from "@/lib/demo-console-api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -51,6 +53,11 @@ export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoCrisisResponse();
   }
 
   const url = new URL(req.url);

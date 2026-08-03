@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoNotificationsResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/console/notifications
@@ -38,6 +40,11 @@ export async function GET() {
   // Task: domain-matching-demo-isolation — demo users see only demo
   // notifications, real users see only real notifications.
   const demoFilter = demoFilterFromSession(session);
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoNotificationsResponse();
+  }
 
   try {
     const notifications = await prisma.notification.findMany({

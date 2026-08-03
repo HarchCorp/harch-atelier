@@ -7,6 +7,8 @@ import {
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
 import { aggregateAlertsByCity, knownCities, type GeoAlertInput } from "@/lib/harchiq/geo-mapper";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoGeoSignalsResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/geo-signals?range=7d|30d|all
@@ -52,6 +54,11 @@ export async function GET(req: NextRequest) {
       { error: "Forbidden — geo signals are for brand-monitor, market-competitor, investment-bank accounts" },
       { status: 403 },
     );
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoGeoSignalsResponse();
   }
 
   try {

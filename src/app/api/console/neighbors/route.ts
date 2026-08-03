@@ -6,6 +6,8 @@ import {
   requireUserCompany,
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoNeighborsResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/neighbors
@@ -62,6 +64,11 @@ export async function GET(req: Request) {
       { error: "Forbidden — competitor data is for brand-monitor, market-competitor and investment-bank accounts only" },
       { status: 403 }
     );
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoNeighborsResponse();
   }
 
   try {

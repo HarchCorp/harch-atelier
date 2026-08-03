@@ -6,6 +6,8 @@ import {
   requireUserCompany,
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoAlertsResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/alerts
@@ -27,6 +29,11 @@ export async function GET(req: Request) {
   const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
   if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoAlertsResponse();
   }
 
   try {

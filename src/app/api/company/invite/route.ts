@@ -7,6 +7,10 @@ import {
   toErrorResponse,
 } from "@/lib/auth/company-scope";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoCompanyInvitePostResponse, demoCompanyInviteListResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/company/invite
@@ -50,6 +54,12 @@ function generatePassword(): string {
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  const demoSession = await getServerSession(authOptions);
+  if (demoSession?.user?.isDemo || isDemoEmail(demoSession?.user?.email)) {
+    const demoBody = await req.json().catch(() => ({}));
+    return demoCompanyInvitePostResponse(demoBody);
+  }
   try {
     const scope = await requireCompanyAdmin();
 
@@ -179,6 +189,11 @@ export async function POST(req: NextRequest) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function GET() {
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  const demoSession = await getServerSession(authOptions);
+  if (demoSession?.user?.isDemo || isDemoEmail(demoSession?.user?.email)) {
+    return demoCompanyInviteListResponse();
+  }
   try {
     const scope = await requireCompanyAdmin();
 

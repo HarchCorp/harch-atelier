@@ -13,6 +13,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoReportsListResponse } from "@/lib/demo-console-api";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,11 @@ export async function GET() {
       { error: "Forbidden — monthly reports are only available on enterprise plans." },
       { status: 403 }
     );
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  if (session.user?.isDemo || isDemoEmail(session.user?.email)) {
+    return demoReportsListResponse();
   }
 
   try {

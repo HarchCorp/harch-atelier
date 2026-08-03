@@ -6,6 +6,8 @@ import {
   requireUserCompany,
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
+import { isDemoEmail } from "@/lib/demo-session";
+import { demoWeatherResponse } from "@/lib/demo-console-api";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/weather
@@ -40,6 +42,12 @@ export async function GET(req: Request) {
       { error: "Forbidden — this data is for brand-monitor, market-competitor and investment-bank accounts only" },
       { status: 403 }
     );
+  }
+
+  // ─── DEMO BYPASS ─────────────────────────────────────────────
+  // Demo sessions serve in-memory data, skipping Prisma entirely.
+  if (session.user.isDemo || isDemoEmail(session.user.email)) {
+    return demoWeatherResponse();
   }
 
   try {
