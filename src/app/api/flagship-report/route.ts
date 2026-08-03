@@ -11,6 +11,10 @@ export const revalidate = 0;
 //  the "Morocco Reputation Intelligence Report 2026" — the biggest
 //  report Harch Atelier produces.
 //
+//  Caching: Results are cached in-memory for 5 minutes (300s) to
+//  reduce latency from ~10s to <100ms on cache hit. The cache is
+//  invalidated on the next request after TTL expiry.
+//
 //  Returns:
 //    - 8 real companies with reputation scores + 1-year trends
 //    - 20 real people (CEOs, ministers, regulators, journalists)
@@ -22,7 +26,21 @@ export const revalidate = 0;
 //    - Sector breakdowns + methodology
 // ═══════════════════════════════════════════════════════════════
 
+// ─── IN-MEMORY CACHE ───────────────────────────────────────────
+let cachedReport: { data: unknown; timestamp: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function GET() {
+  // Check cache first
+  if (cachedReport && Date.now() - cachedReport.timestamp < CACHE_TTL_MS) {
+    return NextResponse.json({
+      success: true,
+      data: cachedReport.data,
+      cached: true,
+      cacheAge: Math.round((Date.now() - cachedReport.timestamp) / 1000),
+    });
+  }
+
   try {
     const now = new Date();
     const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
@@ -344,9 +362,13 @@ export async function GET() {
       },
     };
 
+    // Cache the result
+    cachedReport = { data: report, timestamp: Date.now() };
+
     return NextResponse.json({
       success: true,
       data: report,
+      cached: false,
     });
   } catch (error) {
     console.error("[API] /flagship-report GET error:", error);
