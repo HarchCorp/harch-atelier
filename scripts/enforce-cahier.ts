@@ -183,19 +183,19 @@ const clauses: Array<{
     },
   },
 
-  // ─── CLAUSE-005: Lignes de code TypeScript — CIBLE RÉELLE ───
+  // ─── CLAUSE-005: Lignes de code TypeScript — CIBLE RÉELLE (PALIER 3) ───
   {
     id: "CLAUSE-005",
     type: "BLOCKING",
-    description: "Le projet doit contenir au moins 250,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC)",
+    description: "Le projet doit contenir au moins 400,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC + Meltwater 5-10M LOC)",
     fn: () => {
       const result = exec(`find src -name "*.ts" -o -name "*.tsx" | xargs wc -l 2>/dev/null | tail -1`, 15000);
       const match = result.stdout.match(/(\d+)/);
       const lines = match ? parseInt(match[1], 10) : 0;
       return {
-        status: lines >= 250000 ? "PASS" : "FAIL",
+        status: lines >= 400000 ? "PASS" : "FAIL",
         actual: `${lines.toLocaleString()} lignes`,
-        expected: ">= 250,000 lignes (5% d'AlphaSense)",
+        expected: ">= 400,000 lignes (8% d'AlphaSense / Meltwater)",
       };
     },
   },
@@ -579,6 +579,81 @@ const clauses: Array<{
       } catch {
         return { status: "FAIL", actual: "JSON parse error", expected: ">= 4000 prix" };
       }
+    },
+  },
+
+  // ─── CLAUSE-027: 3 real-metrics reports (BLOCKING) ──────────
+  {
+    id: "CLAUSE-027",
+    type: "BLOCKING",
+    description: "Dossier competitive-reports doit avoir >= 3 fichiers *real-metrics*.md (AlphaSense + Dataminr + Meltwater)",
+    fn: () => {
+      const result = exec(`ls competitive-reports/*real-metrics*.md 2>/dev/null | wc -l`, 5000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 3 ? "PASS" : "FAIL",
+        actual: `${count} fichiers real-metrics`,
+        expected: ">= 3 (AlphaSense + Dataminr + Meltwater)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-028: Ingestion pipeline documented (BLOCKING) ───
+  {
+    id: "CLAUSE-028",
+    type: "BLOCKING",
+    description: "Le projet doit documenter un pipeline d'ingestion (feed-manager.ts)",
+    fn: () => {
+      const content = readFileSync(resolve(PROJECT_ROOT, "src/lib/feed-manager.ts"), "utf-8");
+      const hasScrapeInterval = content.includes("scrapeInterval");
+      const hasIngestion = content.includes("ingestion") || content.includes("ScrapeOrchestrator");
+      const hasPipeline = content.includes("pipeline") || content.includes("FeedManager");
+      const count = [hasScrapeInterval, hasIngestion, hasPipeline].filter(Boolean).length;
+      return {
+        status: count >= 2 ? "PASS" : "FAIL",
+        actual: `${count}/3 concepts présents`,
+        expected: ">= 2 (scrapeInterval, ingestion/pipeline)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-029: Elasticsearch architecture documented (BLOCKING) ─
+  {
+    id: "CLAUSE-029",
+    type: "BLOCKING",
+    description: "Master Spec Sheet doit documenter l'architecture Elasticsearch",
+    fn: () => {
+      const content = readFileSync(resolve(PROJECT_ROOT, "competitive-reports/10-MASTER-SPEC-SHEET.md"), "utf-8").toLowerCase();
+      const es = (content.match(/elasticsearch/g) || []).length;
+      const shard = (content.match(/shard/g) || []).length;
+      const cluster = (content.match(/cluster/g) || []).length;
+      const node = (content.match(/node/g) || []).length;
+      const total = es + shard + cluster + node;
+      return {
+        status: total >= 3 ? "PASS" : "FAIL",
+        actual: `${total} mentions (ES: ${es}, shard: ${shard}, cluster: ${cluster}, node: ${node})`,
+        expected: ">= 3 mentions Elasticsearch/shard/cluster/node",
+      };
+    },
+  },
+
+  // ─── CLAUSE-030: Client strategy documented (BLOCKING) ──────
+  {
+    id: "CLAUSE-030",
+    type: "BLOCKING",
+    description: "Master Spec Sheet doit documenter la stratégie client/pricing",
+    fn: () => {
+      const content = readFileSync(resolve(PROJECT_ROOT, "competitive-reports/10-MASTER-SPEC-SHEET.md"), "utf-8").toLowerCase();
+      const client = (content.match(/client/g) || []).length;
+      const customer = (content.match(/customer/g) || []).length;
+      const pricing = (content.match(/pricing/g) || []).length;
+      const mad = (content.match(/mad/g) || []).length;
+      const total = client + customer + pricing + mad;
+      return {
+        status: total >= 5 ? "PASS" : "FAIL",
+        actual: `${total} mentions (client: ${client}, customer: ${customer}, pricing: ${pricing}, MAD: ${mad})`,
+        expected: ">= 5 mentions client/customer/pricing/MAD",
+      };
     },
   },
 ];

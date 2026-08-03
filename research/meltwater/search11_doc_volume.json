@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://www.meltwater.com/en/press-releases/meltwater-acquires-deepreason-ai",
+    "name": "Meltwater acquires DeepReason.ai",
+    "snippet": "Today, Meltwater ingests and processes over 800 million documents a day, extracting new information on over 14 million companies, 50 million public personas (such as key decision makers within those companies and social media influencers) and 75 million topics.",
+    "host_name": "www.meltwater.com",
+    "rank": 0,
+    "date": "Nov 19, 2021",
+    "favicon": ""
+  },
+  {
+    "url": "https://developer.meltwater.com/guides/listening/exporting-mentions",
+    "name": "Exporting Mentions | Meltwater Developer Portal",
+    "snippet": "Exporting Mentions In this tutorial we'll cover the basics of creating an earned media export using the API. Before you start To run through this tutorial, you will need: Your Meltwater API token A Saved Search in your Meltwater App account Types of export There are two types of exports: One-time exports - these exports are run once, the data will not be refreshed automatically. Recurring ...",
+    "host_name": "developer.meltwater.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://sci-hub.box/?s=rivals+scipt",
+    "name": "Sci-Hub",
+    "snippet": "Sci-Hub has the largest (> 88 million documents) database of full-text scientific papers, available for free. Approximately 80% of the collection are articles from scientific journals, most of them dedicated to the subject of medicine.",
+    "host_name": "sci-hub.box",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://maxintel.org/google-dorking-reference-2026.html",
+    "name": "Google Dorks Cheat Sheet — OSINT Operator Reference",
+    "snippet": "Google Dorking for OSINT: The Complete Operator Reference & Investigation Playbook (2026) Every working search operator across Google, Bing, Yandex, DuckDuckGo, and Brave — with cross-engine compatibility tables, real-world OSINT investigation patterns, a graveyard of deprecated operators, and analysis of how AI search engines are changing dorking forever.",
+    "host_name": "maxintel.org",
+    "rank": 3,
+    "date": "Feb 9, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://thesentinel.network/p/fieldcraft-003-the-public-record",
+    "name": "FIELDCRAFT #003 — THE PUBLIC RECORD",
+    "snippet": "The federal court system’s electronic records database. Over one billion documents across all federal district courts, appellate courts, and bankruptcy courts. Search by party name to find any federal litigation involving your subject. Registration is free. Access costs $0.10 per page, but fees are waived if you accrue less than $30 in a quarter.",
+    "host_name": "thesentinel.network",
+    "rank": 4,
+    "date": "Apr 4, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://cyberinsider.com/security-lapse-at-veritone-ai-exposes-vast-amounts-of-us-govt-data",
+    "name": "Security Lapse at Veritone AI Exposes Vast Amounts of US Govt",
+    "snippet": "Cybersecurity firm UpGuard has reported that Veritone Inc., an AI technology provider, inadvertently exposed around 550GB of sensitive US government data. This massive security lapse involved approximately 1.664 billion documents on two unsecured Elasticsearch servers, discovered on March 23 and 24, 2024. The exposed data, no longer publicly accessible as of March 30, included employee ...",
+    "host_name": "cyberinsider.com",
+    "rank": 5,
+    "date": "May 1, 2024",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.saastr.com/the-new-rule-500k-arr-per-employee-is-the-new-200k",
+    "name": "The New Rule: $500K ARR Per Employee is the New $200K",
+    "snippet": "That’s $200K ARR per employee — which sounds “normal” until you realize they doubled ARR in just 9 months, indexed 27 billion documents, and now consume 20 trillion tokens per year. Enterprise AI at scale, growing faster than almost any pure-play enterprise software company this decade. Harvey AI — $100M+ ARR with ~350 employees.",
+    "host_name": "www.saastr.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

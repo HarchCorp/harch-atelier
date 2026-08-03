@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.redpanda.com/guides/kafka-architecture-kafka-streams",
+    "name": "Kafka Streams—a deep dive",
+    "snippet": "Kafka Streams is a client library for building applications and microservices where the input and output data are stored in Apache Kafka® clusters. Read more",
+    "host_name": "www.redpanda.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=KIiq8lIgUVk",
+    "name": "Building Data Intensive Microservices with Apache Kafka",
+    "snippet": "Developing Real-Time Data Pipelines with Apache Kafka · The hardest part of microservices is your data · The State of the Art in Microservices by ...",
+    "host_name": "www.youtube.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.confluent.io/platform/current/streams/microservices-orders.html",
+    "name": "Tutorial: Streaming Application Development Basics on",
+    "snippet": "This tutorial teaches the basics of building streaming applications and event-driven microservices on Confluent Platform through a sequence of exercises that ... Read more",
+    "host_name": "docs.confluent.io",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.datacamp.com/tutorial/kafka-streams-tutorial",
+    "name": "Kafka Streams Tutorial: Introduction to Real-Time Data",
+    "snippet": "Apr 9, 2025 — This guide covers core concepts, Java & Python implementations , and step-by-step examples for building scalable streaming applications.\nLearn how to build real-time data processing applications with Kafka Streams. This guide covers core concepts, Java & Python implementations, and step-by-step examples for building scalable streaming applications.",
+    "host_name": "www.datacamp.com",
+    "rank": 3,
+    "date": "Apr 9, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/dataengineering/comments/1ilxzk5/kafka_streaming_in_python_any_solid_nonjavascala",
+    "name": "Kafka Streaming in Python: Any Solid Non-Java/Scala",
+    "snippet": "Hey, geeks! I'm diving into Data Streaming with Kafka and Python , but I'm hitting a major roadblock .. almost every solid resource I find is ...",
+    "host_name": "www.reddit.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

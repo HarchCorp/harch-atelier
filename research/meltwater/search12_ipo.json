@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://live.euronext.com/nb/product/equities/NL00150003D3-MERK/ipo",
+    "name": "MELTWATER | NL00150003D3 | Euronext exchange Live quotes",
+    "snippet": "Stock MELTWATER N.V. Common Stock NL00150003D3 XOSL Oslo Børs Euronext Tech Leaders Live Euronext quotes, realtime prices, charts and regulated news",
+    "host_name": "live.euronext.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://live.euronext.com/it/product/equities/NL00150003D3-MERK/ipo",
+    "name": "MELTWATER | NL00150003D3 | Euronext exchange Live quotes",
+    "snippet": "Stock MELTWATER N.V. Common Stock NL00150003D3 XOSL Oslo Børs Tech Leaders Live Euronext quotes, realtime prices, charts and regulated news",
+    "host_name": "live.euronext.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://live.euronext.com/en/ipo-showcase/meltwater-0",
+    "name": "MELTWATER Direct listing,Transfer on Euronext Oslo Børs",
+    "snippet": "Listing MELTWATER on Euronext Oslo Børs Oslo. ISIN : NL00150003D3.",
+    "host_name": "live.euronext.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.meltwater.com/en/about/investor-relations/resources",
+    "name": "Meltwater Investor Relations | Resources",
+    "snippet": "What was the ticker symbol for Meltwater and where was the company listed? During Dec’20 to Aug’23 Meltwater was traded on the Oslo Børs (Oslo Stock Exchange) in Norway under the symbol MWTR.OL",
+    "host_name": "www.meltwater.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.marketscreener.com/quote/stock/MELTWATER-N-V-116042272",
+    "name": "Meltwater N.V. Stock (MWTR) - Quote Oslo Bors- MarketScreener",
+    "snippet": "Meltwater NV, former Meltwater BV, is a software as a service (SaaS) solution and online media monitoring company based in the Netherlands. The Company provides social and media intelligence.",
+    "host_name": "www.marketscreener.com",
+    "rank": 4,
+    "date": "Dec 23, 2004",
+    "favicon": ""
+  },
+  {
+    "url": "https://uk.marketscreener.com/quote/stock/MELTWATER-N-V-116042272",
+    "name": "Meltwater N.V. Share Price (MWTR) - Stock Oslo Bors",
+    "snippet": "Meltwater NV, former Meltwater BV, is a software as a service (SaaS) solution and online media monitoring company based in the Netherlands. The Company provides social and media intelligence.",
+    "host_name": "uk.marketscreener.com",
+    "rank": 5,
+    "date": "Aug 9, 2023",
+    "favicon": ""
+  },
+  {
+    "url": "https://uk.marketscreener.com/quote/stock/MELTWATER-N-V-116042272/quotes",
+    "name": "Meltwater N.V.: Performance & Quotes, MWTR Stock Price on",
+    "snippet": "Meltwater N.V.: Real-time, intraday chart, variations, volumes, technical indicators and last transactions, Stock Meltwater N.V. | Oslo Bors: MWTR | Oslo Bors",
+    "host_name": "uk.marketscreener.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

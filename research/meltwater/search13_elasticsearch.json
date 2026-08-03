@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://underthehood.meltwater.com/blog/2022/11/11/how-we-upgraded-an-old-3pb-large-elasticsearch-cluster-without-downtime-part-1-introduction",
+    "name": "How we upgraded an old, 3PB large, Elasticsearch cluster",
+    "snippet": "Nov 11, 2022 — The cluster contained close to 1100 i3en.3xlarge nodes running in AWS. The cluster had many thousands of indices, almost 100,000 shards and ...\nA few weeks ago, we completed the last steps in terminating our old, 1100 nodes large Elasticsearch cluster and its surrounding infrastructure. At that time, all dependent applications had already been routed over to our new Elasticsearch cluster that would replace it.",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 0,
+    "date": "Nov 11, 2022",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/elasticsearch/comments/dvnoiw/how_big_is_your_elasticsearch_cluster",
+    "name": "How big is your Elasticsearch cluster?",
+    "snippet": "I would like to grasp how big or small everyone else is going with their ES cluster.\n\nHow much data is it handling per second, per day?\n\nWould you be ...",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/blog/2018/11/05/optimal-shard-placement-in-a-petabyte-scale-elasticsearch-cluster",
+    "name": "Optimal Shard Placement in a Petabyte Scale",
+    "snippet": "Nov 5, 2018 — These massive datasets are hosted on several Elasticsearch clusters totaling 750 nodes and comprising thousands of indices and over 50,000 ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 2,
+    "date": "Nov 5, 2018",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.elastic.co/docs/deploy-manage/distributed-architecture/clusters-nodes-shards",
+    "name": "Clusters, nodes, and shards",
+    "snippet": "Shard copies in your cluster are automatically balanced across nodes to provide scale and high availability. All nodes are aware of all the other nodes in the ...\nYou can add servers (nodes) to a cluster to increase capacity, and Elasticsearch automatically distributes your data and query load across all of the available nodes. Elastic is able to distribute your data across nodes by subdividing an index into shards.",
+    "host_name": "www.elastic.co",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/blog/2018/02/06/running-a-400+-node-es-cluster",
+    "name": "Running a 400+ Node Elasticsearch Cluster",
+    "snippet": "Feb 6, 2018 — Every daily index runs with two shards each. This setup results in a large number of shards (closing in on 40k). Our cluster state is about 100 ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 4,
+    "date": "Feb 6, 2018",
+    "favicon": ""
+  },
+  {
+    "url": "https://dattell.com/data-architecture-blog/elasticsearch-optimization-for-small-medium-and-large-clusters",
+    "name": "Optimizing a Small Elasticsearch Cluster",
+    "snippet": "The minimum number of nodes for an Elasticsearch cluster is three. As your cluster size grows, it is best to optimize nodes for specific tasks.",
+    "host_name": "dattell.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.groundcover.com/learn/logging/elasticsearch-shards",
+    "name": "Elasticsearch Shards: Types, Challenges & Best Practices",
+    "snippet": "Feb 19, 2026 — Each shard should be between about 10 and 50 gigabytes in size - so to determine how many shards to create, divide the total size of your index ...",
+    "host_name": "www.groundcover.com",
+    "rank": 6,
+    "date": "Feb 19, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://stackoverflow.com/questions/22544461/elasticsearch-optimal-number-of-shards-per-node",
+    "name": "ElasticSearch - Optimal number of Shards per node",
+    "snippet": "I would appreciate if someone could suggest the optimal number of shards per ES node for optimal performance or provide any recommended way to arrive ...",
+    "host_name": "stackoverflow.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.elastic.co/docs/deploy-manage/production-guidance/optimize-performance/size-shards",
+    "name": "Size your shards - Elastic Docs",
+    "snippet": "While Elasticsearch automatically balances shards, you need to configure indices with an appropriate number of shards and replicas to allow for even distribution across nodes.",
+    "host_name": "www.elastic.co",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://devopsil.com/articles/2026-03-29-elasticsearch-cluster-sizing-production",
+    "name": "Elasticsearch Cluster Sizing for Production: Nodes, Shards",
+    "snippet": "A practical guide to sizing Elasticsearch clusters for production — covering node roles, shard counts, heap tuning, and capacity planning formulas.",
+    "host_name": "devopsil.com",
+    "rank": 9,
+    "date": "Mar 29, 2026",
+    "favicon": ""
+  }
+]

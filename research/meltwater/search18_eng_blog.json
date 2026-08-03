@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://underthehood.meltwater.com",
+    "name": "Meltwater Engineering Blog",
+    "snippet": "Expect practical engineering lessons, data pipelines at scale , and product thinking from the people behind Meltwater. Browse all posts. What we cover. Media ...\nExpect practical engineering lessons, data pipelines at scale, and product thinking from the people behind Meltwater. We rebuilt our journalist research pipeline from the ground up, splitting one generalist agent into focused specialist components.",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 0,
+    "date": "Jun 24, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/blog/archives",
+    "name": "Archive",
+    "snippet": "We rebuilt our journalist research pipeline from the ground up, splitting one generalist agent into focused specialist components.\nEvery Meltwater Engineering story, grouped by year for easy scanning.",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 1,
+    "date": "Jun 24, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.databricks.com/blog/data-pipeline-best-practices",
+    "name": "Data Pipeline Best Practices: Architecture, Modern",
+    "snippet": "Learn data pipeline best practices for architecture , ingestion, transformation, and deployment. Discover how modern data teams build efficient, ...",
+    "host_name": "www.databricks.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/page3",
+    "name": "Inside Meltwater Engineering.",
+    "snippet": "Expect practical engineering lessons, data pipelines at scale , and product thinking from the people behind Meltwater. Browse all posts. What we cover. Media ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://montecarlo.ai/blog-data-pipeline-architecture-explained",
+    "name": "Data Pipeline Architecture Explained: 6 Diagrams And Best",
+    "snippet": "Jul 9, 2025 — Data pipeline architecture is the process of designing how data is surfaced from its source system to the consumption layer. This frequently ...\nLevel up your data pipeline architecture knowledge with this detailed explainer with helpful images and diagrams.",
+    "host_name": "montecarlo.ai",
+    "rank": 4,
+    "date": "Jul 9, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://snowplow.io/blog/data-pipeline-architecture-for-ai-traditional-approaches",
+    "name": "Data Pipeline Architecture For AI: Why Traditional",
+    "snippet": "Apr 11, 2025 — In this installment, we'll examine why traditional pipelines fail AI initiatives and outline core components of AI-ready architectures .",
+    "host_name": "snowplow.io",
+    "rank": 5,
+    "date": "Apr 11, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://oneuptime.com/blog/post/2026-01-30-data-pipeline-architecture/view",
+    "name": "How to Build Data Pipeline Architecture",
+    "snippet": "Jan 30, 2026 — This post walks you through the architecture, patterns, and operational practices needed to build data pipelines that are reliable, scalable, ...",
+    "host_name": "oneuptime.com",
+    "rank": 6,
+    "date": "Jan 30, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://estuary.dev/blog/what-is-a-data-pipeline",
+    "name": "Data Pipelines Explained: What They Are and How They Work",
+    "snippet": "May 26, 2026 — A data pipeline is a system that moves data from one or more source systems to one or more destination systems , often transforming it along the way.",
+    "host_name": "estuary.dev",
+    "rank": 7,
+    "date": "May 26, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dsstream.com/post/data-pipeline-architecture",
+    "name": "Data Pipeline Architecture Explained (2026 Guide)",
+    "snippet": "Jul 17, 2026 — Data pipeline architecture is the end-to-end design that moves data from its sources to the systems and people that consume it. It defines how ...",
+    "host_name": "www.dsstream.com",
+    "rank": 8,
+    "date": "Jul 17, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://estuary.dev/blog/data-pipeline-architecture",
+    "name": "Data Pipeline Architecture: Patterns, Best Practices & Key",
+    "snippet": "Learn how to design modern data pipeline architecture — including ETL vs ELT, batch vs real-time, and mesh vs monolith — with real-world best practices.",
+    "host_name": "estuary.dev",
+    "rank": 9,
+    "date": "Jun 2, 2026",
+    "favicon": ""
+  }
+]

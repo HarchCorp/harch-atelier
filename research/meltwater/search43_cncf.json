@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.cncf.io/case-studies/meltwater",
+    "name": "Meltwater | CNCF",
+    "snippet": "Aug 17, 2023 · Case StudiesRead real-world case studies about the impact cloud native projects are having on organizations around the world · Humans of Cloud ...",
+    "host_name": "www.cncf.io",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.cncf.io/case-studies",
+    "name": "Case Studies | CNCF",
+    "snippet": "Got a cloud native story to share? Read about our case study process and kick off your story. get started.",
+    "host_name": "www.cncf.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.cncf.io",
+    "name": "Cloud Native Computing Foundation (CNCF)",
+    "snippet": "We provide support, oversight and direction for fast-growing, cloud native projects, including Kubernetes, Envoy, and Prometheus.",
+    "host_name": "www.cncf.io",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=qXrkqU5W9VE",
+    "name": "A Case Study Delivering Cloud Native Foundation Mo  - YouTube",
+    "snippet": "Nov 12, 2024 · From Supercomputing to Serving: A Case Study Delivering Cloud Native Foundation Models - Autumn Moulder, Cohere Cloud native takes on new ...",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.prnewswire.com/news-releases/cncf-end-user-community-provides-insights-into-kubernetes-cluster-management-with-technology-radar-301318558.html",
+    "name": "CNCF End User Community Provides Insights into Kubernetes",
+    "snippet": "Jun 23, 2021 · The Cloud Native Computing Foundation (CNCF) hosts critical components of the global technology infrastructure, including Kubernetes, Prometheus ...",
+    "host_name": "www.prnewswire.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

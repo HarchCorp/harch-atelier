@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://underthehood.meltwater.com/page12",
+    "name": "Inside Meltwater Engineering.",
+    "snippet": "Expect practical engineering lessons, data pipelines. Gateway is a design pattern often used in microservice architecture",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/jonathans-musings/all-hail-the-monorepo-long-live-microservices-4f96209c66e4",
+    "name": "All Hail the Monorepo. Long Live Microservices.",
+    "snippet": "A monorepo does not imply a monolith. Monolith. A single deployable unit — one codebase , one artifact, one runtime. Monoliths often live in ...",
+    "host_name": "medium.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=47VOcGGm6aU",
+    "name": "From Monorail to Monorepo: Airbnb's journey into",
+    "snippet": "Most of Airbnb's code lives in a monolithic Rails application called Monorail.",
+    "host_name": "www.youtube.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/softwarearchitecture/comments/1u8j4ey/microservices_have_probably_wasted_more",
+    "name": "Microservices have probably wasted more engineering",
+    "snippet": "Each team owns 1-3 microservices completely, - deployment, contracts, logic, codebase , etc. Microservices are split by business domain and are ...",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://newsletter.pragmaticengineer.com/p/google-part-2",
+    "name": "Inside Google's Engineering Culture: the Tech Stack (Part 2)",
+    "snippet": "Sep 30, 2025 — Monorepo. Also known as “Google3,” the monorepo doesn't mean Google has a monolithic codebase . Google has a monolithic codebase. a microservice ...",
+    "host_name": "newsletter.pragmaticengineer.com",
+    "rank": 4,
+    "date": "Sep 30, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.flagsmith.com/blog/embracing-the-monolith",
+    "name": "Monolith vs. Microservice architecture: Embracing the",
+    "snippet": "this monorepo lays the foundation to enable us to build our monolith service. cats and dogs. With 1 codebase , we can test this with a single Github action.",
+    "host_name": "www.flagsmith.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://danoncoding.com/monorepos-for-microservices-part-1-do-or-do-not-a7a9c90ad50e",
+    "name": "Monorepos for Microservices Part 1: Do or do not?",
+    "snippet": "Feb 21, 2022 — monorepo is a source code management strategy , in which code for multiple projects or systems is stored in one repository, instead of multiple.",
+    "host_name": "danoncoding.com",
+    "rank": 6,
+    "date": "Feb 21, 2022",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/posts/tigranbayburtsyan_monorepos-are-back-at-some-point-making-activity-7429333396260102144-bUTk",
+    "name": "Monorepos Outshine Microservices in AI Coding",
+    "snippet": "It seems counterintuitive, but having Monorepos burn a lot fewer tokens during AI Coding than the small microservice -scoped repos, because ...",
+    "host_name": "www.linkedin.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://engineering.deptagency.com/a-journey-moving-the-monolith-to-microservices",
+    "name": "A Journey Moving the Monolith to Microservices",
+    "snippet": "Mar 28, 2022 — A client who wanted to move their Java based monolith into the 2020's with a spanking new Microservice / Single Page App (SPA) architecture.",
+    "host_name": "engineering.deptagency.com",
+    "rank": 8,
+    "date": "Mar 28, 2022",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/clearing-confusion-monolith-vs-monorepo-polyrepo-priyanka-guha-a07zc",
+    "name": "Clearing the Confusion: Monolith vs Monorepo vs Polyrepo vs",
+    "snippet": "Recently, our engineering team found ourselves in a classic debate. The question on the table was a familiar one: should we adopt a Polyrepo or stick with our existing Monorepo setup?",
+    "host_name": "www.linkedin.com",
+    "rank": 9,
+    "date": "Aug 27, 2025",
+    "favicon": ""
+  }
+]

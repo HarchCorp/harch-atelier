@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.snowflake.com/en/summit",
+    "name": "Snowflake Summit 26",
+    "snippet": "Explore the future of data, AI, and applications at Snowflake Summit 26. Join experts, attend workshops, and get SnowPro certified while learning new data ...",
+    "host_name": "www.snowflake.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.landbase.com/signals/companies-attending-data-cloud-summit-2026",
+    "name": "Companies attending Data Cloud Summit 2026",
+    "snippet": "Snowflake Data Cloud Summit is a leading international conference and trade show dedicated to cloud data platforms and data-driven business strategies.",
+    "host_name": "www.landbase.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.cognizant.com/us/en/cmp/snowflake-data-cloud-2026",
+    "name": "Snowflake Summit 2026: Data Cloud & AI Innovation",
+    "snippet": "Join Cognizant at Snowflake Summit 2026 to explore how enterprises use data, AI, and the Snowflake Data Cloud to drive measurable business outcomes.",
+    "host_name": "www.cognizant.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/snowflake/comments/1tw4o4m/snowflake_summit_post_anyone_else_feeling_a_bit",
+    "name": "Snowflake Summit Post! Anyone else feeling a bit",
+    "snippet": "Anyone else a bit disappointed with Snowflake Summit 26, especially with (but not limited to) the quality of the courses and sessions being ...",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=-ufc0x0-DCQ",
+    "name": "Breaking Down Data Kingdoms for Democratized Analytics",
+    "snippet": "In this Data Cloud Summit 2020 presentation , Sainsbury's Principal Data Engineer talks about how Sainsbury's used its migration to Snowflake ...",
+    "host_name": "www.youtube.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

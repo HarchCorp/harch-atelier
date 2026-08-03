@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://underthehood.meltwater.com/blog/2021/11/05/our-journey-from-database-to-data-lake",
+    "name": "Our Journey from Database to Data Lake",
+    "snippet": "Nov 5, 2021 — Let's take a look at how we implemented a pipeline to collect, enrich and store our structured data into a data lake and how we query this data. Read more",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 0,
+    "date": "Nov 5, 2021",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/developers/guides/kafka-interactive-tables-streaming",
+    "name": "Real-Time Analytics with Kafka, Interactive Tables, and",
+    "snippet": "Jan 15, 2026 — In this quickstart, you will learn how to build a real-time data pipeline that ingests IoT sensor data from Apache Kafka into Snowflake ... Read more",
+    "host_name": "www.snowflake.com",
+    "rank": 1,
+    "date": "Jan 15, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com",
+    "name": "Meltwater Engineering Blog",
+    "snippet": "Insights, analysis, and product updates from Meltwater engineers and data teams. Expect practical engineering lessons, data pipelines at scale, and product ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@cubera_inc/data-pipeline-with-kafka-and-snowflake-af7fb1e26df9",
+    "name": "Data Pipeline with Kafka and Snowflake | by CUBERA",
+    "snippet": "The data pipeline is constructed through Apache Airflow to feed to a Data Lake ( Snowflake ) with that of data directly written to Apache Kafka topics. Read more",
+    "host_name": "medium.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=0cw4BY15oD4",
+    "name": "Real-Time to Lakehouse: Airflow-Triggered Kafka Pipelines",
+    "snippet": "In this video, we build a production-grade, event-driven data pipeline using Apache Airflow, Apache Kafka , Postgres, and Apache Iceberg.",
+    "host_name": "www.youtube.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/AtlantBH/posts/looking-to-set-up-a-production-ready-pipeline-from-scratch-using-kafka-and-snowf/1111237764340442",
+    "name": "snowflake-using-kafka-connect-part-2",
+    "snippet": "Nov 19, 2024 — Looking to set up a production-ready pipeline from scratch using # Kafka and # Snowflake , the essentials of modern # data pipelines ?",
+    "host_name": "www.facebook.com",
+    "rank": 5,
+    "date": "Nov 19, 2024",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.integrate.io/blog/building-a-snowflake-data-pipeline",
+    "name": "Building a Real-time Snowflake Data Pipeline",
+    "snippet": "Aug 17, 2023 — This comprehensive guide explores the process of building a real-time data pipeline using Snowflake and Kafka, covering essential topics. Read more",
+    "host_name": "www.integrate.io",
+    "rank": 6,
+    "date": "Aug 17, 2023",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.starburst.io/blog/data-pipelines-and-data-lakes",
+    "name": "Data pipelines and data lakehouses",
+    "snippet": "Jul 20, 2023 — Data pipelines and data lakes : How Starburst Galaxy can be used to construct the land, structure and consume layers of a data lakehouse.",
+    "host_name": "www.starburst.io",
+    "rank": 7,
+    "date": "Jul 20, 2023",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.voltactivedata.com/blog/2026/07/kafka-ingestion-pipeline-databricks-snowflake",
+    "name": "Kafka Ingestion Pipeline: Why Databricks, Snowflake Shift",
+    "snippet": "4 days ago — Databricks and Snowflake built ways to skip the Kafka ingestion pipeline for single-destination streams. See what changed, and what didn't.",
+    "host_name": "www.voltactivedata.com",
+    "rank": 8,
+    "date": "Jul 30, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/developers/guides/snowflake-confluent-tableflow-iceberg",
+    "name": "Stream Kafka Data to Snowflake via Confluent Tableflow",
+    "snippet": "May 27, 2025 — In this quickstart, you'll build a real-time data pipeline that connects Apache Kafka with Snowflake , without writing a single custom connector ...",
+    "host_name": "www.snowflake.com",
+    "rank": 9,
+    "date": "May 27, 2025",
+    "favicon": ""
+  }
+]

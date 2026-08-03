@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.mydbsync.com/blogs/snowflake-data-warehousing",
+    "name": "A complete guide to data warehousing with Snowflake",
+    "snippet": "Apr 2, 2025 — Master snowflake data warehousing . This complete guide covers architecture, setup, best practices, and optimization for efficient data ...",
+    "host_name": "www.mydbsync.com",
+    "rank": 0,
+    "date": "Apr 2, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=qlRCmH0XC5k",
+    "name": "Streaming CDC data from PostgreSQL to Snowflake",
+    "snippet": "Join Alex as he unveils the secrets behind streaming ETL in this video. From Postgres to Snowflake and beyond, Alex shares valuable lessons ...",
+    "host_name": "www.youtube.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.fortegrp.com/insights/best-cloud-data-warehouse",
+    "name": "Top 21 Cloud Data Warehouse Solutions in the USA (2026",
+    "snippet": "Apr 29, 2026 — Compare the top 21 cloud data warehouse platforms for 2026, including Snowflake , BigQuery, Redshift, and Azure Synapse.",
+    "host_name": "www.fortegrp.com",
+    "rank": 2,
+    "date": "Apr 29, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.definite.app/blog/postgres-data-warehouse-modern-guide-startups-2025",
+    "name": "PostgreSQL as a Data Warehouse: When It Works",
+    "snippet": "Feb 3, 2026 — An honest guide to PostgreSQL for analytics—limitations, hidden costs, cloud warehouses like Snowflake , see our Snowflake alternatives ...",
+    "host_name": "www.definite.app",
+    "rank": 3,
+    "date": "Feb 3, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/posts/vaibhav-gurav-582389116_database-data-postgresql-activity-7375918001063100416-SNJP",
+    "name": "Real-Time Data Pipeline from AWS PostgreSQL to Snowflake",
+    "snippet": "Snowflake operates as a cloud-native data warehouse-as-a-service , streamlining data storage and management without the need for complex  ...",
+    "host_name": "www.linkedin.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/blog/2021/11/05/our-journey-from-database-to-data-lake",
+    "name": "Our Journey from Database to Data Lake",
+    "snippet": "Nov 5, 2021 — In this post, I will share which technical solution we built, and what we learned by building the system a second time. Our Goal Meltwater ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 5,
+    "date": "Nov 5, 2021",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/fundamentals/data-warehouse",
+    "name": "What Is a Data Warehouse? Types, Benefits & Components",
+    "snippet": "Learn what a data warehouse is , how it works, key components, types, benefits and how Snowflake modernizes data warehousing solutions at scale.",
+    "host_name": "www.snowflake.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://clickhouse.com/resources/engineering/top-5-cloud-data-warehouses",
+    "name": "Top 5 cloud data warehouses in 2026: Architecture, cost,",
+    "snippet": "Apr 13, 2026 — Compare the top cloud data warehouses of 2025: Snowflake , BigQuery, Redshift, Databricks, and ClickHouse. Analyze cost efficiency, real-time ...",
+    "host_name": "clickhouse.com",
+    "rank": 7,
+    "date": "Apr 13, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://portable.io/connectors/meltwater/snowflake",
+    "name": "Meltwater Data Integration with Snowflake | Portable",
+    "snippet": "With Portable, integrate Meltwater data with your Snowflake warehouse in minutes. Access your real-time media intelligence platform data from Snowflake without having to manage cumbersome ETL scripts.",
+    "host_name": "portable.io",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.snowflake.com/en/en/user-guide/kafka-connector-overview",
+    "name": "Overview of the Kafka connector | Snowflake Documentation",
+    "snippet": "A Snowflake-provided virtual warehouse loads data from the staged file into the target table (i.e. the table specified in the configuration file for the topic) via the pipe created for the Kafka topic partition.",
+    "host_name": "docs.snowflake.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

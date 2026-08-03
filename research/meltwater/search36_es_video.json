@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://underthehood.meltwater.com/blog/2023/01/20/how-we-upgraded-an-old-3pb-large-elasticsearch-cluster-without-downtime-part-7-final-architecture-learnings",
+    "name": "How we upgraded an old, 3PB large, Elasticsearch cluster",
+    "snippet": "Jan 20, 2023 — This is the 7th and final part of our blog post series on how we upgraded our Elasticsearch cluster without downtime and with minimal user ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 0,
+    "date": "Jan 20, 2023",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.instagram.com/p/Cnw_UDZNv9H",
+    "name": "The final part of our 3#petabyte #Elasticsearch cluster",
+    "snippet": "The final part of our 3#petabyte # Elasticsearch cluster upgrade series is out. We discuss the benefits of the upgrade and provide more details ...",
+    "host_name": "www.instagram.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/blog/2022/12/16/how-we-upgraded-an-old-3pb-large-elasticsearch-cluster-without-downtime-part-6-testing-rollout-strategy",
+    "name": "How we upgraded an old, 3PB large, Elasticsearch cluster",
+    "snippet": "Dec 16, 2022 — Welcome to this sixth part of our adventure of upgrading our Elasticsearch cluster . Until now, we have explained how we structured our work, ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 2,
+    "date": "Dec 16, 2022",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=ms7FtQebWLw",
+    "name": "A Day in the Life of an Elasticsearch Architect",
+    "snippet": "Let us share our learnings of architecting and managing small as well as large-scale Elasticsearch clusters . 15K viewsStreamed 4 years ago",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/user/MeltwaterGroup",
+    "name": "Meltwater",
+    "snippet": "Meltwater transforms global media, social, and AI signals into actionable intelligence that leaders can rely on. All-in-one solution for your PR and marketing ...",
+    "host_name": "www.youtube.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

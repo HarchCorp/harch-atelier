@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-08-03T14:17:36.016Z",
-  "totalClauses": 26,
-  "passed": 26,
-  "failed": 0,
+  "timestamp": "2026-08-03T14:47:57.633Z",
+  "totalClauses": 30,
+  "passed": 29,
+  "failed": 1,
   "skipped": 0,
-  "blockingFailed": 0,
+  "blockingFailed": 1,
   "warningFailed": 0,
-  "sessionCanEnd": true,
+  "sessionCanEnd": false,
   "results": [
     {
       "status": "PASS",
@@ -33,7 +33,7 @@
       "id": "CLAUSE-003",
       "type": "BLOCKING",
       "description": "L'API /api/flagship-report doit retourner 200 OK",
-      "durationMs": 19
+      "durationMs": 10047
     },
     {
       "status": "PASS",
@@ -42,16 +42,16 @@
       "id": "CLAUSE-004",
       "type": "BLOCKING",
       "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
-      "durationMs": 17
+      "durationMs": 46
     },
     {
-      "status": "PASS",
+      "status": "FAIL",
       "actual": "250,989 lignes",
-      "expected": ">= 250,000 lignes (5% d'AlphaSense)",
+      "expected": ">= 400,000 lignes (8% d'AlphaSense / Meltwater)",
       "id": "CLAUSE-005",
       "type": "BLOCKING",
-      "description": "Le projet doit contenir au moins 250,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC)",
-      "durationMs": 16
+      "description": "Le projet doit contenir au moins 400,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC + Meltwater 5-10M LOC)",
+      "durationMs": 47
     },
     {
       "status": "PASS",
@@ -60,7 +60,7 @@
       "id": "CLAUSE-006",
       "type": "BLOCKING",
       "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
-      "durationMs": 6900
+      "durationMs": 7442
     },
     {
       "status": "PASS",
@@ -69,7 +69,7 @@
       "id": "CLAUSE-007",
       "type": "BLOCKING",
       "description": "Les 5 pages company profiles doivent retourner 200 OK",
-      "durationMs": 540
+      "durationMs": 587
     },
     {
       "status": "PASS",
@@ -82,12 +82,12 @@
     },
     {
       "status": "PASS",
-      "actual": "183 lignes, entrée 2026-08-03 présente",
+      "actual": "253 lignes, entrée 2026-08-03 présente",
       "expected": ">= 150 lignes + entrée du jour",
       "id": "CLAUSE-009",
       "type": "BLOCKING",
       "description": "Worklog >= 150 lignes avec entrée du jour",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -96,7 +96,7 @@
       "id": "CLAUSE-010",
       "type": "BLOCKING",
       "description": "La page /atelier/flagship-report doit retourner 200 OK",
-      "durationMs": 46
+      "durationMs": 52
     },
     {
       "status": "PASS",
@@ -105,7 +105,7 @@
       "id": "CLAUSE-011",
       "type": "BLOCKING",
       "description": "Classes utilitaires overflow protection dans globals.css",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -114,7 +114,7 @@
       "id": "CLAUSE-012",
       "type": "BLOCKING",
       "description": "Le serveur de développement doit répondre sur port 3000",
-      "durationMs": 80
+      "durationMs": 79
     },
     {
       "status": "PASS",
@@ -123,7 +123,7 @@
       "id": "CLAUSE-013",
       "type": "BLOCKING",
       "description": "Le projet doit avoir au moins 2 fichiers de test (unit + integration)",
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "status": "PASS",
@@ -132,7 +132,7 @@
       "id": "CLAUSE-014",
       "type": "BLOCKING",
       "description": "Le projet doit avoir un logger structuré",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -150,16 +150,16 @@
       "id": "CLAUSE-016",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit contenir pgvector + Kafka + LLM gateway",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
-      "actual": "11 fichiers .md",
+      "actual": "12 fichiers .md",
       "expected": ">= 8 fichiers",
       "id": "CLAUSE-017",
       "type": "BLOCKING",
       "description": "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -195,7 +195,7 @@
       "id": "CLAUSE-021",
       "type": "BLOCKING",
       "description": "Base de données: >= 5,000 articles réels (cible réelle, AlphaSense a 500M+)",
-      "durationMs": 17
+      "durationMs": 16
     },
     {
       "status": "PASS",
@@ -208,12 +208,12 @@
     },
     {
       "status": "PASS",
-      "actual": "2 fichiers real-metrics",
+      "actual": "3 fichiers real-metrics",
       "expected": ">= 2 (AlphaSense + Dataminr)",
       "id": "CLAUSE-023",
       "type": "BLOCKING",
       "description": "Dossier competitive-reports doit avoir >= 2 fichiers *real-metrics*.md",
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "status": "PASS",
@@ -222,7 +222,7 @@
       "id": "CLAUSE-024",
       "type": "BLOCKING",
       "description": "Base de données: >= 30 personnes réelles",
-      "durationMs": 14
+      "durationMs": 15
     },
     {
       "status": "PASS",
@@ -231,7 +231,7 @@
       "id": "CLAUSE-025",
       "type": "BLOCKING",
       "description": "Base de données: >= 500 snapshots de sentiment",
-      "durationMs": 15
+      "durationMs": 16
     },
     {
       "status": "PASS",
@@ -241,7 +241,45 @@
       "type": "BLOCKING",
       "description": "Base de données: >= 4,000 prix BVC",
       "durationMs": 15
+    },
+    {
+      "status": "PASS",
+      "actual": "3 fichiers real-metrics",
+      "expected": ">= 3 (AlphaSense + Dataminr + Meltwater)",
+      "id": "CLAUSE-027",
+      "type": "BLOCKING",
+      "description": "Dossier competitive-reports doit avoir >= 3 fichiers *real-metrics*.md (AlphaSense + Dataminr + Meltwater)",
+      "durationMs": 2
+    },
+    {
+      "status": "PASS",
+      "actual": "3/3 concepts présents",
+      "expected": ">= 2 (scrapeInterval, ingestion/pipeline)",
+      "id": "CLAUSE-028",
+      "type": "BLOCKING",
+      "description": "Le projet doit documenter un pipeline d'ingestion (feed-manager.ts)",
+      "durationMs": 1
+    },
+    {
+      "status": "PASS",
+      "actual": "13 mentions (ES: 11, shard: 0, cluster: 0, node: 2)",
+      "expected": ">= 3 mentions Elasticsearch/shard/cluster/node",
+      "id": "CLAUSE-029",
+      "type": "BLOCKING",
+      "description": "Master Spec Sheet doit documenter l'architecture Elasticsearch",
+      "durationMs": 0
+    },
+    {
+      "status": "PASS",
+      "actual": "6 mentions (client: 3, customer: 1, pricing: 1, MAD: 1)",
+      "expected": ">= 5 mentions client/customer/pricing/MAD",
+      "id": "CLAUSE-030",
+      "type": "BLOCKING",
+      "description": "Master Spec Sheet doit documenter la stratégie client/pricing",
+      "durationMs": 1
     }
   ],
-  "nextSteps": []
+  "nextSteps": [
+    "CORRIGER CLAUSE-005: Le projet doit contenir au moins 400,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC + Meltwater 5-10M LOC)"
+  ]
 }

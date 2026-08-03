@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.unitedtechno.com/case-study/snowflake-data-warehouse-implementation-case-study",
+    "name": "Snowflake Data Warehouse Implementation Case Study",
+    "snippet": "Snowflake Data Warehouse Implementation Case Study : See how a global cosmetics brand modernized analytics & enabled faster insights.",
+    "host_name": "www.unitedtechno.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/resource/roi-case-study-iovation-deploys-snowflakes-cloud-data-warehouse",
+    "name": "ROI Case Study: iovation Deploys Snowflake's Cloud Data",
+    "snippet": "Dealing with large amounts of data for analysis from its customers · They needed a robust database that could handle routine analytics queries. Read more",
+    "host_name": "www.snowflake.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.polaranalytics.com/vs/meltwater",
+    "name": "Meltwater vs Polar Analytics Compared (2026)",
+    "snippet": "Meltwater vs Polar Analytics compared on server-side tracking, incremental lift measurement. Discover why DTC brands prefer Polar to Meltwater .",
+    "host_name": "www.polaranalytics.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.snowflake.com/en/resources/video/data-warehouse-on-snowflake-copy",
+    "name": "Data Warehouse on Snowflake - copy",
+    "snippet": "This video provides a high-level overview of how the Snowflake Cloud Data Platform can be used as a data warehouse to consolidate all your data.",
+    "host_name": "www.snowflake.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.peerspot.com/questions/what-is-your-primary-use-case-for-snowflake-analytics",
+    "name": "What is your primary use case for Snowflake Analytics?",
+    "snippet": "Jul 1, 2022 — How do you or your organization use this solution? Please share with us so that your peers can learn from your experiences. Thank you!",
+    "host_name": "www.peerspot.com",
+    "rank": 4,
+    "date": "Jul 1, 2022",
+    "favicon": ""
+  }
+]

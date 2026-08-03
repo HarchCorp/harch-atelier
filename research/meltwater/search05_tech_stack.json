@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://underthehood.meltwater.com/blog/archives",
+    "name": "Archive",
+    "snippet": "This is the 7th and final part of our blog post series on how we upgraded our Elasticsearch cluster without downtime and with minimal user impact. In this post, ... Read more\nWe rebuilt our journalist research pipeline from the ground up, splitting one generalist agent into focused specialist components. Read more",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=YzxH5xMButE",
+    "name": "The Meltwater Elasticsearch Architecture",
+    "snippet": "Meltwater provides a search and analytics platform . The underlying technology is powered by a large Elasticsearch cluster.",
+    "host_name": "www.youtube.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/page3",
+    "name": "Inside Meltwater Engineering.",
+    "snippet": "Insights, analysis, and product updates from Meltwater engineers and data teams. Expect practical engineering lessons, data pipelines at scale, and product ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com/blog/2019/11/25/a-simple-tech-stack-for-your-engineering-blog",
+    "name": "A Simple Tech Stack for your Engineering Blog",
+    "snippet": "Nov 25, 2019 — A Simple Tech Stack for your Engineering Blog . For quite a while I am maintaining the Engineering blog for Meltwater at underthehood. meltwater . Read more",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 3,
+    "date": "Nov 25, 2019",
+    "favicon": ""
+  },
+  {
+    "url": "https://thenewstack.io/why-python-data-engineers-should-know-kafka-and-flink",
+    "name": "Why Python Data Engineers Should Know Kafka and Flink",
+    "snippet": "Data engineers who use Python , one of the most popular languages in the world, increasingly need to work with Apache Kafka and Apache Flink for streaming data ... Read more",
+    "host_name": "thenewstack.io",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/dataengineering/comments/1snfqhh/kafka_data_ingestion_dlt_vs_pure_python_vs_pure",
+    "name": "kafka data ingestion: dlt vs pure python vs pure java vs other",
+    "snippet": "Hi all. As a rookie DE looking for feedback on following. application has to process events from kafka . application would run in kubernetes. Read more",
+    "host_name": "www.reddit.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/posts/matteocollina_why-we-built-a-new-kafka-client-for-nodejs-activity-7323365414418251776-DNVO",
+    "name": "Why we built a new Kafka client for Node.js",
+    "snippet": "KafkaJS is a pure JavaScript library but is no longer maintained. It helps developers build strong and maintainable Kafka applications in Node.",
+    "host_name": "www.linkedin.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@rayancr/building-a-tweet-ingestion-and-search-backend-like-twitter-using-go-kafka-and-elasticsearch-608b32e68252",
+    "name": "Building a tweet ingestion and search backend like Twitter",
+    "snippet": "Building a tweet ingestion and search backend like Twitter using Go , Kafka and Elasticsearch Twitter has always been quite a go to place for ...",
+    "host_name": "medium.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=IFfULE1VxE0",
+    "name": "Data pipeline using Kafka - Elasticsearch - Logstash - Kibana",
+    "snippet": "Beginner's Crash Course to Elastic Stack - Part 1: Intro to Elasticsearch and Kibana. Official Elastic Community · 660K views ; Master Kafka Log ...",
+    "host_name": "www.youtube.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://underthehood.meltwater.com",
+    "name": "Meltwater Engineering Blog",
+    "snippet": "Insights, analysis, and product updates from Meltwater engineers and data teams. Expect practical engineering lessons, data pipelines at scale, and product ...",
+    "host_name": "underthehood.meltwater.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
