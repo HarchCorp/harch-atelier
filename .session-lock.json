@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-03T14:47:57.633Z",
+  "timestamp": "2026-08-03T15:02:09.013Z",
   "totalClauses": 30,
   "passed": 29,
   "failed": 1,
@@ -15,7 +15,7 @@
       "id": "CLAUSE-001",
       "type": "BLOCKING",
       "description": "Le schéma Prisma doit contenir au moins 37 modèles",
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "status": "PASS",
@@ -33,7 +33,7 @@
       "id": "CLAUSE-003",
       "type": "BLOCKING",
       "description": "L'API /api/flagship-report doit retourner 200 OK",
-      "durationMs": 10047
+      "durationMs": 9167
     },
     {
       "status": "PASS",
@@ -42,16 +42,16 @@
       "id": "CLAUSE-004",
       "type": "BLOCKING",
       "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
-      "durationMs": 46
+      "durationMs": 21
     },
     {
       "status": "FAIL",
-      "actual": "250,989 lignes",
+      "actual": "251,251 lignes",
       "expected": ">= 400,000 lignes (8% d'AlphaSense / Meltwater)",
       "id": "CLAUSE-005",
       "type": "BLOCKING",
       "description": "Le projet doit contenir au moins 400,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC + Meltwater 5-10M LOC)",
-      "durationMs": 47
+      "durationMs": 17
     },
     {
       "status": "PASS",
@@ -60,7 +60,7 @@
       "id": "CLAUSE-006",
       "type": "BLOCKING",
       "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
-      "durationMs": 7442
+      "durationMs": 7365
     },
     {
       "status": "PASS",
@@ -69,7 +69,7 @@
       "id": "CLAUSE-007",
       "type": "BLOCKING",
       "description": "Les 5 pages company profiles doivent retourner 200 OK",
-      "durationMs": 587
+      "durationMs": 627
     },
     {
       "status": "PASS",
@@ -82,12 +82,12 @@
     },
     {
       "status": "PASS",
-      "actual": "253 lignes, entrée 2026-08-03 présente",
+      "actual": "355 lignes, entrée 2026-08-03 présente",
       "expected": ">= 150 lignes + entrée du jour",
       "id": "CLAUSE-009",
       "type": "BLOCKING",
       "description": "Worklog >= 150 lignes avec entrée du jour",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -96,7 +96,7 @@
       "id": "CLAUSE-010",
       "type": "BLOCKING",
       "description": "La page /atelier/flagship-report doit retourner 200 OK",
-      "durationMs": 52
+      "durationMs": 44
     },
     {
       "status": "PASS",
@@ -114,7 +114,7 @@
       "id": "CLAUSE-012",
       "type": "BLOCKING",
       "description": "Le serveur de développement doit répondre sur port 3000",
-      "durationMs": 79
+      "durationMs": 85
     },
     {
       "status": "PASS",
@@ -123,7 +123,7 @@
       "id": "CLAUSE-013",
       "type": "BLOCKING",
       "description": "Le projet doit avoir au moins 2 fichiers de test (unit + integration)",
-      "durationMs": 3
+      "durationMs": 5
     },
     {
       "status": "PASS",
@@ -150,7 +150,7 @@
       "id": "CLAUSE-016",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit contenir pgvector + Kafka + LLM gateway",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -159,16 +159,16 @@
       "id": "CLAUSE-017",
       "type": "BLOCKING",
       "description": "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "status": "PASS",
-      "actual": "250,989 lignes",
+      "actual": "251,251 lignes",
       "expected": ">= 100,000 lignes (palier 2)",
       "id": "CLAUSE-018",
       "type": "BLOCKING",
       "description": "Le projet doit contenir au moins 100,000 lignes de code TypeScript (palier 2)",
-      "durationMs": 15
+      "durationMs": 14
     },
     {
       "status": "PASS",
@@ -195,7 +195,7 @@
       "id": "CLAUSE-021",
       "type": "BLOCKING",
       "description": "Base de données: >= 5,000 articles réels (cible réelle, AlphaSense a 500M+)",
-      "durationMs": 16
+      "durationMs": 17
     },
     {
       "status": "PASS",
@@ -204,7 +204,7 @@
       "id": "CLAUSE-022",
       "type": "BLOCKING",
       "description": "API /api/flagship-report doit répondre en < 10s (AlphaSense p95 <500ms)",
-      "durationMs": 14
+      "durationMs": 13
     },
     {
       "status": "PASS",
@@ -258,7 +258,7 @@
       "id": "CLAUSE-028",
       "type": "BLOCKING",
       "description": "Le projet doit documenter un pipeline d'ingestion (feed-manager.ts)",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -276,7 +276,7 @@
       "id": "CLAUSE-030",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit documenter la stratégie client/pricing",
-      "durationMs": 1
+      "durationMs": 0
     }
   ],
   "nextSteps": [
