@@ -27,6 +27,7 @@ model Company {
   website        String?
   description    String?
   logoUrl        String?
+  tenantId       String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -92,6 +93,7 @@ model Article {
   relevanceScore Float?
   urlHash       String   @unique
   processed     Boolean  @default(false)
+  tenantId      String?
   createdAt     DateTime @default(now())
 
   // ─── Task: domain-matching-demo-isolation ──────────────────────────

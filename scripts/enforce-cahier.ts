@@ -656,6 +656,86 @@ const clauses: Array<{
       };
     },
   },
+
+  // ─── CLAUSE-031: Audit trail immuable (BLOCKING) ────────────
+  {
+    id: "CLAUSE-031",
+    type: "BLOCKING",
+    description: "Le projet doit contenir un module d'audit trail avec logs inaltérables",
+    fn: () => {
+      const result = exec(`grep -rl "AuditLogger\\|audit.*trail\\|immutable\\|hash.*chain" src/lib/ 2>/dev/null | wc -l`, 10000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 1 ? "PASS" : "FAIL",
+        actual: `${count} fichiers avec audit/immutability`,
+        expected: ">= 1 fichier (AuditLogger ou hash-chain)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-032: RLS multi-tenant strict (BLOCKING) ─────────
+  {
+    id: "CLAUSE-032",
+    type: "BLOCKING",
+    description: "Le schéma Prisma doit contenir tenantId sur >= 3 modèles",
+    fn: () => {
+      const result = exec(`grep -c "tenantId" prisma/schema.prisma 2>/dev/null`, 5000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 3 ? "PASS" : "FAIL",
+        actual: `${count} mentions tenantId`,
+        expected: ">= 3 mentions tenantId dans schema.prisma",
+      };
+    },
+  },
+
+  // ─── CLAUSE-033: Pipeline ingestion distribué (BLOCKING) ────
+  {
+    id: "CLAUSE-033",
+    type: "BLOCKING",
+    description: "Le projet doit documenter un pipeline avec workers, queues, déduplication",
+    fn: () => {
+      const result = exec(`grep -rl "Worker\\|Queue\\|Deduplicator\\|ScrapeOrchestrator" src/lib/ 2>/dev/null | wc -l`, 10000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 1 ? "PASS" : "FAIL",
+        actual: `${count} fichiers avec Worker/Queue/Dedup`,
+        expected: ">= 1 fichier (pipeline distribué)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-034: Matching fuzzy/phonetic (BLOCKING) ─────────
+  {
+    id: "CLAUSE-034",
+    type: "BLOCKING",
+    description: "Le module conformité doit contenir Levenshtein/Jaro-Winkler/fuzzy",
+    fn: () => {
+      const result = exec(`grep -rl "levenshtein\\|jaroWinkler\\|fuzzy\\|phonetic" src/lib/ 2>/dev/null | wc -l`, 10000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 1 ? "PASS" : "FAIL",
+        actual: `${count} fichiers avec fuzzy/phonetic matching`,
+        expected: ">= 1 fichier (Levenshtein/Jaro-Winkler)",
+      };
+    },
+  },
+
+  // ─── CLAUSE-035: Share of Voice calculators (BLOCKING) ──────
+  {
+    id: "CLAUSE-035",
+    type: "BLOCKING",
+    description: "Le projet doit contenir des calculateurs Share of Voice et agrégateurs média",
+    fn: () => {
+      const result = exec(`grep -rl "shareOfVoice\\|ShareOfVoice\\|reach.*aggregate\\|mediaReach" src/lib/ 2>/dev/null | wc -l`, 10000);
+      const count = parseInt(result.stdout, 10) || 0;
+      return {
+        status: count >= 1 ? "PASS" : "FAIL",
+        actual: `${count} fichiers avec SoV/media reach`,
+        expected: ">= 1 fichier (Share of Voice calculators)",
+      };
+    },
+  },
 ];
 
 // ─── MAIN EXECUTION ────────────────────────────────────────────

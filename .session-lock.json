@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-08-03T15:02:09.013Z",
-  "totalClauses": 30,
-  "passed": 29,
+  "timestamp": "2026-08-03T15:14:24.553Z",
+  "totalClauses": 35,
+  "passed": 34,
   "failed": 1,
   "skipped": 0,
   "blockingFailed": 1,
@@ -15,7 +15,7 @@
       "id": "CLAUSE-001",
       "type": "BLOCKING",
       "description": "Le schéma Prisma doit contenir au moins 37 modèles",
-      "durationMs": 4
+      "durationMs": 5
     },
     {
       "status": "PASS",
@@ -33,7 +33,7 @@
       "id": "CLAUSE-003",
       "type": "BLOCKING",
       "description": "L'API /api/flagship-report doit retourner 200 OK",
-      "durationMs": 9167
+      "durationMs": 10029
     },
     {
       "status": "PASS",
@@ -42,16 +42,16 @@
       "id": "CLAUSE-004",
       "type": "BLOCKING",
       "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
-      "durationMs": 21
+      "durationMs": 56
     },
     {
       "status": "FAIL",
-      "actual": "251,251 lignes",
+      "actual": "251,455 lignes",
       "expected": ">= 400,000 lignes (8% d'AlphaSense / Meltwater)",
       "id": "CLAUSE-005",
       "type": "BLOCKING",
       "description": "Le projet doit contenir au moins 400,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC + Meltwater 5-10M LOC)",
-      "durationMs": 17
+      "durationMs": 67
     },
     {
       "status": "PASS",
@@ -60,7 +60,7 @@
       "id": "CLAUSE-006",
       "type": "BLOCKING",
       "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
-      "durationMs": 7365
+      "durationMs": 6711
     },
     {
       "status": "PASS",
@@ -69,7 +69,7 @@
       "id": "CLAUSE-007",
       "type": "BLOCKING",
       "description": "Les 5 pages company profiles doivent retourner 200 OK",
-      "durationMs": 627
+      "durationMs": 564
     },
     {
       "status": "PASS",
@@ -78,7 +78,7 @@
       "id": "CLAUSE-008",
       "type": "BLOCKING",
       "description": "Le rapport AlphaSense doit faire au moins 600 lignes",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -96,7 +96,7 @@
       "id": "CLAUSE-010",
       "type": "BLOCKING",
       "description": "La page /atelier/flagship-report doit retourner 200 OK",
-      "durationMs": 44
+      "durationMs": 47
     },
     {
       "status": "PASS",
@@ -105,7 +105,7 @@
       "id": "CLAUSE-011",
       "type": "BLOCKING",
       "description": "Classes utilitaires overflow protection dans globals.css",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -114,7 +114,7 @@
       "id": "CLAUSE-012",
       "type": "BLOCKING",
       "description": "Le serveur de développement doit répondre sur port 3000",
-      "durationMs": 85
+      "durationMs": 83
     },
     {
       "status": "PASS",
@@ -123,7 +123,7 @@
       "id": "CLAUSE-013",
       "type": "BLOCKING",
       "description": "Le projet doit avoir au moins 2 fichiers de test (unit + integration)",
-      "durationMs": 5
+      "durationMs": 2
     },
     {
       "status": "PASS",
@@ -132,7 +132,7 @@
       "id": "CLAUSE-014",
       "type": "BLOCKING",
       "description": "Le projet doit avoir un logger structuré",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -159,16 +159,16 @@
       "id": "CLAUSE-017",
       "type": "BLOCKING",
       "description": "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "status": "PASS",
-      "actual": "251,251 lignes",
+      "actual": "251,455 lignes",
       "expected": ">= 100,000 lignes (palier 2)",
       "id": "CLAUSE-018",
       "type": "BLOCKING",
       "description": "Le projet doit contenir au moins 100,000 lignes de code TypeScript (palier 2)",
-      "durationMs": 14
+      "durationMs": 15
     },
     {
       "status": "PASS",
@@ -213,7 +213,7 @@
       "id": "CLAUSE-023",
       "type": "BLOCKING",
       "description": "Dossier competitive-reports doit avoir >= 2 fichiers *real-metrics*.md",
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -231,7 +231,7 @@
       "id": "CLAUSE-025",
       "type": "BLOCKING",
       "description": "Base de données: >= 500 snapshots de sentiment",
-      "durationMs": 16
+      "durationMs": 17
     },
     {
       "status": "PASS",
@@ -267,7 +267,7 @@
       "id": "CLAUSE-029",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit documenter l'architecture Elasticsearch",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -277,6 +277,51 @@
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit documenter la stratégie client/pricing",
       "durationMs": 0
+    },
+    {
+      "status": "PASS",
+      "actual": "3 fichiers avec audit/immutability",
+      "expected": ">= 1 fichier (AuditLogger ou hash-chain)",
+      "id": "CLAUSE-031",
+      "type": "BLOCKING",
+      "description": "Le projet doit contenir un module d'audit trail avec logs inaltérables",
+      "durationMs": 7
+    },
+    {
+      "status": "PASS",
+      "actual": "4 mentions tenantId",
+      "expected": ">= 3 mentions tenantId dans schema.prisma",
+      "id": "CLAUSE-032",
+      "type": "BLOCKING",
+      "description": "Le schéma Prisma doit contenir tenantId sur >= 3 modèles",
+      "durationMs": 1
+    },
+    {
+      "status": "PASS",
+      "actual": "10 fichiers avec Worker/Queue/Dedup",
+      "expected": ">= 1 fichier (pipeline distribué)",
+      "id": "CLAUSE-033",
+      "type": "BLOCKING",
+      "description": "Le projet doit documenter un pipeline avec workers, queues, déduplication",
+      "durationMs": 7
+    },
+    {
+      "status": "PASS",
+      "actual": "9 fichiers avec fuzzy/phonetic matching",
+      "expected": ">= 1 fichier (Levenshtein/Jaro-Winkler)",
+      "id": "CLAUSE-034",
+      "type": "BLOCKING",
+      "description": "Le module conformité doit contenir Levenshtein/Jaro-Winkler/fuzzy",
+      "durationMs": 6
+    },
+    {
+      "status": "PASS",
+      "actual": "7 fichiers avec SoV/media reach",
+      "expected": ">= 1 fichier (Share of Voice calculators)",
+      "id": "CLAUSE-035",
+      "type": "BLOCKING",
+      "description": "Le projet doit contenir des calculateurs Share of Voice et agrégateurs média",
+      "durationMs": 6
     }
   ],
   "nextSteps": [
