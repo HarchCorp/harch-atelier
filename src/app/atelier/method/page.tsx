@@ -82,7 +82,7 @@ const jsonLd = {
       "@type": "HowToStep",
       position: 2,
       name: "Analyze — HarchIQ sentiment + NER + topics",
-      text: "Every mention goes through HarchIQ sentiment classification (score -1 to +1), spaCy NER for entity extraction, and BERTopic for topic clustering. French, Arabic, and English handled natively; Darija flagged for review.",
+      text: "Every mention goes through HarchIQ sentiment classification (score -1 to +1), spaCy NER for entity extraction, and BERTopic for topic clustering. Articles handled natively in French, Arabic, and English; NLP Darija pour les commentaires Hespress, forums, WhatsApp et TikTok — la couche UGC que aucun concurrent ne couvre.",
       url: "https://atelier.harchcorp.com/method#analyze",
     },
     {

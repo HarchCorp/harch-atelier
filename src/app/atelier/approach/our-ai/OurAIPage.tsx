@@ -18,7 +18,7 @@ export default function OurAIPage() {
         <SectionHeader label="What HarchIQ does" title="Three capabilities. One brain." />
         <CardGrid color={C.sage} items={[
           { title: "Reads everything", desc: "5M+ news, blog, broadcast & regulatory documents per day. 30+ Moroccan & African media sources. 120+ languages translated. Real-time ingestion with 15-minute refresh.", icon: "◆" },
-          { title: "Understands context", desc: "Trained on your industry, competitors, and priorities. Entity-level understanding (companies, people, products, topics). Trilingual sentiment: French, Arabic, English.", icon: "▲" },
+          { title: "Understands context", desc: "Trained on your industry, competitors, and priorities. Entity-level understanding (companies, people, products, topics). Trilingual sentiment on articles: French, Arabic, English. NLP Darija pour les commentaires Hespress, forums, WhatsApp et TikTok — la couche UGC que aucun concurrent ne couvre.", icon: "▲" },
           { title: "Surfaces what matters", desc: "Predictive alerts before crises erupt. Emerging narrative detection. AI-generated recommendations per risk. WhatsApp + email + dashboard delivery.", icon: "◉" },
         ]} />
       </Section>
@@ -28,7 +28,7 @@ export default function OurAIPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "900px" }}>
           {[
             { n: "01", title: "Ingest", desc: "RSS feeds from 30+ sources scraped every 15 minutes. Google News Morocco as primary aggregator." },
-            { n: "02", title: "Detect language", desc: "fastText identifies FR/AR/EN. Darija and code-switching flagged for review." },
+            { n: "02", title: "Detect language", desc: "Articles: fastText identifies FR/AR/EN. NLP Darija dédié aux commentaires Hespress, forums, WhatsApp et TikTok — la couche UGC que aucun concurrent ne couvre." },
             { n: "03", title: "Extract entities", desc: "spaCy NER with custom Moroccan entity library (banks, telcos, government bodies, executives)." },
             { n: "04", title: "Classify sentiment", desc: "HarchIQ assigns a score from -1 (negative) to +1 (positive) with confidence interval. Trilingual lexicon of 108+ words per language." },
             { n: "05", title: "Cluster topics", desc: "10 topic categories: financial results, leadership, products, ESG, M&A, digital, crisis, expansion, partnerships, regulation." },

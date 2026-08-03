@@ -124,7 +124,7 @@ export default function OurDataPage() {
           { title: "Direct RSS feeds", desc: "11 working RSS feeds from major Moroccan and African publications. Polled every 15 minutes. URL-based deduplication.", icon: "▲" },
           { title: "Regulatory monitoring", desc: "Manual + automated tracking of BAM, AMMC, ANRT, ONSSA circulars and decisions. Pushed to platform within 1 hour of publication.", icon: "◉" },
           { title: "AI engine testing", desc: "Hourly queries to ChatGPT, Perplexity, Gemini, Claude, Copilot, Mistral, Grok with your industry's top prompts. Track citation, position, sentiment.", icon: "⌬" },
-          { title: "Trilingual NLP", desc: "French, Arabic (MSA + Darija), English handled natively. fastText for language detection, spaCy for NER, HarchIQ for sentiment.", icon: "🌐" },
+          { title: "Trilingual NLP", desc: "Articles handled natively in French, Arabic (MSA), English. NLP Darija pour les commentaires Hespress, forums, WhatsApp et TikTok — la couche UGC que aucun concurrent ne couvre. fastText + spaCy + HarchIQ.", icon: "🌐" },
           { title: "Knowledge graph", desc: "100M+ entities linked: companies, people, products, topics, events. Updated continuously as new articles arrive.", icon: "◆" },
         ]} />
       </Section>

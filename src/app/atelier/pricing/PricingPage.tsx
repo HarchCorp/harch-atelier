@@ -15,7 +15,8 @@ import {
 // ═══════════════════════════════════════════════════════════════════════
 //
 // Product: AI Reputation Intelligence — 3 tiers, transparent pricing.
-// Starter 5K · Pro 15K · Enterprise 50K MAD / month
+// Émergence 15K · Corporate 40K · Sovereign 75K MAD / month
+// (Aligned with legal contracts: Executive 450K MAD/yr · Sovereign 850K MAD/yr)
 //
 // Palette (LOCKED — light):
 //   bg #FAFAFA · surface #FFFFFF · surfaceAlt #F4F4F5 · border #E5E5E5
@@ -87,57 +88,24 @@ type Tier = {
 
 const TIERS: Tier[] = [
   {
-    id: "starter",
-    name: "Starter",
-    price: "5,000",
-    period: "MAD / month",
-    tagline: "For SMEs starting reputation monitoring",
-    highlighted: false,
-    features: [
-      "10 media sources monitored",
-      "3 AI engines tracked (ChatGPT, Perplexity, Gemini)",
-      "Daily WhatsApp digest at 7:00 AM",
-      "Real-time dashboard",
-      "Monthly PDF report (8 pages)",
-      "Crisis alert (sentiment < -0.5)",
-      "1 marque suivie",
-      "Support email (48h)",
-    ],
-    notIncluded: [
-      "Board-ready PDF report (32 pages)",
-      "Benchmark concurrents",
-      "API access",
-    ],
-    stats: [
-      { label: "Sources", value: "10" },
-      { label: "AI engines", value: "3" },
-      { label: "Brands", value: "1" },
-    ],
-    deliverables: [
-      "Daily WhatsApp digest",
-      "Live dashboard",
-      "Monthly PDF (8 pages)",
-    ],
-    cta: "Start with Starter",
-  },
-  {
-    id: "pro",
-    name: "Pro",
+    id: "emergence",
+    name: "Émergence",
     price: "15,000",
     period: "MAD / month",
-    tagline: "For companies that want to manage their reputation",
-    highlighted: true,
+    tagline: "Le bouclier d'intelligence réputationnelle — pour l'entreprise qui prend la mesure du risque",
+    highlighted: false,
     features: [
-      "30+ media sources monitored",
-      "8 AI engines tracked",
-      "Daily WhatsApp digest at 7:00 AM",
-      "Real-time dashboard + historique 90j",
-      "Monthly board-ready PDF report (32 pages)",
-      "Crisis alert < 5min + custom alerts",
-      "3 marques suivies (ou filiales)",
-      "Competitor benchmark (up to 3)",
+      "30+ sources media marocaines surveillées",
+      "8 moteurs IA trackés (ChatGPT, Claude, Gemini, Perplexity, Copilot, Mistral, Grok, Llama)",
+      "Daily WhatsApp digest 07h00 (multi-destinataires)",
+      "Console de pilotage temps réel + historique 90j",
+      "Rapport PDF mensuel board-ready (32 pages)",
+      "Alerte crise < 5min (sentiment < -0.5 ou vélocité anormale)",
+      "3 marques suivies (filiales incluses)",
+      "Benchmark concurrents (jusqu'à 3)",
+      "WhatsApp inbound dédié (forward → analyse NLP)",
       "Support email + WhatsApp (24h)",
-      "Personalized onboarding (2h)",
+      "Onboarding personnalisé (2h)",
     ],
     notIncluded: [
       "API access",
@@ -151,90 +119,130 @@ const TIERS: Tier[] = [
     ],
     deliverables: [
       "Daily WhatsApp digest",
-      "Live dashboard + 90j history",
-      "Monthly PDF (32 pages, board-ready)",
-      "Crisis alerts < 5min",
-      "Competitor benchmark",
+      "Console temps réel + 90j",
+      "PDF mensuel board-ready (32p)",
+      "Alertes crise < 5min",
+      "Benchmark concurrents",
     ],
-    cta: "Start with Pro",
+    cta: "Demander un audit",
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "50,000",
+    id: "corporate",
+    name: "Corporate",
+    price: "40,000",
     period: "MAD / month",
-    tagline: "Pour le groupe multi-filiales et multi-pays",
-    highlighted: false,
+    tagline: "Pour le groupe structuré — multi-filiales, conformité, escalade Comex",
+    highlighted: true,
     features: [
-      "Toutes les sources media (MA + Afrique + FR)",
-      "8 moteurs IA + crawl custom",
-      "Daily digest WhatsApp multi-destinataires",
-      "Dashboard + historique 365j + API",
-      "Monthly + quarterly board-ready PDF report",
-      "Crisis alert < 5min + comms playbook",
-      "Unlimited brands (subsidiaries, products)",
-      "Unlimited competitor benchmark",
+      "Toutes les sources media (Maroc + Afrique francophone + FR)",
+      "8 moteurs IA + crawl custom (sources niches)",
+      "Daily WhatsApp multi-destinataires + escalade Comex auto",
+      "Console + historique 365j + API REST + webhooks HMAC",
+      "Rapports PDF mensuels + trimestriels stratégiques",
+      "Alerte crise < 5min + comms playbook + escalation L1→L2→Comex",
+      "Marques illimitées (filiales, produits, dirigeants)",
+      "Benchmark concurrents illimité",
       "Topic taxonomy custom",
-      "Dedicated account manager",
-      "SLA 99.9% + on-prem option",
-      "Multi-country (up to 8 markets)",
+      "Sanctions screening (OFAC + EU + UN, 27K entrées, Jaro-Winkler)",
+      "Account manager dédié + revues trimestrielles",
+      "SLA 99.5% + audit logs 12 mois",
     ],
-    notIncluded: [],
+    notIncluded: [
+      "On-prem option",
+      "Multi-pays > 3 marchés",
+    ],
     stats: [
-      { label: "Sources", value: "∞" },
-      { label: "AI engines", value: "8+" },
+      { label: "Sources", value: "∞ MA+AF+FR" },
+      { label: "AI engines", value: "8 + custom" },
       { label: "Brands", value: "∞" },
     ],
     deliverables: [
-      "Daily WhatsApp multi-destinataires",
-      "Live dashboard + 365j + API",
-      "Monthly + quarterly PDF",
-      "Crisis alerts + comms playbook",
-      "Custom topic taxonomy",
-      "Dedicated account manager",
+      "WhatsApp multi-destinataires + escalade",
+      "Console + 365j + API",
+      "PDF mensuels + trimestriels",
+      "Alertes + comms playbook",
+      "Sanctions screening",
+      "Account manager dédié",
     ],
-    cta: "Talk to sales",
+    cta: "Demander un PoV",
+  },
+  {
+    id: "sovereign",
+    name: "Sovereign",
+    price: "75,000",
+    period: "MAD / month",
+    tagline: "Pour l'institution stratégique — souveraineté, multi-pays, conformité souveraine",
+    highlighted: false,
+    features: [
+      "Couverture globale + sources souveraines (gouvernementales, régulateurs)",
+      "8 moteurs IA + custom fine-tune Darija/Arabe sur corpus client",
+      "WhatsApp souverain dédié + ligne directe Comex 24/7",
+      "Console + historique illimité + API + SSO + on-prem option",
+      "Rapports stratégiques sur-mesure + revues Comex on-site",
+      "Alerte crise < 5min + cellule de crise dédiée + comms playbook",
+      "Marques illimitées + entités (dirigeants, filiales, M&A)",
+      "Multi-pays (jusqu'à 8 marchés)",
+      "Sanctions screening + ESG + supply-chain intelligence",
+      "Conformité : Loi 09-08 + RGPD + roadmap ISO 27001 (12 mois)",
+      "Account manager senior + CTO direct line",
+      "SLA 99.9% + on-prem + pentest annuel",
+    ],
+    notIncluded: [],
+    stats: [
+      { label: "Sources", value: "∞ global" },
+      { label: "AI engines", value: "8 + fine-tune" },
+      { label: "Brands", value: "∞ + entités" },
+    ],
+    deliverables: [
+      "WhatsApp souverain + Comex 24/7",
+      "Console + API + SSO + on-prem",
+      "Rapports stratégiques sur-mesure",
+      "Cellule de crise dédiée",
+      "Sanctions + ESG + supply-chain",
+      "CTO direct line",
+    ],
+    cta: "Contacter le fondateur",
   },
 ];
 
-const COMPARISON_ROWS: { category: string; features: { name: string; starter: string | boolean; pro: string | boolean; enterprise: string | boolean }[] }[] = [
+const COMPARISON_ROWS: { category: string; features: { name: string; emergence: string | boolean; corporate: string | boolean; sovereign: string | boolean }[] }[] = [
   {
     category: "Surveillance",
     features: [
-      { name: "Sources media", starter: "10", pro: "30+", enterprise: "∞" },
-      { name: "AI engines tracked", starter: "3", pro: "8", enterprise: "8+" },
-      { name: "Marques suivies", starter: "1", pro: "3", enterprise: "∞" },
-      { name: "Langues", starter: "FR", pro: "FR · AR · EN", enterprise: "FR · AR · EN + custom" },
-      { name: "Crawl interval", starter: "5 min", pro: "60 sec", enterprise: "60 sec" },
+      { name: "Sources media", emergence: "30+", corporate: "∞ MA+AF+FR", sovereign: "∞ global" },
+      { name: "AI engines tracked", emergence: "8", corporate: "8 + custom", sovereign: "8 + fine-tune" },
+      { name: "Marques suivies", emergence: "3", corporate: "∞", sovereign: "∞ + entités" },
+      { name: "Langues", emergence: "FR · AR · EN", corporate: "FR · AR · EN + custom", sovereign: "FR · AR · EN + Darija fine-tune" },
+      { name: "Crawl interval", emergence: "60 sec", corporate: "60 sec", sovereign: "60 sec" },
     ],
   },
   {
     category: "Analyse",
     features: [
-      { name: "NER (entities)", starter: true, pro: true, enterprise: true },
-      { name: "Sentiment HarchIQ", starter: true, pro: true, enterprise: true },
-      { name: "Topic modeling", starter: false, pro: true, enterprise: true },
-      { name: "Topic taxonomy custom", starter: false, pro: false, enterprise: true },
-      { name: "Benchmark concurrents", starter: false, pro: "3", enterprise: "∞" },
+      { name: "NER (entities)", emergence: true, corporate: true, sovereign: true },
+      { name: "Sentiment HarchIQ", emergence: true, corporate: true, sovereign: true },
+      { name: "Topic modeling", emergence: true, corporate: true, sovereign: true },
+      { name: "Topic taxonomy custom", emergence: false, corporate: true, sovereign: true },
+      { name: "Benchmark concurrents", emergence: "3", corporate: "∞", sovereign: "∞" },
     ],
   },
   {
     category: "Livraison",
     features: [
-      { name: "Daily digest WhatsApp", starter: "7h00", pro: "7h00", enterprise: "7h00 + custom" },
-      { name: "Dashboard", starter: "live", pro: "live + 90j", enterprise: "live + 365j + API" },
-      { name: "Monthly PDF report", starter: "8 pages", pro: "32 pages", enterprise: "32 + trimestriel" },
-      { name: "Crisis alert", starter: "< 1h", pro: "< 5min", enterprise: "< 5min + playbook" },
-      { name: "Multi-destinataires", starter: false, pro: "3", enterprise: "∞" },
+      { name: "Daily digest WhatsApp", emergence: "7h00", corporate: "7h00 + escalade Comex", sovereign: "7h00 + custom + ligne directe 24/7" },
+      { name: "Dashboard", emergence: "live + 90j", corporate: "live + 365j + API", sovereign: "live + illimité + API + SSO + on-prem" },
+      { name: "Monthly PDF report", emergence: "32 pages", corporate: "32 + trimestriel", sovereign: "sur-mesure + revue Comex on-site" },
+      { name: "Crisis alert", emergence: "< 5min", corporate: "< 5min + comms playbook", sovereign: "< 5min + cellule de crise dédiée" },
+      { name: "Multi-destinataires", emergence: "3", corporate: "∞", sovereign: "∞ + Comex" },
     ],
   },
   {
     category: "Support",
     features: [
-      { name: "Onboarding", starter: "self-serve", pro: "2h call", enterprise: "dedicated" },
-      { name: "Support", starter: "email (48h)", pro: "email + WA (24h)", enterprise: "account manager" },
-      { name: "SLA", starter: "—", pro: "99.5%", enterprise: "99.9%" },
-      { name: "On-prem option", starter: false, pro: false, enterprise: true },
+      { name: "Onboarding", emergence: "2h call", corporate: "account manager dédié", sovereign: "account manager senior + CTO direct line" },
+      { name: "Support", emergence: "email + WA (24h)", corporate: "account manager", sovereign: "cellule de crise dédiée" },
+      { name: "SLA", emergence: "—", corporate: "99.5%", sovereign: "99.9% + pentest annuel" },
+      { name: "On-prem option", emergence: false, corporate: false, sovereign: true },
     ],
   },
 ];
@@ -255,7 +263,7 @@ const FAQ_MINI = [
   },
   {
     q: "Is there a long-term commitment?",
-    a: "No. Starter and Pro are monthly, no commitment. Enterprise is annual with an SLA, but cancellable with 90 days notice.",
+    a: "Non. Émergence et Corporate sont mensuels, sans engagement. Sovereign est annuel avec SLA, mais résiliable avec 90 jours de préavis.",
   },
   {
     q: "Puis-je changer de tier en cours?",
@@ -617,7 +625,7 @@ function TierCard({ tier }: { tier: Tier }) {
           <span style={{ fontSize: "14px", fontFamily: FONT.mono, color: C.textMuted }}>{tier.period}</span>
         </div>
         <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.04em" }}>
-          ≈ {tier.id === "starter" ? "€460" : tier.id === "pro" ? "€1,380" : "€4,600"} / month · bank transfer
+          ≈ {tier.id === "emergence" ? "€1,500" : tier.id === "corporate" ? "€4,000" : "€7,500"} / mois · virement bancaire
         </div>
       </div>
 
@@ -671,7 +679,7 @@ function TierCard({ tier }: { tier: Tier }) {
 
       {/* CTA */}
       <a
-        href={tier.id === "enterprise" ? "/atelier/audit" : "/atelier/audit"}
+        href={tier.id === "sovereign" ? "/atelier/audit" : "/atelier/audit"}
         style={{
           display: "flex",
           alignItems: "center",
@@ -801,9 +809,9 @@ function ComparisonTable() {
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div style={{ fontSize: "13px", color: C.textPrimary }}>{f.name}</div>
-                  <ComparisonCell value={f.starter} />
-                  <ComparisonCell value={f.pro} highlight />
-                  <ComparisonCell value={f.enterprise} />
+                  <ComparisonCell value={f.emergence} />
+                  <ComparisonCell value={f.corporate} highlight />
+                  <ComparisonCell value={f.sovereign} />
                 </div>
               ))}
             </div>

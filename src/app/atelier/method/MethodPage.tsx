@@ -1464,7 +1464,7 @@ function StepAnalyze() {
               <AnalysisStageRow n="2.1" title="NER — Named Entity Recognition" desc="Detects companies, people, products, locations. Multi-language." tag="spaCy + custom" />
               <AnalysisStageRow n="2.2" title="Sentiment classification" desc="HarchIQ assigns a score from -1 (negative) to +1 (positive) with confidence." tag="HarchIQ" />
               <AnalysisStageRow n="2.3" title="Topic modeling" desc="BERTopic clusters articles into themes: 'frais bancaires', 'résultats', 'service client'." tag="BERTopic" />
-              <AnalysisStageRow n="2.4" title="Language detection" desc="FR / AR / EN / Darija — handles code-switching common in Moroccan media." tag="fastText" />
+              <AnalysisStageRow n="2.4" title="Language detection" desc="Articles: FR / AR / EN. NLP Darija dédié aux commentaires Hespress, forums, WhatsApp et TikTok — la couche UGC que aucun concurrent ne couvre." tag="fastText" />
             </div>
 
             {/* Output format */}

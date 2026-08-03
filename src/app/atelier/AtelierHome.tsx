@@ -487,10 +487,10 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
                 margin: "0 0 36px",
               }}
             >
-              Cut through the noise and focus on what matters. Harch AI turns
-              the world's media and AI engines into actionable reputation
-              intelligence — so Comms leaders can make confident, reputation-based
-              decisions and stay one step ahead.
+              Le scalpel chirurgical de l&apos;intelligence réputationnelle.
+              Natif Maroc. WhatsApp-native. IA native. Pas une machine lourde
+              occidentale — un instrument de précision qui comprend la réalité
+              politique, sociale et linguistique du terrain.
             </p>
 
             {/* CTAs — DS V2 §3 : primary = bg-emerald-500, secondary = border-neutral-300 */}
@@ -975,11 +975,25 @@ function LogoWall() {
             color: C.textMuted,
             letterSpacing: "0.16em",
             textTransform: "uppercase",
-            marginBottom: "36px",
+            marginBottom: "12px",
           }}
         >
-          Trusted by Moroccan &amp; African leaders
+          Écosystème surveillé et cartographié par Harch IQ
         </div>
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: "12px",
+            color: C.textMuted,
+            fontFamily: FONT.sans,
+            maxWidth: "760px",
+            margin: "0 auto 36px",
+            lineHeight: 1.6,
+          }}
+        >
+          Ces entités sont suivies en continu par nos moteurs d&apos;ingestion et d&apos;analyse.
+          La présence de leurs logos ne constitue pas une endorsement commerciale.
+        </p>
         <div
           className="logo-wall-grid"
           style={{

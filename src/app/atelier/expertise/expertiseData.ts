@@ -148,7 +148,7 @@ export const EXPERTISE_DATA: Record<string, ExpertiseData> = {
     pillars: [
       { title: "Narrative detection", desc: "We identify the 5 dominant narratives forming around your brand — with strength, sentiment, and trajectory. Spot the story before it becomes the story.", icon: "◆" },
       { title: "Entity-level sentiment", desc: "Not just keyword mentions. We track sentiment at the entity level — your company, your CEO, your products, your competitors — in every article.", icon: "▲" },
-      { title: "Trilingual precision", desc: "French, Arabic, and English handled natively. Darija and code-switching detected and flagged for human review. 108+ word sentiment lexicon per language.", icon: "◉" },
+      { title: "Trilingual precision", desc: "Articles in French, Arabic, and English handled natively. NLP Darija pour les commentaires Hespress, forums, WhatsApp et TikTok — la couche UGC que aucun concurrent ne couvre. 108+ word sentiment lexicon per language.", icon: "◉" },
       { title: "Crisis early warning", desc: "WhatsApp alerts when negative sentiment velocity exceeds threshold. Get notified within 5 minutes of a shift — not the next morning.", icon: "⚠" },
     ],
     useCases: [

@@ -129,8 +129,8 @@ const TIMELINE = [
   },
   {
     date: "Jun 2024",
-    title: "First paying client",
-    desc: "A Casablanca bank signs up for monthly monitoring. The PDF report is 12 pages. They renew.",
+    title: "Premier déploiement pilote",
+    desc: "Une banque casablancaise entre en déploiement pilote pour le monitoring mensuel. Le rapport PDF fait 12 pages. Le pilote se poursuit.",
     color: C.sage,
     tag: "Validation",
   },
@@ -143,8 +143,8 @@ const TIMELINE = [
   },
   {
     date: "Dec 2024",
-    title: "10 clients · 4 sectors",
-    desc: "Banking, telecom, energy, hospitality. The HARCH 100 ranking is born — a public benchmark of Moroccan corporate reputation.",
+    title: "Déploiement pilote · 4 secteurs",
+    desc: "Banque, télécoms, énergie, hôtellerie. Le HARCH 100 ranking naît — un benchmark public de la réputation corporate marocaine.",
     color: C.accentDark,
     tag: "Growth",
   },
@@ -166,11 +166,11 @@ const TIMELINE = [
 
 const STATS = [
   { value: "2024", label: "Founded" },
-  { value: "10+", label: "Paying clients" },
-  { value: "4", label: "Sectors covered" },
+  { value: "4", label: "Secteurs pilotes" },
   { value: "8", label: "AI engines tracked" },
   { value: "30+", label: "Media sources" },
   { value: "100", label: "HARCH ranking" },
+  { value: "Casablanca", label: "HQ" },
 ];
 
 const VALUES = [
@@ -181,7 +181,7 @@ const VALUES = [
   },
   {
     title: "Francophone first",
-    desc: "Built for Morocco, Africa, and the francophone world. Arabic sources, French business press, Darija detection.",
+    desc: "Built for Morocco, Africa, and the francophone world. Arabic sources, French business press, NLP Darija pour les commentaires Hespress, forums, WhatsApp et TikTok.",
     icon: "globe",
   },
   {
@@ -361,17 +361,19 @@ function Hero() {
                 margin: "0 0 36px",
               }}
             >
-              Harch Atelier is the AI reputation intelligence division of Harch
-              Corp. We monitor media and AI engines for Moroccan and African
-              companies — and we build in public.
+              Harch Atelier est la division d&apos;intelligence réputationnelle
+              IA de Harch Corp. Élite engineering marocaine, basée à
+              Casablanca — le scalpel chirurgical qui comprend la réalité
+              politique, sociale et linguistique du terrain marocain et
+              africain.
             </p>
 
             {/* Stats inline */}
             <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
               <HeroStat value="2024" label="Founded" />
               <HeroStat value="Casablanca" label="HQ" />
-              <HeroStat value="10+" label="Clients" />
               <HeroStat value="8" label="AI engines" />
+              <HeroStat value="30+" label="Media sources" />
             </div>
           </div>
 
@@ -596,13 +598,13 @@ function Founder() {
       }}
     >
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow color={C.sage}>The founder</Eyebrow>
-        <SectionTitle>Built by one person, for now.</SectionTitle>
+        <Eyebrow color={C.sage}>Elite engineering marocaine</Eyebrow>
+        <SectionTitle>Élite engineering marocaine.</SectionTitle>
         <SectionSub>
-          Harch Atelier is founded and operated by a single person — a
-          software engineer and analyst based in Casablanca. No VC, no
-          cofounder drama, no inflated team. Just one person obsessed with
-          reputation data.
+          Une équipe technique compacte, basée à Casablanca, qui code une
+          technologie plus agressive que les agences parisiennes ou les boîtes
+          US. Proximité directe : en cas de bug, vous appelez le fondateur, pas
+          un support à Dublin.
         </SectionSub>
 
         <div
@@ -654,7 +656,7 @@ function Founder() {
                 H
               </div>
               <div style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
-                The Founder
+                Amine Harch El Korane
               </div>
               <div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>
                 Casablanca, Maroc
@@ -664,10 +666,11 @@ function Founder() {
             {/* Info */}
             <div style={{ padding: "24px 28px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <FounderRow label="Role" value="Founder · Engineer · Analyst" />
+                <FounderRow label="Role" value="Fondateur · Engineer · Analyst" />
                 <FounderRow label="Based" value="Casablanca, Morocco" />
                 <FounderRow label="Background" value="Software engineering · NLP · Media analysis" />
                 <FounderRow label="Languages" value="FR · AR · EN · Darija" />
+                <FounderRow label="Approach" value="Elite engineering · proximité directe" />
                 <FounderRow label="Building" value="In public since Jan 2024" />
               </div>
 
@@ -709,30 +712,32 @@ function Founder() {
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <StoryParagraph>
-                In late 2023, I was helping a Moroccan bank understand why
-                their customer satisfaction scores were dropping. The answer
-                wasn't in their internal data — it was in what Hespress and
-                L'Économiste were saying about a new fee policy. But nobody
-                at the bank had noticed for three weeks.
+                Fin 2023, j&apos;accompagnais une banque casablancaise dont les
+                scores de satisfaction client baissaient. La réponse n&apos;était pas
+                dans leurs données internes — elle était dans ce que Hespress et
+                L&apos;Économiste disaient d&apos;une nouvelle politique tarifaire. Mais
+                personne à la banque ne l&apos;avait remarqué depuis trois semaines.
               </StoryParagraph>
               <StoryParagraph>
-                I looked for a tool that could have warned them. The
-                francophone options were press clipping services from the
-                1990s. The modern options (Meltwater, Brandwatch) were
-                English-only, priced for Fortune 500s, and didn't track what
-                ChatGPT says about you.
+                J&apos;ai cherché un outil qui aurait pu les prévenir. Les options
+                francophones étaient des services de press clipping des années 90.
+                Les plateformes occidentales leaders étaient English-only, vendues
+                à prix d&apos;or par des commerciaux basés à Dublin ou New York, et
+                ne trackaient pas ce que ChatGPT disait d&apos;elles.
               </StoryParagraph>
               <StoryParagraph>
-                So I built one. The first version was a Python script
-                crawling five media sources and querying ChatGPT every hour.
-                It ran on a single brand for 30 days. The data was so
-                striking that the brand became our first paying client.
+                Alors j&apos;en ai construit un. La première version était un script
+                Python crawlant cinq sources media et interrogeant ChatGPT toutes
+                les heures. Il a tourné sur une seule marque pendant 30 jours. Les
+                données étaient tellement frappantes que la marque est entrée en
+                déploiement pilote.
               </StoryParagraph>
               <StoryParagraph>
-                Today we track 30+ media sources, 8 AI engines, and 3
-                languages. We have paying clients in banking, telecom,
-                energy, and hospitality. We're still small, still
-                founder-operated, and still building in public.
+                Aujourd&apos;hui nous trackons 30+ sources media, 8 moteurs IA, 3
+                langues. Nos environnements pilotes couvrent la banque, les
+                télécoms, l&apos;énergie et l&apos;hôtellerie. Toujours une équipe
+                technique compacte à Casablanca, toujours fondée et opérée par
+                le fondateur, toujours en construction publique.
               </StoryParagraph>
             </div>
 
