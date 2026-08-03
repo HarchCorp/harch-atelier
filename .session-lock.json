@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-03T15:14:24.553Z",
+  "timestamp": "2026-08-03T17:28:01.230Z",
   "totalClauses": 35,
   "passed": 34,
   "failed": 1,
@@ -15,7 +15,7 @@
       "id": "CLAUSE-001",
       "type": "BLOCKING",
       "description": "Le schéma Prisma doit contenir au moins 37 modèles",
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "status": "PASS",
@@ -33,7 +33,7 @@
       "id": "CLAUSE-003",
       "type": "BLOCKING",
       "description": "L'API /api/flagship-report doit retourner 200 OK",
-      "durationMs": 10029
+      "durationMs": 21
     },
     {
       "status": "PASS",
@@ -42,16 +42,16 @@
       "id": "CLAUSE-004",
       "type": "BLOCKING",
       "description": "Base de données: >= 20 personnes + >= 1000 articles réels",
-      "durationMs": 56
+      "durationMs": 20
     },
     {
       "status": "FAIL",
-      "actual": "251,455 lignes",
+      "actual": "278,913 lignes",
       "expected": ">= 400,000 lignes (8% d'AlphaSense / Meltwater)",
       "id": "CLAUSE-005",
       "type": "BLOCKING",
       "description": "Le projet doit contenir au moins 400,000 lignes de code TypeScript (cible réelle basée sur AlphaSense 5-15M LOC + Meltwater 5-10M LOC)",
-      "durationMs": 67
+      "durationMs": 19
     },
     {
       "status": "PASS",
@@ -60,7 +60,7 @@
       "id": "CLAUSE-006",
       "type": "BLOCKING",
       "description": "Le projet ne doit avoir aucune erreur de compilation TypeScript",
-      "durationMs": 6711
+      "durationMs": 7728
     },
     {
       "status": "PASS",
@@ -69,7 +69,7 @@
       "id": "CLAUSE-007",
       "type": "BLOCKING",
       "description": "Les 5 pages company profiles doivent retourner 200 OK",
-      "durationMs": 564
+      "durationMs": 667
     },
     {
       "status": "PASS",
@@ -82,7 +82,7 @@
     },
     {
       "status": "PASS",
-      "actual": "355 lignes, entrée 2026-08-03 présente",
+      "actual": "701 lignes, entrée 2026-08-03 présente",
       "expected": ">= 150 lignes + entrée du jour",
       "id": "CLAUSE-009",
       "type": "BLOCKING",
@@ -96,7 +96,7 @@
       "id": "CLAUSE-010",
       "type": "BLOCKING",
       "description": "La page /atelier/flagship-report doit retourner 200 OK",
-      "durationMs": 47
+      "durationMs": 54
     },
     {
       "status": "PASS",
@@ -105,7 +105,7 @@
       "id": "CLAUSE-011",
       "type": "BLOCKING",
       "description": "Classes utilitaires overflow protection dans globals.css",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -114,7 +114,7 @@
       "id": "CLAUSE-012",
       "type": "BLOCKING",
       "description": "Le serveur de développement doit répondre sur port 3000",
-      "durationMs": 83
+      "durationMs": 94
     },
     {
       "status": "PASS",
@@ -132,7 +132,7 @@
       "id": "CLAUSE-014",
       "type": "BLOCKING",
       "description": "Le projet doit avoir un logger structuré",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -150,7 +150,7 @@
       "id": "CLAUSE-016",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit contenir pgvector + Kafka + LLM gateway",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
@@ -159,11 +159,11 @@
       "id": "CLAUSE-017",
       "type": "BLOCKING",
       "description": "Le dossier competitive-reports doit avoir >= 8 fichiers .md",
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "status": "PASS",
-      "actual": "251,455 lignes",
+      "actual": "278,913 lignes",
       "expected": ">= 100,000 lignes (palier 2)",
       "id": "CLAUSE-018",
       "type": "BLOCKING",
@@ -195,7 +195,7 @@
       "id": "CLAUSE-021",
       "type": "BLOCKING",
       "description": "Base de données: >= 5,000 articles réels (cible réelle, AlphaSense a 500M+)",
-      "durationMs": 17
+      "durationMs": 20
     },
     {
       "status": "PASS",
@@ -204,7 +204,7 @@
       "id": "CLAUSE-022",
       "type": "BLOCKING",
       "description": "API /api/flagship-report doit répondre en < 10s (AlphaSense p95 <500ms)",
-      "durationMs": 13
+      "durationMs": 15
     },
     {
       "status": "PASS",
@@ -213,7 +213,7 @@
       "id": "CLAUSE-023",
       "type": "BLOCKING",
       "description": "Dossier competitive-reports doit avoir >= 2 fichiers *real-metrics*.md",
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "status": "PASS",
@@ -222,7 +222,7 @@
       "id": "CLAUSE-024",
       "type": "BLOCKING",
       "description": "Base de données: >= 30 personnes réelles",
-      "durationMs": 15
+      "durationMs": 18
     },
     {
       "status": "PASS",
@@ -231,7 +231,7 @@
       "id": "CLAUSE-025",
       "type": "BLOCKING",
       "description": "Base de données: >= 500 snapshots de sentiment",
-      "durationMs": 17
+      "durationMs": 16
     },
     {
       "status": "PASS",
@@ -240,7 +240,7 @@
       "id": "CLAUSE-026",
       "type": "BLOCKING",
       "description": "Base de données: >= 4,000 prix BVC",
-      "durationMs": 15
+      "durationMs": 16
     },
     {
       "status": "PASS",
@@ -249,7 +249,7 @@
       "id": "CLAUSE-027",
       "type": "BLOCKING",
       "description": "Dossier competitive-reports doit avoir >= 3 fichiers *real-metrics*.md (AlphaSense + Dataminr + Meltwater)",
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "status": "PASS",
@@ -267,7 +267,7 @@
       "id": "CLAUSE-029",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit documenter l'architecture Elasticsearch",
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "status": "PASS",
@@ -276,16 +276,16 @@
       "id": "CLAUSE-030",
       "type": "BLOCKING",
       "description": "Master Spec Sheet doit documenter la stratégie client/pricing",
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "status": "PASS",
-      "actual": "3 fichiers avec audit/immutability",
+      "actual": "4 fichiers avec audit/immutability",
       "expected": ">= 1 fichier (AuditLogger ou hash-chain)",
       "id": "CLAUSE-031",
       "type": "BLOCKING",
       "description": "Le projet doit contenir un module d'audit trail avec logs inaltérables",
-      "durationMs": 7
+      "durationMs": 10
     },
     {
       "status": "PASS",
@@ -294,34 +294,34 @@
       "id": "CLAUSE-032",
       "type": "BLOCKING",
       "description": "Le schéma Prisma doit contenir tenantId sur >= 3 modèles",
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "status": "PASS",
-      "actual": "10 fichiers avec Worker/Queue/Dedup",
+      "actual": "11 fichiers avec Worker/Queue/Dedup",
       "expected": ">= 1 fichier (pipeline distribué)",
       "id": "CLAUSE-033",
       "type": "BLOCKING",
       "description": "Le projet doit documenter un pipeline avec workers, queues, déduplication",
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "status": "PASS",
-      "actual": "9 fichiers avec fuzzy/phonetic matching",
+      "actual": "12 fichiers avec fuzzy/phonetic matching",
       "expected": ">= 1 fichier (Levenshtein/Jaro-Winkler)",
       "id": "CLAUSE-034",
       "type": "BLOCKING",
       "description": "Le module conformité doit contenir Levenshtein/Jaro-Winkler/fuzzy",
-      "durationMs": 6
+      "durationMs": 8
     },
     {
       "status": "PASS",
-      "actual": "7 fichiers avec SoV/media reach",
+      "actual": "9 fichiers avec SoV/media reach",
       "expected": ">= 1 fichier (Share of Voice calculators)",
       "id": "CLAUSE-035",
       "type": "BLOCKING",
       "description": "Le projet doit contenir des calculateurs Share of Voice et agrégateurs média",
-      "durationMs": 6
+      "durationMs": 7
     }
   ],
   "nextSteps": [
