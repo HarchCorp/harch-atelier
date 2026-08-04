@@ -2310,7 +2310,6 @@ export function BrandMonitorDashboard({
             <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
               <RegulatoryFeedWidget />
             </div>
-            </div>
 
             {/* ─── ROW 2.1: Crisis Workflow + Compliance Roadmap ───
                 Recommendation #3: automated crisis management +
