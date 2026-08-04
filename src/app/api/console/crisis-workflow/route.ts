@@ -41,7 +41,7 @@ export async function GET() {
         crisis: {
           id: activeRisk.id,
           type: activeRisk.category as string,
-          title: activeRisk.summary?.slice(0, 80) || `Risk: ${activeRisk.category}`,
+          title: `Risk: ${activeRisk.category} (level: ${activeRisk.riskLevel})`,
           phase: timeLeft > 0 ? "containment" : "resolution",
           escalation: timeLeft < 3600000 ? "L2" : "L1",
           detectedAt,
