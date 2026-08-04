@@ -628,14 +628,14 @@ function WhatsAppImportModal({ onClose, onCreated }: { onClose: () => void; onCr
               </div>
             )}
 
-            {extracted.use_case && (
+            {Boolean(extracted.use_case) && (
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginBottom: 4, display: "block" }}>Use case</label>
                 <p style={{ fontSize: 13, color: C.textBody, margin: 0, padding: 10, background: C.bgHover, borderRadius: 8 }}>{String(extracted.use_case)}</p>
               </div>
             )}
 
-            {extracted.notes && (
+            {Boolean(extracted.notes) && (
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginBottom: 4, display: "block" }}>Notes</label>
                 <p style={{ fontSize: 12, color: C.textMuted, margin: 0, padding: 10, background: C.bgHover, borderRadius: 8, fontStyle: "italic" }}>{String(extracted.notes)}</p>
