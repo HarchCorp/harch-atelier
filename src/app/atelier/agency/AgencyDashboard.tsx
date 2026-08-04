@@ -112,6 +112,7 @@ export function AgencyDashboard({ agency, userName, activeAgencyClientId }: Prop
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showWhatsAppImport, setShowWhatsAppImport] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
 
   const fetchClients = useCallback(async () => {
@@ -294,19 +295,39 @@ export function AgencyDashboard({ agency, userName, activeAgencyClientId }: Prop
             >
               Sub-clients ({clients.length})
             </h2>
-            <button
-              onClick={() => setShowCreate(true)}
-              style={{
-                background: C.cta,
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 16px",
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: C.fontSans,
-              }}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => setShowWhatsAppImport(true)}
+                style={{
+                  background: C.surface,
+                  color: C.text,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 8,
+                  padding: "10px 16px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: C.fontSans,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                💬 WhatsApp Import
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                style={{
+                  background: C.cta,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 16px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: C.fontSans,
+                }}
             >
               + Create sub-client
             </button>
@@ -381,7 +402,279 @@ export function AgencyDashboard({ agency, userName, activeAgencyClientId }: Prop
           }}
         />
       )}
+
+      {showWhatsAppImport && (
+        <WhatsAppImportModal
+          onClose={() => setShowWhatsAppImport(false)}
+          onCreated={() => {
+            setShowWhatsAppImport(false);
+            fetchClients();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WHATSAPP IMPORT MODAL — Agency self-service onboarding
+//
+//  The killer B2B2B feature: agency pastes a WhatsApp conversation
+//  with their client prospect → GLM-4 extracts structured data →
+//  agency reviews → one click creates the sub-client workspace.
+// ═══════════════════════════════════════════════════════════════
+
+function WhatsAppImportModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [conversation, setConversation] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [extracted, setExtracted] = useState<Record<string, unknown> | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const analyze = async () => {
+    if (conversation.trim().length < 10) return;
+    setLoading(true);
+    setExtracted(null);
+    try {
+      const res = await fetch("/api/agency/whatsapp-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+      } else if (data.extracted) {
+        setExtracted(data.extracted);
+      }
+    } catch (e) {
+      toast.error("Analysis failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createAccount = async () => {
+    setCreating(true);
+    try {
+      const res = await fetch("/api/agency/whatsapp-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation, createAccount: true }),
+      });
+      const data = await res.json();
+      if (data.created) {
+        toast.success(data.message || "Sub-client created successfully");
+        setResult(data.message);
+        setTimeout(() => onCreated(), 2000);
+      } else if (data.error) {
+        toast.error(data.error);
+      }
+    } catch (e) {
+      toast.error("Account creation failed");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    border: `1px solid ${C.border}`,
+    borderRadius: 8,
+    fontSize: 14,
+    fontFamily: C.fontSans,
+    background: C.surface,
+    color: C.text,
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        backdropFilter: "blur(4px)",
+        zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: C.surface,
+          borderRadius: 16,
+          maxWidth: 680,
+          width: "100%",
+          maxHeight: "90vh",
+          overflow: "auto",
+          padding: 32,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 20 }}>💬</span>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: C.text }}>
+              WhatsApp Import → AI Account Creation
+            </h2>
+          </div>
+          <p style={{ fontSize: 13, color: C.textBody, margin: 0, lineHeight: 1.5 }}>
+            Paste a WhatsApp conversation with your client prospect. GLM-4 will extract the company name,
+            contact, plan, pricing, and topics — then create the sub-client workspace automatically.
+          </p>
+        </div>
+
+        {!extracted && !result && (
+          <>
+            <textarea
+              value={conversation}
+              onChange={(e) => setConversation(e.target.value)}
+              placeholder="Paste the WhatsApp conversation here…&#10;&#10;Example:&#10;[10:14] Salma: Bonjour, on cherche un outil de veille pour Attijariwafa&#10;[10:15] Omocto: Parfait, on a Harch Atelier. Plan Corporate à 40K MAD/mois?&#10;[10:16] Salma: Oui, on veut suivre 'frais bancaires', 'service client', 'digitalisation'&#10;[10:17] Salma: Nos concurrents: BCP, Bank of Africa, CIH&#10;[10:18] Omocto: Je vous crée le compte tout de suite. Email?"
+              style={{
+                ...inputStyle,
+                minHeight: 200,
+                fontFamily: C.fontMono,
+                fontSize: 12,
+                resize: "vertical",
+                lineHeight: 1.5,
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+              <button onClick={onClose} style={{ padding: "10px 16px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: C.fontSans, color: C.textBody }}>
+                Cancel
+              </button>
+              <button
+                onClick={analyze}
+                disabled={loading || conversation.trim().length < 10}
+                style={{
+                  padding: "10px 20px",
+                  background: loading ? C.border : C.cta,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontFamily: C.fontSans,
+                }}
+              >
+                {loading ? "Analyzing with GLM-4…" : "✨ Analyze with AI"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {extracted && !result && (
+          <div>
+            <div style={{ padding: 12, background: C.successBg, borderRadius: 8, marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ color: C.success, fontSize: 16 }}>✓</span>
+              <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>AI extraction complete — review the data below</span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", marginBottom: 4 }}>Company</label>
+                <input value={String(extracted.company_name || "")} readOnly style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", marginBottom: 4 }}>Contact</label>
+                <input value={String(extracted.contact_name || "")} readOnly style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", marginBottom: 4 }}>Email</label>
+                <input value={String(extracted.email || "")} readOnly style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", marginBottom: 4 }}>Phone</label>
+                <input value={String(extracted.phone || "")} readOnly style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", marginBottom: 4 }}>Plan</label>
+                <input value={String(extracted.plan_tier || "emergence")} readOnly style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", marginBottom: 4 }}>Pricing (MAD/mo)</label>
+                <input value={String(extracted.pricing_mad || "")} readOnly style={inputStyle} />
+              </div>
+            </div>
+
+            {Array.isArray(extracted.topics) && extracted.topics.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginBottom: 4, display: "block" }}>Topics to monitor</label>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {extracted.topics.map((t: string, i: number) => (
+                    <span key={i} style={{ padding: "3px 8px", background: C.bgHover, borderRadius: 4, fontSize: 11, fontFamily: C.fontMono, color: C.textBody }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(extracted.competitors) && extracted.competitors.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginBottom: 4, display: "block" }}>Competitors to track</label>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {extracted.competitors.map((c: string, i: number) => (
+                    <span key={i} style={{ padding: "3px 8px", background: C.bgHover, borderRadius: 4, fontSize: 11, fontFamily: C.fontMono, color: C.textBody }}>{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {extracted.use_case && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginBottom: 4, display: "block" }}>Use case</label>
+                <p style={{ fontSize: 13, color: C.textBody, margin: 0, padding: 10, background: C.bgHover, borderRadius: 8 }}>{String(extracted.use_case)}</p>
+              </div>
+            )}
+
+            {extracted.notes && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginBottom: 4, display: "block" }}>Notes</label>
+                <p style={{ fontSize: 12, color: C.textMuted, margin: 0, padding: 10, background: C.bgHover, borderRadius: 8, fontStyle: "italic" }}>{String(extracted.notes)}</p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setExtracted(null)} style={{ padding: "10px 16px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: C.fontSans, color: C.textBody }}>
+                ← Re-analyze
+              </button>
+              <button
+                onClick={createAccount}
+                disabled={creating}
+                style={{
+                  padding: "10px 20px",
+                  background: creating ? C.border : C.cta,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: creating ? "not-allowed" : "pointer",
+                  fontFamily: C.fontSans,
+                }}
+              >
+                {creating ? "Creating sub-client…" : "✓ Create Sub-Client"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {result && (
+          <div style={{ textAlign: "center", padding: 24 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+            <p style={{ fontSize: 15, color: C.text, fontWeight: 600, margin: "0 0 8px" }}>{result}</p>
+            <p style={{ fontSize: 13, color: C.textMuted }}>Redirecting to dashboard…</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
