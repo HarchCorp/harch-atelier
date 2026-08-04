@@ -15,6 +15,8 @@ import { CompetitorRadarChart } from "../../console/views/CompetitorRadarChart";
 import { CrisisTimeline } from "../../console/views/CrisisTimeline";
 import { WhatsAppDigestPreview } from "../../console/views/WhatsAppDigestPreview";
 import { RegulatoryFeedWidget } from "../../console/views/RegulatoryFeedWidget";
+import { CrisisWorkflowEngine } from "../../console/views/CrisisWorkflowEngine";
+import { ComplianceRoadmap } from "../../console/views/ComplianceRoadmap";
 
 // ═══════════════════════════════════════════════════════════════
 //  COMMAND CENTER LAB — public demo of the premium widgets

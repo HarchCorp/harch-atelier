@@ -28,6 +28,8 @@ import { CompetitorRadarChart } from "./CompetitorRadarChart";
 import { CrisisTimeline } from "./CrisisTimeline";
 import { WhatsAppDigestPreview } from "./WhatsAppDigestPreview";
 import { RegulatoryFeedWidget } from "./RegulatoryFeedWidget";
+import { CrisisWorkflowEngine } from "./CrisisWorkflowEngine";
+import { ComplianceRoadmap } from "./ComplianceRoadmap";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -2307,6 +2309,17 @@ export function BrandMonitorDashboard({
             </div>
             <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
               <RegulatoryFeedWidget />
+            </div>
+            </div>
+
+            {/* ─── ROW 2.1: Crisis Workflow + Compliance Roadmap ───
+                Recommendation #3: automated crisis management +
+                compliance tracker for Niveau 1→2 transition. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <CrisisWorkflowEngine />
+            </div>
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <ComplianceRoadmap />
             </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
