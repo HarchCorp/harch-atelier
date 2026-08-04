@@ -157,7 +157,7 @@ export function WhatsAppDigestPreview() {
         <span style={{ fontSize: "16px" }}>📲</span>
         <div>
           <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>Livré chaque matin à 07h00</div>
-          <div style={{ fontSize: "12px", color: C.textSec }}>Aux destinataires configurés · taux d'ouverture >90% au Maroc</div>
+          <div style={{ fontSize: "12px", color: C.textSec }}>Aux destinataires configurés · taux d'ouverture {">"}90% au Maroc</div>
         </div>
       </div>
     </div>
