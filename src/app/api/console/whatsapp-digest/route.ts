@@ -78,7 +78,7 @@ ${negativeArticles > 5 ? `⚠ ALERTE: ${negativeArticles} articles négatifs en 
 
 Top article: ${articles24h[0]?.title?.slice(0, 60) || "N/A"}
 
-AI Visibility: ${aiVis.map(a => `${a.engine} ${a.score}`).join(" · ") || "N/A"}
+AI Visibility: ${aiVis.map(a => `${a.platform} ${Math.round((a.confidence ?? 0) * 100)}`).join(" · ") || "N/A"}
 
 — HarchIQ · /atelier/console pour le détail`;
 
