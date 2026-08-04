@@ -1707,3 +1707,10 @@
   contain: content;
 }
 
+
+/* VLM fix: prevent awkward French hyphenation */
+* {
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+}
+
