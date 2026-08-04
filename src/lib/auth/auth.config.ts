@@ -339,20 +339,7 @@ export function getConsolePath(accountType?: string, role?: string): string {
   if (role === "admin") return "/atelier/admin";
   if (role === "company-admin") return "/atelier/console/enterprise-admin";
   if (role === "agency-admin") return "/atelier/agency";
-  switch (accountType) {
-    case "brand-monitor":
-      return "/atelier/console/brand-monitor";
-    // The 3 hidden account types below are on STANDBY (Task ID:
-    // 5-standby). Their consoles render a StandbyBanner, but we
-    // never redirect users there from the smart redirector — they
-    // land on the core Brand Monitor console instead. This keeps
-    // legacy DB rows (accountType=trader/investor/competitor)
-    // functional instead of bouncing them to a standby page.
-    case "market-competitor":
-    case "investment-bank":
-    case "harch-alpha":
-      return "/atelier/console/brand-monitor";
-    default:
-      return "/atelier/console/brand-monitor";
-  }
+  // Regular users land on the client dashboard (simple overview)
+  // before diving into the full console.
+  return "/atelier/client-dashboard";
 }
