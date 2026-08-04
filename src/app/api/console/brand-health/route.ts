@@ -26,7 +26,7 @@ export async function GET() {
       prisma.reputationScore.findFirst({ where: { companyId }, orderBy: { calculatedAt: "desc" } }),
       prisma.article.count({ where: { companyId, publishedAt: { gte: oneDayAgo } } }),
       prisma.article.findMany({ where: { companyId, publishedAt: { gte: sevenDaysAgo } }, select: { sentimentLabel: true, sentimentScore: true }, take: 500 }),
-      prisma.aIVisibility.findMany({ where: { companyId }, orderBy: { checkedAt: "desc" }, take: 4, select: { engine: true, score: true } }),
+      prisma.aIVisibility.findMany({ where: { companyId }, orderBy: { checkedAt: "desc" }, take: 4, select: { platform: true, confidence: true, cited: true, mentions: true, rank: true, shareOfVoice: true } }),
       prisma.company.findMany({ where: { id: { not: companyId } }, take: 5, select: { id: true, name: true } }),
     ]);
 
@@ -54,7 +54,7 @@ export async function GET() {
       crisisLevel: crisisScore >= 75 ? "critical" : crisisScore >= 50 ? "warning" : crisisScore >= 25 ? "watch" : "safe",
       crisisScore,
       topNarrative: { label: negativeShare > 0.3 ? "Negative sentiment spike" : "Stable reputation", momentum: negativeShare > 0.3 ? "rising" : "stable", sentiment: -(negativeShare) },
-      aiVisibility: aiVis.length > 0 ? aiVis.map(a => ({ engine: a.engine, score: a.score })) : [{engine:"ChatGPT",score:0},{engine:"Claude",score:0},{engine:"Gemini",score:0},{engine:"Perplexity",score:0}],
+      aiVisibility: aiVis.length > 0 ? aiVis.map(a => ({ engine: a.platform, score: Math.round((a.confidence ?? 0) * 100) })) : [{engine:"ChatGPT",score:0},{engine:"Claude",score:0},{engine:"Gemini",score:0},{engine:"Perplexity",score:0}],
       recommendation: crisisScore >= 75 ? "CRITICAL — Activate crisis workflow." : crisisScore >= 50 ? "WARNING — Prepare Dircom brief." : "Nominal.",
       lastUpdated: new Date().toISOString(),
       source: "neon",

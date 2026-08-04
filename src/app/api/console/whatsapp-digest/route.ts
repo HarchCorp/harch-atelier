@@ -43,7 +43,7 @@ export async function GET() {
         where: { companyId },
         orderBy: { checkedAt: "desc" },
         take: 4,
-        select: { engine: true, score: true },
+        select: { platform: true, confidence: true },
       }),
       prisma.article.count({
         where: { companyId, sentimentLabel: "negative", publishedAt: { gte: oneDayAgo } },
@@ -91,7 +91,7 @@ AI Visibility: ${aiVis.map(a => `${a.engine} ${a.score}`).join(" · ") || "N/A"}
       sentiment: { positive: posPct, neutral: neuPct, negative: negPct },
       negativeCount: negativeArticles,
       topArticle: articles24h[0]?.title || null,
-      aiVisibility: aiVis.map(a => ({ engine: a.engine, score: a.score })),
+      aiVisibility: aiVis.map(a => ({ engine: a.platform, score: Math.round((a.confidence ?? 0) * 100) })),
       date: dateStr,
       source: "neon",
     });

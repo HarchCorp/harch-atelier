@@ -26,7 +26,7 @@ export async function GET() {
       const [articles, scores, aiVis, risks] = await Promise.all([
         prisma.article.count({ where: { companyId: b.id, publishedAt: { gte: thirtyDaysAgo } } }),
         prisma.reputationScore.findFirst({ where: { companyId: b.id }, orderBy: { calculatedAt: "desc" } }),
-        prisma.aIVisibility.count({ where: { companyId: b.id } }),
+        prisma.aIVisibility.count({ where: { companyId: b.id, cited: true } }),
         prisma.riskAssessment.count({ where: { companyId: b.id } }),
       ]);
       const negativeArticles = await prisma.article.count({ where: { companyId: b.id, sentimentLabel: "negative", publishedAt: { gte: thirtyDaysAgo } } });
