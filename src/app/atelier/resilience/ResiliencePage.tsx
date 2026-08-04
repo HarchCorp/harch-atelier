@@ -13,6 +13,8 @@ const C = {
   surfaceAlt: "#F4F4F5",
   border: "#E5E5E5",
   borderLight: "#F0F0F0",
+  borderStrong: "#D4D4D4",
+  bgSubtle: "#FAFAFA",
   text: "#0A0A0A",
   textSec: "#525252",
   textMuted: "#71717A",
@@ -198,7 +200,7 @@ const btnSecondaryStyle: React.CSSProperties = {
   ...btnStyle,
   background: C.surface,
   color: C.text,
-  border: `1px solid ${C.borderStrong}`,
+  border: `1px solid ${C.border}`,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -929,7 +931,7 @@ function CaseMatrix() {
           <span>{pct(stats.byStatus["live-demo"] + stats.byStatus.architectural)}% shipped · {pct(stats.byStatus.planned + stats.byStatus.roadmap)}% pending</span>
         </div>
         <div style={{ display: "flex", height: "14px", borderRadius: "7px", overflow: "hidden", background: C.surfaceAlt, border: `1px solid ${C.borderLight}` }}>
-          <div style={{ width: `${pct(stats.byStatus["live-demo"])}%`, background: C.success, title: "Live demo" }} title="Live demo" />
+          <div style={{ width: `${pct(stats.byStatus["live-demo"])}%`, background: C.success }} title="Live demo" />
           <div style={{ width: `${pct(stats.byStatus.architectural)}%`, background: C.info }} title="Architectural" />
           <div style={{ width: `${pct(stats.byStatus.planned)}%`, background: C.warning }} title="Planned" />
           <div style={{ width: `${pct(stats.byStatus.roadmap)}%`, background: C.accentBright }} title="Roadmap" />
@@ -1025,7 +1027,7 @@ export function ResiliencePage() {
           </p>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "8px" }}>
             <a href="#demos" style={{ padding: "12px 22px", borderRadius: "10px", background: C.cta, color: "#fff", textDecoration: "none", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600 }}>Try the live demos ↓</a>
-            <a href="#matrix" style={{ padding: "12px 22px", borderRadius: "10px", background: C.surface, color: C.text, textDecoration: "none", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600, border: `1px solid ${C.borderStrong}` }}>Browse all 100 cases</a>
+            <a href="#matrix" style={{ padding: "12px 22px", borderRadius: "10px", background: C.surface, color: C.text, textDecoration: "none", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600, border: `1px solid ${C.border}` }}>Browse all 100 cases</a>
           </div>
         </div>
       </section>

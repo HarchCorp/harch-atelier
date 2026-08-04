@@ -79,6 +79,7 @@ export interface CustomSourceUpload {
   extractedEntities?: string[];
   extractedSentiment?: "positive" | "neutral" | "negative";
   extractedScore?: number;
+  matchCount?: number;
 }
 
 export interface WhiteLabelConfig {
