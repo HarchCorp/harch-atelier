@@ -96,20 +96,12 @@ const CRISIS_META = {
   critical: { label: "CRITICAL", color: C.dangerText, bg: C.dangerBg, border: C.dangerBorder, icon: "✕", pulse: true },
 };
 
-export function BrandHealthCommandCenter({ apiEndpoint }: { apiEndpoint?: string }) {
+export function BrandHealthCommandCenter({ apiEndpoint = "/api/console/brand-health" }: { apiEndpoint?: string }) {
   const [data, setData] = useState<BrandHealthData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    if (!apiEndpoint) {
-      // Use demo data
-      setTimeout(() => {
-        setData(DEMO_DATA);
-        setLoading(false);
-      }, 600);
-      return;
-    }
     try {
       const res = await fetch(apiEndpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
