@@ -389,6 +389,7 @@ export function AgencyDashboard({ agency, userName, activeAgencyClientId }: Prop
             </div>
           )}
         </div>
+        </div>
       </main>
       <AtelierFooter />
 
