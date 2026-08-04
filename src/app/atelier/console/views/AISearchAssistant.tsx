@@ -80,7 +80,7 @@ export function AISearchAssistant() {
     }
   }, [messages, thinking]);
 
-  const send = (text: string) => {
+  const send = async (text: string) => {
     if (!text.trim()) return;
     const userMsg: Message = {
       id: `user-${Date.now()}`,
