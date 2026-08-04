@@ -19,7 +19,7 @@ export async function GET() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
     const [activeRisk, negativeCount, whatsappFlagged] = await Promise.all([
       prisma.riskAssessment.findFirst({
-        where: { companyId, level: { in: ["critical", "high"] }, createdAt: { gte: sevenDaysAgo } },
+        where: { companyId, riskLevel: { in: ["critical", "high"] } }, createdAt: { gte: sevenDaysAgo } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.article.count({

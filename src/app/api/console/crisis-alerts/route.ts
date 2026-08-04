@@ -29,7 +29,7 @@ export async function GET() {
         where: { companyId, createdAt: { gte: sevenDaysAgo } },
         orderBy: { createdAt: "desc" },
         take: 5,
-        select: { id: true, category: true, level: true, summary: true, createdAt: true },
+        select: { id: true, category: true, riskLevel: true, summary: true, createdAt: true },
       }),
       prisma.inboundWhatsAppMessage.findMany({
         where: { status: "flagged" },
@@ -64,7 +64,7 @@ export async function GET() {
       })),
       ...riskAssessments.map(r => ({
         id: r.id,
-        severity: r.level === "critical" ? "critical" as const : r.level === "high" ? "warning" as const : "watch" as const,
+        severity: r.riskLevel === "critical" ? "critical" as const : r.riskLevel === "high" ? "warning" as const : "watch" as const,
         title: `Risk: ${r.category}`,
         summary: r.summary?.slice(0, 100) || "",
         source: "Risk Assessment",
