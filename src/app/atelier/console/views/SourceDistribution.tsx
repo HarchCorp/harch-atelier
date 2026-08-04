@@ -109,7 +109,7 @@ export function SourceDistribution() {
 
           {/* Center label */}
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            {hovered !== null ? (
+            {hovered !== null && sources[hovered] ? (
               <>
                 <div style={{ fontSize: "24px", fontWeight: 700, color: sources[hovered].color }}>{sources[hovered].count}</div>
                 <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, textAlign: "center" }}>{sources[hovered].name}</div>

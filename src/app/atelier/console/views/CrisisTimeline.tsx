@@ -49,11 +49,12 @@ const DEMO_TIMELINE: TimelineEvent[] = [
   { time: "J · 11h00", label: "Crise stabilisée", description: "Vélocité redescend sous 10/h. Sentiment revient à -0.12. Surveillance maintenue 48h.", severity: "resolved", sentiment: -0.12, language: "all", source: "All sources" },
 ];
 
-const SEVERITY_META = {
+const SEVERITY_META: Record<string, { color: string; icon: string; label: string }> = {
   info: { color: C.info, icon: "ℹ", label: "INFO" },
   warning: { color: C.warning, icon: "⚠", label: "WARNING" },
   critical: { color: C.danger, icon: "✕", label: "CRITICAL" },
   resolved: { color: C.cta, icon: "✓", label: "RESOLVED" },
+  watch: { color: C.warning, icon: "△", label: "WATCH" },
 };
 
 export function CrisisTimeline() {
@@ -108,7 +109,7 @@ export function CrisisTimeline() {
       {/* Event cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {timeline.map((event, i) => {
-          const meta = SEVERITY_META[event.severity];
+          const meta = SEVERITY_META[event.severity] || SEVERITY_META.info;
           const isExpanded = expanded === i;
           return (
             <div
