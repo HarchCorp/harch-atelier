@@ -1,12 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 // ═══════════════════════════════════════════════════════════════
 //  WHATSAPP DIGEST PREVIEW
 //
 //  Shows exactly what the Dircom will receive on their phone at
-//  07h00 every morning. This is the killer delivery channel —
-//  the Dircom sees this preview in the console and knows it's
-//  what lands on their WhatsApp.
+//  07h00 every morning. Fetches REAL data from Neon via
+//  /api/console/whatsapp-digest — the same data that would be
+//  sent via Twilio WhatsApp Business API.
 //
 //  Pattern: phone mockup with WhatsApp chat bubble.
 // ═══════════════════════════════════════════════════════════════
@@ -30,8 +32,41 @@ const C = {
 };
 
 export function WhatsAppDigestPreview() {
+  const [digest, setDigest] = useState<{
+    companyName: string;
+    digestMessage: string;
+    score: number;
+    trend: string;
+    mentionCount: number;
+    sentiment: { positive: number; neutral: number; negative: number };
+    negativeCount: number;
+    topArticle: string | null;
+    aiVisibility: { engine: string; score: number }[];
+    date: string;
+    source: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/console/whatsapp-digest")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setDigest(d); })
+      .catch(() => {});
+  }, []);
+
   const now = new Date();
   const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const companyName = digest?.companyName || "HarchIQ";
+  const score = digest?.score ?? 74;
+  const trend = digest?.trend ?? "↓";
+  const mentionCount = digest?.mentionCount ?? 0;
+  const posPct = digest?.sentiment?.positive ?? 42;
+  const neuPct = digest?.sentiment?.neutral ?? 28;
+  const negPct = digest?.sentiment?.negative ?? 30;
+  const negativeCount = digest?.negativeCount ?? 0;
+  const topArticle = digest?.topArticle ?? "N/A";
+  const aiVis = digest?.aiVisibility ?? [{engine:"ChatGPT",score:72},{engine:"Claude",score:68},{engine:"Gemini",score:64}];
+  const dateStr = digest?.date ?? now.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const source = digest?.source ?? "demo";
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px" }}>
@@ -101,41 +136,40 @@ export function WhatsAppDigestPreview() {
               }}
             >
               <div style={{ fontWeight: 700, marginBottom: "8px", color: "#075E54" }}>
-                📊 Daily Digest · {now.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                📊 Daily Digest · {dateStr}
               </div>
 
               <div style={{ marginBottom: "8px" }}>
-                <strong>Score réputation:</strong> 74/100 <span style={{ color: C.danger }}>↓ 3pts</span>
+                <strong>Score réputation:</strong> {score}/100 <span style={{ color: trend === "↑" ? C.cta : C.danger }}>{trend}</span>
+                {source === "neon" && <span style={{ fontSize: "10px", color: C.textMuted, marginLeft: "4px" }}>(réel)</span>}
               </div>
 
               <div style={{ marginBottom: "8px" }}>
-                <strong>Mentions 24h:</strong> 1,247
+                <strong>Mentions 24h:</strong> {mentionCount.toLocaleString()}
                 <br />
                 <span style={{ fontSize: "12px", color: C.textSec }}>
-                  ▓▓▓▓▓▓▓░░ 42% positif
+                  {"▓".repeat(Math.round(posPct/10))}{"░".repeat(10 - Math.round(posPct/10))} {posPct}% positif
                   <br />
-                  ▓▓▓▓░░░░░ 28% neutre
+                  {"▓".repeat(Math.round(neuPct/10))}{"░".repeat(10 - Math.round(neuPct/10))} {neuPct}% neutre
                   <br />
-                  ▓▓▓▓▓▓░░░ 30% négatif
+                  {"▓".repeat(Math.round(negPct/10))}{"░".repeat(10 - Math.round(negPct/10))} {negPct}% négatif
                 </span>
               </div>
 
-              <div style={{ marginBottom: "8px", padding: "8px", background: "#fff", borderRadius: "6px", border: `1px solid ${C.danger}30` }}>
-                <strong style={{ color: C.danger }}>⚠ ALERTE CRITIQUE</strong>
-                <br />
-                <span style={{ fontSize: "12px" }}>
-                  Bad buzz "Frais bancaires" — Darija → MSA+FR
+              {negativeCount > 5 && (
+                <div style={{ marginBottom: "8px", padding: "8px", background: "#fff", borderRadius: "6px", border: `1px solid ${C.danger}30` }}>
+                  <strong style={{ color: C.danger }}>⚠ {negativeCount} articles négatifs en 24h</strong>
                   <br />
-                  Vélocité: 35/h · 65% négatif
-                </span>
+                  <span style={{ fontSize: "12px" }}>{topArticle?.slice(0, 60)}</span>
+                </div>
+              )}
+
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Top article:</strong> {topArticle?.slice(0, 50)}
               </div>
 
               <div style={{ marginBottom: "8px" }}>
-                <strong>Top narrative:</strong> "Frais bancaires excessifs" ↑ rising
-              </div>
-
-              <div style={{ marginBottom: "8px" }}>
-                <strong>AI Visibility:</strong> ChatGPT 72 · Claude 68 · Gemini 64
+                <strong>AI Visibility:</strong> {aiVis.map(a => `${a.engine} ${a.score}`).join(" · ")}
               </div>
 
               <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "8px" }}>
