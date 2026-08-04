@@ -31,6 +31,7 @@ import { RegulatoryFeedWidget } from "./RegulatoryFeedWidget";
 import { CrisisWorkflowEngine } from "./CrisisWorkflowEngine";
 import { ComplianceRoadmap } from "./ComplianceRoadmap";
 import { AlertConfigurationPanel } from "./AlertConfigurationPanel";
+import { ExportPanel } from "./ExportPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
