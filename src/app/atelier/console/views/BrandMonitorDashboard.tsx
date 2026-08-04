@@ -15,6 +15,7 @@ import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { InsightPanel } from "./InsightPanel";
+import { LinguisticMatrixPanel } from "./LinguisticMatrixPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -2225,6 +2226,14 @@ export function BrandMonitorDashboard({
                 first thing the user sees after the KPIs, mirroring
                 Dataminr's anomaly-detection signal. */}
             <CrisisIndicator />
+
+            {/* ─── Linguistic Intelligence Matrix (Brique 9) ───
+                The definitive 35/35/20/10 cartography of the Moroccan
+                digital street. GRI gauge + cascade detection + per-language
+                risk breakdown. This is the Harch IQ NLP Engine signature widget. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <LinguisticMatrixPanel />
+            </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
             <section data-template-row="2" style={{ display: "contents" }}>
