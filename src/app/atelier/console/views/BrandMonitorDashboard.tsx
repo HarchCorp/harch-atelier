@@ -18,6 +18,13 @@ import { InsightPanel } from "./InsightPanel";
 import { LinguisticMatrixPanel } from "./LinguisticMatrixPanel";
 import { BrandHealthCommandCenter } from "./BrandHealthCommandCenter";
 import { CrisisAlertFeed } from "./CrisisAlertFeed";
+import { KeywordSearchBar } from "./KeywordSearchBar";
+import { AISearchAssistant } from "./AISearchAssistant";
+import { ExposureTrendChart } from "./ExposureTrendChart";
+import { ShareOfVoicePanel } from "./ShareOfVoicePanel";
+import { SourceDistribution } from "./SourceDistribution";
+import { InfluencerImpactPanel } from "./InfluencerImpactPanel";
+import { CompetitorRadarChart } from "./CompetitorRadarChart";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -2250,6 +2257,39 @@ export function BrandMonitorDashboard({
                 detection + cascade indicators. Acknowledge + escalate actions. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
               <CrisisAlertFeed />
+            </div>
+
+            {/* ─── ROW 1.5: Keyword Search + Exposure Trend ───
+                The search bar lets the Dircom query their reputation
+                with filter pills (source/language/sentiment/date).
+                The exposure trend chart shows 30-day mention volume
+                by language with the Darija area fill highlighting UGC. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <KeywordSearchBar />
+            </div>
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <ExposureTrendChart />
+            </div>
+
+            {/* ─── ROW 1.75: Share of Voice + Source Distribution + Competitor Radar ───
+                Three competitive intelligence widgets side by side. */}
+            <div style={{ gridColumn: "span 4", marginBottom: "16px" }}>
+              <ShareOfVoicePanel />
+            </div>
+            <div style={{ gridColumn: "span 4", marginBottom: "16px" }}>
+              <SourceDistribution />
+            </div>
+            <div style={{ gridColumn: "span 4", marginBottom: "16px" }}>
+              <CompetitorRadarChart />
+            </div>
+
+            {/* ─── ROW 1.85: Influencer Impact + AI Search Assistant ───
+                Who is amplifying the brand + conversational AI for deep dives. */}
+            <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
+              <InfluencerImpactPanel />
+            </div>
+            <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
+              <AISearchAssistant />
             </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
