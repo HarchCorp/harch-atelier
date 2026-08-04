@@ -2295,6 +2295,20 @@ export function BrandMonitorDashboard({
               <AISearchAssistant />
             </div>
 
+            {/* ─── ROW 1.95: Crisis Timeline + WhatsApp Digest + Regulatory Feed ───
+                Three delivery + context widgets. The crisis timeline shows
+                the 72h evolution, the WhatsApp digest shows what lands on
+                the Dircom's phone, and the regulatory feed tracks BAM/AMMC. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <CrisisTimeline />
+            </div>
+            <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
+              <WhatsAppDigestPreview />
+            </div>
+            <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
+              <RegulatoryFeedWidget />
+            </div>
+
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
             <section data-template-row="2" style={{ display: "contents" }}>
 
