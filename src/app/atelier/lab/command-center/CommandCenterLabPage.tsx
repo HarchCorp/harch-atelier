@@ -8,6 +8,8 @@ import { CrisisAlertFeed } from "../../console/views/CrisisAlertFeed";
 import { KeywordSearchBar } from "../../console/views/KeywordSearchBar";
 import { AISearchAssistant } from "../../console/views/AISearchAssistant";
 import { ExposureTrendChart } from "../../console/views/ExposureTrendChart";
+import { ShareOfVoicePanel } from "../../console/views/ShareOfVoicePanel";
+import { SourceDistribution } from "../../console/views/SourceDistribution";
 
 // ═══════════════════════════════════════════════════════════════
 //  COMMAND CENTER LAB — public demo of the premium widgets
@@ -117,6 +119,32 @@ export function CommandCenterLabPage() {
             </p>
           </div>
           <AISearchAssistant />
+        </section>
+
+        {/* Widget 6: Share of Voice */}
+        <section style={{ marginBottom: "48px" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
+              6. Share of Voice — Competitive Position
+            </h2>
+            <p style={{ fontSize: "13px", color: C.textMuted, margin: 0 }}>
+              Meltwater + Talkwalker pattern — stacked bar + ranked competitor rows with sentiment + trend
+            </p>
+          </div>
+          <ShareOfVoicePanel />
+        </section>
+
+        {/* Widget 7: Source Distribution */}
+        <section style={{ marginBottom: "48px" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
+              7. Source Distribution
+            </h2>
+            <p style={{ fontSize: "13px", color: C.textMuted, margin: 0 }}>
+              Meltwater + Talkwalker donut chart — interactive hover, media/social/regulatory breakdown
+            </p>
+          </div>
+          <SourceDistribution />
         </section>
 
         {/* Design rationale */}
