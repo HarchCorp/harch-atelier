@@ -71,11 +71,16 @@ const SOURCE_META = {
   regulatory: { icon: "⚖️", label: "Regulatory" },
 };
 
-const LANG_META = {
+const LANG_META: Record<string, { label: string; color: string }> = {
   msa: { label: "MSA", color: "#1e3a5f" },
   french: { label: "FR", color: "#4a7b5f" },
   english: { label: "EN", color: "#8b6914" },
   darija: { label: "Darija", color: "#a0524b" },
+  fr: { label: "FR", color: "#4a7b5f" },
+  ar: { label: "AR", color: "#1e3a5f" },
+  en: { label: "EN", color: "#8b6914" },
+  mixed: { label: "Mix", color: "#78716c" },
+  arabic: { label: "AR", color: "#1e3a5f" },
 };
 
 // Demo alerts — the 2018 boycott pattern in real-time
