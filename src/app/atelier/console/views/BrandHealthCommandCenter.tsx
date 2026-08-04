@@ -127,7 +127,7 @@ export function BrandHealthCommandCenter({ apiEndpoint = "/api/console/brand-hea
     );
   }
 
-  const crisis = CRISIS_META[data.crisisLevel];
+  const crisis = CRISIS_META[data.crisisLevel] || CRISIS_META.safe;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

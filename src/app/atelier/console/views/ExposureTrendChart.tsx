@@ -63,6 +63,10 @@ export function ExposureTrendChart() {
   }, []);
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
+  if (series.length === 0 || !series[0] || series[0].data.length === 0) {
+    return <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "40px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading exposure data…</div>;
+  }
+
   const days = 30;
   const width = 800;
   const height = 240;
@@ -299,7 +303,7 @@ export function ExposureTrendChart() {
         <span style={{ fontSize: "14px" }}>💡</span>
         <p style={{ margin: 0, fontSize: "12px", color: C.textSec, lineHeight: 1.5 }}>
           {pctChange > 0
-            ? `L'exposure globale a augmenté de ${pctChange}% en 30 jours. Le Darija porte la croissance (+${Math.round((series[0].data[29] - series[0].data[0]) / series[0].data[0] * 100)}%), signe d'un bad buzz émergent en UGC. Surveiller la cascade vers MSA/Français.`
+            ? `L'exposure globale a augmenté de ${pctChange}% en 30 jours. Le Darija porte la croissance (+${Math.round((series[0].data[29] - (series[0].data[0] || 1)) / (series[0].data[0] || 1) * 100)}%), signe d'un bad buzz émergent en UGC. Surveiller la cascade vers MSA/Français.`
             : `L'exposure globale a baissé de ${Math.abs(pctChange)}% en 30 jours. Le sentiment s'améliore.`}
         </p>
       </div>

@@ -277,9 +277,9 @@ export function CrisisAlertFeed() {
           </div>
         )}
         {filtered.map((alert, i) => {
-          const meta = SEVERITY_META[alert.severity];
+          const meta = SEVERITY_META[alert.severity] || SEVERITY_META.info;
           const src = SOURCE_META[alert.sourceType];
-          const lang = LANG_META[alert.language];
+          const lang = LANG_META[alert.language] || { label: "?", color: "#78716c" };
           return (
             <div
               key={alert.id}

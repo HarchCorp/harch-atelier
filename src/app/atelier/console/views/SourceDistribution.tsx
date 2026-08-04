@@ -84,7 +84,7 @@ export function SourceDistribution() {
           <svg width="200" height="200" viewBox="0 0 200 200">
             <g transform="translate(100, 100) rotate(-90)">
               {sources.map((s, i) => {
-                const seg = segments[i];
+                const seg = segments[i] || { dash: 0, offset: 0 };
                 return (
                   <circle
                     key={s.name}
