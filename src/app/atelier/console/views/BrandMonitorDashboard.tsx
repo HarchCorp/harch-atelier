@@ -25,6 +25,9 @@ import { ShareOfVoicePanel } from "./ShareOfVoicePanel";
 import { SourceDistribution } from "./SourceDistribution";
 import { InfluencerImpactPanel } from "./InfluencerImpactPanel";
 import { CompetitorRadarChart } from "./CompetitorRadarChart";
+import { CrisisTimeline } from "./CrisisTimeline";
+import { WhatsAppDigestPreview } from "./WhatsAppDigestPreview";
+import { RegulatoryFeedWidget } from "./RegulatoryFeedWidget";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
