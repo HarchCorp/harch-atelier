@@ -44,7 +44,7 @@ function generateTrend(base: number, volatility: number, trend: number, days: nu
   return data;
 }
 
-const SERIES: Series[] = [
+const DEMO_SERIES: Series[] = [
   { name: "Darija", color: "#a0524b", data: generateTrend(40, 15, 2.5, 30) },
   { name: "MSA", color: "#1e3a5f", data: generateTrend(60, 10, 1.2, 30) },
   { name: "Français", color: "#4a7b5f", data: generateTrend(80, 12, -0.5, 30) },
@@ -52,7 +52,15 @@ const SERIES: Series[] = [
 ];
 
 export function ExposureTrendChart() {
-  const [visibleSeries, setVisibleSeries] = useState<Set<string>>(new Set(SERIES.map((s) => s.name)));
+  const [series, setSeries] = useState<Series[]>(DEMO_SERIES);
+  const [visibleSeries, setVisibleSeries] = useState<Set<string>>(new Set(DEMO_SERIES.map((s) => s.name)));
+
+  useEffect(() => {
+    fetch("/api/console/exposure-trend")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.series) setSeries(d.series); })
+      .catch(() => {});
+  }, []);
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
   const days = 30;
@@ -63,7 +71,7 @@ export function ExposureTrendChart() {
   const chartHeight = height - padding.top - padding.bottom;
 
   // Find max value across all visible series
-  const allValues = SERIES.filter((s) => visibleSeries.has(s.name)).flatMap((s) => s.data);
+  const allValues = series.filter((s) => visibleSeries.has(s.name)).flatMap((s) => s.data);
   const maxValue = Math.max(...allValues, 100);
   const yScale = (v: number) => chartHeight - (v / maxValue) * chartHeight;
   const xScale = (i: number) => (i / (days - 1)) * chartWidth;
@@ -82,8 +90,8 @@ export function ExposureTrendChart() {
   };
 
   // Calculate total exposure change (first vs last day sum)
-  const firstDayTotal = SERIES.reduce((sum, s) => sum + (visibleSeries.has(s.name) ? s.data[0] : 0), 0);
-  const lastDayTotal = SERIES.reduce((sum, s) => sum + (visibleSeries.has(s.name) ? s.data[days - 1] : 0), 0);
+  const firstDayTotal = series.reduce((sum, s) => sum + (visibleSeries.has(s.name) ? s.data[0] : 0), 0);
+  const lastDayTotal = series.reduce((sum, s) => sum + (visibleSeries.has(s.name) ? s.data[days - 1] : 0), 0);
   const pctChange = firstDayTotal > 0 ? Math.round(((lastDayTotal - firstDayTotal) / firstDayTotal) * 100) : 0;
   const peakValue = Math.max(...allValues);
   const peakDay = allValues.indexOf(peakValue) % days;
@@ -122,7 +130,7 @@ export function ExposureTrendChart() {
 
       {/* Legend (clickable) */}
       <div style={{ display: "flex", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
-        {SERIES.map((s) => {
+        {series.map((s) => {
           const isVisible = visibleSeries.has(s.name);
           return (
             <button
@@ -199,11 +207,11 @@ export function ExposureTrendChart() {
 
             {/* Area fill for Darija (the highest-signal series) */}
             {visibleSeries.has("Darija") && (
-              <path d={buildAreaPath(SERIES[0].data)} fill="url(#darijaGradient)" />
+              <path d={buildAreaPath(series[0].data)} fill="url(#darijaGradient)" />
             )}
 
             {/* Lines */}
-            {SERIES.filter((s) => visibleSeries.has(s.name)).map((s) => (
+            {series.filter((s) => visibleSeries.has(s.name)).map((s) => (
               <path
                 key={s.name}
                 d={buildPath(s.data)}
@@ -229,7 +237,7 @@ export function ExposureTrendChart() {
                   strokeDasharray="3,3"
                   opacity={0.3}
                 />
-                {SERIES.filter((s) => visibleSeries.has(s.name)).map((s) => (
+                {series.filter((s) => visibleSeries.has(s.name)).map((s) => (
                   <circle
                     key={s.name}
                     cx={xScale(hoveredDay)}
@@ -275,7 +283,7 @@ export function ExposureTrendChart() {
             }}
           >
             <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, marginBottom: "4px" }}>Day {hoveredDay + 1}</div>
-            {SERIES.filter((s) => visibleSeries.has(s.name)).map((s) => (
+            {series.filter((s) => visibleSeries.has(s.name)).map((s) => (
               <div key={s.name} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: C.text }}>
                 <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: s.color }} />
                 <span style={{ fontFamily: C.fontMono }}>{s.name}:</span>
@@ -291,7 +299,7 @@ export function ExposureTrendChart() {
         <span style={{ fontSize: "14px" }}>💡</span>
         <p style={{ margin: 0, fontSize: "12px", color: C.textSec, lineHeight: 1.5 }}>
           {pctChange > 0
-            ? `L'exposure globale a augmenté de ${pctChange}% en 30 jours. Le Darija porte la croissance (+${Math.round((SERIES[0].data[29] - SERIES[0].data[0]) / SERIES[0].data[0] * 100)}%), signe d'un bad buzz émergent en UGC. Surveiller la cascade vers MSA/Français.`
+            ? `L'exposure globale a augmenté de ${pctChange}% en 30 jours. Le Darija porte la croissance (+${Math.round((series[0].data[29] - series[0].data[0]) / series[0].data[0] * 100)}%), signe d'un bad buzz émergent en UGC. Surveiller la cascade vers MSA/Français.`
             : `L'exposure globale a baissé de ${Math.abs(pctChange)}% en 30 jours. Le sentiment s'améliore.`}
         </p>
       </div>
