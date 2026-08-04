@@ -55,7 +55,7 @@ export function ShareOfVoicePanel() {
 
   const total = competitors.reduce((sum, c) => sum + c.mentionCount, 0);
   const maxMentions = Math.max(...competitors.map((c) => c.mentionCount));
-  const yourRank = competitors.sort((a, b) => b.mentionCount - a.mentionCount).findIndex((c) => c.isYou) + 1;
+  const yourRank = [...competitors].sort((a, b) => b.mentionCount - a.mentionCount).findIndex((c) => c.isYou) + 1;
 
   // Sort by mention count descending
   const sorted = [...competitors].sort((a, b) => b.mentionCount - a.mentionCount);

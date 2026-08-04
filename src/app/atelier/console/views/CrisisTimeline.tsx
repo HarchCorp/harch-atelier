@@ -65,7 +65,7 @@ export function CrisisTimeline() {
   const width = 600;
   const height = 60;
   const points = timeline.map((e, i) => ({
-    x: (i / (timeline.length - 1)) * width,
+    x: (i / (Math.max(timeline.length - 1, 1))) * width,
     y: height / 2 - (e.sentiment * height * 0.4),
   }));
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
