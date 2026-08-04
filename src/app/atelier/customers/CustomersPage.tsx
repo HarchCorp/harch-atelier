@@ -130,7 +130,7 @@ export default function CustomersPage() {
                   {s.value}
                 </div>
                 <div style={{
-                  fontSize: "11px", color: C.textMuted,
+                  fontSize: "11px", color: C.textSec,
                   fontFamily: "'JetBrains Mono', monospace",
                 }}>
                   {s.label}
@@ -228,7 +228,7 @@ export default function CustomersPage() {
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px", textAlign: "center" }}>
           <div style={{
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase",
+            color: C.textSec, letterSpacing: "0.14em", textTransform: "uppercase",
             marginBottom: "32px",
           }}>
             Secteurs couverts par nos environnements pilotes
@@ -252,7 +252,7 @@ export default function CustomersPage() {
             ))}
           </div>
           <p style={{
-            fontSize: "13px", color: C.textMuted,
+            fontSize: "13px", color: C.textSec,
             fontFamily: "'JetBrains Mono', monospace",
             marginTop: "24px",
           }}>

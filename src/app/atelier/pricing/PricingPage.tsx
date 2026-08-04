@@ -459,7 +459,7 @@ function Hero() {
           className="hero-anchors"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
             gap: "16px",
             maxWidth: "760px",
             margin: "0 auto",
@@ -551,7 +551,7 @@ function PricingTiers() {
           className="tier-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
             gap: "24px",
             alignItems: "start",
           }}
@@ -630,7 +630,7 @@ function TierCard({ tier }: { tier: Tier }) {
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "8px", marginBottom: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: "8px", marginBottom: "24px" }}>
         {tier.stats.map((s, i) => (
           <div key={i} style={{ padding: "10px", background: C.surfaceAlt, borderRadius: "4px", textAlign: "center", border: `1px solid ${C.borderLight}` }}>
             <div style={{ fontSize: "18px", fontWeight: 700, fontFamily: FONT.mono, color: tier.highlighted ? C.sage : C.textPrimary, lineHeight: 1 }}>
@@ -898,7 +898,7 @@ function DeliverablePreviews() {
           className="deliverable-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
             gap: "24px",
           }}
         >
@@ -1058,7 +1058,7 @@ function DashboardPreview() {
         <path d={buildAreaPath(data, 200, 60, 100)} fill="url(#pricingDashGrad)" />
         <path d={buildLinePath(data, 200, 60, 100)} fill="none" stroke={C.accentDark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "6px", marginTop: "10px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: "6px", marginTop: "10px" }}>
         <DashMini label="Articles" value="247" />
         <DashMini label="Mentions" value="1.2K" />
         <DashMini label="AI cites" value="14" />
@@ -1136,7 +1136,7 @@ function AddOns() {
           className="addon-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
             gap: "20px",
           }}
         >

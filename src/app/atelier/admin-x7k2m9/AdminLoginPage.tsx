@@ -45,9 +45,9 @@ export function AdminLoginPage() {
 
   // Intentionally ugly inline styles — this is admin-only, not public-facing
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "monospace" }}>
-      <form onSubmit={handleSubmit} style={{ background: "#fff", border: "1px solid #999", padding: "24px", width: "320px" }}>
-        <h1 style={{ fontSize: "16px", margin: "0 0 16px", color: "#333", fontWeight: "bold" }}>
+    <div style={{ minHeight: "100vh", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "monospace" }}>
+      <form onSubmit={handleSubmit} style={{ background: "#fafafa", border: "1px solid #333", padding: "24px", width: "320px" }}>
+        <h1 style={{ fontSize: "16px", margin: "0 0 16px", color: "#0a0a0a", fontWeight: "bold" }}>
           Admin
         </h1>
 
@@ -64,7 +64,7 @@ export function AdminLoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: "100%", padding: "6px", border: "1px solid #999", fontSize: "13px", fontFamily: "monospace", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "6px", border: "1px solid #333", fontSize: "13px", fontFamily: "monospace", boxSizing: "border-box" }}
             autoComplete="email"
           />
         </div>
@@ -76,7 +76,7 @@ export function AdminLoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ width: "100%", padding: "6px", border: "1px solid #999", fontSize: "13px", fontFamily: "monospace", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "6px", border: "1px solid #333", fontSize: "13px", fontFamily: "monospace", boxSizing: "border-box" }}
             autoComplete="current-password"
           />
         </div>
