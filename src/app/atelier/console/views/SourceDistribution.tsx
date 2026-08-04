@@ -47,15 +47,16 @@ export function SourceDistribution() {
   const stroke = 24;
   const circumference = 2 * Math.PI * radius;
 
-  // Pre-compute segment offsets (avoid mutating `let` inside .map)
-  let runningOffset = 0;
-  const segments = SOURCES.map((s) => {
+  // Pre-compute segment offsets (cumulative sum, no mutation during render)
+  const segments = SOURCES.reduce<
+    Array<{ dash: number; offset: number }>
+  >((acc, s) => {
     const pct = s.count / total;
     const dash = pct * circumference;
-    const seg = { dash, offset: runningOffset };
-    runningOffset += dash;
-    return seg;
-  });
+    const offset = acc.length > 0 ? acc[acc.length - 1].offset + acc[acc.length - 1].dash : 0;
+    acc.push({ dash, offset });
+    return acc;
+  }, []);
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px" }}>
