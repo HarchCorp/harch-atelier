@@ -37,10 +37,18 @@ const DEMO_SOURCES: SourceData[] = [
   { name: "WhatsApp", count: 156, color: "#10b981", type: "social" },
 ];
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function SourceDistribution() {
+  const [sources, setSources] = useState<SourceData[]>(DEMO_SOURCES);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/console/source-distribution")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.sources) setSources(d.sources); })
+      .catch(() => {});
+  }, []);
 
   const total = sources.reduce((sum, s) => sum + s.count, 0);
   const radius = 80;
