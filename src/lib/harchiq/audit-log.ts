@@ -39,7 +39,9 @@ export type AuditAction =
   | "onboarding_complete"
   | "ai_probe"
   | "briefing_generate"
-  | "insights_generate";
+  | "insights_generate"
+  | "agency_subclient_created"
+  | "whatsapp_import";
 
 export type AuditResult = "success" | "denied" | "error";
 
