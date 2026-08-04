@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 //  SHARE OF VOICE — Competitive Position
@@ -43,7 +43,16 @@ const DEMO_COMPETITORS: Competitor[] = [
 ];
 
 export function ShareOfVoicePanel() {
+  const [competitors, setCompetitors] = useState<Competitor[]>(DEMO_COMPETITORS);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/console/share-of-voice")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.competitors) setCompetitors(d.competitors); })
+      .catch(() => {});
+  }, []);
+
   const total = competitors.reduce((sum, c) => sum + c.mentionCount, 0);
   const maxMentions = Math.max(...competitors.map((c) => c.mentionCount));
   const yourRank = competitors.sort((a, b) => b.mentionCount - a.mentionCount).findIndex((c) => c.isYou) + 1;
