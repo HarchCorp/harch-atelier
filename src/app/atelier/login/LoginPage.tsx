@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { C } from "../components/tokens";
+import { BrandingProvider, type BrandingPayload } from "../components/BrandingProvider";
 
 // ═══════════════════════════════════════════════════════════════
 //  LOGIN PAGE — For invited users only
@@ -19,6 +20,26 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [branding, setBranding] = useState<BrandingPayload | null>(null);
+
+  // Fetch white-label branding on mount (based on the request host /
+  // subdomain). If the page is served from iq.attijari.harchcorp.com,
+  // the branding API returns Attijariwafa's custom logo + colors +
+  // login title. Otherwise it returns Harch defaults.
+  useEffect(() => {
+    fetch("/api/agency/branding", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: BrandingPayload | null) => {
+        if (data) setBranding(data);
+      })
+      .catch(() => {
+        /* swallow — branding is best-effort */
+      });
+  }, []);
+
+  const loginTitle = branding?.loginTitle || "HarchIQ";
+  const loginSubtitle = branding?.loginSubtitle || "Console";
+  const isWhiteLabel = branding?.resolvedFrom === "agency-client" || branding?.resolvedFrom === "agency-master";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,11 +85,21 @@ export function LoginPage() {
   };
 
   return (
+    <BrandingProvider payload={branding ?? undefined}>
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", fontFamily: C.fontSans }}>
-      <header style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}` }}>
-        <span style={{ fontFamily: C.fontMono, fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", color: C.text, textTransform: "uppercase" }}>
-          HarchIQ<span style={{ color: C.accent, marginLeft: "8px" }}>Console</span>
-        </span>
+      <header style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: "12px" }}>
+        {branding?.logoUrl ? (
+          <img src={branding.logoUrl} alt={branding.displayName || "Logo"} height={28} style={{ height: "28px", width: "auto", objectFit: "contain" }} />
+        ) : (
+          <span style={{ fontFamily: C.fontMono, fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", color: C.text, textTransform: "uppercase" }}>
+            {loginTitle}<span style={{ color: branding?.accentColor || C.accent, marginLeft: "8px" }}>{loginSubtitle}</span>
+          </span>
+        )}
+        {isWhiteLabel && branding?.displayName && (
+          <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", borderLeft: `1px solid ${C.border}`, paddingLeft: "12px" }}>
+            {branding.displayName}
+          </span>
+        )}
       </header>
 
       <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
@@ -80,7 +111,9 @@ export function LoginPage() {
             Welcome back.
           </h1>
           <p style={{ fontSize: "15px", color: C.textBody, lineHeight: 1.5, marginBottom: "32px" }}>
-            Access your HarchIQ Console.
+            {isWhiteLabel && branding?.displayName
+              ? `Access the ${branding.displayName} intelligence console.`
+              : "Access your HarchIQ Console."}
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -158,6 +191,7 @@ export function LoginPage() {
         </div>
       </main>
     </div>
+    </BrandingProvider>
   );
 }
 

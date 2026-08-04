@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
+import { BrandingProvider } from "../components/BrandingProvider";
 import { C as TOKENS } from "../components/tokens";
 import { BrandMonitorDashboard } from "./views/BrandMonitorDashboard";
 import { CompetitorIntelDashboard } from "./views/CompetitorIntelDashboard";
@@ -737,6 +738,49 @@ const pageStyles = `
   .console-bottom-nav-item[data-active="true"] {
     color: #0a0a0a;
   }
+
+  /* ─── AGENCY WHITE-LABEL BRANDING (Brique 8) ──────────────────
+     When the BrandingProvider injects --brand-primary and --brand-accent
+     CSS custom properties (from the AgencyBranding config), these rules
+     apply them to key console UI elements. The fallback values ensure
+     the console looks correct even without branding (standard Harch). */
+
+  /* Top bar: the left accent border uses brand-primary */
+  .console-topbar {
+    border-left: 3px solid var(--brand-primary, #0a0a0a);
+  }
+
+  /* Active sidebar nav item: brand-primary tint background + brand-accent left border */
+  .console-nav-item[data-active="true"] {
+    background: color-mix(in srgb, var(--brand-primary, #0a0a0a) 8%, transparent);
+    border-left: 2px solid var(--brand-accent, #10b981);
+  }
+
+  /* The Harch badge in the top bar: hidden when data-hide-harch-badge="true" */
+  html[data-hide-harch-badge="true"] .console-harch-badge {
+    display: none !important;
+  }
+
+  /* Brand accent on focus rings (keyboard nav) */
+  .console-shell *:focus-visible {
+    outline-color: var(--brand-accent, #10b981);
+  }
+
+  /* The "LIVE" indicator dot in the top bar pulses with brand-accent */
+  .console-live-dot {
+    background: var(--brand-accent, #10b981);
+  }
+
+  /* Primary CTA buttons in the console use brand-accent */
+  .console-cta-primary {
+    background: var(--brand-accent, #10b981);
+    color: #ffffff;
+  }
+
+  /* Widget title accent line uses brand-primary */
+  .console-widget-title::before {
+    background: var(--brand-primary, #0a0a0a);
+  }
 `;
 
 // ═══════════════════════════════════════════════════════════════
@@ -1315,6 +1359,7 @@ export function ConsoleShell({
   }, []);
 
   return (
+    <BrandingProvider varsOnly>
     <div className="console-shell" style={{ minHeight: "100vh", background: C.surfaceAlt, fontFamily: FONT.sans }}>
       {/* Mobile overlay for drawer */}
       {mobileMenuOpen && (
@@ -1535,6 +1580,7 @@ export function ConsoleShell({
 
       <style>{pageStyles}</style>
     </div>
+    </BrandingProvider>
   );
 }
 

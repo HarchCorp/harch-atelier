@@ -100,7 +100,7 @@ const LEVEL_META: Record<GRIResult["level"], { label: string; color: string; bg:
   critical: { label: "CRITICAL", color: C.dangerText, bg: C.dangerBg, border: C.dangerBorder, icon: "✕" },
 };
 
-export function LinguisticMatrixPanel() {
+export function LinguisticMatrixPanel({ apiEndpoint = "/api/console/linguistic-matrix" }: { apiEndpoint?: string } = {}) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +110,7 @@ export function LinguisticMatrixPanel() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/console/linguistic-matrix");
+      const res = await fetch(apiEndpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -123,7 +123,7 @@ export function LinguisticMatrixPanel() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, apiEndpoint]);
 
   if (loading) {
     return (
