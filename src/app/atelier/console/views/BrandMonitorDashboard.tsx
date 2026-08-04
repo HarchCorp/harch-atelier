@@ -32,6 +32,7 @@ import { CrisisWorkflowEngine } from "./CrisisWorkflowEngine";
 import { ComplianceRoadmap } from "./ComplianceRoadmap";
 import { AlertConfigurationPanel } from "./AlertConfigurationPanel";
 import { ExportPanel } from "./ExportPanel";
+import { TeamCollaborationPanel } from "./TeamCollaborationPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -2334,6 +2335,12 @@ export function BrandMonitorDashboard({
                 CSV export of articles, alerts, reputation, AI visibility. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
               <ExportPanel />
+            </div>
+
+            {/* ─── Team Collaboration ───
+                Team members, alert assignments, activity tracking. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <TeamCollaborationPanel />
             </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
