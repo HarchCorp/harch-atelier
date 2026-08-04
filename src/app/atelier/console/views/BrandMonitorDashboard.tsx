@@ -2330,6 +2330,12 @@ export function BrandMonitorDashboard({
               <AlertConfigurationPanel />
             </div>
 
+            {/* ─── Export Panel ───
+                CSV export of articles, alerts, reputation, AI visibility. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <ExportPanel />
+            </div>
+
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
             <section data-template-row="2" style={{ display: "contents" }}>
 
