@@ -26,7 +26,7 @@ interface SourceData {
   type: "media" | "social" | "regulatory";
 }
 
-const SOURCES: SourceData[] = [
+const DEMO_SOURCES: SourceData[] = [
   { name: "Hespress", count: 847, color: "#a0524b", type: "media" },
   { name: "Le360", count: 623, color: "#1e3a5f", type: "media" },
   { name: "TelQuel", count: 412, color: "#4a7b5f", type: "media" },
@@ -42,13 +42,13 @@ import { useState } from "react";
 export function SourceDistribution() {
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const total = SOURCES.reduce((sum, s) => sum + s.count, 0);
+  const total = sources.reduce((sum, s) => sum + s.count, 0);
   const radius = 80;
   const stroke = 24;
   const circumference = 2 * Math.PI * radius;
 
   // Pre-compute segment offsets (cumulative sum, no mutation during render)
-  const segments = SOURCES.reduce<
+  const segments = sources.reduce<
     Array<{ dash: number; offset: number }>
   >((acc, s) => {
     const pct = s.count / total;
@@ -66,7 +66,7 @@ export function SourceDistribution() {
           Source Distribution
         </div>
         <div style={{ fontSize: "13px", color: C.textSec }}>
-          Top {SOURCES.length} sources · 30j · {total.toLocaleString()} mentions total
+          Top {sources.length} sources · 30j · {total.toLocaleString()} mentions total
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export function SourceDistribution() {
         <div style={{ position: "relative", width: "200px", height: "200px" }}>
           <svg width="200" height="200" viewBox="0 0 200 200">
             <g transform="translate(100, 100) rotate(-90)">
-              {SOURCES.map((s, i) => {
+              {sources.map((s, i) => {
                 const seg = segments[i];
                 return (
                   <circle
@@ -103,9 +103,9 @@ export function SourceDistribution() {
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             {hovered !== null ? (
               <>
-                <div style={{ fontSize: "24px", fontWeight: 700, color: SOURCES[hovered].color }}>{SOURCES[hovered].count}</div>
-                <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, textAlign: "center" }}>{SOURCES[hovered].name}</div>
-                <div style={{ fontFamily: C.fontMono, fontSize: "11px", fontWeight: 700, color: C.text }}>{((SOURCES[hovered].count / total) * 100).toFixed(1)}%</div>
+                <div style={{ fontSize: "24px", fontWeight: 700, color: sources[hovered].color }}>{sources[hovered].count}</div>
+                <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, textAlign: "center" }}>{sources[hovered].name}</div>
+                <div style={{ fontFamily: C.fontMono, fontSize: "11px", fontWeight: 700, color: C.text }}>{((sources[hovered].count / total) * 100).toFixed(1)}%</div>
               </>
             ) : (
               <>
@@ -118,7 +118,7 @@ export function SourceDistribution() {
 
         {/* Legend */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          {SOURCES.map((s, i) => (
+          {sources.map((s, i) => (
             <div
               key={s.name}
               onMouseEnter={() => setHovered(i)}
@@ -149,7 +149,7 @@ export function SourceDistribution() {
       {/* Type summary */}
       <div style={{ marginTop: "16px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
         {["media", "social", "regulatory"].map((type) => {
-          const count = SOURCES.filter((s) => s.type === type).reduce((sum, s) => sum + s.count, 0);
+          const count = sources.filter((s) => s.type === type).reduce((sum, s) => sum + s.count, 0);
           const pct = ((count / total) * 100).toFixed(0);
           const labels = { media: "📰 Media", social: "📱 Social", regulatory: "⚖️ Regulatory" };
           const colors = { media: "#1e3a5f", social: "#ef4444", regulatory: "#8b6914" };

@@ -34,7 +34,7 @@ interface Competitor {
   isYou: boolean;
 }
 
-const COMPETITORS: Competitor[] = [
+const DEMO_COMPETITORS: Competitor[] = [
   { name: "Attijariwafa Bank", mentionCount: 2847, sentiment: 0.12, trend: 3, isYou: true },
   { name: "Bank of Africa", mentionCount: 2103, sentiment: 0.21, trend: 2, isYou: false },
   { name: "BCP", mentionCount: 1876, sentiment: -0.08, trend: -1, isYou: false },
@@ -44,12 +44,12 @@ const COMPETITORS: Competitor[] = [
 
 export function ShareOfVoicePanel() {
   const [hovered, setHovered] = useState<number | null>(null);
-  const total = COMPETITORS.reduce((sum, c) => sum + c.mentionCount, 0);
-  const maxMentions = Math.max(...COMPETITORS.map((c) => c.mentionCount));
-  const yourRank = COMPETITORS.sort((a, b) => b.mentionCount - a.mentionCount).findIndex((c) => c.isYou) + 1;
+  const total = competitors.reduce((sum, c) => sum + c.mentionCount, 0);
+  const maxMentions = Math.max(...competitors.map((c) => c.mentionCount));
+  const yourRank = competitors.sort((a, b) => b.mentionCount - a.mentionCount).findIndex((c) => c.isYou) + 1;
 
   // Sort by mention count descending
-  const sorted = [...COMPETITORS].sort((a, b) => b.mentionCount - a.mentionCount);
+  const sorted = [...competitors].sort((a, b) => b.mentionCount - a.mentionCount);
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px" }}>
@@ -60,7 +60,7 @@ export function ShareOfVoicePanel() {
             Share of Voice
           </div>
           <div style={{ fontSize: "13px", color: C.textSec }}>
-            You are <span style={{ fontWeight: 700, color: C.text }}>#{yourRank}</span> of {COMPETITORS.length} competitors
+            You are <span style={{ fontWeight: 700, color: C.text }}>#{yourRank}</span> of {competitors.length} competitors
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -175,7 +175,7 @@ export function ShareOfVoicePanel() {
         <p style={{ margin: 0, fontSize: "12px", color: C.textSec, lineHeight: 1.5 }}>
           {yourRank === 1
             ? "Vous dominez le share of voice. Surveillez BCP (sentiment négatif) qui pourrait gagner du momentum."
-            : `Vous êtes #${yourRank}. ${sorted[0].name} vous devance de ${Math.round((sorted[0].mentionCount / COMPETITORS.find((c) => c.isYou)!.mentionCount - 1) * 100)}% en volume.`}
+            : `Vous êtes #${yourRank}. ${sorted[0].name} vous devance de ${Math.round((sorted[0].mentionCount / competitors.find((c) => c.isYou)!.mentionCount - 1) * 100)}% en volume.`}
         </p>
       </div>
     </div>

@@ -161,7 +161,15 @@ function timeAgo(ts: number): string {
 
 export function CrisisAlertFeed() {
   const [alerts, setAlerts] = useState<Alert[]>(DEMO_ALERTS);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Severity | "all">("all");
+
+  useEffect(() => {
+    fetch("/api/console/crisis-alerts")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.alerts) setAlerts(d.alerts); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   const filtered = filter === "all" ? alerts : alerts.filter((a) => a.severity === filter);
 
