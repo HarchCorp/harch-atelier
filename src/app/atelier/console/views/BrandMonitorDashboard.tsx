@@ -2243,7 +2243,9 @@ export function BrandMonitorDashboard({
                 Meltwater unified view + Vizia command aesthetic + Signal AI
                 decision augmentation + PeakMetrics narrative detection. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <BrandHealthCommandCenter />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <BrandHealthCommandCenter />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── Crisis indicator (after KPI strip, before deep widgets) ───
@@ -2257,14 +2259,18 @@ export function BrandMonitorDashboard({
                 digital street. GRI gauge + cascade detection + per-language
                 risk breakdown. This is the Harch IQ NLP Engine signature widget. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <LinguisticMatrixPanel />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <LinguisticMatrixPanel />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── Crisis Alert Feed (Brique 10) ───
                 Dataminr-style real-time severity feed + PeakMetrics narrative
                 detection + cascade indicators. Acknowledge + escalate actions. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <CrisisAlertFeed />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <CrisisAlertFeed />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── ROW 1.5: Keyword Search + Exposure Trend ───
@@ -2276,28 +2282,40 @@ export function BrandMonitorDashboard({
               <KeywordSearchBar />
             </div>
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <ExposureTrendChart />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <ExposureTrendChart />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── ROW 1.75: Share of Voice + Source Distribution + Competitor Radar ───
                 Three competitive intelligence widgets side by side. */}
             <div style={{ gridColumn: "span 4", marginBottom: "16px" }}>
-              <ShareOfVoicePanel />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <ShareOfVoicePanel />
+              </DashboardErrorBoundary>
             </div>
             <div style={{ gridColumn: "span 4", marginBottom: "16px" }}>
-              <SourceDistribution />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <SourceDistribution />
+              </DashboardErrorBoundary>
             </div>
             <div style={{ gridColumn: "span 4", marginBottom: "16px" }}>
-              <CompetitorRadarChart />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <CompetitorRadarChart />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── ROW 1.85: Influencer Impact + AI Search Assistant ───
                 Who is amplifying the brand + conversational AI for deep dives. */}
             <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
-              <InfluencerImpactPanel />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <InfluencerImpactPanel />
+              </DashboardErrorBoundary>
             </div>
             <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
-              <AISearchAssistant />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <AISearchAssistant />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── ROW 1.95: Crisis Timeline + WhatsApp Digest + Regulatory Feed ───
@@ -2305,42 +2323,52 @@ export function BrandMonitorDashboard({
                 the 72h evolution, the WhatsApp digest shows what lands on
                 the Dircom's phone, and the regulatory feed tracks BAM/AMMC. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <CrisisTimeline />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <CrisisTimeline />
+              </DashboardErrorBoundary>
             </div>
             <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
-              <WhatsAppDigestPreview />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <WhatsAppDigestPreview />
+              </DashboardErrorBoundary>
             </div>
             <div style={{ gridColumn: "span 6", marginBottom: "16px" }}>
-              <RegulatoryFeedWidget />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <RegulatoryFeedWidget />
+              </DashboardErrorBoundary>
             </div>
 
-            {/* ─── ROW 2.1: Crisis Workflow + Compliance Roadmap ───
-                Recommendation #3: automated crisis management +
-                compliance tracker for Niveau 1→2 transition. */}
+            {/* ─── ROW 2.1: Crisis Workflow + Compliance Roadmap ─── */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <CrisisWorkflowEngine />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <CrisisWorkflowEngine />
+              </DashboardErrorBoundary>
             </div>
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <ComplianceRoadmap />
-            </div>
-
-            {/* ─── Alert Configuration Panel ───
-                Dircom configures alert thresholds, delivery channels,
-                quiet hours, and severity filters. */}
-            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <AlertConfigurationPanel />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <ComplianceRoadmap />
+              </DashboardErrorBoundary>
             </div>
 
-            {/* ─── Export Panel ───
-                CSV export of articles, alerts, reputation, AI visibility. */}
+            {/* ─── Alert Configuration Panel ─── */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <ExportPanel />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <AlertConfigurationPanel />
+              </DashboardErrorBoundary>
             </div>
 
-            {/* ─── Team Collaboration ───
-                Team members, alert assignments, activity tracking. */}
+            {/* ─── Export Panel ─── */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
-              <TeamCollaborationPanel />
+              <DashboardErrorBoundary accent={ACCENT}>
+                <ExportPanel />
+              </DashboardErrorBoundary>
+            </div>
+
+            {/* ─── Team Collaboration ─── */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <DashboardErrorBoundary accent={ACCENT}>
+                <TeamCollaborationPanel />
+              </DashboardErrorBoundary>
             </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
