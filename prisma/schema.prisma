@@ -69,6 +69,9 @@ model Company {
   settings         CompanySettings?
   webhooks         Webhook[]
 
+  // ─── Agency white-label relation (Brique 8) ───────────────────
+  agencyClients    AgencyClient[]
+
   @@unique([iceNumber]) // ICE must be unique if provided
   @@index([sector])
   @@index([parentId])
@@ -222,6 +225,147 @@ model InboundWhatsAppMessage {
   @@index([status])
   @@index([crisisScore])
   @@index([receivedAt])
+}
+
+// ─── AGENCY WHITE-LABEL ENGINE (Brique 8) ───────────────────────
+//
+//  Task ID: BRICK-8-agency
+//  Why: PR/comms agencies (Omocto, PRESMA, Webcom, Blue Lions) are
+//  prescripteurs, not direct buyers. They resell Harch under their
+//  brand to their Dircom clients. This engine provides:
+//    • Multi-tenant isolation (agency_id scoping on all queries)
+//    • White-label branding (logo, colors, subdomain per sub-client)
+//    • Quota allocation (requests, WhatsApp alerts, keywords)
+//
+//  Architecture:
+//    Agency (master account) → has many AgencyClients (sub-clients)
+//    AgencyClient → maps to one Company (existing model)
+//    AgencyClient → has one AgencyBranding (logo, colors, subdomain)
+//    AgencyClient → has one AgencyQuota (limits + current usage)
+//    AgencyAdmin (User with role="agency-admin") → can switch between
+//      sub-client workspaces via a session-scoped activeAgencyClientId
+
+model Agency {
+  id              String   @id @default(cuid())
+  name            String   // e.g. "Omocto"
+  slug            String   @unique // e.g. "omocto"
+  legalName       String?  // e.g. "Omocto SARL"
+  contactEmail    String?  // agency contact email
+  contactPhone    String?
+  website         String?
+  // Commission: 30% revenue share (configurable per agency)
+  commissionPct   Float    @default(30)
+  // Agency-level branding (applied to the agency's own portal, not sub-clients)
+  logoUrl         String?
+  primaryColor    String?  // hex, e.g. "#4A7B5F"
+  // Status
+  status          String   @default("active") // active | suspended | terminated
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clients         AgencyClient[]
+  admins          User[]   @relation("AgencyAdmins")
+
+  @@index([status])
+}
+
+model AgencyClient {
+  id              String   @id @default(cuid())
+  agencyId        String
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // The actual Company this sub-client manages (OCP, Attijariwafa, etc.)
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Display name (may differ from Company.name — agency might use a codename)
+  displayName     String
+
+  // Subdomain for white-label access: iq.{subdomain}.harchcorp.com
+  // or custom domain: iq.{client-domain}.com
+  subdomain       String?  @unique
+  customDomain    String?  @unique
+
+  // Status
+  status          String   @default("active") // active | suspended | terminated
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  branding        AgencyBranding?
+  quota           AgencyQuota?
+  usage           AgencyUsage[]
+
+  @@unique([agencyId, companyId])
+  @@index([agencyId])
+  @@index([companyId])
+  @@index([status])
+}
+
+model AgencyBranding {
+  id              String   @id @default(cuid())
+  agencyClientId  String   @unique
+  agencyClient    AgencyClient @relation(fields: [agencyClientId], references: [id], onDelete: Cascade)
+
+  // Visual identity
+  logoUrl         String?  // custom logo URL (overrides Harch default)
+  primaryColor    String?  @default("#0A0A0A") // hex
+  accentColor     String?  @default("#10b981") // hex
+  fontFamily      String?  @default("'Inter', system-ui, sans-serif")
+  faviconUrl      String?
+
+  // Custom copy
+  loginTitle      String?  @default("HarchIQ Console")
+  loginSubtitle   String?
+  footerText      String?
+
+  // Hide Harch branding?
+  hideHarchBadge  Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AgencyQuota {
+  id              String   @id @default(cuid())
+  agencyClientId  String   @unique
+  agencyClient    AgencyClient @relation(fields: [agencyClientId], references: [id], onDelete: Cascade)
+
+  // Limits (reset monthly)
+  maxApiRequests      Int   @default(10000)  // per month
+  maxWhatsAppAlerts   Int   @default(100)    // per month
+  maxKeywords         Int   @default(50)     // concurrent tracked keywords
+  maxSources          Int   @default(30)     // concurrent monitored sources
+  maxUsers            Int   @default(5)      // seats
+
+  // Billing
+  planTier            String @default("emergence") // emergence | corporate | sovereign
+  monthlyPriceMAD     Int    @default(15000)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AgencyUsage {
+  id              String   @id @default(cuid())
+  agencyClientId  String
+  agencyClient    AgencyClient @relation(fields: [agencyClientId], references: [id], onDelete: Cascade)
+
+  // Usage period (monthly: "2026-08" format)
+  period          String   // e.g. "2026-08"
+
+  // Counters
+  apiRequests     Int      @default(0)
+  whatsappAlerts  Int      @default(0)
+  keywordsUsed    Int      @default(0)
+  sourcesUsed     Int      @default(0)
+  usersActive     Int      @default(0)
+
+  // Rolling counters (incremented in real-time, reset on billing cycle)
+  lastResetAt     DateTime @default(now())
+
+  @@unique([agencyClientId, period])
+  @@index([agencyClientId])
+  @@index([period])
 }
 
 // ─── ANALYTICS ──────────────────────────────────────────────────
@@ -528,9 +672,16 @@ model User {
   briefings     Briefing[]
   invitations   Invitation[] @relation("InvitationCreator")
 
+  // ─── Agency white-label relation (Brique 8) ───────────────────
+  // Users with role="agency-admin" are linked to an Agency master account.
+  // They can switch between sub-client workspaces via activeAgencyClientId.
+  agency         Agency?  @relation("AgencyAdmins", fields: [agencyId], references: [id], onDelete: SetNull)
+  agencyId       String?
+
   @@index([companyId])
   @@index([status])
   @@index([isDemo])
+  @@index([agencyId])
 }
 
 model Account {

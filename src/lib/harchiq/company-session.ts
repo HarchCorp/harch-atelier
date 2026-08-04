@@ -29,6 +29,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { getAgencyContext } from "@/lib/agency/agency-session";
 
 export interface UserCompanyOk {
   ok: true;
@@ -63,6 +64,13 @@ export interface UserCompanyOk {
       sector: string;
       ticker: string | null;
     };
+    /**
+     * Brick 8 — agency white-label. When the caller is an agency-admin
+     * who has switched into a sub-client workspace, this is the
+     * AgencyClient.id they're acting on behalf of. Null for regular
+     * users (not an agency admin, or no workspace switch yet).
+     */
+    agencyActiveClientId?: string | null;
   };
 }
 
@@ -124,6 +132,32 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
     };
   }
 
+  // ─── Brick 8 — agency white-label workspace switching ──────────
+  // If the user is an agency-admin (or super-admin acting as one) and
+  // they've switched into a sub-client workspace via POST /api/agency/switch,
+  // the `activeAgencyClientId` cookie drives which company they see.
+  // We resolve the agency context (which verifies the client belongs to
+  // their agency — defence in depth) and substitute the companyId.
+  //
+  // This is APP-LEVEL tenant isolation (Prisma queries scoped by companyId),
+  // NOT database-level PostgreSQL RLS. Every console API already spreads
+  // `companyId` into its where clauses — we just point it at the active
+  // sub-client's company instead of the agency admin's own (which is null).
+  let effectiveCompanyId: string | null = user.companyId;
+  let agencyActiveClientId: string | null = null;
+  if (user.role === "agency-admin" || user.role === "admin") {
+    try {
+      const agencyCtx = await getAgencyContext(session);
+      if (agencyCtx?.activeAgencyClientId && agencyCtx.companyId) {
+        effectiveCompanyId = agencyCtx.companyId;
+        agencyActiveClientId = agencyCtx.activeAgencyClientId;
+      }
+    } catch {
+      // Agency context errored (e.g. suspended agency) — fall through to
+      // the normal "no companyId" branch below, which returns 403.
+    }
+  }
+
   // ─── Task: domain-matching-demo-isolation ──────────────────────
   // Build the demo isolation filter. Demo users (the four executive
   // demo accounts) see ONLY isDemo:true data. Real users (everyone
@@ -138,7 +172,28 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
   // No companyId → the user hasn't completed onboarding. Return a 403
   // with a redirect hint so the client can bounce them to /atelier/onboarding
   // without an extra round-trip.
-  if (!user.companyId) {
+  //
+  // Brick 8 exception: agency-admins don't have their own companyId —
+  // they only have an agencyId. They can use the agency dashboard at
+  // /atelier/agency without onboarding, but they CANNOT use console APIs
+  // unless they've switched into a sub-client workspace (in which case
+  // effectiveCompanyId is non-null above).
+  if (!effectiveCompanyId) {
+    // Special case: an agency-admin without an active workspace gets a
+    // 403 with a redirect to the agency dashboard, not to onboarding.
+    if (user.role === "agency-admin") {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          {
+            error: "No active sub-client workspace — switch from the agency dashboard",
+            redirect: "/atelier/agency",
+            agencyAdmin: true,
+          },
+          { status: 403 },
+        ),
+      };
+    }
     return {
       ok: false,
       response: NextResponse.json(
@@ -154,7 +209,7 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
 
   // ─── 4. Fetch the company row ──────────────────────────────────
   const company = await prisma.company.findUnique({
-    where: { id: user.companyId },
+    where: { id: effectiveCompanyId },
     select: {
       id: true,
       slug: true,
@@ -191,10 +246,13 @@ export async function requireUserCompany(): Promise<UserCompanyResult> {
         name: user.name,
         role: user.role,
         accountType: user.accountType,
-        companyId: user.companyId,
+        companyId: company.id, // reflect the EFFECTIVE company (agency workspace)
       },
       company,
-    },
+      // Brick 8 — surface the active agency client id so callers can
+      // attribute quota / audit logs to the right sub-client.
+      agencyActiveClientId,
+    } as UserCompanyOk["data"],
   };
 }
 

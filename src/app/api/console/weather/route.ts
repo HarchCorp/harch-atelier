@@ -8,6 +8,7 @@ import {
 } from "@/lib/harchiq/company-session";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoWeatherResponse } from "@/lib/demo-console-api";
+import { withQuotaCheck } from "@/lib/agency/quota";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/weather
@@ -27,7 +28,11 @@ import { demoWeatherResponse } from "@/lib/demo-console-api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+// Brick 8 — wrap the GET handler with quota enforcement. The wrapper
+// is a no-op for regular users (no active agency workspace); for
+// agency-admins switched into a sub-client workspace, it checks the
+// apiRequest quota for the current month and returns 429 if exceeded.
+export async function getHandler(req: Request) {
   // Auth check — STRICT (no anonymous access)
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -213,3 +218,7 @@ export async function GET(req: Request) {
     );
   }
 }
+
+// Brick 8 — exported GET wrapped with quota enforcement (apiRequest resource).
+// Regular users (no active agency workspace) pass through unchanged.
+export const GET = withQuotaCheck(getHandler, "apiRequest");

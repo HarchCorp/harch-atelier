@@ -42,6 +42,11 @@ import {
   dispatchAlertEvent,
   type AlertEventPayload,
 } from "@/lib/harchiq/webhook-dispatcher";
+import {
+  withQuotaCheck,
+  checkQuota,
+  incrementUsage,
+} from "@/lib/agency/quota";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +86,15 @@ function severityFromRiskLevel(level: string): Severity {
 }
 
 // ─── GET (the only method this cron uses) ──────────────────────────
-export async function GET(req: NextRequest) {
+//
+// Brick 8 — the handler is wrapped with `withQuotaCheck(.., "whatsappAlert")`
+// at the bottom of this file. The wrapper is a no-op when the request has
+// no agency context (which is the case for the CRON_SECRET auth path), but
+// it would activate if the route were ever invoked with a session. The
+// SUBSTANTIVE per-(user, alert) quota enforcement happens inline below —
+// for every (user, alert) pair we look up the user's AgencyClient and
+// check the whatsappAlert quota before sending.
+export async function getHandler(req: NextRequest) {
   // Auth check — fail fast and quiet.
   if (!process.env.CRON_SECRET) {
     return NextResponse.json(
@@ -201,11 +214,17 @@ export async function GET(req: NextRequest) {
   }
 
   // ── 2. Load all users with WhatsApp alerts enabled ──────────────
+  //
+  // Brick 8 — we also select `companyId` so we can attribute each
+  // (user, alert) pair to the user's AgencyClient and enforce the
+  // per-sub-client whatsappAlert quota. Users without a company
+  // (super-admins, agency-admins themselves) bypass the quota check.
   let users: Array<{
     id: string;
     name: string | null;
     whatsappNumber: string | null;
     alertSeverityThreshold: string;
+    companyId: string | null;
   }> = [];
 
   try {
@@ -219,6 +238,7 @@ export async function GET(req: NextRequest) {
         name: true,
         whatsappNumber: true,
         alertSeverityThreshold: true,
+        companyId: true,
       },
     });
   } catch (err) {
@@ -232,6 +252,27 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
+
+  // ── 2b. Pre-fetch AgencyClients by companyId ─────────────────────
+  //
+  // Build a Map<companyId, agencyClientId> so we can check the
+  // whatsappAlert quota per (user, alert) pair without an extra DB
+  // hit per send. This is the substantive enforcement point for the
+  // cron — the withQuotaCheck wrapper around the handler is a no-op
+  // because the cron uses CRON_SECRET auth (no session, no agency
+  // context), so we do the per-user check inline here.
+  const companyIdsWithUsers = Array.from(
+    new Set(users.map((u) => u.companyId).filter((id): id is string => !!id)),
+  );
+  const agencyClientRows = companyIdsWithUsers.length
+    ? await prisma.agencyClient.findMany({
+        where: { companyId: { in: companyIdsWithUsers }, status: "active" },
+        select: { id: true, companyId: true },
+      })
+    : [];
+  const agencyClientByCompany = new Map<string, string>(
+    agencyClientRows.map((c) => [c.companyId, c.id]),
+  );
 
   // ── 3. For each user, filter + send ─────────────────────────────
   const log: Array<{
@@ -249,6 +290,7 @@ export async function GET(req: NextRequest) {
   let totalSent = 0;
   let totalFailed = 0;
   let totalSkipped = 0;
+  let totalQuotaBlocked = 0;
 
   for (const user of users) {
     if (!user.whatsappNumber) continue; // safety check (filtered above)
@@ -257,12 +299,52 @@ export async function GET(req: NextRequest) {
     // Per-user dedupe set: never send the same alert twice in one run.
     const sentIds = new Set<string>();
 
+    // Brick 8 — resolve the user's AgencyClient for quota enforcement.
+    // Users without a company (or whose company isn't an AgencyClient)
+    // bypass the whatsappAlert quota check (they're Harch direct customers,
+    // not on a white-label plan).
+    const agencyClientId = user.companyId
+      ? agencyClientByCompany.get(user.companyId) ?? null
+      : null;
+
     for (const alert of rawAlerts) {
       if (sentIds.has(alert.id)) continue;
 
       if (!severityMeetsThreshold(alert.severity, threshold)) {
         totalSkipped++;
         continue;
+      }
+
+      // Brick 8 — whatsappAlert quota check (per sub-client).
+      if (agencyClientId) {
+        try {
+          const check = await checkQuota(agencyClientId, "whatsappAlert");
+          if (!check.allowed) {
+            totalQuotaBlocked++;
+            log.push({
+              userId: user.id,
+              to: user.whatsappNumber,
+              alertId: alert.id,
+              alertTitle: alert.title,
+              severity: alert.severity,
+              sent: false,
+              reason: "quota_exceeded",
+            });
+            continue;
+          }
+          // Increment the counter BEFORE the send — if the send fails
+          // we still consumed a quota unit (Twilio may have queued it).
+          // This is the safe direction for billing-grade accounting.
+          await incrementUsage(agencyClientId, "whatsappAlert", 1);
+        } catch (err) {
+          // Quota check errored — log and PASS THROUGH (better to send
+          // an extra alert than to silently drop a critical notification
+          // because of a transient DB error in the quota subsystem).
+          console.error(
+            `[whatsapp-alerts] quota check failed for agencyClient ${agencyClientId}:`,
+            err,
+          );
+        }
       }
 
       const payload: AlertPayload = {
@@ -390,6 +472,7 @@ export async function GET(req: NextRequest) {
       sent: totalSent,
       failed: totalFailed,
       skipped: totalSkipped,
+      quotaBlocked: totalQuotaBlocked,
     },
     webhooks: {
       dispatchedAlerts: webhookResults.length,
@@ -398,3 +481,9 @@ export async function GET(req: NextRequest) {
     log,
   });
 }
+
+// Brick 8 — wrap the handler with whatsappAlert quota enforcement.
+// The wrapper is a no-op for the cron's CRON_SECRET auth path (no
+// session → no agency context → pass-through); the substantive
+// per-(user, alert) enforcement happens inline above.
+export const GET = withQuotaCheck(getHandler as unknown as (req: Request) => Promise<Response>, "whatsappAlert");

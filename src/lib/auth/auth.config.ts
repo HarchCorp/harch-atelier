@@ -29,6 +29,14 @@ declare module "next-auth" {
     companyId?: string | null;
     status?: string;
     isDemo?: boolean;     // Task: domain-matching-demo-isolation — true for demo-*@harch.atelier
+    // ─── Brick 8 — agency white-label ────────────────────────────
+    // agencyId is set at sign-in for users with role="agency-admin".
+    // activeAgencyClientId is the JWT-side mirror of the
+    // `activeAgencyClientId` cookie — present so the first render
+    // after sign-in already has a workspace pre-selected. Subsequent
+    // workspace switches only touch the cookie (see agency-session.ts).
+    agencyId?: string | null;
+    activeAgencyClientId?: string | null;
   }
   interface Session {
     user: {
@@ -41,6 +49,8 @@ declare module "next-auth" {
       companyId?: string | null;
       status?: string;
       isDemo?: boolean;
+      agencyId?: string | null;
+      activeAgencyClientId?: string | null;
     };
   }
 }
@@ -53,6 +63,8 @@ declare module "next-auth/jwt" {
     companyId?: string | null;
     status?: string;
     isDemo?: boolean;
+    agencyId?: string | null;
+    activeAgencyClientId?: string | null;
   }
 }
 
@@ -228,6 +240,12 @@ export const authOptions: NextAuthOptions = {
           companyId: user.companyId,
           status: user.status,
           isDemo: user.isDemo,
+          // Brick 8 — agency white-label: surface agencyId in the JWT so
+          // agency-session.ts can resolve the master account without an
+          // extra DB hit on every request. activeAgencyClientId is left
+          // null here — the agency-session module reads it from the cookie.
+          agencyId: user.agencyId,
+          activeAgencyClientId: null,
         };
       },
     }),
@@ -242,6 +260,11 @@ export const authOptions: NextAuthOptions = {
         token.companyId = (user as { companyId?: string | null }).companyId;
         token.status = (user as { status?: string }).status;
         token.isDemo = (user as { isDemo?: boolean }).isDemo;
+        // Brick 8 — agency white-label: persist agencyId claim so the
+        // agency-session module can short-circuit when there's no
+        // active sub-client workspace.
+        token.agencyId = (user as { agencyId?: string | null }).agencyId ?? null;
+        token.activeAgencyClientId = null;
       }
       // Fallback for old JWTs (created before token.id was added):
       // if token.id is missing but we have an email, look up the user
@@ -260,6 +283,7 @@ export const authOptions: NextAuthOptions = {
               companyId: true,
               status: true,
               isDemo: true,
+              agencyId: true,
             },
           });
           if (dbUser) {
@@ -269,6 +293,9 @@ export const authOptions: NextAuthOptions = {
             token.companyId = dbUser.companyId;
             token.status = dbUser.status;
             token.isDemo = dbUser.isDemo;
+            token.agencyId = dbUser.agencyId;
+            // Don't overwrite activeAgencyClientId on every jwt refresh —
+            // it's managed by the cookie, not the token.
           }
         } catch {
           // DB error — leave token as-is (will fail at the route level with 401)
@@ -295,6 +322,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as { companyId?: string | null }).companyId = token.companyId;
         (session.user as { status?: string }).status = token.status;
         (session.user as { isDemo?: boolean }).isDemo = token.isDemo;
+        (session.user as { agencyId?: string | null }).agencyId = token.agencyId;
+        (session.user as { activeAgencyClientId?: string | null }).activeAgencyClientId = token.activeAgencyClientId;
       }
       return session;
     },
@@ -309,6 +338,7 @@ export const authOptions: NextAuthOptions = {
 export function getConsolePath(accountType?: string, role?: string): string {
   if (role === "admin") return "/atelier/admin";
   if (role === "company-admin") return "/atelier/console/enterprise-admin";
+  if (role === "agency-admin") return "/atelier/agency";
   switch (accountType) {
     case "brand-monitor":
       return "/atelier/console/brand-monitor";

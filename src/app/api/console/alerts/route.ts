@@ -8,6 +8,7 @@ import {
 } from "@/lib/harchiq/company-session";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoAlertsResponse } from "@/lib/demo-console-api";
+import { withQuotaCheck } from "@/lib/agency/quota";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/alerts
@@ -22,7 +23,10 @@ import { demoAlertsResponse } from "@/lib/demo-console-api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+// Brick 8 — wrap the GET handler with quota enforcement (apiRequest resource).
+// No-op for regular users; checks + increments usage for agency-admins in
+// an active sub-client workspace.
+export async function getHandler(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -125,3 +129,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }
+
+// Brick 8 — exported GET wrapped with quota enforcement (apiRequest resource).
+export const GET = withQuotaCheck(getHandler, "apiRequest");
