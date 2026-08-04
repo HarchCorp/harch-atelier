@@ -29,7 +29,7 @@ export async function GET() {
       channels: { whatsapp: true, email: true, dashboard: true, comexEscalation: false },
       severityFilter: { critical: true, warning: true, watch: false, info: false },
       quietHours: { enabled: true, start: "22:00", end: "07:00" },
-      whatsappNumber: settings.whatsappNumber || "",
+      whatsappNumber: settings.alertThresholds ? JSON.parse(settings.alertThresholds).whatsappNumber : "" || "",
       email: session.user.email || "",
       source: "neon",
     });
@@ -55,7 +55,6 @@ export async function PATCH(req: NextRequest) {
           minMentions: body.velocityThreshold,
           crisisThreshold: body.crisisScoreThreshold,
         }),
-        whatsappNumber: body.whatsappNumber || null,
       },
       create: {
         companyId,
@@ -64,7 +63,6 @@ export async function PATCH(req: NextRequest) {
           minMentions: body.velocityThreshold,
           crisisThreshold: body.crisisScoreThreshold,
         }),
-        whatsappNumber: body.whatsappNumber || null,
       },
     });
 
