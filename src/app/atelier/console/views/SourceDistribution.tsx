@@ -46,7 +46,16 @@ export function SourceDistribution() {
   const radius = 80;
   const stroke = 24;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+
+  // Pre-compute segment offsets (avoid mutating `let` inside .map)
+  let runningOffset = 0;
+  const segments = SOURCES.map((s) => {
+    const pct = s.count / total;
+    const dash = pct * circumference;
+    const seg = { dash, offset: runningOffset };
+    runningOffset += dash;
+    return seg;
+  });
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px" }}>
@@ -66,17 +75,16 @@ export function SourceDistribution() {
           <svg width="200" height="200" viewBox="0 0 200 200">
             <g transform="translate(100, 100) rotate(-90)">
               {SOURCES.map((s, i) => {
-                const pct = s.count / total;
-                const dash = pct * circumference;
-                const seg = (
+                const seg = segments[i];
+                return (
                   <circle
                     key={s.name}
                     r={radius}
                     fill="none"
                     stroke={s.color}
                     strokeWidth={hovered === i ? stroke + 4 : stroke}
-                    strokeDasharray={`${dash} ${circumference - dash}`}
-                    strokeDashoffset={-offset}
+                    strokeDasharray={`${seg.dash} ${circumference - seg.dash}`}
+                    strokeDashoffset={-seg.offset}
                     style={{
                       transition: "stroke-width 0.2s",
                       opacity: hovered === null || hovered === i ? 1 : 0.3,
@@ -86,8 +94,6 @@ export function SourceDistribution() {
                     onMouseLeave={() => setHovered(null)}
                   />
                 );
-                offset += dash;
-                return seg;
               })}
             </g>
           </svg>
