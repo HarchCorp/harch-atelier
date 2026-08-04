@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
-//  CRISIS TIMELINE — Annotated Event Timeline
+//  CRISIS timeline — Annotated Event Timeline
 //
 //  Shows the evolution of a crisis over time with annotated
 //  events (the 2018 boycott pattern). The Dircom sees exactly
@@ -40,7 +40,7 @@ interface TimelineEvent {
   source: string;
 }
 
-const TIMELINE: TimelineEvent[] = [
+const DEMO_TIMELINE: TimelineEvent[] = [
   { time: "J-3 · 23h14", label: "1er signal Darija", description: "Commentaire Hespress: 'tbarkellah 3la had frais jdad, mchaw lflous'. 12 likes en 30min.", severity: "info", sentiment: -0.42, language: "darija", source: "Hespress comments" },
   { time: "J-2 · 08h00", label: "Vélocité anormale", description: "142 mentions négatives en 2h. Sentiment moyen -0.58. Sarcasme détecté sur 38% des commentaires.", severity: "warning", sentiment: -0.58, language: "darija", source: "Hespress + TikTok" },
   { time: "J-2 · 14h30", label: "Vidéo TikTok virale", description: "Vidéo client mécontent atteint 80K vues. 100% négatif. Vélocité 35 mentions/h.", severity: "critical", sentiment: -0.78, language: "darija", source: "TikTok" },
@@ -57,13 +57,15 @@ const SEVERITY_META = {
 };
 
 export function CrisisTimeline() {
+  const [timeline, setTimeline] = useState<TimelineEvent[]>(DEMO_TIMELINE);
   const [expanded, setExpanded] = useState<number | null>(0);
+  useEffect(() => { fetch("/api/console/crisis-timeline").then(r => r.ok ? r.json() : null).then(d => { if (d?.events) setTimeline(d.events); }).catch(() => {}); }, []);
 
   // Build the sentiment curve points
   const width = 600;
   const height = 60;
-  const points = TIMELINE.map((e, i) => ({
-    x: (i / (TIMELINE.length - 1)) * width,
+  const points = timeline.map((e, i) => ({
+    x: (i / (timeline.length - 1)) * width,
     y: height / 2 - (e.sentiment * height * 0.4),
   }));
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
@@ -91,13 +93,13 @@ export function CrisisTimeline() {
           <path d={`${pathD} L ${width} ${height / 2} L 0 ${height / 2} Z`} fill={C.danger} fillOpacity={0.08} />
           {/* Event dots */}
           {points.map((p, i) => {
-            const meta = SEVERITY_META[TIMELINE[i].severity];
+            const meta = SEVERITY_META[timeline[i].severity];
             return <circle key={i} cx={p.x} cy={p.y} r={5} fill={meta.color} stroke={C.surface} strokeWidth={2} />;
           })}
         </svg>
         {/* Time labels */}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
-          {TIMELINE.map((e, i) => (
+          {timeline.map((e, i) => (
             <span key={i} style={{ fontFamily: C.fontMono, fontSize: "9px", color: C.textMuted }}>{e.time.split(" · ")[0]}</span>
           ))}
         </div>
@@ -105,7 +107,7 @@ export function CrisisTimeline() {
 
       {/* Event cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {TIMELINE.map((event, i) => {
+        {timeline.map((event, i) => {
           const meta = SEVERITY_META[event.severity];
           const isExpanded = expanded === i;
           return (

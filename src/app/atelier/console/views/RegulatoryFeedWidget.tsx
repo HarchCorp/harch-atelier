@@ -34,7 +34,7 @@ interface RegulatoryItem {
   summary: string;
 }
 
-const ITEMS: RegulatoryItem[] = [
+const DEMO_ITEMS: RegulatoryItem[] = [
   { id: "r1", source: "BAM", title: "Circulaire n° 14/G/2026 sur les exigences de gouvernance interne", type: "circular", date: "2026-08-01", impact: "high", summary: "Renforcement des contrôles internes pour les établissements bancaires. Entrée en vigueur 1er octobre 2026." },
   { id: "r2", source: "AMMC", title: "Décision n° 02/AMMC/2026 — information financière", type: "decision", date: "2026-07-28", impact: "medium", summary: "Nouvelles règles de transparence pour les sociétés cotées. Publication des rapports trimestriels sous 45 jours." },
   { id: "r3", source: "BVC", title: "Avis de cotation — OCP Group", type: "listing", date: "2026-07-25", impact: "low", summary: "Ajustement du flottant suite à l'opération de rachat d'actions." },
@@ -57,6 +57,8 @@ const IMPACT_META = {
 };
 
 export function RegulatoryFeedWidget() {
+  const [items, setItems] = useState<RegulatoryItem[]>(DEMO_ITEMS);
+  useEffect(() => { fetch("/api/console/regulatory-feed").then(r => r.ok ? r.json() : null).then(d => { if (d?.items) setItems(d.items); }).catch(() => {}); }, []);
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px" }}>
       {/* Header */}
@@ -80,7 +82,7 @@ export function RegulatoryFeedWidget() {
 
       {/* Items */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {ITEMS.map((item) => {
+        {items.map((item) => {
           const src = SOURCE_META[item.source];
           const impact = IMPACT_META[item.impact];
           return (

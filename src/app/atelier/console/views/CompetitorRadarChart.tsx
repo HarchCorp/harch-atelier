@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 //  COMPETITOR RADAR CHART
@@ -32,7 +32,7 @@ interface BrandScores {
   scores: { sentiment: number; shareOfVoice: number; aiVisibility: number; influencerAuthority: number; crisisResilience: number; mediaReach: number };
 }
 
-const BRANDS: BrandScores[] = [
+const DEMO_BRANDS: BrandScores[] = [
   { name: "Attijariwafa", color: "#1e3a5f", isYou: true, scores: { sentiment: 62, shareOfVoice: 78, aiVisibility: 72, influencerAuthority: 65, crisisResilience: 58, mediaReach: 84 } },
   { name: "Bank of Africa", color: "#4a7b5f", isYou: false, scores: { sentiment: 71, shareOfVoice: 65, aiVisibility: 68, influencerAuthority: 70, crisisResilience: 72, mediaReach: 70 } },
   { name: "BCP", color: "#a0524b", isYou: false, scores: { sentiment: 45, shareOfVoice: 58, aiVisibility: 54, influencerAuthority: 60, crisisResilience: 50, mediaReach: 62 } },
@@ -48,7 +48,9 @@ const AXES = [
 ];
 
 export function CompetitorRadarChart() {
-  const [visibleBrands, setVisibleBrands] = useState<Set<string>>(new Set(BRANDS.map((b) => b.name)));
+  const [brands, setBrands] = useState<BrandScores[]>(DEMO_BRANDS);
+  const [visibleBrands, setVisibleBrands] = useState<Set<string>>(new Set(DEMO_BRANDS.map((b) => b.name)));
+  useEffect(() => { fetch("/api/console/competitor-radar").then(r => r.ok ? r.json() : null).then(d => { if (d?.brands) setBrands(d.brands); }).catch(() => {}); }, []);
 
   const size = 280;
   const center = size / 2;
@@ -110,7 +112,7 @@ export function CompetitorRadarChart() {
           })}
 
           {/* Brand polygons */}
-          {BRANDS.filter((b) => visibleBrands.has(b.name)).map((brand) => (
+          {brands.filter((b) => visibleBrands.has(b.name)).map((brand) => (
             <polygon
               key={brand.name}
               points={buildPoints(brand.scores)}
@@ -149,7 +151,7 @@ export function CompetitorRadarChart() {
 
         {/* Legend + scores */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {BRANDS.map((brand) => {
+          {brands.map((brand) => {
             const isVisible = visibleBrands.has(brand.name);
             const avgScore = Math.round(Object.values(brand.scores).reduce((a, b) => a + b, 0) / AXES.length);
             return (

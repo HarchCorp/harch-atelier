@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 //  INFLUENCER IMPACT PANEL
@@ -39,7 +39,7 @@ interface Influencer {
   verified: boolean;
 }
 
-const INFLUENCERS: Influencer[] = [
+const DEMO_INFLUENCERS: Influencer[] = [
   { handle: "@drissbasri", name: "Driss Basri", platform: "twitter", followers: 142000, mentions: 12, sentiment: -0.42, reach: 89000, authority: 78, verified: true },
   { handle: "@salma_dircom", name: "Salma El Fassi", platform: "linkedin", followers: 28000, mentions: 8, sentiment: 0.34, reach: 42000, authority: 65, verified: true },
   { handle: "@tiktok_eco", name: "EcoMaroc TT", platform: "tiktok", followers: 450000, mentions: 3, sentiment: -0.58, reach: 320000, authority: 82, verified: true },
@@ -63,10 +63,12 @@ function formatNum(n: number): string {
 }
 
 export function InfluencerImpactPanel() {
+  const [influencers, setInfluencers] = useState<Influencer[]>(DEMO_INFLUENCERS);
   const [sortBy, setSortBy] = useState<"reach" | "mentions" | "authority" | "sentiment">("reach");
   const [filter, setFilter] = useState<"all" | "positive" | "negative">("all");
+  useEffect(() => { fetch("/api/console/influencer-impact").then(r => r.ok ? r.json() : null).then(d => { if (d?.influencers) setInfluencers(d.influencers); }).catch(() => {}); }, []);
 
-  const filtered = INFLUENCERS.filter((i) => {
+  const filtered = influencers.filter((i) => {
     if (filter === "positive") return i.sentiment > 0;
     if (filter === "negative") return i.sentiment < 0;
     return true;
