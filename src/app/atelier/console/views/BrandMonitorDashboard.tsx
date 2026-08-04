@@ -30,6 +30,7 @@ import { WhatsAppDigestPreview } from "./WhatsAppDigestPreview";
 import { RegulatoryFeedWidget } from "./RegulatoryFeedWidget";
 import { CrisisWorkflowEngine } from "./CrisisWorkflowEngine";
 import { ComplianceRoadmap } from "./ComplianceRoadmap";
+import { AlertConfigurationPanel } from "./AlertConfigurationPanel";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -2319,6 +2320,13 @@ export function BrandMonitorDashboard({
             </div>
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
               <ComplianceRoadmap />
+            </div>
+
+            {/* ─── Alert Configuration Panel ───
+                Dircom configures alert thresholds, delivery channels,
+                quiet hours, and severity filters. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <AlertConfigurationPanel />
             </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
