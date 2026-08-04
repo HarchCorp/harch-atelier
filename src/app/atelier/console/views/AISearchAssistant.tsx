@@ -92,8 +92,25 @@ export function AISearchAssistant() {
     setInput("");
     setThinking(true);
 
-    // Simulate AI response (in production, call /api/console/ask with GLM-4)
-    setTimeout(() => {
+    // Call real GLM-4 via /api/console/ask
+    // Falls back to local responses if the API fails
+    try {
+      const res = await fetch("/api/console/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text }),
+      });
+      const data = await res.json();
+      const aiContent = data.answer || data.response || getResponse(text);
+      const aiMsg: Message = {
+        id: `ai-${Date.now()}`,
+        role: "assistant",
+        content: aiContent,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch {
+      // Fallback to local responses if GLM-4 is unavailable
       const aiMsg: Message = {
         id: `ai-${Date.now()}`,
         role: "assistant",
@@ -101,8 +118,9 @@ export function AISearchAssistant() {
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, aiMsg]);
+    } finally {
       setThinking(false);
-    }, 1200 + Math.random() * 800);
+    }
   };
 
   return (
