@@ -1,17 +1,21 @@
 // ═══════════════════════════════════════════════════════════════
 //  PERSISTENCE LAYER — for scraped Hespress comments + WhatsApp inbound
 //
-//  Wraps the local Prisma client (SQLite) to persist the two new
-//  data bricks. Falls back gracefully if the DB is unavailable
-//  (returns the in-memory result unchanged, logs a warning).
+//  Uses the main Prisma client (Neon PostgreSQL) to persist the two
+//  new data bricks: ArticleComment (Hespress UGC) and
+//  InboundWhatsAppMessage (the IKEA loop).
 //
-//  When Neon PostgreSQL is provisioned, these functions migrate to
-//  the main `@/lib/db` client — same signatures, different backend.
+//  Task ID: BRICK-5-persistence (migrated from SQLite to Neon PG)
 // ═══════════════════════════════════════════════════════════════
 
-import { prismaLocal, localDbAvailable } from "@/lib/db-local";
+import { createHash } from "crypto";
+import { prisma } from "@/lib/db";
 import type { ScrapeResult, ScrapedComment } from "@/lib/scrapers/hespress-comments";
 import type { InboundMessage } from "@/lib/whatsapp/inbound-store";
+
+function hashUrl(url: string): string {
+  return createHash("sha256").update(url).digest("hex");
+}
 
 // ─── Persist Hespress comments ─────────────────────────────────
 
@@ -28,28 +32,28 @@ export async function persistScrapedComments(
   source: string,
   result: ScrapeResult,
 ): Promise<PersistResult> {
-  if (!localDbAvailable() || !prismaLocal) {
+  if (!prisma) {
     return { persisted: false, articleId: null, commentsPersisted: 0, error: "Local DB unavailable" };
   }
 
   try {
     // Upsert the article (find by URL, create if missing)
-    let article = await prismaLocal.article.findUnique({
+    let article = await prisma.article.findUnique({
       where: { url: articleUrl },
     });
 
     if (!article) {
       // Extract a title from the first comment if available, else use URL
-      const title = result.comments[0]?.content
-        ? `Hespress article ${articleId}`
-        : `Hespress article ${articleId}`;
-      article = await prismaLocal.article.create({
+      const title = `Hespress article ${articleId}`;
+      article = await prisma.article.create({
         data: {
-          slug: `hespress-${articleId}`,
           title,
           url: articleUrl,
+          urlHash: hashUrl(articleUrl),
           source: "hespress",
+          sourceType: "media",
           publishedAt: new Date(),
+          language: "french",
         },
       });
     }
@@ -58,7 +62,7 @@ export async function persistScrapedComments(
     let commentsPersisted = 0;
     for (const comment of result.comments) {
       try {
-        await prismaLocal.articleComment.upsert({
+        await prisma.articleComment.upsert({
           where: {
             articleId_commentId: {
               articleId: article.id,
@@ -112,7 +116,7 @@ export async function persistScrapedComments(
 export async function persistInboundMessage(
   msg: InboundMessage,
 ): Promise<{ persisted: boolean; dbId: string | null; error?: string }> {
-  if (!localDbAvailable() || !prismaLocal) {
+  if (!prisma) {
     return { persisted: false, dbId: null, error: "Local DB unavailable" };
   }
 
@@ -129,7 +133,7 @@ export async function persistInboundMessage(
   const language = a?.language ?? "english";
 
   try {
-    const created = await prismaLocal.inboundWhatsAppMessage.create({
+    const created = await prisma.inboundWhatsAppMessage.create({
       data: {
         fromPhone: msg.from,
         fromName: msg.fromName,
@@ -176,9 +180,9 @@ export async function readRecentComments(limit = 50): Promise<
     article: { title: string | null; url: string | null; source: string | null };
   }>
 > {
-  if (!localDbAvailable() || !prismaLocal) return [];
+  if (!prisma) return [];
   try {
-    return await prismaLocal.articleComment.findMany({
+    return await prisma.articleComment.findMany({
       take: limit,
       orderBy: { scrapedAt: "desc" },
       include: { article: { select: { title: true, url: true, source: true } } },
@@ -200,9 +204,9 @@ export async function readRecentInboundMessages(limit = 50): Promise<
     receivedAt: Date;
   }>
 > {
-  if (!localDbAvailable() || !prismaLocal) return [];
+  if (!prisma) return [];
   try {
-    return await prismaLocal.inboundWhatsAppMessage.findMany({
+    return await prisma.inboundWhatsAppMessage.findMany({
       take: limit,
       orderBy: { receivedAt: "desc" },
     });
@@ -220,7 +224,7 @@ export async function getLocalDbStats(): Promise<{
   inboundMessageCount: number;
   flaggedMessageCount: number;
 }> {
-  if (!localDbAvailable() || !prismaLocal) {
+  if (!prisma) {
     return {
       available: false,
       articleCount: 0,
@@ -231,10 +235,10 @@ export async function getLocalDbStats(): Promise<{
   }
   try {
     const [articleCount, commentCount, inboundMessageCount, flaggedMessageCount] = await Promise.all([
-      prismaLocal.article.count(),
-      prismaLocal.articleComment.count(),
-      prismaLocal.inboundWhatsAppMessage.count(),
-      prismaLocal.inboundWhatsAppMessage.count({ where: { status: "flagged" } }),
+      prisma.article.count(),
+      prisma.articleComment.count(),
+      prisma.inboundWhatsAppMessage.count(),
+      prisma.inboundWhatsAppMessage.count({ where: { status: "flagged" } }),
     ]);
     return {
       available: true,

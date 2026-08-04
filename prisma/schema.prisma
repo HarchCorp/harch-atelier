@@ -180,6 +180,50 @@ model ArticleComment {
   @@index([language])
 }
 
+// ─── INBOUND WHATSAPP MESSAGES (the IKEA loop) ──────────────────
+//
+//  Task ID: BRICK-2-whatsapp-inbound
+//  Why: The Dircom forwards a WhatsApp message (screenshot, link, or
+//  text) from a group they're worried about. Harch's NLP pipeline
+//  analyzes it and returns a risk assessment. This model persists
+//  every inbound message + its analysis so the Dircom builds a
+//  historical archive of "what I flagged and when".
+//
+//  Lifecycle: received → analyzing → responded | flagged
+//  Crisis score: 0-100, computed from sentiment + injection + fakeness
+//  + crisis keywords. >= 70 = critical (flagged, Comex escalation).
+
+model InboundWhatsAppMessage {
+  id                String   @id @default(cuid())
+  fromPhone         String   // sender phone (E.164)
+  fromName          String?  // ProfileName from Twilio
+  body              String   // message text (or "[BLOCKED ...]" for injections)
+  mediaUrl          String?  // image/audio/video URL (Twilio-hosted)
+  mediaContentType  String?  // image/jpeg, audio/ogg, etc.
+  receivedAt        DateTime @default(now())
+
+  // NLP analysis (run by inbound-pipeline.ts)
+  sentimentPolarity String   // positive | negative | neutral
+  sentimentScore    Float
+  sarcasmDetected   Boolean  @default(false)
+  injectionDetected Boolean  @default(false)
+  injectionPatterns String?  // JSON-encoded array of {label, match}
+  fakenessScore     Float    @default(0)
+  fakenessVerdict   String   @default("low") // low | medium | high
+  crisisScore       Int      @default(0)     // 0-100
+  language          String   // darija | arabic | french | mixed | english
+
+  // Lifecycle
+  status            String   @default("received") // received | analyzing | responded | flagged
+  outboundBody      String?  // the WhatsApp reply we sent back
+  respondedAt       DateTime?
+
+  @@index([fromPhone])
+  @@index([status])
+  @@index([crisisScore])
+  @@index([receivedAt])
+}
+
 // ─── ANALYTICS ──────────────────────────────────────────────────
 
 model SentimentScore {
