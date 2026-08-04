@@ -149,7 +149,7 @@ export function ClientDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {data.aiVisibility.map((ai, i) => (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 40px", gap: "12px", alignItems: "center" }}>
-                <span style={{ fontFamily: C.fontMono, fontSize: "13px", color: C.textSec }}>{ai.engine}</span>
+                <span style={{ fontFamily: C.fontMono, fontSize: "13px", color: C.textBody }}>{ai.engine}</span>
                 <div style={{ height: "8px", background: C.bgHover, borderRadius: "4px", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${ai.score}%`, background: ai.score >= 70 ? "#10b981" : ai.score >= 50 ? "#f59e0b" : "#ef4444", borderRadius: "4px", transition: "width 1s" }} />
                 </div>
