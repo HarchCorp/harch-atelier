@@ -5,6 +5,9 @@ import { AtelierFooter } from "../../components/AtelierFooter";
 import { C } from "../../components/tokens";
 import { BrandHealthCommandCenter } from "../../console/views/BrandHealthCommandCenter";
 import { CrisisAlertFeed } from "../../console/views/CrisisAlertFeed";
+import { KeywordSearchBar } from "../../console/views/KeywordSearchBar";
+import { AISearchAssistant } from "../../console/views/AISearchAssistant";
+import { ExposureTrendChart } from "../../console/views/ExposureTrendChart";
 
 // ═══════════════════════════════════════════════════════════════
 //  COMMAND CENTER LAB — public demo of the premium widgets
@@ -75,6 +78,45 @@ export function CommandCenterLabPage() {
             </p>
           </div>
           <CrisisAlertFeed />
+        </section>
+
+        {/* Widget 3: Keyword Search Bar */}
+        <section style={{ marginBottom: "48px" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
+              3. Keyword Search Bar
+            </h2>
+            <p style={{ fontSize: "13px", color: C.textMuted, margin: 0 }}>
+              Meltwater Explorer + Talkwalker filter pills — source, language, sentiment, date range
+            </p>
+          </div>
+          <KeywordSearchBar />
+        </section>
+
+        {/* Widget 4: Exposure Trend Chart */}
+        <section style={{ marginBottom: "48px" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
+              4. Exposure Trend Chart
+            </h2>
+            <p style={{ fontSize: "13px", color: C.textMuted, margin: 0 }}>
+              Meltwater multi-line exposure charts — 30-day mention volume by language, clickable legend, hover tooltip
+            </p>
+          </div>
+          <ExposureTrendChart />
+        </section>
+
+        {/* Widget 5: AI Search Assistant */}
+        <section style={{ marginBottom: "48px" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
+              5. AI Search Assistant
+            </h2>
+            <p style={{ fontSize: "13px", color: C.textMuted, margin: 0 }}>
+              Meltwater AI Search Assistant pattern — chat interface, suggested questions, grounded in reputation data
+            </p>
+          </div>
+          <AISearchAssistant />
         </section>
 
         {/* Design rationale */}
