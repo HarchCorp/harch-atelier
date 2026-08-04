@@ -16,6 +16,8 @@ import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
 import { InsightPanel } from "./InsightPanel";
 import { LinguisticMatrixPanel } from "./LinguisticMatrixPanel";
+import { BrandHealthCommandCenter } from "./BrandHealthCommandCenter";
+import { CrisisAlertFeed } from "./CrisisAlertFeed";
 import {
   useDashboardTemplate,
   TemplateVisibilityStyle,
@@ -2221,6 +2223,14 @@ export function BrandMonitorDashboard({
 
             </section>
 
+            {/* ─── Brand Health Command Center (Brique 10) ───
+                The hero widget — what the Dircom sees first. Synthesizes
+                Meltwater unified view + Vizia command aesthetic + Signal AI
+                decision augmentation + PeakMetrics narrative detection. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <BrandHealthCommandCenter />
+            </div>
+
             {/* ─── Crisis indicator (after KPI strip, before deep widgets) ───
                 Task: dataminr-realtime-crisis — the crisis score is the
                 first thing the user sees after the KPIs, mirroring
@@ -2233,6 +2243,13 @@ export function BrandMonitorDashboard({
                 risk breakdown. This is the Harch IQ NLP Engine signature widget. */}
             <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
               <LinguisticMatrixPanel />
+            </div>
+
+            {/* ─── Crisis Alert Feed (Brique 10) ───
+                Dataminr-style real-time severity feed + PeakMetrics narrative
+                detection + cascade indicators. Acknowledge + escalate actions. */}
+            <div style={{ gridColumn: "span 12", marginBottom: "16px" }}>
+              <CrisisAlertFeed />
             </div>
 
             {/* ─── ROW 2: Geographic Intelligence + Real-time Feed ─── */}
