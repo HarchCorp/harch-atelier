@@ -77,7 +77,7 @@ const jsonLd = {
       name: "Which media sources do you cover?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "30+ Moroccan and African media sources, plus the major francophone press. Morocco: Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui, Le Desk, ChallengeMA. Africa: Jeune Afrique, RFI Afrique, Africa News, Financial Afrik. Francophone: Le Monde Afrique, Le Figaro, Libération. We crawl every 60 seconds for Pro and Enterprise, every 5 minutes for Starter. Enterprise clients can request additional sources.",
+        text: "30+ Moroccan and African media sources, plus the major francophone press. Morocco: Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui, Le Desk, ChallengeMA. Africa: Jeune Afrique, RFI Afrique, Africa News, Financial Afrik. Francophone: Le Monde Afrique, Le Figaro, Libération. We crawl every 60 seconds for Corporate and Sovereign, every 5 minutes for Émergence. Sovereign clients can request additional sources.",
       },
     },
     {
@@ -85,7 +85,7 @@ const jsonLd = {
       name: "How fast are crisis alerts?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Pro and Enterprise tiers get crisis alerts in under 5 minutes from publication. The pipeline: detection (2min) → NLP (1min) → sentiment classification (1min) → WhatsApp delivery (1min). Starter tier alerts are under 1 hour. Triggers: sentiment below -0.5 on a tracked entity, or a volume spike above 200%. We deliver to WhatsApp because that's where you already are at 7am.",
+        text: "Corporate and Sovereign tiers get crisis alerts in under 5 minutes from publication. The pipeline: detection (2min) → NLP (1min) → sentiment classification (1min) → WhatsApp delivery (1min). Émergence tier alerts are under 1 hour. Triggers: sentiment below -0.5 on a tracked entity, or a volume spike above 200%. We deliver to WhatsApp because that's where you already are at 7am.",
       },
     },
     {
@@ -101,7 +101,7 @@ const jsonLd = {
       name: "Can I cancel anytime?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Starter and Pro are monthly with no commitment. You cancel with one email, effective at the end of the current month — no penalty, no clawback. Enterprise has a 90-day notice period for annual contracts. You keep dashboard access until the end of the paid period, and all your historical data is exported to CSV on request. We don't believe in lock-in.",
+        text: "Yes. Émergence and Corporate are monthly with no commitment. You cancel with one email, effective at the end of the current month — no penalty, no clawback. Sovereign has a 90-day notice period for annual contracts. You keep dashboard access until the end of the paid period, and all your historical data is exported to CSV on request. We don't believe in lock-in.",
       },
     },
     {
@@ -133,7 +133,7 @@ const jsonLd = {
       name: "What's in the monthly PDF report?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "A 32-page board-ready document. Pages 1-2: cover + executive summary (1-page read for the CEO). Pages 3-8: reputation score evolution (30 / 90 / 365 days). Pages 9-16: sentiment breakdown by source, topic, entity. Pages 17-24: top risks + crisis review. Pages 25-28: competitor benchmark (3 competitors). Pages 29-32: recommended actions + appendix. Starter tier gets an 8-page version. Enterprise gets an additional quarterly report.",
+        text: "A 32-page board-ready document. Pages 1-2: cover + executive summary (1-page read for the CEO). Pages 3-8: reputation score evolution (30 / 90 / 365 days). Pages 9-16: sentiment breakdown by source, topic, entity. Pages 17-24: top risks + crisis review. Pages 25-28: competitor benchmark (3 competitors). Pages 29-32: recommended actions + appendix. Émergence tier gets an 8-page version. Sovereign gets an additional quarterly report.",
       },
     },
     {
@@ -141,7 +141,7 @@ const jsonLd = {
       name: "I'm a startup / SME — is this for me?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Starter tier (5,000 MAD/month) is designed for SMEs and startups. You get the same pipeline as the big groups, just with fewer sources and brands. SME / startup: Starter (5K MAD) — 1 brand, 10 sources, 3 AI engines. Mid-size: Pro (15K MAD) — 3 brands, 30+ sources, 8 AI engines. Large group / multi-country: Enterprise (50K MAD) — unlimited brands, custom taxonomy. Free 7-day audit available for any tier. 70% of our clients start on Starter and upgrade within 3 months.",
+        text: "Yes. Émergence tier (15,000 MAD/month) is calibrated for the structured mid-cap company that needs institutional-grade intelligence without the enterprise footprint. You get the same pipeline as the big groups, just with fewer sources and brands. Structured mid-cap: Émergence (15K MAD) — 1 brand, 10 sources, 3 AI engines. Corporate group: Corporate (40K MAD) — 3 brands, 30+ sources, 8 AI engines. Large group / multi-country / sovereign entity: Sovereign (75K MAD) — unlimited brands, custom taxonomy. Free 7-day audit available for any tier. 70% of our clients start on Émergence and upgrade within 3 months.",
       },
     },
   ],

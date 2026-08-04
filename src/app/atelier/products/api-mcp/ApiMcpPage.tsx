@@ -183,8 +183,8 @@ export default function ApiMcpPage() {
       <Section>
         <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
           <StatsGrid color={C.accent} stats={[
-            { value: "10K", label: "API calls / day — Pro plan" },
-            { value: "100K", label: "API calls / day — Enterprise" },
+            { value: "10K", label: "API calls / day — Corporate plan" },
+            { value: "100K", label: "API calls / day — Sovereign" },
             { value: "4", label: "official SDKs (Python, TS, Go, Ruby)" },
             { value: "99.9%", label: "API uptime SLA" },
           ]} />
@@ -495,7 +495,7 @@ export default function ApiMcpPage() {
 
       {/* RATE LIMITS */}
       <Section>
-        <SectionHeader label="Rate limits" title="Pro vs Enterprise, side by side." />
+        <SectionHeader label="Rate limits" title="Corporate vs Sovereign, side by side." />
         <div style={{
           border: `1px solid ${C.border}`,
           borderRadius: "12px",
@@ -517,8 +517,8 @@ export default function ApiMcpPage() {
             fontWeight: 700,
           }}>
             <span>Resource</span>
-            <span>Pro</span>
-            <span>Enterprise</span>
+            <span>Corporate</span>
+            <span>Sovereign</span>
           </div>
           {[
             { res: "API calls / day", pro: "10,000", ent: "100,000" },
@@ -627,7 +627,7 @@ X-Harch-Client: my-crm-integration/1.4.0`}
 
       <CTABottom
         title="Get API access."
-        subtitle="Pro keys ship in 5 minutes from the dashboard. Enterprise plans include a dedicated integration engineer and a 99.9% uptime SLA."
+        subtitle="Corporate keys ship in 5 minutes from the dashboard. Sovereign plans include a dedicated integration engineer and a 99.9% uptime SLA."
         href="/atelier/audit"
         cta="Get API access →"
         color={C.accent}

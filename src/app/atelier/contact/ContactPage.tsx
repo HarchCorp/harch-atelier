@@ -25,7 +25,7 @@ const CONTACT_METHODS = [
     title: "Customer support",
     email: "support@harchcorp.com",
     desc: "Existing customers with technical questions or feature requests.",
-    response: "Within 2 business hours (Pro) / 30 min (Enterprise)",
+    response: "Within 2 business hours (Corporate) / 30 min (Sovereign)",
     icon: "▲",
   },
   {

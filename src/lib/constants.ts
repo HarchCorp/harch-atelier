@@ -87,7 +87,7 @@ export const NAV_STRUCTURE = {
     { label: "Partners", href: "/atelier/partners", desc: "Strategic partnerships" },
     { label: "Careers", href: "/atelier/careers", desc: "Join the team" },
     { label: "Contact", href: "/atelier/contact", desc: "Get in touch" },
-    { label: "Pricing", href: "/atelier/pricing", desc: "5K-50K MAD/month" },
+    { label: "Pricing", href: "/atelier/pricing", desc: "15K-75K MAD/month" },
     { label: "Audit", href: "/atelier/audit", desc: "Request a demo" },
     { label: "News", href: "/atelier/news", desc: "Latest updates" },
     { label: "Blog", href: "/atelier/blog", desc: "Articles and insights" },

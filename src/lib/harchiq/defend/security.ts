@@ -264,12 +264,12 @@ export const RATE_LIMITS: Record<
   api_pro: {
     maxRequests: 60,
     windowMs: 60 * 1000, // 1 minute
-    label: "API Pro (60 req / min)",
+    label: "API Corporate (60 req / min)",
   },
   api_enterprise: {
     maxRequests: 600,
     windowMs: 60 * 1000, // 1 minute
-    label: "API Enterprise (600 req / min)",
+    label: "API Sovereign (600 req / min)",
   },
   internal: {
     maxRequests: 10_000,

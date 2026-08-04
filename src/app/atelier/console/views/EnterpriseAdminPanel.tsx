@@ -200,7 +200,7 @@ export function EnterpriseAdminPanel() {
           >
             HarchIQ
             <span style={{ color: C.accent, marginLeft: "8px" }}>
-              Enterprise
+              Sovereign
             </span>
           </span>
           <span

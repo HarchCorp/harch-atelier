@@ -87,7 +87,7 @@ const WHAT_YOU_GET = [
   {
     n: "01",
     title: "7-day monitoring",
-    desc: "We run the full pipeline on your brand for 7 days. Same coverage as Pro tier.",
+    desc: "We run the full pipeline on your brand for 7 days. Same coverage as Corporate tier.",
     icon: "radar",
   },
   {
@@ -309,7 +309,7 @@ function Hero() {
             margin: "0 auto 40px",
           }}
         >
-          7 days of full monitoring — same pipeline as our Pro tier. You get a
+          7 days of full monitoring — same pipeline as our Corporate tier. You get a
           live dashboard, three WhatsApp digests, and a sample PDF report.
           No credit card. No commitment.
         </p>

@@ -69,7 +69,7 @@ const PRODUCTS: Product[] = [
       "MCP server for direct integration with Claude, ChatGPT, Cursor, Windsurf",
       "Webhooks for real-time alerts (sentiment shift, risk spike, narrative change)",
       "Bulk export endpoints (CSV, JSON, Parquet)",
-      "Rate limit: 10,000 calls/day (Pro), 100,000 calls/day (Enterprise)",
+      "Rate limit: 10,000 calls/day (Corporate), 100,000 calls/day (Sovereign)",
       "OAuth 2.0 authentication",
       "Comprehensive API documentation + SDKs (Python, TypeScript, Go)",
       "Sandbox environment for testing",
@@ -214,7 +214,7 @@ export default function ProductsPage() {
           }}>
             {[
               { value: "5", label: "integrated products" },
-              { value: "10K+", label: "API calls/day (Pro)" },
+              { value: "10K+", label: "API calls/day (Corporate)" },
               { value: "7 days", label: "report delivery time" },
               { value: "24mo", label: "briefing archive" },
             ].map(s => (

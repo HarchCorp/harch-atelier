@@ -306,13 +306,13 @@ export default function AskHarchIQPage() {
       }}>
         <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
-            Enterprise access
+            Sovereign access
           </div>
           <h2 style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
             Unlock full HarchIQ access.
           </h2>
           <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.7)", marginBottom: "32px", lineHeight: 1.6 }}>
-            The demo above is just a taste. Enterprise customers get unlimited HarchIQ queries, custom training,
+            The demo above is just a taste. Sovereign customers get unlimited HarchIQ queries, custom training,
             and integration with their internal data via API and MCP.
           </p>
           <a href="/atelier/audit" style={{

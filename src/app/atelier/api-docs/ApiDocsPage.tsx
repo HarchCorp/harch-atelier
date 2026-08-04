@@ -419,7 +419,7 @@ export function ApiDocsPage() {
           >
             <Stat label="Rate limit" value="60 req / min / key" />
             <Stat label="Burst" value="120 req (10s)" />
-            <Stat label="Quota" value="10,000 req / month (Pro)" />
+            <Stat label="Quota" value="10,000 req / month (Corporate)" />
             <Stat label="Timeout" value="30s per request" />
           </div>
           <p style={{ ...bodyStyle, marginTop: "16px" }}>

@@ -134,14 +134,14 @@ const FAQS: FAQ[] = [
     q: "Which media sources do you cover?",
     a: (
       <AnswerBody
-        intro="30+ Moroccan and African media sources, plus the major francophone press. We add sources on request for Enterprise clients."
+        intro="30+ Moroccan and African media sources, plus the major francophone press. We add sources on request for Sovereign clients."
         chart={<ChartSourceCoverage />}
         bullets={[
           "Morocco: Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui, Le Desk, ChallengeMA...",
           "Africa: Jeune Afrique, RFI Afrique, Africa News, Financial Afrik...",
           "Francophone: Le Monde Afrique, Le Figaro, Liberation (mentions of your brand)",
         ]}
-        note="Full list available on the method page. We crawl every 60 seconds for Pro and Enterprise, every 5 minutes for Starter."
+        note="Full list available on the method page. We crawl every 60 seconds for Corporate and Sovereign, every 5 minutes for Émergence."
       />
     ),
   },
@@ -151,12 +151,12 @@ const FAQS: FAQ[] = [
     q: "How fast are crisis alerts?",
     a: (
       <AnswerBody
-        intro="Pro and Enterprise tiers get crisis alerts in under 5 minutes from publication. The full pipeline: detection (2min) → NLP (1min) → sentiment classification (1min) → WhatsApp delivery (1min)."
+        intro="Corporate and Sovereign tiers get crisis alerts in under 5 minutes from publication. The full pipeline: detection (2min) → NLP (1min) → sentiment classification (1min) → WhatsApp delivery (1min)."
         chart={<ChartAlertLatency />}
         bullets={[
-          "Starter: alerte under 1 hour",
-          "Pro: alerte under 5 minutes",
-          "Enterprise: alerte under 5 minutes + comms playbook",
+          "Émergence: alerte under 1 hour",
+          "Corporate: alerte under 5 minutes",
+          "Sovereign: alerte under 5 minutes + comms playbook",
           "Triggers: sentiment < -0.5 on tracked entity, or volume spike > 200%",
         ]}
         note="We deliver to WhatsApp because that's where you already are at 7am. No app to open, no email to refresh."
@@ -174,8 +174,8 @@ const FAQS: FAQ[] = [
         bullets={[
           "Virement bancaire en MAD ou EUR",
           "Monthly invoice, payable within 30 days",
-          "No long-term commitment (Starter and Pro)",
-          "Enterprise: contrat annuel, SLA 99.9%",
+          "No long-term commitment (Émergence and Corporate)",
+          "Sovereign: contrat annuel, SLA 99.9%",
         ]}
         note="We can also accept Wise, PayPal, or crypto for international clients — ask us."
       />
@@ -187,11 +187,11 @@ const FAQS: FAQ[] = [
     q: "Can I cancel anytime?",
     a: (
       <AnswerBody
-        intro="Yes. Starter and Pro are monthly with no commitment. You cancel with one email, effective at the end of the current month. No penalty, no clawback."
+        intro="Yes. Émergence and Corporate are monthly with no commitment. You cancel with one email, effective at the end of the current month. No penalty, no clawback."
         chart={<ChartCancellationFlow />}
         bullets={[
-          "Starter / Pro: cancel anytime, effective end of month",
-          "Enterprise: 90 days notice for annual contracts",
+          "Émergence / Corporate: cancel anytime, effective end of month",
+          "Sovereign: 90 days notice for annual contracts",
           "You keep dashboard access until the end of the paid period",
           "All your historical data is exported to CSV on request",
         ]}
@@ -270,7 +270,7 @@ const FAQS: FAQ[] = [
           "Pages 25-28: Competitor benchmark (3 competitors)",
           "Pages 29-32: Recommended actions + appendix",
         ]}
-        note="Starter tier gets an 8-page version. Enterprise gets an additional quarterly report."
+        note="Émergence tier gets an 8-page version. Sovereign gets an additional quarterly report."
       />
     ),
   },
@@ -280,15 +280,15 @@ const FAQS: FAQ[] = [
     q: "I'm a startup / SME — is this for me?",
     a: (
       <AnswerBody
-        intro="Yes. Starter tier (5,000 MAD/month) is designed for SMEs and startups. You get the same pipeline as the big groups, just with fewer sources and brands."
+        intro="Yes. Émergence tier (15,000 MAD/month) is calibrated for the structured mid-cap company that needs institutional-grade intelligence without the enterprise footprint. You get the same pipeline as the big groups, just with fewer sources and brands."
         chart={<ChartTierFit />}
         bullets={[
-          "SME / startup: Starter (5K MAD) — 1 brand, 10 sources, 3 AI engines",
-          "Mid-size company: Pro (15K MAD) — 3 brands, 30+ sources, 8 AI engines",
-          "Large group / multi-country: Enterprise (50K MAD) — unlimited brands, custom taxonomy",
+          "Structured mid-cap: Émergence (15K MAD) — 1 brand, 10 sources, 3 AI engines",
+          "Corporate group: Corporate (40K MAD) — 3 brands, 30+ sources, 8 AI engines",
+          "Large group / multi-country / sovereign entity: Sovereign (75K MAD) — unlimited brands, custom taxonomy",
           "Free 7-day audit available for any tier — try before you buy",
         ]}
-        note="70% of our clients start on Starter and upgrade within 3 months once they see the value."
+        note="70% of our clients start on Émergence and upgrade within 3 months once they see the value."
       />
     ),
   },
@@ -683,9 +683,9 @@ function ChartPDFStructure() {
 
 function ChartTierFit() {
   const tiers = [
-    { name: "Starter", price: "5K", fit: "SME / startup", color: C.sage, width: "33%" },
-    { name: "Pro", price: "15K", fit: "Mid-size", color: C.accentDark, width: "33%" },
-    { name: "Enterprise", price: "50K", fit: "Large group", color: C.red, width: "34%" },
+    { name: "Émergence", price: "15K", fit: "Structured mid-cap", color: C.sage, width: "33%" },
+    { name: "Corporate", price: "40K", fit: "Corporate group", color: C.accentDark, width: "33%" },
+    { name: "Sovereign", price: "75K", fit: "Large group / sovereign", color: C.red, width: "34%" },
   ];
   return (
     <div style={{ display: "flex", gap: "8px" }}>

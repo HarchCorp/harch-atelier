@@ -30,6 +30,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isDemoEmail } from "@/lib/demo-session";
 import { runInboundPipeline } from "@/lib/whatsapp/inbound-pipeline";
+import { persistInboundMessage } from "@/lib/persistence";
 import { get as getInboundMessage } from "@/lib/whatsapp/inbound-store";
 
 export const dynamic = "force-dynamic";
@@ -138,6 +139,18 @@ export async function POST(req: NextRequest) {
     // pipeline's intermediate result.
     const persisted = getInboundMessage(result.message.id) ?? result.message;
 
+    // ─── PERSIST to local DB (Brique 5) ─────────────────────
+    // Best-effort, fire-and-forget — never blocks the response.
+    let dbPersisted = false;
+    let dbError: string | undefined;
+    try {
+      const persistResult = await persistInboundMessage(persisted);
+      dbPersisted = persistResult.persisted;
+      dbError = persistResult.error;
+    } catch (e) {
+      dbError = e instanceof Error ? e.message : String(e);
+    }
+
     return NextResponse.json({
       message: persisted,
       analysis: result.analysis,
@@ -149,6 +162,8 @@ export async function POST(req: NextRequest) {
         action: result.injection.action,
       },
       isDemo,
+      dbPersisted,
+      dbError,
       // The TwiML the real webhook would have returned — useful
       // for showing the "what Twilio would have seen" in the UI.
       twimlReceipt: `<?xml version="1.0" encoding="UTF-8"?><Response><Message>Reçu. Analyse en cours. Réponse dans 60 secondes.</Message></Response>`,

@@ -75,7 +75,7 @@ const jsonLd = {
       "@type": "HowToStep",
       position: 1,
       name: "Monitor — 30+ media sources 24/7",
-      text: "We crawl 30+ Moroccan and African media sources every 60 seconds (Pro & Enterprise) or every 5 minutes (Starter). We also query 8 AI engines hourly with the prompts your customers actually use.",
+      text: "We crawl 30+ Moroccan and African media sources every 60 seconds (Corporate & Sovereign) or every 5 minutes (Émergence). We also query 8 AI engines hourly with the prompts your customers actually use.",
       url: "https://atelier.harchcorp.com/method#monitor",
     },
     {
@@ -89,7 +89,7 @@ const jsonLd = {
       "@type": "HowToStep",
       position: 3,
       name: "Deliver — WhatsApp, dashboard, PDF",
-      text: "Daily WhatsApp digest at 7:00 Casa time, live dashboard with 90-day history, monthly 32-page board-ready PDF report. Crisis alerts delivered in under 5 minutes for Pro and Enterprise tiers.",
+      text: "Daily WhatsApp digest at 7:00 Casa time, live dashboard with 90-day history, monthly 32-page board-ready PDF report. Crisis alerts delivered in under 5 minutes for Corporate and Sovereign tiers.",
       url: "https://atelier.harchcorp.com/method#deliver",
     },
   ],

@@ -178,7 +178,7 @@ export const REPORT_DATA: Record<string, ReportData> = {
     pricing: [
       { tier: "One-time", price: "25,000 MAD", frequency: "single report", features: ["24-page PDF", "Executive deck (15 slides)", "2-hour analyst briefing", "30-day dashboard access", "Custom research questions"] },
       { tier: "Quarterly", price: "18,000 MAD", frequency: "per quarter", features: ["4 reports per year", "Updated executive deck", "Quarterly analyst briefing", "90-day dashboard", "Year-over-year trends"] },
-      { tier: "Monthly (Enterprise)", price: "15,000 MAD", frequency: "per month", features: ["12 reports per year", "Monthly executive deck", "Dedicated analyst", "Continuous dashboard", "24/7 priority support", "Custom pillar definitions", "Board presentation prep"] },
+      { tier: "Monthly (Sovereign)", price: "15,000 MAD", frequency: "per month", features: ["12 reports per year", "Monthly executive deck", "Dedicated analyst", "Continuous dashboard", "24/7 priority support", "Custom pillar definitions", "Board presentation prep"] },
     ],
   },
 

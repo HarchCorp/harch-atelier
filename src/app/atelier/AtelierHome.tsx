@@ -1938,7 +1938,7 @@ function DashboardMockup() {
                 Plan
               </div>
               <div style={{ fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
-                Pro
+                Corporate
               </div>
               <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "4px" }}>
                 28 days remaining
@@ -2869,7 +2869,7 @@ function HowItWorks() {
       num: "03",
       title: "You receive",
       desc: "Daily WhatsApp digest at 7:00. Live dashboard with full drill-down. Monthly PDF report. Real-time alerts when sentiment shifts.",
-      detail: "Channels: WhatsApp · Web dashboard · Email PDF · API (Enterprise)",
+      detail: "Channels: WhatsApp · Web dashboard · Email PDF · API (Sovereign)",
       icon: <IconBell size={36} color={C.sage} />,
     },
   ];
@@ -3481,7 +3481,7 @@ function VaultView() {
       name: "Web Dashboard",
       desc: "Full drill-down — articles, entities, trends, competitors",
       icon: "▦",
-      detail: "Drag-and-drop visualization builder (Pro+)",
+      detail: "Drag-and-drop visualization builder (Corporate+)",
     },
     {
       name: "Monthly PDF Report",
@@ -3592,10 +3592,10 @@ function VaultView() {
 function Pricing() {
   const tiers = [
     {
-      name: "Starter",
-      price: "5K",
+      name: "Émergence",
+      price: "15K",
       period: "MAD / month",
-      tagline: "For solo comms directors who need the essentials.",
+      tagline: "For the structured mid-cap comms director who needs institutional-grade intelligence.",
       features: [
         "Daily WhatsApp digest (7:00)",
         "20 media sources",
@@ -3608,12 +3608,12 @@ function Pricing() {
       highlighted: false,
     },
     {
-      name: "Pro",
-      price: "15K",
+      name: "Corporate",
+      price: "40K",
       period: "MAD / month",
-      tagline: "For comms teams who need the full picture, daily.",
+      tagline: "For corporate comms teams who need the full picture, daily.",
       features: [
-        "Everything in Starter, plus:",
+        "Everything in Émergence, plus:",
         "Full web dashboard",
         "50 media sources",
         "3 competitors tracked",
@@ -3627,12 +3627,12 @@ function Pricing() {
       highlighted: true,
     },
     {
-      name: "Enterprise",
-      price: "50K",
+      name: "Sovereign",
+      price: "75K",
       period: "MAD / month",
-      tagline: "For groups & institutions with analyst needs.",
+      tagline: "For groups, institutions & sovereign entities with analyst needs.",
       features: [
-        "Everything in Pro, plus:",
+        "Everything in Corporate, plus:",
         "200 media sources (incl. Africa)",
         "5 competitors tracked",
         "Dedicated reputation analyst",

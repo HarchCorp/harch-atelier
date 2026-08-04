@@ -50,7 +50,7 @@ const CATEGORY_META: { name: Category; desc: string; color: string }[] = [
 ];
 
 const STEPS: { n: string; title: string; desc: string; color: string }[] = [
-  { n: "01", title: "Generate an API key", desc: "Open the Harch dashboard, head to Settings → API, and spin up a scoped key for the integration you want to connect. Pro plans get 10K calls / day; Enterprise gets 100K.", color: C.sage },
+  { n: "01", title: "Generate an API key", desc: "Open the Harch dashboard, head to Settings → API, and spin up a scoped key for the integration you want to connect. Corporate plans get 10K calls / day; Sovereign gets 100K.", color: C.sage },
   { n: "02", title: "Paste the key into the integration", desc: "Each integration has a one-line config — paste the API key, pick the company or watchlist you want to sync, and save. Most setups take under 2 minutes.", color: C.accent },
   { n: "03", title: "Data flows in real-time", desc: "Reputation scores, risk events, sentiment shifts, and article matches start streaming within minutes. Webhooks fire on score changes; BI tools refresh on your schedule.", color: C.amber },
 ];

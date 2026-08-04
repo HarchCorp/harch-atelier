@@ -51,7 +51,7 @@ const LEGAL_DOCS = [
   },
   {
     title: "Service Level Agreement (SLA)",
-    desc: "Our commitment to platform uptime, support response times, and incident communication. 99.9% uptime for Pro and Enterprise.",
+    desc: "Our commitment to platform uptime, support response times, and incident communication. 99.9% uptime for Corporate and Sovereign.",
     lastUpdated: "July 1, 2026",
     href: "#sla",
     icon: "◐",

@@ -307,11 +307,11 @@ export function RequestAccessPage() {
   ];
 
   const budgets = [
-    "< 1K MAD/month",
-    "1K - 5K MAD/month",
+    "< 5K MAD/month",
     "5K - 15K MAD/month",
-    "15K - 50K MAD/month",
-    "50K+ MAD/month",
+    "15K - 40K MAD/month",
+    "40K - 75K MAD/month",
+    "75K+ MAD/month",
   ];
 
   const referralSources = [

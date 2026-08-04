@@ -1,0 +1,107 @@
+// ═══════════════════════════════════════════════════════════════
+//  PRISMA SCHEMA — LOCAL SQLite (for new data bricks)
+//
+//  Why this exists:
+//  The main `schema.prisma` is PostgreSQL-only (uses String[] arrays).
+//  The sandbox has no sudo to install Postgres locally, and Neon
+//  provisioning requires the founder's account. This SEPARATE schema
+//  uses SQLite to materialize the new tables (ArticleComment,
+//  InboundWhatsAppMessage) NOW, so the Hespress scraper and WhatsApp
+//  inbound pipeline can persist to a real relational database.
+//
+//  Migration path to Neon PostgreSQL:
+//  1. Provision Neon free tier (5 min, https://neon.tech)
+//  2. Set DATABASE_URL=postgresql://... in .env
+//  3. Move the two models below into the main schema.prisma
+//  4. Run `bunx prisma db push` against the main schema
+//  5. Delete this file + src/lib/db-local.ts
+//  6. Update imports in hespress-comments.ts + inbound-store.ts
+//     to use the main `@/lib/db` client
+//
+//  The models below are byte-identical to their PostgreSQL equivalents
+//  except: provider=sqlite, no String[] arrays (JSON-encoded String
+//  where needed), no relation to the full Article model (stub instead).
+// ═══════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client-local"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL_LOCAL")
+}
+
+// ─── Article stub (minimal, for the relation) ──────────────────
+// In the main PostgreSQL schema, ArticleComment has a full relation
+// to Article. Here we use a stub with just the fields the comment
+// scraper needs to link against. When migrated to PostgreSQL, this
+// stub is replaced by the real Article model.
+model Article {
+  id          String   @id @default(cuid())
+  slug        String?  @unique
+  title       String?
+  url         String?  @unique
+  source      String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  comments ArticleComment[]
+}
+
+// ─── ArticleComment (Hespress UGC) ─────────────────────────────
+model ArticleComment {
+  id                String   @id @default(cuid())
+  articleId         String
+  commentId         String   // original Hespress comment ID
+  author            String?
+  content           String
+  publishedAt       DateTime?
+  parentId          String?  // for threading
+  likes             Int      @default(0)
+  language          String   // darija | arabic | french | mixed
+  sentimentPolarity String   // positive | negative | neutral
+  sentimentScore    Float
+  sarcasmDetected   Boolean  @default(false)
+  scrapedAt         DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, commentId])
+  @@index([articleId])
+  @@index([sentimentPolarity])
+  @@index([language])
+}
+
+// ─── InboundWhatsAppMessage (the IKEA loop) ────────────────────
+model InboundWhatsAppMessage {
+  id                String   @id @default(cuid())
+  fromPhone         String   // sender phone (E.164)
+  fromName          String?  // ProfileName from Twilio
+  body              String   // message text
+  mediaUrl          String?  // image/audio/video URL
+  mediaContentType  String?  // image/jpeg, audio/ogg, etc.
+  receivedAt        DateTime @default(now())
+
+  // NLP analysis (run by inbound-pipeline.ts)
+  sentimentPolarity String   // positive | negative | neutral
+  sentimentScore    Float
+  sarcasmDetected   Boolean  @default(false)
+  injectionDetected Boolean  @default(false)
+  injectionPatterns String?  // JSON-encoded array of {label, match}
+  fakenessScore     Float    @default(0)
+  fakenessVerdict   String   @default("low") // low | medium | high
+  crisisScore       Int      @default(0)     // 0-100
+  language          String   // darija | arabic | french | mixed | english
+
+  // Lifecycle
+  status            String   @default("received") // received | analyzing | responded | flagged
+  outboundBody      String?  // the WhatsApp reply we sent back
+  respondedAt       DateTime?
+
+  @@index([fromPhone])
+  @@index([status])
+  @@index([crisisScore])
+  @@index([receivedAt])
+}

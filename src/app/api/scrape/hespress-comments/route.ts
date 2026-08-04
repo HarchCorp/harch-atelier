@@ -6,6 +6,7 @@ import {
   scrapeHespressComments,
   type ScrapeResult,
 } from "@/lib/scrapers/hespress-comments";
+import { persistScrapedComments } from "@/lib/persistence";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/scrape/hespress-comments
@@ -208,10 +209,34 @@ export async function POST(req: NextRequest) {
     // If the scraper fell back to mock data, return 200 but flag it.
     // The demo page reads `result.source === "mock"` to show the
     // "sample data" badge.
+
+    // ─── PERSIST to local DB (Brique 5) ─────────────────────
+    // Best-effort persistence — never blocks the response.
+    let persistResult: { persisted: boolean; commentsPersisted: number; error?: string } | null = null;
+    if (result.comments.length > 0) {
+      try {
+        persistResult = await persistScrapedComments(
+          articleUrl,
+          result.articleId,
+          result.source,
+          result,
+        );
+      } catch (e) {
+        persistResult = {
+          persisted: false,
+          commentsPersisted: 0,
+          error: e instanceof Error ? e.message : String(e),
+        };
+      }
+    }
+
     return NextResponse.json({
       ...result,
       isDemo,
       rateLimited: false,
+      persisted: persistResult?.persisted ?? false,
+      commentsPersisted: persistResult?.commentsPersisted ?? 0,
+      persistError: persistResult?.error,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

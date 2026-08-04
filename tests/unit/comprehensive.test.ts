@@ -753,9 +753,9 @@ describe("Config", () => {
     const config = getMasterConfig();
     expect(config.pricing.currency).toBe("MAD");
     expect(config.pricing.plans).toHaveLength(3);
-    expect(config.pricing.plans[0].priceMonthly).toBe(5000);
-    expect(config.pricing.plans[1].priceMonthly).toBe(15000);
-    expect(config.pricing.plans[2].priceMonthly).toBe(50000);
+    expect(config.pricing.plans[0].priceMonthly).toBe(15000);
+    expect(config.pricing.plans[1].priceMonthly).toBe(40000);
+    expect(config.pricing.plans[2].priceMonthly).toBe(75000);
   });
 
   it("LLM config has 5 providers", () => {

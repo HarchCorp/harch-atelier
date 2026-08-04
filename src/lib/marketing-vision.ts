@@ -200,7 +200,7 @@ export const MARKETING_ANGLES: MarketingAngle[] = [
     targetPersona: "CMO / Marketing Director",
     trigger: "Meltwater Trustpilot = 1.5/5. Users complain about price and unused features.",
     valueProposition: "Same intelligence at 1/10th the price. Only pay for what you use.",
-    proofPoint: "5K MAD/month vs $10K+/month. No long-term contracts. WhatsApp alerts included.",
+    proofPoint: "15K MAD/month vs $10K+/month. No long-term contracts. WhatsApp alerts included.",
     callToAction: "Switch from Meltwater — we'll import your existing queries for free.",
     expectedConversionRate: 0.08,
   },

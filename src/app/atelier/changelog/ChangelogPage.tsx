@@ -23,6 +23,28 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.0.0",
+    date: "July 21, 2026",
+    type: "major",
+    title: "Tier rename — Corporate & Sovereign grade",
+    changes: [
+      { category: "Changed", items: [
+        "Renommage des tiers : Starter / Pro / Enterprise → Émergence / Corporate / Sovereign",
+        "Nouvelle grille tarifaire : Émergence 15K · Corporate 40K · Sovereign 75K MAD/mo",
+        "Alignement avec les contrats licence (Executive 450K MAD/yr · Sovereign 850K MAD/yr)",
+        "Tokens renommés : pricingEmergence / pricingCorporate / pricingSovereign (cosmetic consistency)",
+        "Configs backend (lib/config.ts) : IDs aligned avec PricingPage (emergence / corporate / sovereign)",
+        "API rate-limit labels : API Corporate (60 req/min) · API Sovereign (600 req/min)",
+        "FAQ JSON-LD, AtelierHome pricing section, AuditPage, OurCommitment, LegalPage, ContactPage, Method, ApiMcp, Integrations, ProductsPage, ApiDocs, AskHarchIQ, BroadcastMonitor — all tier references migrated",
+        "SME / startup framing repositioned to 'structured mid-cap' / 'corporate group' / 'sovereign entity'",
+      ]},
+      { category: "Removed", items: [
+        "Old pricing tiers Starter (5K) / Pro (15K) / Enterprise (50K) — purged from marketing surfaces",
+        "'Designed for SMEs and startups' positioning — replaced with institutional-grade language",
+      ]},
+    ],
+  },
+  {
     version: "2.4.0",
     date: "July 19, 2026",
     type: "major",

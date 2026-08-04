@@ -341,13 +341,13 @@ export const I18N = {
     featureAlerts: "Crisis Alerts",
     featureAlertsDesc: "WhatsApp alerts when negative sentiment spikes",
 
-    // Pricing
-    pricingStarter: "Starter",
-    pricingPro: "Pro",
-    pricingEnterprise: "Enterprise",
-    pricingStarterPrice: "5K",
-    pricingProPrice: "15K",
-    pricingEnterprisePrice: "50K",
+    // Pricing — Corporate & Sovereign grade (renamed Q3 2026)
+    pricingEmergence: "Émergence",
+    pricingCorporate: "Corporate",
+    pricingSovereign: "Sovereign",
+    pricingEmergencePrice: "15K",
+    pricingCorporatePrice: "40K",
+    pricingSovereignPrice: "75K",
     pricingCurrency: "MAD/mo",
 
     // CTA
@@ -394,13 +394,13 @@ export const I18N = {
     featureAlerts: "Crisis Alerts",
     featureAlertsDesc: "WhatsApp alerts when negative sentiment spikes",
 
-    // Pricing
-    pricingStarter: "Starter",
-    pricingPro: "Pro",
-    pricingEnterprise: "Enterprise",
-    pricingStarterPrice: "5K",
-    pricingProPrice: "15K",
-    pricingEnterprisePrice: "50K",
+    // Pricing — Corporate & Sovereign grade (renamed Q3 2026)
+    pricingEmergence: "Émergence",
+    pricingCorporate: "Corporate",
+    pricingSovereign: "Sovereign",
+    pricingEmergencePrice: "15K",
+    pricingCorporatePrice: "40K",
+    pricingSovereignPrice: "75K",
     pricingCurrency: "MAD/month",
 
     // CTA

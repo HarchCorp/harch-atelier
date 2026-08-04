@@ -10,7 +10,7 @@
 //    • Every channel card carries a "MONITORING OFFLINE" badge and
 //      a "Request access" button — NO fake telemetry anywhere.
 //    • Clicking a channel opens a modal that explains broadcast
-//      monitoring is available in the Enterprise plan and routes
+//      monitoring is available in the Sovereign plan and routes
 //      the user to sales.
 //
 //  Light theme. English. No emojis. C tokens only. Zero mock data.
@@ -302,7 +302,7 @@ function RequestModal({ channel, onClose }: { channel: Channel | null; onClose: 
             fontFamily: FONT.sans, fontSize: "13px", color: C.textBody, lineHeight: 1.5,
           }}>
             Broadcast monitoring for <b style={{ color: C.text }}>{channel.name}</b> is
-            available in the <b style={{ color: ACCENT }}>Enterprise plan</b>. Real-time
+            available in the <b style={{ color: ACCENT }}>Sovereign plan</b>. Real-time
             closed-caption ingestion, segment-level sentiment and brand mention tracking
             across Moroccan TV and radio require a dedicated capture pipeline.
           </div>
@@ -311,7 +311,7 @@ function RequestModal({ channel, onClose }: { channel: Channel | null; onClose: 
         <div style={{
           fontFamily: FONT.mono, fontSize: "11px", color: C.textMuted, lineHeight: 1.6,
         }}>
-          We do not display synthetic broadcast metrics. When your Enterprise contract
+          We do not display synthetic broadcast metrics. When your Sovereign contract
           is activated, this card will populate with live caption mentions, segment
           transcripts and air-time analytics — sourced from the broadcaster feed, not
           fabricated.
@@ -395,7 +395,7 @@ function StatusBanner() {
           fontFamily: FONT.sans, fontSize: "12px", color: C.textBody, lineHeight: 1.55,
         }}>
           Broadcast monitoring (TV + radio closed captions, segment transcripts, air-time
-          analytics) is gated to the Enterprise plan. The directory below lists every
+          analytics) is gated to the Sovereign plan. The directory below lists every
           Moroccan channel we will track when access is granted. No synthetic data is
           displayed — every channel shows "MONITORING OFFLINE" until capture is live.
         </div>

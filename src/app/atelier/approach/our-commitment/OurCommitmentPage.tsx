@@ -98,13 +98,13 @@ export default function OurCommitmentPage() {
             gap: "20px",
           }}>
             {[
-              { title: "Onboarding in 7 days", desc: "From contract signature to first dashboard in 7 calendar days. Dedicated onboarding manager for Enterprise tier." },
-              { title: "Response time SLAs", desc: "Pro: 2 business hours. Enterprise: 30 minutes. Critical incidents: immediate, 24/7." },
-              { title: "Quarterly business reviews", desc: "Every Enterprise customer gets a QBR with senior analysts. We review your metrics, adjust HarchIQ training, plan next quarter." },
-              { title: "Customer success manager", desc: "Pro and Enterprise get a dedicated CSM. They know your business, your team, and your goals." },
+              { title: "Onboarding in 7 days", desc: "From contract signature to first dashboard in 7 calendar days. Dedicated onboarding manager for Sovereign tier." },
+              { title: "Response time SLAs", desc: "Corporate: 2 business hours. Sovereign: 30 minutes. Critical incidents: immediate, 24/7." },
+              { title: "Quarterly business reviews", desc: "Every Sovereign customer gets a QBR with senior analysts. We review your metrics, adjust HarchIQ training, plan next quarter." },
+              { title: "Customer success manager", desc: "Corporate and Sovereign get a dedicated CSM. They know your business, your team, and your goals." },
               { title: "Free HarchIQ retraining", desc: "Quarterly retraining session where we update your entity library, topics, and sentiment rules. Included in all tiers." },
               { title: "Money-back guarantee", desc: "If you're not satisfied in the first 60 days, we refund 100% of your subscription. No questions asked." },
-              { title: "Product roadmap input", desc: "Enterprise customers get quarterly roadmap reviews and can request features. Top 5 requests ship within 90 days." },
+              { title: "Product roadmap input", desc: "Sovereign customers get quarterly roadmap reviews and can request features. Top 5 requests ship within 90 days." },
               { title: "Training & certification", desc: "Free Harch Atelier Certified Analyst program for your team. 8-hour course, online or in-person at CFC." },
             ].map(item => (
               <div key={item.title} style={{
