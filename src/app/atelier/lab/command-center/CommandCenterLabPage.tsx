@@ -10,6 +10,8 @@ import { AISearchAssistant } from "../../console/views/AISearchAssistant";
 import { ExposureTrendChart } from "../../console/views/ExposureTrendChart";
 import { ShareOfVoicePanel } from "../../console/views/ShareOfVoicePanel";
 import { SourceDistribution } from "../../console/views/SourceDistribution";
+import { InfluencerImpactPanel } from "../../console/views/InfluencerImpactPanel";
+import { CompetitorRadarChart } from "../../console/views/CompetitorRadarChart";
 
 // ═══════════════════════════════════════════════════════════════
 //  COMMAND CENTER LAB — public demo of the premium widgets
