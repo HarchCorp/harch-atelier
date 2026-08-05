@@ -424,7 +424,7 @@ export const CrisisIndicator = memo(function CrisisIndicator({
             }}
           >
             {data
-              ? `${data.inputSize.recent} alerts (24h) · ${data.inputSize.baseline} baseline`
+              ? `${(data.inputSize?.recent) || 0} alerts (24h) · ${(data.inputSize?.baseline) || 0} baseline`
               : "loading…"}
           </div>
           {data?.company ? (

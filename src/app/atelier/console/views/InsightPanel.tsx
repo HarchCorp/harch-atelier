@@ -301,7 +301,7 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
   const handleMarkAllRead = useCallback(() => {
     if (!data) return;
     const next = new Set<string>();
-    for (const i of data.insights) next.add(i.id);
+    for (const i of (data.insights || [])) next.add(i.id);
     setReadIds(next);
     saveReadIds(accountType, next);
   }, [data, accountType]);
