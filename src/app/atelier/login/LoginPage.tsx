@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { C } from "../components/tokens";
 import { BrandingProvider, type BrandingPayload } from "../components/BrandingProvider";
@@ -21,6 +21,11 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [branding, setBranding] = useState<BrandingPayload | null>(null);
+  // Synchronous rage-click guard. React state (loading) is async — 15
+  // clicks in 500ms all see loading=false before the first re-render.
+  // This ref flips to true synchronously on the first click, blocking
+  // all subsequent clicks until the async handler completes + resets.
+  const submittingRef = useRef(false);
 
   // Fetch white-label branding on mount (based on the request host /
   // subdomain). If the page is served from iq.attijari.harchcorp.com,
@@ -43,6 +48,10 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Rage-click guard: synchronous ref check blocks all clicks after
+    // the first one until the async signIn() completes.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -59,6 +68,7 @@ export function LoginPage() {
     });
 
     setLoading(false);
+    submittingRef.current = false;
 
     if (result?.error) {
       setError("Invalid credentials.");
