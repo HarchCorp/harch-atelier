@@ -69,21 +69,24 @@ export function ExportPanel() {
     setExporting(true);
     try {
       const days = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 }[dateRange];
-      const res = await fetch(`/api/console/export-data?type=${selected}&days=${days}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const rows = data.rows || data.articles || data.items || [];
-      if (rows.length > 0) {
-        const filename = `harch_${selected}_${dateRange}_${new Date().toISOString().slice(0, 10)}.csv`;
-        downloadCSV(filename, rows);
-        setLastExport(`${rows.length} rows exported → ${filename}`);
-      } else {
-        setLastExport("No data to export for this period");
-      }
+      // STREAMING DOWNLOAD: hit the /api/console/export-csv route directly.
+      // The browser handles the download natively — the server streams CSV
+      // chunks via ReadableStream, so neither server RAM nor client RAM
+      // ever holds the full export. 250k rows = flat ~50MB on both sides.
+      // (Previous approach: fetch JSON → build CSV client-side → 3× memory.)
+      const downloadUrl = `/api/console/export-csv?type=${selected}&days=${days}`;
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `harchiq-${selected}-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setLastExport(`Export started — streaming ${selected} for ${dateRange}… check your downloads.`);
     } catch {
       setLastExport("Export failed — try again");
     } finally {
-      setExporting(false);
+      // Small delay so the UI shows feedback before the download dialog
+      setTimeout(() => setExporting(false), 1500);
     }
   };
 
