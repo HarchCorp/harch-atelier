@@ -265,8 +265,16 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
           const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
           throw new Error(j.error || `HTTP ${res.status}`);
         }
-        const json = (await res.json()) as InsightResult;
-        setData(json);
+        const json = (await res.json()) as Partial<InsightResult>;
+        // Ensure all required fields exist to prevent crashes
+        setData({
+          insights: Array.isArray(json.insights) ? json.insights : [],
+          cached: Boolean(json.cached),
+          accountType: json.accountType || accountType,
+          generatedAt: json.generatedAt || new Date().toISOString(),
+          dataPoints: json.dataPoints || 0,
+          model: json.model || "glm-4",
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load insights");
       } finally {
