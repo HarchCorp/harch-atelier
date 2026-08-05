@@ -21,6 +21,8 @@
 
 import { scrapeDirectRSS, type ScrapedArticle } from "../../scrapers/rss-scraper";
 import { RSS_SOURCES } from "../../scrapers/sources-config";
+import { fetchBVCQuote } from "../../scrapers/bvc-prices";
+import { logInfo, logWarn } from "@/lib/logger";
 import type { CollectionResult } from "../types";
 
 // Re-export for ergonomic imports from this module.
@@ -37,12 +39,12 @@ export type { CollectionResult } from "../types";
 const BAM_RSS_URL = "https://www.bkam.ma/rss"; // Bank Al-Maghrib (central bank)
 const AMMC_RSS_URL = "https://www.ammc.ma/rss"; // Autorité Marocaine du Marché des Capitaux
 
-// ─── STOCK-PRICE COLLECTOR (stub) ─────────────────────────────────
+// ─── STOCK-PRICE COLLECTOR (BVC via Yahoo GDR + manual CSV) ────────
 
 /**
- * StockPriceData — the shape collectStockPrice will return once the
- * Bourse de Casablanca integration is built. Declared here so the
- * PREDICT stage can already be coded against the future contract.
+ * StockPriceData — the canonical shape returned by collectStockPrice.
+ * The PREDICT stage and the cron refresh both code against this
+ * contract.
  */
 export interface StockPriceData {
   /** Casablanca Stock Exchange ticker (e.g. "ATW", "OCP", "IAM"). */
@@ -68,28 +70,98 @@ export interface StockPriceData {
 }
 
 /**
- * collectStockPrice — stub for the Bourse de Casablanca market-data
- * integration.
+ * In-memory 5-minute cache for stock quotes. The BVC has no free
+ * real-time API, so every quote goes through `fetchBVCQuote` (Yahoo
+ * Finance GDR mapping for the handful of Moroccan issuers listed
+ * internationally, e.g. IAM → IAM.PA on Euronext Paris). Caching
+ * respects the upstream rate limits and keeps collector latency low
+ * for the PREDICT stage which may call this repeatedly.
  *
- * TODO: implement against the Bourse de Casablanca market-data API
- * (or an authorized redistributor). Requirements:
- *   • Licensed market-data feed (BdC Terms prohibit screen-scraping)
- *   • 15-minute delayed quotes are acceptable for OSINT dossiers
- *   • Cache for 5 minutes minimum to respect rate limits
+ * Keyed by uppercase ticker. Entries expire after CACHE_TTL_MS.
+ */
+const STOCK_PRICE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const stockPriceCache = new Map<
+  string,
+  { data: StockPriceData; expiresAt: number }
+>();
+
+/**
+ * collectStockPrice — fetch the latest Bourse de Casablanca quote for
+ * a ticker.
  *
- * Until then, returns null.
+ * Implementation: delegates to `fetchBVCQuote` (in
+ * `src/lib/scrapers/bvc-prices.ts`) which chains Yahoo Finance GDR
+ * mappings → Investing.com (currently 403) → manual CSV uploads.
+ * Returns null honestly when no live source is available — we never
+ * fabricate a price.
  *
- * @param ticker Casablanca Stock Exchange ticker (e.g. "ATW")
- * @returns always null until the integration is built
+ * @param ticker Casablanca Stock Exchange ticker (e.g. "ATW", "OCP", "IAM")
+ * @returns StockPriceData when a live quote is available, null otherwise
  */
 export async function collectStockPrice(
   ticker: string,
 ): Promise<StockPriceData | null> {
-  // TODO: Bourse de Casablanca API integration planned.
-  console.warn(
-    `[HarchIQ-Collect] Stock-price collection not yet configured for ticker "${ticker}" (Bourse de Casablanca API planned)`,
+  const key = ticker.toUpperCase();
+
+  // 1. Cache hit?
+  const cached = stockPriceCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  // 2. Live fetch via the BVC price fetcher.
+  let quote;
+  try {
+    quote = await fetchBVCQuote(key);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "unknown";
+    logWarn("financial-collector", `collectStockPrice(${key}) fetch error: ${msg}`);
+    return null;
+  }
+
+  if (!quote) {
+    // No live source for this ticker — return null honestly.
+    // The caller (PREDICT stage / cron refresh) must treat null as
+    // "no data" and fall back to the last cached AssetPrice row.
+    return null;
+  }
+
+  // 3. Map BVCQuote → StockPriceData.
+  // Yahoo GDR quotes give us last price + changePct + volume, but
+  // not OHLC. We set open/high/low to the last price so the
+  // StockPriceData shape is always populated (callers that need
+  // true OHLC should query Yahoo's chart endpoint directly).
+  const lastPrice = quote.price;
+  const changePercent = quote.changePct ?? 0;
+  const change = (lastPrice * changePercent) / 100;
+  const data: StockPriceData = {
+    ticker: key,
+    lastPrice,
+    open: lastPrice, // Yahoo quote endpoint doesn't expose OHLC for GDRs
+    high: lastPrice,
+    low: lastPrice,
+    volume: quote.volume ?? 0,
+    asOf: (quote.fetchedAt instanceof Date ? quote.fetchedAt : new Date()).toISOString(),
+    change: parseFloat(change.toFixed(4)),
+    changePercent: parseFloat(changePercent.toFixed(2)),
+  };
+
+  // 4. Cache + log.
+  stockPriceCache.set(key, { data, expiresAt: Date.now() + STOCK_PRICE_CACHE_TTL_MS });
+  logInfo(
+    "financial-collector",
+    `collectStockPrice(${key}) → ${data.lastPrice} ${quote.currency} (${quote.source}, Δ${data.changePercent}%)`,
   );
-  return null;
+
+  return data;
+}
+
+/**
+ * Clear the stock-price cache. Exposed for the admin "scrape now"
+ * endpoint and for tests.
+ */
+export function clearStockPriceCache(): void {
+  stockPriceCache.clear();
 }
 
 // ─── FINANCIAL-REPORTS COLLECTOR (stub) ───────────────────────────
@@ -256,7 +328,7 @@ function toRegulatoryResult(
     url: article.url,
     source: article.source,
     publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
-    snippet: (article.rawContent || article.description || "").slice(0, 500),
+    snippet: (article.description || "").slice(0, 500),
     // Full content not fetched for regulatory filings — they're usually
     // PDF attachments that fetchArticleContent can't extract. The
     // snippet from the RSS feed is sufficient for dossier generation.

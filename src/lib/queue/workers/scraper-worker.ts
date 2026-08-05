@@ -105,7 +105,7 @@ async function upsertArticle(
   // First sighting — fetch the full article body for downstream NLP.
   // If fetchArticleContent fails (403, timeout, paywall), fall back to
   // the RSS description so the article still enters the pipeline.
-  let content = article.rawContent || article.description || "";
+  let content = article.description || "";
   try {
     const full = await fetchArticleContent(article.url);
     if (full && full.length > content.length) content = full;
@@ -125,7 +125,7 @@ async function upsertArticle(
       sourceId: article.source.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 30),
       publishedAt: article.publishedAt,
       content,
-      summary: (article.rawContent || article.description || "").slice(0, 500) || null,
+      summary: (article.description || "").slice(0, 500) || null,
       language: article.language,
       urlHash: article.urlHash,
       // No `processed` column on the actual Article table — we use
@@ -136,6 +136,44 @@ async function upsertArticle(
   });
 
   return true;
+}
+
+/**
+ * Batch-parallel article upsert. Processes `articles` in concurrent
+ * chunks of BATCH_SIZE so we don't hold a single DB connection for the
+ * whole sequential loop. Each `upsertArticle` call is independent
+ * (keyed on a unique urlHash), so parallelism is safe — the only
+ * shared resource is the Prisma connection pool (default 10), and a
+ * chunk size of 5 leaves headroom for the NLP worker + API routes.
+ *
+ * Failures are isolated: one article that throws (e.g. a transient
+ * Postgres error) is logged and skipped, the rest of the batch still
+ * completes. Returns the count of newly-created rows.
+ *
+ * Task: perf-parallel-upserts (crawler-technique objective #13)
+ */
+const UPSERT_BATCH_SIZE = 5;
+
+async function upsertArticlesBatch(
+  articles: ScrapedArticle[],
+  companyId: string,
+): Promise<{ found: number; created: number }> {
+  let created = 0;
+  for (let i = 0; i < articles.length; i += UPSERT_BATCH_SIZE) {
+    const chunk = articles.slice(i, i + UPSERT_BATCH_SIZE);
+    const results = await Promise.allSettled(
+      chunk.map((a) => upsertArticle(a, companyId)),
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value) created++;
+      else if (r.status === "rejected") {
+        const msg =
+          r.reason instanceof Error ? r.reason.message : String(r.reason);
+        console.warn(`[scraper-worker] upsertArticle rejected: ${msg}`);
+      }
+    }
+  }
+  return { found: articles.length, created };
 }
 
 /**
@@ -198,27 +236,27 @@ async function processScraperJob(
       maxArticles: 50,
     });
 
-    let newCount = 0;
-    for (const a of googleArticles) {
-      const isNew = await upsertArticle(a, company.id);
-      if (isNew) newCount++;
-    }
+    // Batch-parallel upsert (5 concurrent) instead of sequential await.
+    const { found: gFound, created: gNew } = await upsertArticlesBatch(
+      googleArticles,
+      company.id,
+    );
 
-    articlesFound += googleArticles.length;
-    articlesNew += newCount;
+    articlesFound += gFound;
+    articlesNew += gNew;
 
     await logScrape({
       sourceId: "google-news-ma",
       sourceName: "Google News Morocco",
       sourceUrl: `https://news.google.com/rss/search?q=${encodeURIComponent(companyName)}`,
       status: "ok",
-      articlesFound: googleArticles.length,
-      articlesNew: newCount,
+      articlesFound: gFound,
+      articlesNew: gNew,
       durationMs: Date.now() - t0,
     });
 
     console.log(
-      `[scraper-worker] Google News: ${googleArticles.length} found, ${newCount} new`,
+      `[scraper-worker] Google News: ${gFound} found, ${gNew} new`,
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -251,27 +289,27 @@ async function processScraperJob(
         rateLimitMs: src.rateLimitMs,
       });
 
-      let newCount = 0;
-      for (const a of articles) {
-        const isNew = await upsertArticle(a, company.id);
-        if (isNew) newCount++;
-      }
+      // Batch-parallel upsert (5 concurrent).
+      const { found: dFound, created: dNew } = await upsertArticlesBatch(
+        articles,
+        company.id,
+      );
 
-      articlesFound += articles.length;
-      articlesNew += newCount;
+      articlesFound += dFound;
+      articlesNew += dNew;
 
       await logScrape({
         sourceId: src.id,
         sourceName: src.name,
         sourceUrl: src.url,
         status: "ok",
-        articlesFound: articles.length,
-        articlesNew: newCount,
+        articlesFound: dFound,
+        articlesNew: dNew,
         durationMs: Date.now() - t0,
       });
 
       console.log(
-        `[scraper-worker] ${src.name}: ${articles.length} found, ${newCount} new`,
+        `[scraper-worker] ${src.name}: ${dFound} found, ${dNew} new`,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

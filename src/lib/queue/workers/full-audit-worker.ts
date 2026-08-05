@@ -112,7 +112,7 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
     // window. Fall back to the RSS snippet if full-text fetch fails.
     const articlesForAnalysis: IntelligenceReportArticle[] = [];
     for (const article of scrapedArticles.slice(0, 10)) {
-      let content = article.rawContent || article.title;
+      let content = article.description || article.title;
       try {
         const fullContent = await fetchArticleContent(article.url);
         if (fullContent && fullContent.length > 200) content = fullContent;

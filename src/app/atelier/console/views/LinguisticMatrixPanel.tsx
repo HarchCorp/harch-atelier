@@ -100,6 +100,82 @@ const LEVEL_META: Record<GRIResult["level"], { label: string; color: string; bg:
   critical: { label: "CRITICAL", color: C.dangerText, bg: C.dangerBg, border: C.dangerBorder, icon: "✕" },
 };
 
+// ─── Payload normalizer ────────────────────────────────────────
+// The linguistic-matrix API may omit `gri` (e.g. cold cache, no
+// company scope, NLP engine warming up). Every nested read below
+// (`gri.level`, `gri.cascade.detected`, `gri.perLanguage.find`)
+// would throw on undefined — this normalizer guarantees a fully-
+// typed ApiResponse with safe defaults so the render never crashes.
+const SAFE_GRI: GRIResult = {
+  score: 0,
+  level: "safe",
+  perLanguage: [],
+  cascade: {
+    detected: false,
+    severity: "none",
+    originLanguage: "",
+    crossedTo: [],
+    description: "",
+    darijaVelocity: 0,
+    mainstreamVelocity: 0,
+  },
+  recommendation: "Linguistic engine warming up — no GRI available yet.",
+};
+
+function normalizeGri(gri: unknown): GRIResult {
+  if (!gri || typeof gri !== "object") return { ...SAFE_GRI };
+  const g = gri as Partial<GRIResult>;
+  const num = (v: unknown, fallback = 0): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : fallback;
+  const level: GRIResult["level"] =
+    g.level === "safe" || g.level === "watch" || g.level === "warning" || g.level === "critical"
+      ? g.level
+      : "safe";
+  const cascadeRaw = (g.cascade ?? {}) as Partial<GRIResult["cascade"]>;
+  const severity: GRIResult["cascade"]["severity"] =
+    cascadeRaw.severity === "none" ||
+    cascadeRaw.severity === "watch" ||
+    cascadeRaw.severity === "warning" ||
+    cascadeRaw.severity === "critical"
+      ? cascadeRaw.severity
+      : "none";
+  const perLanguage = Array.isArray(g.perLanguage) ? g.perLanguage : [];
+  const crossedTo = Array.isArray(cascadeRaw.crossedTo)
+    ? cascadeRaw.crossedTo.filter((c): c is string => typeof c === "string")
+    : [];
+  return {
+    score: num(g.score, 0),
+    level,
+    perLanguage,
+    cascade: {
+      detected: Boolean(cascadeRaw.detected),
+      severity,
+      originLanguage: typeof cascadeRaw.originLanguage === "string" ? cascadeRaw.originLanguage : "",
+      crossedTo,
+      description: typeof cascadeRaw.description === "string" ? cascadeRaw.description : "",
+      darijaVelocity: num(cascadeRaw.darijaVelocity, 0),
+      mainstreamVelocity: num(cascadeRaw.mainstreamVelocity, 0),
+    },
+    recommendation:
+      typeof g.recommendation === "string" && g.recommendation.length > 0
+        ? g.recommendation
+        : SAFE_GRI.recommendation,
+  };
+}
+
+function normalizeApiResponse(json: unknown): ApiResponse {
+  const obj = (json ?? {}) as Partial<ApiResponse>;
+  return {
+    matrix: Array.isArray(obj.matrix) ? obj.matrix : [],
+    matrixDetail: Array.isArray(obj.matrixDetail) ? obj.matrixDetail : [],
+    gri: normalizeGri(obj.gri),
+    contentApplicability:
+      obj.contentApplicability && typeof obj.contentApplicability === "object"
+        ? obj.contentApplicability
+        : {},
+  };
+}
+
 export function LinguisticMatrixPanel({ apiEndpoint = "/api/console/linguistic-matrix" }: { apiEndpoint?: string } = {}) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +189,10 @@ export function LinguisticMatrixPanel({ apiEndpoint = "/api/console/linguistic-m
       const res = await fetch(apiEndpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      setData(json);
+      // Normalize defensively — `gri` and nested cascade/perLanguage
+      // may be absent on cold cache or when the NLP engine has no
+      // company scope. Prevents render-time TypeError.
+      setData(normalizeApiResponse(json));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -148,7 +227,9 @@ export function LinguisticMatrixPanel({ apiEndpoint = "/api/console/linguistic-m
   }
 
   const gri = data.gri;
-  const levelMeta = LEVEL_META[gri.level];
+  const levelMeta = LEVEL_META[gri.level] ?? LEVEL_META.safe;
+  const matrixData = data.matrix ?? [];
+  const matrixDetail = data.matrixDetail ?? [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -335,7 +416,7 @@ export function LinguisticMatrixPanel({ apiEndpoint = "/api/console/linguistic-m
         {/* Language rows */}
         <div style={{ display: "flex", flexDirection: "column" }}>
           {data.matrix.map((lang, i) => {
-            const detail = data.matrixDetail.find((d) => d.code === lang.code);
+            const detail = matrixDetail.find((d) => d.code === lang.code);
             const griLang = gri.perLanguage.find((p) => p.language === lang.code);
             const isExpanded = expandedLang === lang.code;
             const isLast = i === data.matrix.length - 1;

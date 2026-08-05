@@ -26,8 +26,7 @@
 //  The new `ScrapedArticle` interface carries both `description` (the
 //  RSS <description> short summary) and `content` (the full article
 //  text from <content:encoded> or fetched HTML — may be empty when only
-//  the feed is fetched). The legacy `rawContent` field is kept as a
-//  deprecated alias of `description` so the v3 layer keeps compiling.
+//  the feed is fetched).
 // ═══════════════════════════════════════════════════════════════
 
 import { createHash } from "crypto";
@@ -40,8 +39,7 @@ import {
 
 /**
  * ScrapedArticle — the canonical article payload produced by the new
- * real-feed pipeline. The legacy `rawContent` field is kept as a
- * deprecated alias of `description` so the v3 layer keeps compiling.
+ * real-feed pipeline.
  */
 export interface ScrapedArticle {
   title: string;
@@ -59,8 +57,6 @@ export interface ScrapedArticle {
   language: string;
   /** SHA-256 of the URL — stable dedupe key (matches DB unique field). */
   urlHash: string;
-  /** @deprecated use `description` instead. Kept for v3 callers. */
-  rawContent?: string;
 }
 
 /**
@@ -704,7 +700,6 @@ export function parseRSS(xml: string, feed: RSSFeed): ScrapedArticle[] {
         content,
         language,
         urlHash,
-        rawContent: description, // legacy alias
       });
     } catch {
       // Malformed <item> — skip, never crash the whole batch
@@ -783,7 +778,6 @@ export function parseRSSXML(xml: string, maxArticles: number): ScrapedArticle[] 
         content: description,
         language: detectLanguage(`${title} ${description}`),
         urlHash: hashUrl(cleanUrl),
-        rawContent: description,
       });
     } catch {
       // Malformed <item> — skip, never crash the whole batch

@@ -35,6 +35,25 @@ import type {
 
 const FONT = { sans: C.fontSans, mono: C.fontMono };
 
+// ─── Date safety helper ────────────────────────────────────────
+// `new Date(maybeInvalidString)` throws RangeError on Safari/FF
+// when the string is not a parseable ISO date. Triggering alerts
+// occasionally carry legacy `publishedAt` values — this never throws.
+function safeFormatDate(
+  iso: string | null | undefined,
+  opts: Intl.DateTimeFormatOptions,
+  locale = "en-US",
+): string {
+  if (!iso || typeof iso !== "string") return "—";
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "—";
+  try {
+    return new Date(iso).toLocaleString(locale, opts);
+  } catch {
+    return "—";
+  }
+}
+
 // ─── Server-returned shape (includes triggeringAlerts + company) ─
 interface TriggeringAlert {
   id: string;
@@ -683,7 +702,7 @@ export const CrisisIndicator = memo(function CrisisIndicator({
                       <span>{a.source}</span>
                       {a.publishedAt ? (
                         <span>
-                          {new Date(a.publishedAt).toLocaleString("en-US", {
+                          {safeFormatDate(a.publishedAt, {
                             month: "short",
                             day: "numeric",
                             hour: "2-digit",

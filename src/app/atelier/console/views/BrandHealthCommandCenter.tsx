@@ -89,6 +89,67 @@ const DEMO_DATA: BrandHealthData = {
   lastUpdated: new Date().toISOString(),
 };
 
+// ─── Payload normalizer ────────────────────────────────────────
+// The /api/console/brand-health route may return a partial payload
+// (e.g. when the company has no recent articles, or the engine is
+// warming up). This function guarantees every field the render reads
+// is present with a sane default, so we never throw at render time.
+function normalizeBrandHealth(json: unknown): BrandHealthData {
+  const obj = (json ?? {}) as Partial<BrandHealthData>;
+  const sentiment = (obj.sentiment ?? {}) as Partial<BrandHealthData["sentiment"]>;
+  const topNarrative = (obj.topNarrative ?? {}) as Partial<BrandHealthData["topNarrative"]>;
+  const aiVisibilityRaw = Array.isArray(obj.aiVisibility) ? obj.aiVisibility : [];
+  const crisisLevel = ((): BrandHealthData["crisisLevel"] => {
+    const lvl = obj.crisisLevel;
+    return lvl === "safe" || lvl === "watch" || lvl === "warning" || lvl === "critical"
+      ? lvl
+      : "safe";
+  })();
+  const num = (v: unknown, fallback = 0): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+  return {
+    score: num(obj.score, 0),
+    trend: num(obj.trend, 0),
+    sentiment: {
+      positive: num(sentiment.positive, 0),
+      neutral: num(sentiment.neutral, 0),
+      negative: num(sentiment.negative, 0),
+    },
+    shareOfVoice: num(obj.shareOfVoice, 0),
+    competitiveRank: num(obj.competitiveRank, 0),
+    totalCompetitors: num(obj.totalCompetitors, 0),
+    mentionCount24h: num(obj.mentionCount24h, 0),
+    mentionVelocity: num(obj.mentionVelocity, 0),
+    crisisLevel,
+    crisisScore: num(obj.crisisScore, 0),
+    topNarrative: {
+      label: typeof topNarrative.label === "string" ? topNarrative.label : "—",
+      momentum:
+        topNarrative.momentum === "rising" ||
+        topNarrative.momentum === "falling" ||
+        topNarrative.momentum === "stable"
+          ? topNarrative.momentum
+          : "stable",
+      sentiment: num(topNarrative.sentiment, 0),
+    },
+    aiVisibility: aiVisibilityRaw
+      .filter(
+        (a): a is { engine: string; score: number } =>
+          !!a && typeof (a as { engine?: unknown }).engine === "string",
+      )
+      .map((a) => ({ engine: a.engine, score: num(a.score, 0) })),
+    recommendation:
+      typeof obj.recommendation === "string" && obj.recommendation.length > 0
+        ? obj.recommendation
+        : "No recommendation available for this period.",
+    lastUpdated:
+      typeof obj.lastUpdated === "string" && obj.lastUpdated.length > 0
+        ? obj.lastUpdated
+        : new Date().toISOString(),
+  };
+}
+
 const CRISIS_META = {
   safe: { label: "SAFE", color: C.success, bg: C.successBg, border: "#a7f3d0", icon: "✓", pulse: false },
   watch: { label: "WATCH", color: C.warningText, bg: C.warningBg, border: C.warningBorder, icon: "△", pulse: false },
@@ -106,7 +167,10 @@ export function BrandHealthCommandCenter({ apiEndpoint = "/api/console/brand-hea
       const res = await fetch(apiEndpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      setData(json);
+      // Normalize defensively — never trust the API payload shape at
+      // render time. A partial/empty response is upgraded to a fully-
+      // typed BrandHealthData with zero-valued fields.
+      setData(normalizeBrandHealth(json));
     } catch {
       setData(DEMO_DATA);
     } finally {

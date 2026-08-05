@@ -8,7 +8,6 @@
 //  and ships safe fallback defaults if the GLM call fails.
 // ═══════════════════════════════════════════════════════════════
 
-import { createHash } from "crypto";
 import {
   promptGLMJSON,
   selectModel,
@@ -30,75 +29,25 @@ import {
   type TranslationPromptParams,
   type DossierPromptParams,
 } from "./glm-prompts";
-import { prisma } from "../db";
+import {
+  dbGLMCache,
+  getCachedGLMResult,
+  cacheGLMResult,
+} from "./llm-cache";
 
 // Re-export health check for consumers of this module
 export { checkGLMHealth, type GLMHealthStatus } from "./glm-client";
+// Re-export the cache helpers so full-audit-worker.ts (which imports
+// them from here) keeps compiling without a migration.
+export { getCachedGLMResult, cacheGLMResult } from "./llm-cache";
 
-// ─── GLM DB CACHE HELPERS ─────────────────────────────────────────
-// SHA-256 hash of { promptType, inputPayload } — deterministic for
-// the same input so identical analyses resolve to the same cache row.
-// All DB operations are wrapped in try/catch so caching failures
-// never break the analysis pipeline (NON-BLOCKING).
+// ─── CACHED GLM CALL ───────────────────────────────────────────────
+// Check the DB cache (Prisma GLMAnalysis, 24h TTL) → call GLM on miss
+// → persist the result. All cache I/O is non-blocking: a cache failure
+// is logged inside llm-cache.ts and the call proceeds as a miss.
+// The cache key is SHA-256 of { promptType, inputPayload } so identical
+// analyses across processes (serverless, workers, cron) collapse.
 
-function glmInputHash(promptType: string, inputPayload: unknown): string {
-  return createHash("sha256")
-    .update(JSON.stringify({ promptType, inputPayload }))
-    .digest("hex");
-}
-
-export async function getCachedGLMResult(
-  promptType: string,
-  inputPayload: unknown
-): Promise<unknown | null> {
-  try {
-    const hash = glmInputHash(promptType, inputPayload);
-    const cached = await prisma.gLMAnalysis.findFirst({
-      where: {
-        inputHash: hash,
-        createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-      },
-    });
-    if (!cached) return null;
-    return cached.outputPayload;
-  } catch (err) {
-    console.error(
-      `[GLM Cache] getCachedGLMResult failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return null;
-  }
-}
-
-export async function cacheGLMResult(
-  promptType: string,
-  inputPayload: unknown,
-  outputPayload: unknown,
-  model: string,
-  latencyMs: number
-): Promise<void> {
-  try {
-    const hash = glmInputHash(promptType, inputPayload);
-    await prisma.gLMAnalysis.create({
-      data: {
-        inputHash: hash,
-        model,
-        promptType,
-        inputPayload: inputPayload as any,
-        outputPayload: outputPayload as any,
-        latencyMs,
-      },
-    });
-  } catch (err) {
-    // Caching failure should NOT break the analysis
-    console.error(
-      `[GLM Cache] cacheGLMResult failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-}
-
-// Generic wrapper: check cache → call GLM on miss → persist result.
-// `model` is captured up-front via selectModel(usePremium) so the cache
-// row records which model produced the output.
 async function cachedGLMCall<T>(
   step: string,
   promptType: string,
@@ -106,7 +55,7 @@ async function cachedGLMCall<T>(
   model: string,
   fn: () => Promise<T>
 ): Promise<T> {
-  const cached = await getCachedGLMResult(promptType, inputPayload);
+  const cached = await dbGLMCache.get(promptType, inputPayload);
   if (cached !== null) {
     console.log(`[GLM Cache] HIT for ${step}`);
     return cached as T;
@@ -115,7 +64,7 @@ async function cachedGLMCall<T>(
   const start = Date.now();
   const result = await fn();
   const latencyMs = Date.now() - start;
-  await cacheGLMResult(promptType, inputPayload, result, model, latencyMs);
+  await dbGLMCache.set(promptType, inputPayload, result, model, latencyMs);
   return result;
 }
 

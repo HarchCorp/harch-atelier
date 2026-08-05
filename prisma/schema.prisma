@@ -118,6 +118,7 @@ model Article {
   sourceType    String   @default("media")
 
   @@index([companyId, publishedAt])
+  @@index([companyId, sentimentLabel])
   @@index([source])
   @@index([sentimentLabel])
   @@index([processed])

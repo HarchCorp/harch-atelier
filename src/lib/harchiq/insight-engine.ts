@@ -35,6 +35,7 @@
 
 import { prisma } from "@/lib/db";
 import { logInfo, logError } from "@/lib/logger";
+import { MemoryCache } from "@/lib/ai/llm-cache";
 import {
   requireUserCompany,
   demoFilterFromSession,
@@ -157,52 +158,33 @@ const PERSONAS: Record<InsightAccountType, PersonaConfig> = {
   },
 };
 
-// ─── In-memory cache (15-min TTL) ───────────────────────────────
-
-interface CacheEntry {
-  result: InsightResult;
-  expiresAt: number;
-}
+// ─── In-memory cache (15-min TTL, MemoryCache from llm-cache) ────
+// Uses the shared MemoryCache<T> class so the caching contract is
+// identical to the DB cache in glm-orchestrator (just an in-process
+// Map instead of a Prisma table). The `cached` flag on InsightResult
+// is set here: false on write, true on read.
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-const insightCache = new Map<string, CacheEntry>();
+const insightCache = new MemoryCache<InsightResult>(CACHE_TTL_MS);
 
 function cacheKey(userId: string, accountType: InsightAccountType): string {
   return `${userId}::${accountType}`;
 }
 
 function readCache(userId: string, accountType: InsightAccountType): InsightResult | null {
-  const key = cacheKey(userId, accountType);
-  const entry = insightCache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
-    insightCache.delete(key);
-    return null;
-  }
-  return { ...entry.result, cached: true };
+  const result = insightCache.get(cacheKey(userId, accountType));
+  if (!result) return null;
+  // Mutate the cached flag on read so the consumer sees cached:true.
+  return { ...result, cached: true };
 }
 
 function writeCache(userId: string, accountType: InsightAccountType, result: InsightResult): void {
-  insightCache.set(cacheKey(userId, accountType), {
-    result: { ...result, cached: false },
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  insightCache.set(cacheKey(userId, accountType), { ...result, cached: false });
 }
 
 export function clearInsightCache(userId?: string): number {
-  if (!userId) {
-    const n = insightCache.size;
-    insightCache.clear();
-    return n;
-  }
-  let n = 0;
-  for (const k of Array.from(insightCache.keys())) {
-    if (k.startsWith(`${userId}::`)) {
-      insightCache.delete(k);
-      n++;
-    }
-  }
-  return n;
+  if (!userId) return insightCache.clear();
+  return insightCache.clear(`${userId}::`);
 }
 
 // ─── Helpers ────────────────────────────────────────────────────

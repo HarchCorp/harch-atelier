@@ -94,6 +94,26 @@ interface InsightResult {
   model: string;
 }
 
+// ─── Date safety helper ────────────────────────────────────────
+// `new Date(maybeInvalidString)` throws RangeError on Safari/FF
+// when the string is not a parseable ISO date. The insight engine
+// and alert-detail API occasionally surface legacy values like
+// "unknown" or empty strings — this helper never throws.
+function safeFormatDate(
+  iso: string | null | undefined,
+  opts: Intl.DateTimeFormatOptions,
+  locale = "en-US",
+): string {
+  if (!iso || typeof iso !== "string") return "—";
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "—";
+  try {
+    return new Date(iso).toLocaleString(locale, opts);
+  } catch {
+    return "—";
+  }
+}
+
 // ─── Persona accent config ─────────────────────────────────────
 
 export type InsightAccountType =
@@ -448,7 +468,7 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
                 {data.cached || false ? "CACHED" : "FRESH"} · {data.model || "glm-4"}
               </span>
               <span>
-                {new Date(data.generatedAt).toLocaleTimeString("en-US", {
+                {safeFormatDate(data.generatedAt, {
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: false,
@@ -804,7 +824,7 @@ function SourceRow({
   };
 
   // Build the chip label — "[Alert #<id-suffix> — <source> — <Mon DD>]"
-  const idSuffix = source.id.slice(-4);
+  const idSuffix = typeof source.id === "string" && source.id.length > 0 ? source.id.slice(-4) : "????";
 
   const chip = (
     <button
@@ -1109,13 +1129,13 @@ function AlertDetailBody({ data, accent }: { data: AlertDetailResponse; accent: 
   if (a.publishedAt) {
     meta.push([
       "Published",
-      new Date(a.publishedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+      safeFormatDate(a.publishedAt, { dateStyle: "medium", timeStyle: "short" }),
     ]);
   }
   if (a.scrapedAt) {
     meta.push([
       "Ingested",
-      new Date(a.scrapedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+      safeFormatDate(a.scrapedAt, { dateStyle: "medium", timeStyle: "short" }),
     ]);
   }
   meta.push(["Source", a.source]);

@@ -344,7 +344,7 @@ function toCollectionResult(
   // Re-detect language from the richer text when we have it.
   const langSource = fullContent
     ? `${article.title} ${fullContent.slice(0, 500)}`
-    : `${article.title} ${article.rawContent}`;
+    : `${article.title} ${article.description}`;
   const language = detectLanguage(langSource) || article.language;
 
   return {
@@ -353,7 +353,7 @@ function toCollectionResult(
     url: article.url,
     source: article.source,
     publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
-    snippet: (article.rawContent || article.description || "").slice(0, 500),
+    snippet: (article.description || "").slice(0, 500),
     fullContent: fullContent ?? null,
     language,
     collector: "rss",
