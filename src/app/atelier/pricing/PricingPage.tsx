@@ -618,13 +618,13 @@ function TierCard({ tier }: { tier: Tier }) {
 
       {/* Price */}
       <div style={{ marginBottom: "24px", paddingBottom: "24px", borderBottom: `1px solid ${C.borderLight}` }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-          <span style={{ fontSize: "44px", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1, letterSpacing: "-0.03em" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap", overflow: "hidden" }}>
+          <span style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1, letterSpacing: "-0.03em" }}>
             {tier.price}
           </span>
-          <span style={{ fontSize: "14px", fontFamily: FONT.mono, color: C.textSecondary }}>{tier.period}</span>
+          <span style={{ fontSize: "clamp(11px, 2vw, 14px)", fontFamily: FONT.mono, color: C.textSecondary }}>{tier.period}</span>
         </div>
-        <div style={{ fontSize: "12px", color: C.textSecondary, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.04em" }}>
+        <div style={{ fontSize: "clamp(10px, 1.5vw, 12px)", color: C.textSecondary, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.04em" }}>
           ≈ {tier.id === "emergence" ? "€1,500" : tier.id === "corporate" ? "€4,000" : "€7,500"} / mois · virement bancaire
         </div>
       </div>
@@ -686,10 +686,11 @@ function TierCard({ tier }: { tier: Tier }) {
           justifyContent: "center",
           gap: "10px",
           width: "100%",
+          minHeight: "48px",
           padding: "14px 20px",
           background: tier.highlighted ? C.sage : "transparent",
           color: tier.highlighted ? "#FFFFFF" : C.accentDark,
-          fontSize: "14px",
+          fontSize: "clamp(13px, 2vw, 14px)",
           fontWeight: 600,
           textDecoration: "none",
           borderRadius: "3px",
@@ -697,6 +698,7 @@ function TierCard({ tier }: { tier: Tier }) {
           cursor: "pointer",
           fontFamily: FONT.sans,
           transition: "all 0.2s",
+          boxSizing: "border-box",
         }}
         onMouseEnter={(e) => {
           if (tier.highlighted) {
