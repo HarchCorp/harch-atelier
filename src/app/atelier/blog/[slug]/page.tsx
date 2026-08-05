@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: { absolute: `${article.title} | Harch Atelier Blog` },
     description: article.excerpt,
     alternates: {
-      canonical: `https://atelier.harchcorp.com/blog/${article.slug}`,
+      canonical: `https://atelier.harchcorp.com/atelier/blog/${article.slug}`,
     },
     openGraph: {
       title: article.title,
@@ -65,10 +65,10 @@ export default async function Page({ params }: Params) {
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://atelier.harchcorp.com/blog/${article.slug}`,
+      "@id": `https://atelier.harchcorp.com/atelier/blog/${article.slug}`,
     },
-    url: `https://atelier.harchcorp.com/blog/${article.slug}`,
-    image: `https://atelier.harchcorp.com/blog/${article.slug}/og.png`,
+    url: `https://atelier.harchcorp.com/atelier/blog/${article.slug}`,
+    image: `https://atelier.harchcorp.com/atelier/blog/${article.slug}/og.png`,
     articleSection: article.category,
     keywords: article.tags.join(", "),
     inLanguage: "en",

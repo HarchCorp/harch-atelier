@@ -22,14 +22,14 @@ export const metadata: Metadata = {
     "solo founder Morocco",
   ],
   alternates: {
-    canonical: "https://atelier.harchcorp.com/about",
+    canonical: "https://atelier.harchcorp.com/atelier/about",
   },
   openGraph: {
     title: "About Harch Atelier — Building in Public Since 2026",
     description:
       "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Building in Public from Casablanca, Morocco.",
     type: "profile",
-    url: "https://atelier.harchcorp.com/about",
+    url: "https://atelier.harchcorp.com/atelier/about",
     siteName: "Harch Atelier",
     locale: "en_US",
   },
@@ -46,7 +46,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "AboutPage",
   name: "About Harch Atelier",
-  url: "https://atelier.harchcorp.com/about",
+  url: "https://atelier.harchcorp.com/atelier/about",
   description:
     "AI reputation intelligence for African enterprises. Founded by Amine Harch El Korane. Building in Public from Casablanca, Morocco since 2026.",
   mainEntity: {

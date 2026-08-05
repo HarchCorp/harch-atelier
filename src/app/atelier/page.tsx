@@ -24,14 +24,14 @@ export const metadata: Metadata = {
     "reputation score",
   ],
   alternates: {
-    canonical: "https://atelier.harchcorp.com",
+    canonical: "https://atelier.harchcorp.com/atelier",
   },
   openGraph: {
     title: "Harch Atelier — AI Reputation Intelligence for Africa",
     description:
       "Monitor what media and AI say about your company. Sentiment analysis, crisis alerts on WhatsApp, monthly board-ready PDF reports. 30+ Moroccan and African media sources.",
     type: "website",
-    url: "https://atelier.harchcorp.com",
+    url: "https://atelier.harchcorp.com/atelier",
     siteName: "Harch Atelier",
     locale: "en_US",
     images: [

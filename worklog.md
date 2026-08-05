@@ -166,3 +166,70 @@ Stage Summary:
 - 2 bugs rules-of-hooks pré-existants révélés et fixés par le refactor AbortController
 - 0 régression TypeScript (lint: 0 nouvelle erreur sur 9 fichiers édités)
 - Infrastructure: clamp() CSS pour fluid typography, AbortController pattern pour tous les useEffect fetch
+
+---
+Task ID: 9-SEO
+Agent: seo-agent
+Task: Audit + fix SEO pour 100% d'indexabilité des pages publiques
+
+GAPS TROUVÉS (inventaire):
+1. Sitemap incomplet: 41 URLs vs 90 attendues — manquaient resilience, news, intelligence, lab/* (4), expertise/* (5), products/* (4), approach/* (3), insight-reports/* (5), flagship-report, api-docs, demo, access, request-access, templates/institutional-audit, + 15 articles blog dynamiques
+2. BUG sitemap: industries listait 'telecommunications' mais le folder réel est 'telecom' → URL 404 dans le sitemap
+3. robots.ts insuffisant: ne bloquait que /api/, /_next/, /atelier/audit/received. Laisse Google indexer /atelier/console/*, /atelier/agency, /atelier/admin-x7k2m9, /atelier/admin, /atelier/login, /atelier/onboarding, /atelier/dashboard, /atelier/client-dashboard, /atelier/health
+4. BUG robots.ts: seuls '*' et 'Googlebot' avaient disallow. Bingbot, YandexBot, DuckDuckBot, Twitterbot, facebookexternalhit, LinkedInBot, Applebot, Slackbot, Discordbot, TelegramBot, WhatsApp, GPTBot, ChatGPT-User, PerplexityBot, Claude-Web, anthropic-ai, CCBot, Google-Extended — tous n'avaient que 'Allow: /' sans hériter du disallow (règle most-specific UA de robots.txt)
+5. BUG CONFLIT: public/robots.txt (static) + src/app/robots.ts (App Router) coexistaient → Next.js 16 lève une 500 "conflicting public file and page file" sur /robots.txt
+6. Canonical URLs cassés (manque /atelier prefix → 404): pricing (/pricing), about (/about), contact (/contact), blog index (/blog), blog [slug] (/blog/{slug}), home (/au lieu de /atelier), et les 6 pages industry (/industries/{slug})
+7. openGraph.url cassés sur les mêmes pages (même bug)
+8. Page resilience: metadata incomplète — pas de Metadata type, pas de canonical, pas d'openGraph, pas de twitter, pas de JSON-LD
+9. Page contact: pas d'openGraph, pas de twitter, pas de JSON-LD
+10. Blog index: pas de twitter card, pas de JSON-LD (Blog schema)
+11. 6 pages industry: ZÉRO JSON-LD (alors que les 5 company pages en avaient)
+12. feed.xml: utilise www.harchcorp.com au lieu de atelier.harchcorp.com (HORS SCOPE — non touché, ce feed sert harch-corp repo)
+
+FIXES APPLIQUÉS (fichier par fichier):
+- src/app/sitemap.ts: réécrit. 90 URLs (31 static marketing + 4 products + 5 expertise + 3 approach + 5 insight-reports + 4 lab + 5 companies + 6 industries + 15 blog articles + access flows). Fix 'telecommunications'→'telecom'. Import ARTICLES pour générer les URLs blog dynamiques avec lastmod = date article.
+- src/app/robots.ts: extrait PRIVATE_PATHS (const partagée). Appliqué disallow à TOUS les 18 user-agents (* + Googlebot + Bingbot + YandexBot + DuckDuckBot + 8 social + 7 AI). Ajouté /atelier/console/*, /atelier/agency, /atelier/client-dashboard, /atelier/admin, /atelier/admin-x7k2m9, /atelier/login, /atelier/onboarding, /atelier/dashboard, /atelier/health au disallow.
+- public/robots.txt: SUPPRIMÉ (conflit Next.js 16 — le src/app/robots.ts est l'unique source of truth).
+- src/app/atelier/resilience/page.tsx: metadata complète (Metadata type, title absolute, description, keywords, canonical /atelier/resilience, openGraph, twitter) + JSON-LD ItemList.
+- src/app/atelier/contact/page.tsx: ajouté openGraph + twitter + fixé canonical /atelier/contact + JSON-LD ContactPage avec Organization.contactPoint (sales, support, press).
+- src/app/atelier/blog/page.tsx: ajouté twitter card + fixé canonical /atelier/blog + openGraph.url + JSON-LD Blog (publisher Organization).
+- src/app/atelier/blog/[slug]/page.tsx: fixé canonical /atelier/blog/{slug} + openGraph non touché (hérite) + fixé JSON-LD Article url, mainEntityOfPage @id, image.
+- src/app/atelier/pricing/page.tsx: fixé canonical /atelier/pricing + openGraph.url + JSON-LD Product url + 3 Offer url (#emergence, #corporate, #sovereign).
+- src/app/atelier/about/page.tsx: fixé canonical /atelier/about + openGraph.url + JSON-LD AboutPage url.
+- src/app/atelier/page.tsx (home): fixé canonical /atelier + openGraph.url (était / qui 308-redirect → sous-optimal pour OG scrapers).
+- src/app/atelier/industries/banking/page.tsx: fixé canonical + openGraph.url → /atelier/industries/banking + ajouté JSON-LD Dataset (variableMeasured: reputation score, sentiment, risk index, share of voice, AI visibility).
+- src/app/atelier/industries/telecom/page.tsx: même fix + JSON-LD Dataset.
+- src/app/atelier/industries/mining/page.tsx: même fix + JSON-LD Dataset.
+- src/app/atelier/industries/energy/page.tsx: même fix + JSON-LD Dataset.
+- src/app/atelier/industries/aviation/page.tsx: même fix + JSON-LD Dataset.
+- src/app/atelier/industries/retail/page.tsx: même fix + JSON-LD Dataset.
+
+VÉRIFICATION:
+- TypeScript (bunx tsc --noEmit): 0 erreur sur tous les fichiers édités
+- ESLint (bun run lint): 0 nouvelle erreur sur fichiers édités (26 erreurs pré-existantes hors scope confirmées non touchées)
+- Dev server curl tests:
+  • GET /robots.txt → 200, 18 user-agent groups avec disallow PRIVATE_PATHS ✓
+  • GET /sitemap.xml → 200, 90 <loc> URLs, telecom (pas telecommunications), 15 articles blog, resilience, flagship-report, api-docs, lab/*, expertise/*, products/* ✓
+  • GET /atelier/resilience → meta description + og:title + og:url + og:site_name + twitter:card ✓
+  • GET /atelier/industries/banking → canonical /atelier/industries/banking + JSON-LD Dataset ✓
+  • GET /atelier/contact → canonical /atelier/contact + og:url + ContactPage JSON-LD ✓
+  • GET /atelier/pricing → canonical /atelier/pricing ✓
+  • GET /atelier/blog → canonical /atelier/blog + Blog JSON-LD ✓
+  • GET /atelier/about → canonical /atelier/about ✓
+  • GET /atelier/companies/ocp-group → canonical + Organization JSON-LD (déjà présent) ✓
+
+Stage Summary:
+- 14 fichiers édités (sitemap.ts, robots.ts, 12 page.tsx), 1 fichier supprimé (public/robots.txt)
+- 90 URLs indexables dans le sitemap (vs 41 avant) — +220%
+- 18 user-agents robots.txt avec disallow privé cohérent (vs 2 avant)
+- 7 canonical URLs cassés corrigés (pricing, about, contact, blog index, blog [slug], home, 6 industries)
+- 6 pages industry désormais ont JSON-LD Dataset (0 avant)
+- 3 pages (resilience, contact, blog index) désormais ont metadata complète (openGraph + twitter + JSON-LD)
+- 0 régression TypeScript, 0 nouvelle erreur lint
+- Commit: fix(seo): sitemap + robots + metadata + JSON-LD
+
+Non couvert (recommandations pour prochain cycle):
+- feed.xml/route.ts utilise www.harchcorp.com — relève du repo harch-corp, pas atelier
+- OG images: les pages utilisent /public/images/og-harch-corp.png (chemin inhabituel mais fonctionnel via public/public/). Une OG image dédiée par page serait un gain (actuellement seule la home a une OG image explicite)
+- Le root layout metadata.canonical = / (root) — fonctionne via 308 redirect vers /atelier, mais pourrait pointer directement vers /atelier
+- Les 5 company pages ont déjà JSON-LD Organization mais sans sameAs (Wikipedia, LinkedIn, Twitter) — ajouter sameAs renforcerait le Knowledge Graph
