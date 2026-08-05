@@ -436,8 +436,8 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
               <span>
                 {(data.insights || []).length} insights · {(data.dataPoints || 0)} data points
               </span>
-              <span style={{ color: data.cached ? C.textMuted : persona.accent }}>
-                {data.cached ? "CACHED" : "FRESH"} · {data.model}
+              <span style={{ color: data.cached || false ? C.textMuted : persona.accent }}>
+                {data.cached || false ? "CACHED" : "FRESH"} · {data.model || "glm-4"}
               </span>
               <span>
                 {new Date(data.generatedAt).toLocaleTimeString("en-US", {
@@ -687,14 +687,14 @@ function InsightCard({ insight, accent, accentBg, read, onMarkAsRead, onOpenAler
         <span style={{ fontWeight: 700, color: accent, flexShrink: 0 }} aria-hidden="true">
           {"\u2192"}
         </span>
-        <span>{insight.action}</span>
+        <span>{insight.action || ""}</span>
       </div>
 
       {/* ─── Confidence bar ─── */}
       <div style={confidenceStyle}>
         <span>CONFIDENCE</span>
         <span style={{ fontWeight: 700, color: C.textBody }}>
-          {(insight.confidence * 100).toFixed(0)}%
+          {((insight.confidence || 0) * 100).toFixed(0)}%
         </span>
         <div
           style={{
@@ -709,7 +709,7 @@ function InsightCard({ insight, accent, accentBg, read, onMarkAsRead, onOpenAler
         >
           <div
             style={{
-              width: `${insight.confidence * 100}%`,
+              width: `${(insight.confidence || 0) * 100}%`,
               height: "100%",
               background: accent,
               transition: "width 0.4s ease",

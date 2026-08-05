@@ -203,6 +203,9 @@ export function demoInsightsResponse() {
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     persona: "brand-monitor",
+    dataPoints: 34,
+    model: "glm-4",
+    cached: false,
     insights: [
       {
         id: "insight-1",
