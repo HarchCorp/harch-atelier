@@ -308,7 +308,7 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
 
   const unreadCount = useMemo(() => {
     if (!data) return 0;
-    return data.insights.filter((i) => !readIds.has(i.id)).length;
+    return (data.insights || []).filter((i) => !readIds.has(i.id)).length;
   }, [data, readIds]);
 
   // ─── Styles ──────────────────────────────────────────────────
@@ -434,7 +434,7 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
               }}
             >
               <span>
-                {data.insights.length} insights · {data.dataPoints} data points
+                {(data.insights || []).length} insights · {(data.dataPoints || 0)} data points
               </span>
               <span style={{ color: data.cached ? C.textMuted : persona.accent }}>
                 {data.cached ? "CACHED" : "FRESH"} · {data.model}
@@ -488,7 +488,7 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
           <InsightSkeleton accent={persona.accent} />
         ) : error ? (
           <InsightError accent={persona.accent} message={error} onRetry={() => load(true)} />
-        ) : !data || data.insights.length === 0 ? (
+        ) : !data || (data.insights || []).length === 0 ? (
           <div
             style={{
               padding: 24,
@@ -502,7 +502,7 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
           </div>
         ) : (
           <div>
-            {data.insights.map((insight) => (
+            {(data.insights || []).map((insight) => (
               <InsightCard
                 key={insight.id}
                 insight={insight}
@@ -719,7 +719,7 @@ function InsightCard({ insight, accent, accentBg, read, onMarkAsRead, onOpenAler
       </div>
 
       {/* ─── Sources ─── */}
-      {insight.sources.length > 0 && (
+      {(insight.sources || []).length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div
             style={{
@@ -731,10 +731,10 @@ function InsightCard({ insight, accent, accentBg, read, onMarkAsRead, onOpenAler
               marginBottom: 4,
             }}
           >
-            Sources ({insight.sources.length})
+            Sources ({(insight.sources || []).length})
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {insight.sources.map((s) => (
+            {(insight.sources || []).map((s) => (
               <SourceRow key={s.id} source={s} accent={accent} onOpenDetail={onOpenAlert} />
             ))}
           </div>
