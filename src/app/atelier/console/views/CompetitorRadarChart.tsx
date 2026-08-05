@@ -51,7 +51,14 @@ export function CompetitorRadarChart() {
   const [brands, setBrands] = useState<BrandScores[]>(DEMO_BRANDS);
   const [visibleBrands, setVisibleBrands] = useState<Set<string>>(new Set(DEMO_BRANDS.map((b) => b.name)));
   if (!brands || brands.length === 0) return null;
-  useEffect(() => { fetch("/api/console/competitor-radar").then(r => r.ok ? r.json() : null).then(d => { if (d?.brands) setBrands(d.brands); }).catch(() => {}); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/console/competitor-radar", { signal: controller.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.brands) setBrands(d.brands); })
+      .catch((e) => { if (!(e instanceof DOMException && e.name === "AbortError")) {} });
+    return () => controller.abort();
+  }, []);
 
   const size = 280;
   const center = size / 2;

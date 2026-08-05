@@ -60,7 +60,14 @@ const IMPACT_META = {
 
 export function RegulatoryFeedWidget() {
   const [items, setItems] = useState<RegulatoryItem[]>(DEMO_ITEMS);
-  useEffect(() => { fetch("/api/console/regulatory-feed").then(r => r.ok ? r.json() : null).then(d => { if (d?.items) setItems(d.items); }).catch(() => {}); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/console/regulatory-feed", { signal: controller.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.items) setItems(d.items); })
+      .catch((e) => { if (!(e instanceof DOMException && e.name === "AbortError")) {} });
+    return () => controller.abort();
+  }, []);
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px" }}>
       {/* Header */}

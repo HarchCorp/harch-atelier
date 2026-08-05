@@ -61,7 +61,14 @@ export function CrisisTimeline() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>(DEMO_TIMELINE);
   const [expanded, setExpanded] = useState<number | null>(0);
   if (!timeline || timeline.length === 0) return null;
-  useEffect(() => { fetch("/api/console/crisis-timeline").then(r => r.ok ? r.json() : null).then(d => { if (d?.events) setTimeline(d.events); }).catch(() => {}); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/console/crisis-timeline", { signal: controller.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.events) setTimeline(d.events); })
+      .catch((e) => { if (!(e instanceof DOMException && e.name === "AbortError")) {} });
+    return () => controller.abort();
+  }, []);
 
   // Build the sentiment curve points
   const width = 600;

@@ -170,10 +170,18 @@ export function CrisisAlertFeed() {
   const [filter, setFilter] = useState<Severity | "all">("all");
 
   useEffect(() => {
-    fetch("/api/console/crisis-alerts")
+    // AbortController prevents memory leak: if the component unmounts
+    // before the fetch resolves (e.g. user switches tab), the request
+    // is aborted and setState is never called on the dead component.
+    const controller = new AbortController();
+    fetch("/api/console/crisis-alerts", { signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.alerts) setAlerts(d.alerts); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return; // expected on unmount
+        setLoading(false);
+      });
+    return () => controller.abort();
   }, []);
 
   const filtered = filter === "all" ? alerts : alerts.filter((a) => a.severity === filter);

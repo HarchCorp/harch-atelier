@@ -66,7 +66,14 @@ export function InfluencerImpactPanel() {
   const [influencers, setInfluencers] = useState<Influencer[]>(DEMO_INFLUENCERS);
   const [sortBy, setSortBy] = useState<"reach" | "mentions" | "authority" | "sentiment">("reach");
   const [filter, setFilter] = useState<"all" | "positive" | "negative">("all");
-  useEffect(() => { fetch("/api/console/influencer-impact").then(r => r.ok ? r.json() : null).then(d => { if (d?.influencers) setInfluencers(d.influencers); }).catch(() => {}); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/console/influencer-impact", { signal: controller.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.influencers) setInfluencers(d.influencers); })
+      .catch((e) => { if (!(e instanceof DOMException && e.name === "AbortError")) {} });
+    return () => controller.abort();
+  }, []);
 
   const filtered = influencers.filter((i) => {
     if (filter === "positive") return i.sentiment > 0;
