@@ -2041,7 +2041,9 @@ export function BrandMonitorDashboard({
           insights per persona. The panel sits at the TOP of the Overview tab,
           above the KPI strip, so the Dircom sees AI-generated intelligence
           before the raw metrics. */}
-      <InsightPanel accountType="brand-monitor" />
+      <DashboardErrorBoundary accent={ACCENT}>
+        <InsightPanel accountType="brand-monitor" />
+      </DashboardErrorBoundary>
 
       {/* ─── Page title + toolbar ─── */}
       <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
@@ -2252,7 +2254,9 @@ export function BrandMonitorDashboard({
                 Task: dataminr-realtime-crisis — the crisis score is the
                 first thing the user sees after the KPIs, mirroring
                 Dataminr's anomaly-detection signal. */}
-            <CrisisIndicator />
+            <DashboardErrorBoundary accent={ACCENT}>
+              <CrisisIndicator />
+            </DashboardErrorBoundary>
 
             {/* ─── Linguistic Intelligence Matrix (Brique 9) ───
                 The definitive 35/35/20/10 cartography of the Moroccan
