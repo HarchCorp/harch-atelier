@@ -90,6 +90,101 @@ export function currentPeriod(now: Date = new Date()): string {
 // ─── Quota reads ────────────────────────────────────────────────────
 
 /**
+ * Atomically check + increment a counter resource in a single SQL
+ * statement. This is the race-condition-safe version of
+ * `checkQuota` → `incrementUsage` for counter resources
+ * (apiRequest, whatsappAlert).
+ *
+ * SQL equivalent:
+ *   UPDATE "AgencyUsage"
+ *   SET "apiRequests" = "apiRequests" + 1
+ *   WHERE "agencyClientId" = $1 AND "period" = $2
+ *     AND "apiRequests" < $max
+ *   RETURNING "apiRequests"
+ *
+ * If 0 rows are returned, the quota is exceeded (or the row doesn't
+ * exist yet, which we treat as "allowed" since the first request
+ * creates the row with count=1).
+ *
+ * RACE CONDITION FIX (Protocole Omega — Phase 1):
+ * The previous withQuotaCheck did checkQuota (read) then
+ * incrementUsage (write) as TWO operations. 50 concurrent requests
+ * all read used=0, all pass the check, all increment → 50 creations
+ * instead of 1. This function makes the check+increment atomic via
+ * a single UPDATE...WHERE...RETURNING statement, so Postgres's row
+ * lock serialises the concurrent increments.
+ *
+ * For gauge resources (keyword/source/user), use checkQuota +
+ * incrementUsage separately — gauges don't have the same race
+ * (they're set to an absolute value, not incremented).
+ */
+export async function consumeQuota(
+  agencyClientId: string,
+  resource: "apiRequest" | "whatsappAlert",
+): Promise<QuotaCheckResult> {
+  const period = currentPeriod();
+  const snap = await getQuota(agencyClientId);
+  if (!snap) {
+    return {
+      allowed: true,
+      used: 0,
+      max: Number.MAX_SAFE_INTEGER,
+      remaining: Number.MAX_SAFE_INTEGER,
+      period,
+    };
+  }
+
+  const max = resource === "apiRequest" ? snap.quota.maxApiRequests : snap.quota.maxWhatsAppAlerts;
+  const column = resource === "apiRequest" ? "apiRequests" : "whatsappAlerts";
+
+  // Atomic UPDATE...WHERE counter < max RETURNING new_value
+  // If the row doesn't exist yet (first request of the period), we
+  // create it with count=1 (allowed since 1 <= max for any sane plan).
+  if (!snap.usage) {
+    try {
+      await prisma.agencyUsage.create({
+        data: {
+          agencyClientId,
+          period,
+          [column]: 1,
+        } as any,
+      });
+      return { allowed: true, used: 1, max, remaining: Math.max(0, max - 1), period };
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        // Row was just created by a concurrent request — fall through
+        // to the atomic UPDATE path below.
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  // Atomic check+increment: only updates if current value < max.
+  const result = await prisma.$queryRaw<Array<{ newval: number }>>`
+    UPDATE "AgencyUsage"
+    SET "${column}" = "${column}" + 1
+    WHERE "agencyClientId" = ${agencyClientId}
+      AND "period" = ${period}
+      AND "${column}" < ${max}
+    RETURNING "${column}" AS "newval"
+  `;
+
+  if (result.length > 0) {
+    const newVal = Number(result[0].newval);
+    return { allowed: true, used: newVal, max, remaining: Math.max(0, max - newVal), period };
+  }
+
+  // Either quota exceeded OR a concurrent create won the race.
+  // Re-read to get the accurate current value for the 429 response.
+  const current = await getQuota(agencyClientId);
+  const used = resource === "apiRequest"
+    ? current?.usage?.apiRequests ?? 0
+    : current?.usage?.whatsappAlerts ?? 0;
+  return { allowed: false, used, max, remaining: 0, period };
+}
+
+/**
  * Get the quota + current month's usage for an AgencyClient.
  * Returns null if the client doesn't exist or has no quota row.
  */
@@ -191,12 +286,20 @@ export async function checkQuota(
 
 /**
  * Atomically increment the usage counter for a resource on the
- * current period. Uses Prisma upsert against the @@unique([agencyClientId, period])
- * index — concurrent calls are serialised by Postgres's row lock on the
- * unique constraint, so the counter is always consistent.
+ * current period. Uses a single SQL UPDATE with `counter = counter + N`
+ * (via Prisma's atomic update) — no read-then-write window, so 50
+ * concurrent requests all see the increment applied serially by
+ * Postgres's row lock on the @@unique constraint.
  *
  * For "gauge" resources (keyword / source / user), this SETS the value
  * rather than incrementing — callers pass the new absolute count.
+ *
+ * RACE CONDITION FIX (Protocole Omega — Phase 1):
+ * The previous implementation did findUnique → update, which had a
+ * TOCTOU window: 50 concurrent requests all read used=0, all pass
+ * the checkQuota gate, all write used=1. The atomic UPDATE below
+ * eliminates this window by letting Postgres serialise the increments
+ * via the row lock acquired during the UPDATE.
  *
  * Returns the updated row.
  */
@@ -206,63 +309,100 @@ export async function incrementUsage(
   count: number = 1,
 ): Promise<void> {
   const period = currentPeriod();
-  // Prisma's upsert on a composite unique key requires us to read first
-  // or use a SQL raw query. We use the simpler pattern: findUnique →
-  // update / create. There's a tiny race window between find + update,
-  // but the @@unique constraint prevents duplicate rows; the worst case
-  // is one missed increment under very high concurrency, which is
-  // acceptable for billing-grade accounting (we'd rather under-count
-  // than over-count and wrongly block a paying customer).
-  const existing = await prisma.agencyUsage.findUnique({
-    where: { agencyClientId_period: { agencyClientId, period } },
-    select: {
-      id: true,
-      apiRequests: true,
-      whatsappAlerts: true,
-      keywordsUsed: true,
-      sourcesUsed: true,
-      usersActive: true,
-    },
-  });
 
-  if (existing) {
-    const patch: Record<string, number> = {};
+  // 1. Try atomic increment on existing row.
+  //    Prisma translates `{ apiRequests: { increment: count } }` into
+  //    `UPDATE ... SET "apiRequests" = "apiRequests" + $1` — a single
+  //    statement that acquires the row lock and applies the delta
+  //    atomically. No TOCTOU window.
+  try {
+    const patch: Record<string, { increment: number } | number> = {};
     switch (resource) {
-      case "apiRequest":     patch.apiRequests = existing.apiRequests + count; break;
-      case "whatsappAlert":  patch.whatsappAlerts = existing.whatsappAlerts + count; break;
+      case "apiRequest":
+        patch.apiRequests = { increment: count };
+        break;
+      case "whatsappAlert":
+        patch.whatsappAlerts = { increment: count };
+        break;
       // Gauges: caller passes the new absolute value via `count`.
-      case "keyword":        patch.keywordsUsed = count; break;
-      case "source":         patch.sourcesUsed = count; break;
-      case "user":           patch.usersActive = count; break;
+      case "keyword":
+        patch.keywordsUsed = count;
+        break;
+      case "source":
+        patch.sourcesUsed = count;
+        break;
+      case "user":
+        patch.usersActive = count;
+        break;
     }
-    await prisma.agencyUsage.update({
-      where: { id: existing.id },
-      data: patch,
+
+    const updated = await prisma.agencyUsage.update({
+      where: { agencyClientId_period: { agencyClientId, period } },
+      data: patch as any,
+    }).catch((err: any) => {
+      // P2025 = row not found → need to create. Everything else → throw.
+      if (err?.code === "P2025") return null;
+      throw err;
     });
-  } else {
-    // No usage row yet for this period → create one. Defaults are 0
-    // for every counter, so we only set the one being incremented.
-    const data: Record<string, number | string> = {
-      agencyClientId,
-      period,
-    };
-    switch (resource) {
-      case "apiRequest":     data.apiRequests = count; break;
-      case "whatsappAlert":  data.whatsappAlerts = count; break;
-      case "keyword":        data.keywordsUsed = count; break;
-      case "source":         data.sourcesUsed = count; break;
-      case "user":           data.usersActive = count; break;
-    }
-    try {
-      await prisma.agencyUsage.create({ data: data as any });
-    } catch (err: any) {
-      // Race: another worker just created the row. Fall back to update.
-      if (err?.code === "P2002") {
-        // Recurse once — the existing-row branch will now succeed.
-        await incrementUsage(agencyClientId, resource, count);
-      } else {
-        throw err;
+
+    if (updated) return; // atomic increment succeeded
+  } catch (err) {
+    // Fall through to create path if the update failed with P2025
+    if ((err as any)?.code !== "P2025") throw err;
+  }
+
+  // 2. No usage row for this period → create one.
+  //    The @@unique constraint prevents duplicates: if 2 workers race
+  //    here, only one create succeeds; the other gets P2002 and falls
+  //    back to the atomic update path above.
+  const data: Record<string, number | string> = { agencyClientId, period };
+  switch (resource) {
+    case "apiRequest":
+      data.apiRequests = count;
+      break;
+    case "whatsappAlert":
+      data.whatsappAlerts = count;
+      break;
+    case "keyword":
+      data.keywordsUsed = count;
+      break;
+    case "source":
+      data.sourcesUsed = count;
+      break;
+    case "user":
+      data.usersActive = count;
+      break;
+  }
+  try {
+    await prisma.agencyUsage.create({ data: data as any });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      // Race: another worker just created the row. Re-run the atomic
+      // increment — the row now exists, so the UPDATE path succeeds.
+      const patch: Record<string, { increment: number } | number> = {};
+      switch (resource) {
+        case "apiRequest":
+          patch.apiRequests = { increment: count };
+          break;
+        case "whatsappAlert":
+          patch.whatsappAlerts = { increment: count };
+          break;
+        case "keyword":
+          patch.keywordsUsed = count;
+          break;
+        case "source":
+          patch.sourcesUsed = count;
+          break;
+        case "user":
+          patch.usersActive = count;
+          break;
       }
+      await prisma.agencyUsage.update({
+        where: { agencyClientId_period: { agencyClientId, period } },
+        data: patch as any,
+      });
+    } else {
+      throw err;
     }
   }
 }
@@ -367,33 +507,58 @@ export function withQuotaCheck(
     try {
       const agency = await getAgencyContext();
       if (agency && agency.activeAgencyClientId) {
-        const check = await checkQuota(agency.activeAgencyClientId, resource);
-        if (!check.allowed) {
-          return NextResponse.json(
-            {
-              error: "Quota exceeded",
-              resource,
-              used: check.used,
-              max: check.max,
-              remaining: 0,
-              period: check.period,
-              agencyClientId: agency.activeAgencyClientId,
-            },
-            { status: 429 },
+        // Counter resources (apiRequest, whatsappAlert) use the atomic
+        // consumeQuota — check + increment in a single SQL statement,
+        // no TOCTOU window. Gauge resources use checkQuota separately
+        // (they're set to an absolute value, not incremented).
+        if (resource === "apiRequest" || resource === "whatsappAlert") {
+          const check = await consumeQuota(
+            agency.activeAgencyClientId,
+            resource as "apiRequest" | "whatsappAlert",
           );
+          if (!check.allowed) {
+            return NextResponse.json(
+              {
+                error: "Quota exceeded",
+                resource,
+                used: check.used,
+                max: check.max,
+                remaining: 0,
+                period: check.period,
+                agencyClientId: agency.activeAgencyClientId,
+              },
+              { status: 429 },
+            );
+          }
+          // consumeQuota already incremented — no separate increment needed.
+        } else {
+          // Gauge resource (keyword/source/user) — check only, the caller
+          // is responsible for recomputing and setting the absolute value.
+          const check = await checkQuota(agency.activeAgencyClientId, resource);
+          if (!check.allowed) {
+            return NextResponse.json(
+              {
+                error: "Quota exceeded",
+                resource,
+                used: check.used,
+                max: check.max,
+                remaining: 0,
+                period: check.period,
+                agencyClientId: agency.activeAgencyClientId,
+              },
+              { status: 429 },
+            );
+          }
+          // Best-effort increment — never block the handler on accounting.
+          incrementUsage(agency.activeAgencyClientId, resource, 1).catch((err) => {
+            console.error(
+              `[quota] failed to increment ${resource} for agencyClient ${agency.activeAgencyClientId}:`,
+              err,
+            );
+          });
         }
-        // Best-effort increment — never block the handler on accounting.
-        incrementUsage(agency.activeAgencyClientId, resource, 1).catch((err) => {
-          console.error(
-            `[quota] failed to increment ${resource} for agencyClient ${agency.activeAgencyClientId}:`,
-            err,
-          );
-        });
       }
     } catch (err) {
-      // Quota check itself failed — log and PASS THROUGH. The handler
-      // still runs (we'd rather serve the request than block a paying
-      // customer because of a transient DB error in the quota subsystem).
       console.error(`[quota] check failed for resource ${resource}:`, err);
     }
     return handler(req, ctx);
