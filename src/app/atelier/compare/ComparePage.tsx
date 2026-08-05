@@ -323,7 +323,7 @@ export default function ComparePage() {
               color: COLORS[i],
               values: getRiskValues(c),
             }))}
-            size={360}
+            size={420}
           />
         </div>
       </section>
@@ -432,7 +432,7 @@ export default function ComparePage() {
                 padding: "20px", background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px",
               }}>
-                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>
+                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.75)", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>
                   {s.label}
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700, color: "#FFFFFF", marginBottom: "4px" }}>
@@ -441,7 +441,7 @@ export default function ComparePage() {
                 <div style={{ fontSize: "24px", fontWeight: 800, color: C.sageBright, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>
                   {s.value}
                 </div>
-                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>
+                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.65)", marginTop: "4px" }}>
                   {s.metric}
                 </div>
               </div>
