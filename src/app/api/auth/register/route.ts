@@ -76,17 +76,29 @@ export async function POST(req: Request) {
     select: {
       id: true,
       email: true,
-      name: true,
       role: true,
-      
       createdAt: true,
     },
   });
 
   logInfo("auth.register", `New user registered: ${user.email}`);
 
+  // Defense-in-depth: the `name` field is user-controlled and may
+  // contain HTML (<script>...</script>). React escapes it in our own
+  // UI, but a third-party consumer of this JSON API could render it
+  // as HTML. We omit `name` from the response body (the client
+  // already knows the value it sent) and only return identifiers.
+  // Task ID: bugfix-qa-4b (XSS reflection hardening)
   return NextResponse.json(
-    { success: true, data: user },
+    {
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
+    },
     { status: 201 },
   );
 }
