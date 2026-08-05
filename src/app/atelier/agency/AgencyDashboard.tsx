@@ -938,8 +938,10 @@ function Tag({ children, status }: { children: React.ReactNode; status?: string 
     status === "suspended" ? C.warning :
     status === "terminated" ? C.danger :
     C.textMuted;
+  const text = typeof children === "string" ? children : "";
   return (
     <span
+      title={text}
       style={{
         fontSize: 11,
         fontWeight: 600,
@@ -949,6 +951,11 @@ function Tag({ children, status }: { children: React.ReactNode; status?: string 
         color: status ? color : C.textBody,
         fontFamily: C.fontMono,
         letterSpacing: "0.02em",
+        maxWidth: 180,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        display: "inline-block",
       }}
     >
       {children}

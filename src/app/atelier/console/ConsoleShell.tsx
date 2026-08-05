@@ -2347,7 +2347,7 @@ function DashboardSidebar(props: SidebarProps) {
               display: "flex",
               alignItems: "center",
               gap: "10px",
-              padding: "10px 20px",
+              padding: "10px 16px",
               fontSize: "13px",
               fontWeight: isActive ? 600 : 500,
               color: isActive ? C.sage : C.textSecondary,
@@ -2357,6 +2357,7 @@ function DashboardSidebar(props: SidebarProps) {
               transition: "all 0.15s",
               position: "relative",
               opacity: isDragged ? 0.4 : 1,
+              overflow: "hidden",
             }}
             onMouseEnter={(e) => {
               if (!isActive) {
@@ -2373,7 +2374,13 @@ function DashboardSidebar(props: SidebarProps) {
             title={`Drag to reorder · ${item.label}`}
           >
             {item.icon}
-            <span>{item.label}</span>
+            <span style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: "1 1 auto",
+              minWidth: 0,
+            }}>{item.label}</span>
             {item.badge && (
               <span
                 style={{
