@@ -50,7 +50,6 @@ const AXES = [
 export function CompetitorRadarChart() {
   const [brands, setBrands] = useState<BrandScores[]>(DEMO_BRANDS);
   const [visibleBrands, setVisibleBrands] = useState<Set<string>>(new Set(DEMO_BRANDS.map((b) => b.name)));
-  if (!brands || brands.length === 0) return null;
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/console/competitor-radar", { signal: controller.signal })
@@ -59,6 +58,7 @@ export function CompetitorRadarChart() {
       .catch((e) => { if (!(e instanceof DOMException && e.name === "AbortError")) {} });
     return () => controller.abort();
   }, []);
+  if (!brands || brands.length === 0) return null;
 
   const size = 280;
   const center = size / 2;
