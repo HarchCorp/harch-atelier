@@ -95,7 +95,8 @@ const SENTIMENT_30D = {
 // ─── SVG PATH HELPERS (copied from AtelierHome.tsx) ────────────────
 
 function buildLinePath(data: number[], w: number, h: number, max = 100): string {
-  const step = w / (data.length - 1);
+  if (!data || data.length === 0) return "";
+  const step = w / Math.max(data.length - 1, 1);
   return data
     .map((v, i) => {
       const x = i * step;
@@ -106,7 +107,8 @@ function buildLinePath(data: number[], w: number, h: number, max = 100): string 
 }
 
 function buildAreaPath(data: number[], w: number, h: number, max = 100): string {
-  const step = w / (data.length - 1);
+  if (!data || data.length === 0) return "";
+  const step = w / Math.max(data.length - 1, 1);
   const line = data
     .map((v, i) => {
       const x = i * step;
