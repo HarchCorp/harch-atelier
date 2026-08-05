@@ -60,6 +60,7 @@ const SEVERITY_META: Record<string, { color: string; icon: string; label: string
 export function CrisisTimeline() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>(DEMO_TIMELINE);
   const [expanded, setExpanded] = useState<number | null>(0);
+  if (!timeline || timeline.length === 0) return null;
   useEffect(() => { fetch("/api/console/crisis-timeline").then(r => r.ok ? r.json() : null).then(d => { if (d?.events) setTimeline(d.events); }).catch(() => {}); }, []);
 
   // Build the sentiment curve points

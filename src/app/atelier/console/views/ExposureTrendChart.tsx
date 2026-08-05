@@ -63,7 +63,7 @@ export function ExposureTrendChart() {
   }, []);
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
-  if (series.length === 0 || !series[0] || series[0].data.length === 0) {
+  if (!series || series.length === 0 || !series[0] || !series[0].data || series[0].data.length === 0) {
     return <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "40px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "13px" }}>Loading exposure data…</div>;
   }
 

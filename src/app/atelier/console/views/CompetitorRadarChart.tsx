@@ -50,6 +50,7 @@ const AXES = [
 export function CompetitorRadarChart() {
   const [brands, setBrands] = useState<BrandScores[]>(DEMO_BRANDS);
   const [visibleBrands, setVisibleBrands] = useState<Set<string>>(new Set(DEMO_BRANDS.map((b) => b.name)));
+  if (!brands || brands.length === 0) return null;
   useEffect(() => { fetch("/api/console/competitor-radar").then(r => r.ok ? r.json() : null).then(d => { if (d?.brands) setBrands(d.brands); }).catch(() => {}); }, []);
 
   const size = 280;
