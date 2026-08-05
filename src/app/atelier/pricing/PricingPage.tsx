@@ -488,7 +488,7 @@ function Hero() {
               <div style={{ fontSize: "28px", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1, letterSpacing: "-0.02em" }}>
                 {t.price}
               </div>
-              <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, marginTop: "6px" }}>
+              <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textSecondary, marginTop: "6px" }}>
                 {t.period}
               </div>
             </a>
@@ -622,9 +622,9 @@ function TierCard({ tier }: { tier: Tier }) {
           <span style={{ fontSize: "44px", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1, letterSpacing: "-0.03em" }}>
             {tier.price}
           </span>
-          <span style={{ fontSize: "14px", fontFamily: FONT.mono, color: C.textMuted }}>{tier.period}</span>
+          <span style={{ fontSize: "14px", fontFamily: FONT.mono, color: C.textSecondary }}>{tier.period}</span>
         </div>
-        <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.04em" }}>
+        <div style={{ fontSize: "12px", color: C.textSecondary, fontFamily: FONT.mono, marginTop: "8px", letterSpacing: "0.04em" }}>
           ≈ {tier.id === "emergence" ? "€1,500" : tier.id === "corporate" ? "€4,000" : "€7,500"} / mois · virement bancaire
         </div>
       </div>
