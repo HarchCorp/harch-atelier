@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Language",
+    "switchLanguage": "Switch language",
+    "nav": {
+      "home": "Home",
+      "pricing": "Pricing",
+      "about": "About",
+      "contact": "Contact",
+      "blog": "Blog",
+      "sign_in": "Sign in",
+      "console": "Console"
+    },
+    "footer": {
+      "navigation": "Navigation",
+      "products": "Products",
+      "tools": "Tools",
+      "resources": "Resources",
+      "company": "Company"
+    },
+    "cta": {
+      "get_audit": "Get audit",
+      "start_trial": "Start trial",
+      "contact_sales": "Contact sales"
+    }
+  }
+}

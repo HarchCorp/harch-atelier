@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useLocale } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import BrandBadge from "@/components/BrandBadge";
 import { ATELIER_NAV_LINKS, NavItem } from "./tokens";
 
@@ -9,6 +11,14 @@ import { ATELIER_NAV_LINKS, NavItem } from "./tokens";
 //  ATELIER NAVBAR — MEGA MENU (Signal AI style)
 //  6 top-level items with dropdowns containing grouped sections
 //  Light theme, sticky, blur backdrop on scroll
+//
+//  i18n: the FR/EN toggle is wired to `router.replace(pathname,
+//  { locale })` from `@/i18n/navigation`. The active locale is read
+//  from `useLocale()` (next-intl), which reflects the URL prefix set
+//  by the next-intl middleware in src/middleware.ts. The previous
+//  implementation only updated local React state + localStorage —
+//  the button appeared alive but the URL & page content never
+//  changed ("dead button" bug YGGDRASIL-i18n).
 // ═══════════════════════════════════════════════════════════════
 
 type Lang = "fr" | "en";
@@ -37,7 +47,11 @@ export function AtelierNav() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const [lang, setLang] = useState<Lang>("en");
+
+  // Active locale from next-intl (reflects URL prefix set by middleware).
+  const locale = useLocale() as Lang;
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -45,19 +59,27 @@ export function AtelierNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Migrate any legacy localStorage preference on first mount, then
+  // mirror the URL locale. The source of truth is now the URL.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("atelier-lang");
-      if (stored === "en" || stored === "fr") setLang(stored);
-    } catch {}
-  }, []);
+      if (stored === "en" || stored === "fr") {
+        if (stored !== locale) {
+          router.replace(pathname, { locale: stored });
+        }
+        window.localStorage.removeItem("atelier-lang");
+      }
+    } catch {
+      // localStorage may be unavailable (private mode) — ignore.
+    }
+  }, [locale, pathname, router]);
 
   const switchLang = (next: Lang) => {
-    if (next === lang) return;
-    setLang(next);
-    try {
-      window.localStorage.setItem("atelier-lang", next);
-    } catch {}
+    if (next === locale) return;
+    // Real i18n navigation: rewrites the URL with the new locale prefix.
+    // English (default) → no prefix; French → /fr/... prefix.
+    router.replace(pathname, { locale: next });
   };
 
   return (
@@ -131,7 +153,7 @@ export function AtelierNav() {
             }}
           >
             {(["fr", "en"] as Lang[]).map((code) => {
-              const active = code === lang;
+              const active = code === locale;
               return (
                 <button
                   key={code}

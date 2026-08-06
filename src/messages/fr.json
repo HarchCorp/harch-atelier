@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Langue",
+    "switchLanguage": "Changer de langue",
+    "nav": {
+      "home": "Accueil",
+      "pricing": "Tarifs",
+      "about": "À propos",
+      "contact": "Contact",
+      "blog": "Blog",
+      "sign_in": "Se connecter",
+      "console": "Console"
+    },
+    "footer": {
+      "navigation": "Navigation",
+      "products": "Produits",
+      "tools": "Outils",
+      "resources": "Ressources",
+      "company": "Entreprise"
+    },
+    "cta": {
+      "get_audit": "Obtenir l'audit",
+      "start_trial": "Démarrer l'essai",
+      "contact_sales": "Contacter les ventes"
+    }
+  }
+}

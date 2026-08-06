@@ -1,18 +1,23 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // ═══════════════════════════════════════════════════════════════
 //  NEXT.CONFIG — Harch Atelier (atelier.harchcorp.com)
 //
-//  This repo deploys ONLY the Atelier product. No harch-corp routes,
-//  no i18n (next-intl removed — atelier is English-only for now),
-//  no harchcorp.com redirects.
+//  This repo deploys the Atelier product with FR/EN i18n (next-intl).
+//  Public marketing pages (/atelier/pricing, /about, /contact...) are
+//  localized; private apps (/atelier/console/*, /atelier/admin-x7k2m9,
+//  /atelier/agency) remain English-only and bypass i18n.
 //
 //  Key config:
+//  • next-intl plugin wired to ./src/i18n/request.ts
 //  • / → 308 permanent redirect to /atelier (SEO link equity)
 //  • standalone output (Vercel-friendly)
 //  • AEGIS security headers + strict CSP
 //  • Images: only atelier.harchcorp.com allowed as remote pattern
 // ═══════════════════════════════════════════════════════════════
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -125,4 +130,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);
