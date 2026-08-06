@@ -535,3 +535,143 @@ Files changed:
 4. Le badge "1 Issue" sur la login screen — investiguer (probablement un warning build/runtime qui fuite vers l'UI)
 
 — *Agent 3 (Le Juge), rapprochement trilatéral terminé. End of report.*
+
+---
+
+## Task ID: YGGDRASIL-i18n — Câblage i18n réel (FR/EN)
+
+**Agent:** Architecte i18n (sub-agent general-purpose)
+**Commit:** `c54903f` (poussé sur `origin/main`)
+**Date:** 2026-08-06
+
+### Contexte / Problème
+
+Le bouton FR/EN de l'atelier (`AtelierNav.tsx`) était mort : son handler
+`switchLang` ne faisait qu'un `setLang` (state local) + `localStorage.setItem`.
+L'URL ne changeait jamais, et même si elle avait changé, le middleware
+n'avait aucun câblage next-intl — donc aucune détection de locale, aucun
+préfixe `/fr/`, aucun message FR chargé. Le `NextIntlClientProvider` était
+également absent du layout atelier.
+
+### Changes (7 fichiers, +298 / −63)
+
+1. **`next.config.ts`** — Wrap avec `createNextIntlPlugin('./src/i18n/request.ts')`.
+   Le plugin est requis en next-intl v4 pour brancher `getRequestConfig`.
+
+2. **`src/i18n/request.ts`** — Fix du chemin d'import des messages :
+   `../../messages/${locale}.json` pointait vers la racine du repo (hors `src/`).
+   Corrigé en `../messages/${locale}.json` → `src/messages/{locale}.json`.
+
+3. **`src/messages/en.json`** + **`src/messages/fr.json`** (nouveaux) —
+   Clés minimaux demandées :
+   - `common.nav` : home, pricing, about, contact, blog, sign_in, console
+   - `common.footer` : navigation, products, tools, resources, company
+   - `common.cta` : get_audit, start_trial, contact_sales
+   - `common.language` + `common.switchLanguage` (consommés par `LanguageSwitcher.tsx`)
+
+4. **`src/middleware.ts`** — Combine les 3 concerns (i18n + auth + security) :
+   - **i18n** : `createMiddleware(routing)` de `next-intl/middleware` pour la
+     détection de locale (Accept-Language + cookie `NEXT_LOCALE` + URL prefix).
+   - **Auth gate préservé** : `/dashboard/*`, `/admin/*`, `/api/atelier/*`
+     gardent leur logique zero-trust (getToken + role check). Ces routes
+     ne sont PAS localisées.
+   - **Apps privées English-only** : `/atelier/console/*`,
+     `/atelier/admin-x7k2m9`, `/atelier/agency` bypassent i18n. Si un user
+     tombe sur `/fr/<private-app>`, le middleware 308-redirect vers la
+     version sans préfixe.
+   - **Pattern d'interception** : next-intl v4 suppose qu'on a un segment
+     `[locale]` dans `app/` et rewrite `/atelier/pricing` → `/en/atelier/pricing`
+     en interne. Comme l'atelier vit à `app/atelier/*` (pas de `[locale]`),
+     on intercepte la réponse next-intl, on strip le préfixe `/<locale>/`,
+     et on emit un `NextResponse.rewrite()` vers le path sous-jacent tout en
+     préservant le header `x-next-intl-locale` que `getRequestConfig` lit.
+     Hreflang alternates (en/fr/x-default) et cookie `NEXT_LOCALE` propagés.
+   - **AEGIS headers** appliqués sur toutes les réponses (incl. redirects).
+
+5. **`src/app/atelier/layout.tsx`** — Wrap `children` dans
+   `NextIntlClientProvider` avec `messages={await getMessages()}`. Layout
+   devient `async`. `getMessages()` lit depuis `getRequestConfig` qui
+   lui-même lit le header `x-next-intl-locale` posé par le middleware.
+
+6. **`src/app/atelier/components/AtelierNav.tsx`** — Le bouton FR/EN mort
+   est remplacé :
+   - Avant : `setLang(next)` + `localStorage.setItem("atelier-lang", next)` →
+     URL inchangée, page inchangée.
+   - Après : `useLocale()` (next-intl) pour la locale active +
+     `router.replace(pathname, { locale: next })` depuis `@/i18n/navigation`.
+     L'URL est réécrite avec le préfixe `/fr/` (ou stripped pour EN), le
+     middleware re-détecte la locale, recharge les messages FR, et
+     `useLocale()` retourne 'fr'. Migration de l'ancien localStorage au
+     premier mount (puis removal).
+
+7. **`src/components/LanguageSwitcher.tsx`** — Pas touché. Déjà correct :
+   `useLocale()` + `useRouter()` + `router.replace(pathname, {locale})`.
+   Vérifié fonctionnel avec le nouveau middleware.
+
+### Vérification (dev server, `next dev -p 3000`)
+
+```
+/atelier/pricing              → 200 (EN, default, no prefix)
+/fr/atelier/pricing           → 200 (FR, prefix stripped, locale=fr)
+/atelier                      → 200
+/atelier/about                → 200
+/atelier/console/brand-monitor → 200 (private app, no i18n, English-only)
+/fr/atelier/console/brand-monitor → 308 → /atelier/console/brand-monitor
+/                             → 308 → /atelier (next.config redirect)
+```
+
+Headers vérifiés sur `/fr/atelier/pricing` :
+- `set-cookie: NEXT_LOCALE=fr; Path=/; SameSite=lax` ✓
+- `link: <...>; rel="alternate"; hreflang="en", <...>; hreflang="fr", <...>; hreflang="x-default"` ✓
+- `x-middleware-rewrite: /atelier/pricing` ✓
+- Tous les AEGIS security headers présents ✓
+
+### Lint / Type-check
+
+- `bun run lint` sur les fichiers édités : 0 erreur, 0 warning.
+  (Le reste du repo a 25 erreurs pré-existantes dans des fichiers non touchés :
+  PageTransition.tsx, Sidebar.tsx, Charts.tsx, lib/types/platform.ts, etc.)
+- `bunx tsc --noEmit` : 0 erreur sur les fichiers édités.
+
+### Ce que fait maintenant le bouton FR
+
+1. User clique FR dans `AtelierNav` (ou `LanguageSwitcher` si utilisé).
+2. `router.replace(pathname, { locale: 'fr' })` génère l'URL `/fr/atelier/pricing`.
+3. Le navigateur navigue (history.replaceState, pas de full reload).
+4. Le middleware détecte locale=fr, strip `/fr/`, rewrite vers
+   `/atelier/pricing` avec header `x-next-intl-locale: fr`.
+5. `getRequestConfig` lit le header, charge `src/messages/fr.json`.
+6. `NextIntlClientProvider` reçoit les messages FR.
+7. `useLocale()` retourne 'fr' → le bouton highlight FR.
+8. `useTranslations('common.nav.pricing')` retourne "Tarifs" (quand les
+   pages consommeront les traductions — pour l'instant seul le switcher
+   lui-même utilise `common.switchLanguage` / `common.language`).
+9. Cookie `NEXT_LOCALE=fr` posé → la locale persiste au prochain visit.
+
+### Trade-off / Note technique
+
+next-intl v4 suppose un segment `[locale]` dans `app/` (ex: `app/[locale]/atelier/...`).
+Le repo utilise `app/atelier/*` (pas de segment). Deux options :
+
+- **A** (rejetée) : déplacer tout `app/atelier/*` → `app/[locale]/atelier/*`.
+  Trop invasif (90+ pages, imports relatifs à vérifier), et casse la
+  contrainte "le layout atelier reste à `src/app/atelier/layout.tsx`".
+- **B** (adoptée) : garder `createMiddleware` pour la détection + Accept-Language
+  + cookie, mais intercepter sa réponse et rewrite vers le path sous-jacent.
+  ~25 lignes de code en plus, zéro fichier déplacé, toutes les features
+  next-intl (hreflang, NEXT_LOCALE cookie, `useRouter().replace(pathname, {locale})`)
+  fonctionnelles.
+
+### Prochaines étapes recommandées (hors scope)
+
+- Traduire le contenu des pages (pricing, about, contact) en utilisant
+  `useTranslations('atelier.pricing.*')` etc. — les clés sont à ajouter
+  dans `src/messages/{en,fr}.json`.
+- Vérifier que `src/i18n/i18n/` (dossier dupliqué, ancien backup) peut
+  être supprimé — il n'est pas référencé par le plugin (qui pointe sur
+  `./src/i18n/request.ts` canonique).
+- Considérer migrer le `app/page.tsx` (root redirect) et le `next.config.ts`
+  `redirects()` pour qu'ils respectent la locale (un user FR visitant `/`
+  devrait aller sur `/fr/atelier` plutôt que `/atelier`).
+
+— *Architecte i18n, YGGDRASIL-i18n terminé.*
