@@ -901,12 +901,12 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
               }}>
                 <span>
                   <span style={{ color: C.textMuted }}>Harch 100 rank </span>
-                  <strong style={{ color: D.color, fontSize: "16px" }}>#{D.rank}</strong>
+                  <strong style={{ color: D.color, fontSize: "16px" }}>{formatRank(D.rank)}</strong>
                 </span>
                 <span style={{ color: C.borderLight }}>·</span>
                 <span>
                   <span style={{ color: C.textMuted }}>Industry rank </span>
-                  <strong style={{ color: C.text }}>#{D.industryRank}</strong>
+                  <strong style={{ color: C.text }}>{formatRank(D.industryRank)}</strong>
                   <span style={{ color: C.textMuted }}> of {D.industryTotal}</span>
                 </span>
                 <span style={{ color: C.borderLight }}>·</span>
@@ -969,9 +969,9 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
           <div style={cardStyle}>
             <div style={cardTitleStyle}>Position in Harch 100</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <RankRow label="Harch 100 cross-industry rank" value={`#${D.rank}`} subtitle="of 100 Moroccan companies tracked" color={D.color} />
-              <RankRow label={`${D.sector} industry rank`} value={`#${D.industryRank}`} subtitle={`of ${D.industryTotal} ${D.sector.toLowerCase()} companies`} color={C.accent} />
-              <RankRow label="AI visibility rank" value={`#${D.topStats.aiCitations === D.topStats.aiCitationsTotal ? "1" : "2"}`} subtitle={`Cited by ${D.topStats.aiCitations} of ${D.topStats.aiCitationsTotal} AI engines`} color={C.sage} />
+              <RankRow label="Harch 100 cross-industry rank" value={formatRank(D.rank)} subtitle="of 100 Moroccan companies tracked" color={D.color} />
+              <RankRow label={`${D.sector} industry rank`} value={formatRank(D.industryRank)} subtitle={`of ${D.industryTotal} ${D.sector.toLowerCase()} companies`} color={C.accent} />
+              <RankRow label="AI visibility rank" value={formatRank(D.topStats.aiCitations === D.topStats.aiCitationsTotal ? 1 : 2)} subtitle={`Cited by ${D.topStats.aiCitations} of ${D.topStats.aiCitationsTotal} AI engines`} color={C.sage} />
             </div>
             <div style={{
               marginTop: "24px", paddingTop: "20px",
@@ -1791,6 +1791,26 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
 }
 
 // ─── SUB-COMPONENTS ──────────────────────────────────────────────
+
+/**
+ * formatRank — defensive rank formatter.
+ *
+ * Background: Agent 2 (VLM) reported seeing "#0000" as a rank placeholder
+ * on the OCP company page. Investigation (Agent 3, Task 10-A3) showed
+ * the actual code rendered "#1" correctly and the body-text capture
+ * confirmed "#1" — the VLM hallucinated "#0000". However, the prior
+ * template literal `#${D.rank}` would render "#0" or "#undefined" if a
+ * future company ever has rank === 0 or rank === undefined. This helper
+ * guarantees that invalid ranks render as "N/A" instead of an ambiguous
+ * "#" + falsy string, eliminating any future VLM hallucination fodder.
+ */
+function formatRank(rank: number | undefined | null): string {
+  if (rank === undefined || rank === null || !Number.isFinite(rank) || rank < 1) {
+    return "N/A";
+  }
+  return `#${Math.floor(rank)}`;
+}
+
 function RankRow({ label, value, subtitle, color }: { label: string; value: string; subtitle: string; color: string }) {
   return (
     <div style={{

@@ -151,7 +151,10 @@ export function AtelierFooter() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
+            // Wider cards (180px min) so city labels like "Casablanca · Rabat · Marrakech"
+            // are not aggressively truncated. Was 140px → clientWidth was 80px → "Paris - Ly…".
+            // Agent 3 fix (Task 10-A3): 140px → 180px + tighter padding/gap.
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
             gap: "12px",
           }}
         >
@@ -161,11 +164,12 @@ export function AtelierFooter() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px",
+                gap: "8px",
+                padding: "8px 10px",
                 background: C.bgSubtle,
                 border: `1px solid ${C.border}`,
                 borderRadius: "4px",
+                overflow: "hidden",
               }}
             >
               <span
@@ -174,7 +178,7 @@ export function AtelierFooter() {
                   fontWeight: 700,
                   fontFamily: C.fontMono,
                   color: "#FFFFFF",
-                  padding: "4px 8px",
+                  padding: "4px 6px",
                   background: C.accent,
                   border: `1px solid ${C.accent}`,
                   borderRadius: "2px",
@@ -184,7 +188,7 @@ export function AtelierFooter() {
               >
                 {c.code}
               </span>
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
                 <div
                   style={{
                     fontSize: "13px",

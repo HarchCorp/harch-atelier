@@ -58,7 +58,29 @@ export function LoginPage() {
     // Build callback URL from the CURRENT browser origin (not NEXTAUTH_URL)
     // so it works on localhost (dev), atelier.harchcorp.com (prod), and
     // cloudflared tunnels without redirecting to the wrong host.
-    const callbackUrl = `${window.location.origin}/atelier/console`;
+    //
+    // Agent 3 fix (Task 10-A3): PRESERVE the ?callbackUrl=… query param
+    // that the auth gate at /atelier/console/{brand-monitor,…}/page.tsx
+    // sets when redirecting unauthenticated users. Previously this was
+    // hardcoded to "/atelier/console", so a user who tried to visit
+    // /atelier/console/brand-monitor would land on /atelier/console
+    // after login instead of the brand-monitor dashboard they wanted.
+    // The flow now:
+    //   1. Auth gate redirects to /atelier/login?callbackUrl=/atelier/console/brand-monitor
+    //   2. LoginPage reads the param and passes it to signIn()
+    //   3. signIn() returns result.url with the callbackUrl appended
+    //   4. The pathname-only fallback (line ~86) keeps the user on the current origin
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedCallback = urlParams.get("callbackUrl");
+    // SECURITY: only accept same-origin relative paths (must start with "/atelier/").
+    // Reject absolute URLs and paths outside /atelier/ to prevent open-redirect abuse.
+    const safeCallback =
+      requestedCallback &&
+      requestedCallback.startsWith("/atelier/") &&
+      !requestedCallback.startsWith("//")
+        ? requestedCallback
+        : "/atelier/console";
+    const callbackUrl = `${window.location.origin}${safeCallback}`;
 
     const result = await signIn("credentials", {
       email,
