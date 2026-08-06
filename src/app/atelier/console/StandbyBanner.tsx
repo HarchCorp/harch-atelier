@@ -18,9 +18,8 @@
 //  Task ID: 5-standby
 // ═══════════════════════════════════════════════════════════════
 
-import { AtelierNav } from "../components/AtelierNav";
-import { AtelierFooter } from "../components/AtelierFooter";
 import { C } from "../components/tokens";
+import { BrandBadge } from "../components/HarchLogo";
 
 export interface StandbyBannerProps {
   featureName: string;
@@ -52,7 +51,27 @@ export function StandbyBanner({
         color: C.text,
       }}
     >
-      <AtelierNav />
+      <header style={{
+        padding: "16px 24px",
+        borderBottom: `1px solid ${C.border}`,
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        background: C.surface,
+      }}>
+        <BrandBadge size="sm" theme="light" />
+        <span style={{
+          fontFamily: C.fontMono,
+          fontSize: "10px",
+          color: C.accent,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          borderLeft: `1px solid ${C.border}`,
+          paddingLeft: "10px",
+        }}>
+          Console
+        </span>
+      </header>
 
       <main
         style={{
@@ -202,7 +221,21 @@ export function StandbyBanner({
         </div>
       </main>
 
-      <AtelierFooter />
+      <footer style={{
+        padding: "12px 24px",
+        borderTop: `1px solid ${C.border}`,
+        background: C.surface,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        fontFamily: C.fontMono,
+        fontSize: "10px",
+        color: C.textMuted,
+        letterSpacing: "0.05em",
+      }}>
+        <span>HarchIQ Console · Private workspace</span>
+        <span>English only · No public navigation</span>
+      </footer>
     </div>
   );
 }

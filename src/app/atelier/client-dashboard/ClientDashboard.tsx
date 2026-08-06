@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AtelierNav } from "../components/AtelierNav";
-import { AtelierFooter } from "../components/AtelierFooter";
 import { C } from "../components/tokens";
+import { BrandBadge } from "../components/HarchLogo";
 
 // ═══════════════════════════════════════════════════════════════
 //  CLIENT DASHBOARD — the page a paying client sees
@@ -85,7 +84,27 @@ export function ClientDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bgSubtle, fontFamily: C.fontSans, color: C.text, display: "flex", flexDirection: "column" }}>
-      <AtelierNav />
+      <header style={{
+        padding: "16px 24px",
+        borderBottom: `1px solid ${C.border}`,
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        background: C.surface,
+      }}>
+        <BrandBadge size="sm" theme="light" />
+        <span style={{
+          fontFamily: C.fontMono,
+          fontSize: "10px",
+          color: C.accent,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          borderLeft: `1px solid ${C.border}`,
+          paddingLeft: "10px",
+        }}>
+          Client Dashboard
+        </span>
+      </header>
       
       <main style={{ maxWidth: "1100px", margin: "0 auto", padding: "32px 24px", flex: 1, width: "100%" }}>
         {/* Header */}
@@ -167,7 +186,21 @@ export function ClientDashboard() {
         </div>
       </main>
 
-      <AtelierFooter />
+      <footer style={{
+        padding: "12px 24px",
+        borderTop: `1px solid ${C.border}`,
+        background: C.surface,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        fontFamily: C.fontMono,
+        fontSize: "10px",
+        color: C.textMuted,
+        letterSpacing: "0.05em",
+      }}>
+        <span>HarchIQ · Client Dashboard</span>
+        <span>Private workspace · English only</span>
+      </footer>
     </div>
   );
 }
