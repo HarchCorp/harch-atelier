@@ -675,3 +675,73 @@ Le repo utilise `app/atelier/*` (pas de segment). Deux options :
   devrait aller sur `/fr/atelier` plutôt que `/atelier`).
 
 — *Architecte i18n, YGGDRASIL-i18n terminé.*
+
+---
+
+Task ID: YGGDRASIL-rbac
+Agent: Architecte RBAC
+Task: RBAC matrix profonde + Master Codes Admin uniques pour le propriétaire (super_admin activation)
+
+Work Log:
+- ÉTAPE 1 — `src/lib/auth/rbac.ts` (358 lignes) :
+  - `UserRole` const enum avec 10 rôles : `super_admin`, `admin`, `agency-admin`, `company-admin`, `manager`, `analyst`, `viewer` + 3 rôles legacy (`legacy_user_v1`, `legacy_trial`, `legacy_beta`) préservés pour l'intégrité historique (DB peut contenir d'anciennes lignes).
+  - Type `Permission` (23 permissions) couvrant 10 domaines : console, agency, admin, users, reports, alerts, billing, audit, master:code.
+  - `PERMISSIONS: Record<UserRole, Permission[]>` — matrice exhaustive explicite (pas de cascade, chaque rôle liste toutes ses permissions — audit trivial par grep).
+  - Helpers : `hasPermission`, `hasAnyPermission`, `getRoleLevel` (0=viewer, 10=analyst, 20=manager, 30=company-admin, 40=agency-admin, 50=admin, 100=super_admin), `canRoleAccess`, `normalizeRole` (fail-closed vers VIEWER si rôle inconnu), `isLegacyRole`, `roleLabel`.
+  - Rôles legacy résolvent au niveau 0 (lecture seule) — impossible d'escalader silencieusement les privilèges via une ligne DB corrompue.
+
+- ÉTAPE 2 — `src/lib/auth/master-code.ts` (319 lignes) :
+  - `generateMasterCode()` : format `HARCH-XXXXX-XXXXX-XXXXX` (15 chars aléatoires depuis un alphabet de 32 chars sans 0/1/O/I pour éviter les erreurs de transcription). CSPRNG via `crypto.randomBytes` avec rejection sampling (mask 0x1f) pour éliminer le modulo bias. Retourne `{ code, hash, salt, expiresAt }`.
+  - Hashing : `SHA-256(salt + ':' + code)` hex digest, 32-byte salt aléatoire. Le plaintext n'est JAMAIS persisté — seul hash+salt sont stockés.
+  - `validateMasterCode(code, user)` :
+    1. Normalisation (trim, uppercase, strip espaces)
+    2. Validation format regex `^HARCH-[A-Z2-9]{5}-[A-Z2-9]{5}-[A-Z2-9]{5}$`
+    3. Rejet si user déjà `super_admin` (pas de gaspillage de code)
+    4. Scan de tous les codes non-utilisés + non-expirés (set minuscule : 1-5 codes actifs max), comparaison constant-time via `timingSafeEqual` sur les hex digests (longueurs égales — pas de length-leak)
+    5. Mark-used atomique : `updateMany WHERE usedAt IS NULL` — un seul gagnant en cas de concurrence
+    6. Upgrade user → `super_admin`
+    7. Audit log (succès + échec, avec reason)
+  - TTL 24h (`MASTER_CODE_TTL_MS = 24 * 60 * 60 * 1000`).
+  - `persistMasterCode()` : écrit uniquement hash+salt, jamais le plaintext.
+
+- ÉTAPE 3 — `prisma/schema.prisma` (+26 lignes) :
+  - Nouveau modèle `MasterCode` : `id`, `codeHash @unique`, `codeSalt`, `createdBy` ("bootstrap" pour le premier code), `usedAt?`, `usedByUserId?`, `expiresAt`, `createdAt`.
+  - Indexes : `@@index([codeHash])`, `@@index([usedAt])`, `@@index([expiresAt])`.
+  - `AuditLog.AuditAction` étendu : `master_code_generate`, `master_code_activate`, `master_code_failed` (conformité Loi 09-08 / CNDP Maroc).
+  - Note : `bun run db:push` échoue dans ce sandbox car `DATABASE_URL` pointe vers SQLite (`file:...`) mais le `provider` est `postgresql`. Le schéma est prêt pour le push Neon — il suffit d'un env avec `DATABASE_URL` + `DIRECT_URL` postgresql valides. Client Prisma régénéré (`bunx prisma generate`) — le delegate `prisma.masterCode` est actif.
+
+- ÉTAPE 4 — `scripts/generate-master-code.ts` (232 lignes) :
+  - Génère exactement UN Master Code.
+  - Backend de persistance en cascade : (1) Prisma → Neon PostgreSQL, (2) fallback SQLite local via `bun:sqlite` (miroir de la table MasterCode dans `./db/custom.db`) pour les envs sans postgres.
+  - Refuse de générer un second code si un code actif (unused + non-expiré) existe déjà (sécurité anti-minting).
+  - Affiche le plaintext UNE SEULE FOIS dans une bannière ASCII.
+  - Audit log best-effort.
+
+- ÉTAPE 5 — `src/app/api/auth/activate-master/route.ts` (241 lignes) :
+  - `POST /api/auth/activate-master` body `{ code, userId? }`.
+  - Anti-brute-force : 5 tentatives par IP / 10 min via `createRateLimiter` (rate-limit.ts existant). 6e tentative → 429 + `Retry-After`.
+  - Auth requise : `getServerSession(authOptions)` — un caller non-authentifié ne peut pas activer de code (401).
+  - `userId` body optionnel ; si fourni, DOIT matcher `session.user.id` (409 si mismatch — impossible d'upgrader un autre compte).
+  - Re-lit le rôle user depuis la DB (décision `already_super_admin` autoritative, pas sur le JWT potentiellement stale).
+  - Comptes demo bloqués (in-memory, l'upgrade disparaîtrait à la prochaine requête).
+  - Réponses uniformisées : tous les échecs de validation de code retournent `"Invalid code."` générique (pas de side-channel d'énumération entre `invalid_format` / `not_found` / `already_used` / `expired`). Seuls `already_super_admin` (409) et `db_error` (500) ont des messages distincts.
+
+- ÉTAPE 6 — Vérification + commit :
+  - `bunx eslint` sur les 4 nouveaux fichiers : 0 erreur, 0 warning.
+  - `bunx prisma generate` : Prisma Client v6.19.2 régénéré avec le delegate `masterCode`.
+  - `bun run scripts/generate-master-code.ts` exécuté → Master Code généré + persisté dans SQLite local + vérifié cryptographiquement (hash SHA-256 match, wrong code ne matche pas).
+  - Commit `03e247f` poussé sur `main` : 6 fichiers, +1278 lignes, -1.
+
+Stage Summary:
+- 6 fichiers créés/édités : `src/lib/auth/rbac.ts` (new), `src/lib/auth/master-code.ts` (new), `src/app/api/auth/activate-master/route.ts` (new), `scripts/generate-master-code.ts` (new), `prisma/schema.prisma` (+26), `src/lib/harchiq/audit-log.ts` (+3 actions).
+- RBAC : 10 rôles (7 actifs + 3 legacy), 23 permissions, helpers fail-closed.
+- Master Codes : format `HARCH-XXXXX-XXXXX-XXXXX`, SHA-256 + 32-byte salt, usage unique, TTL 24h, comparaison constant-time.
+- API route : anti-brute-force 5/10min, session-required, no cross-user activation, no enumeration side-channel.
+- Audit : 3 nouvelles actions `master_code_*` ajoutées au type `AuditAction` (Loi 09-08).
+
+Notes opérationnelles :
+- **db:push** : nécessite un env postgresql (Neon) avec `DATABASE_URL` + `DIRECT_URL`. Dans ce sandbox, `DATABASE_URL=file:...` (SQLite stale) → `prisma db push` échoue avec P1012 (DIRECT_URL manquant). Le schéma est committed et prêt ; au prochain déploiement Neon, `bun run db:push` créera la table `MasterCode`.
+- **Master Code en clair** : voir le rapport final de l'agent. Le hash+salt sont persistés en SQLite local pour vérification sandbox ; en production, re-exécuter `bun run scripts/generate-master-code.ts` dans l'env Neon pour persister un code dans PostgreSQL.
+- **Code space** : 32^15 ≈ 3.7×10^22 combinaisons possibles. Combiné au rate-limit (5/10min/IP) + TTL 24h, le brute-force est computationnellement infaisable (~7.4×10^16 années en moyenne par IP).
+
+— *Architecte RBAC, YGGDRASIL-rbac terminé.*
