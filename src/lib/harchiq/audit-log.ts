@@ -41,7 +41,10 @@ export type AuditAction =
   | "briefing_generate"
   | "insights_generate"
   | "agency_subclient_created"
-  | "whatsapp_import";
+  | "whatsapp_import"
+  | "master_code_generate"
+  | "master_code_activate"
+  | "master_code_failed";
 
 export type AuditResult = "success" | "denied" | "error";
 
