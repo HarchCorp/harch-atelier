@@ -935,3 +935,28 @@ Stage Summary:
 - The UI now ADAPTS to user behavior — no more static interfaces
 - Components self-heal on crash — no more white screens
 - Next: ZKP auth (N10,10,100), then Agent-to-Agent B2B (N40,100,50)
+
+---
+Task ID: 17
+Agent: main (Swarm)
+Task: Infinite R&D Swarm — Grey Zone Protocol (Phase 1 + 2)
+
+Work Log:
+- Phase 1 (Inquisitor found 5 grey zones):
+  1. RBAC Permission UI missing → built PermissionsTab (7 roles, dropdown, RBAC hierarchy card)
+  2. RBAC not wired to admin → wired via PermissionsTab + SecurityTab
+  3. ZKP not linked from login → added ZKP link box on /atelier/login
+  4. Super-admin pages orphaned → linked from Security tab
+  5. Admin nav incomplete → added Permissions + Security tabs (7 total)
+
+- Phase 2 (Driver found 3 NEW grey zones after Phase 1):
+  1. tabTitle/tabSubtitle missing new tabs → added permissions + security cases
+  2. PATCH /api/admin/users missing → added role-change handler with sessionVersion bump
+  3. Lab index missing → created /atelier/lab/page.tsx with 6 experiment cards
+
+Commits: ebb2893 (Phase 1), 0976b13 (Phase 2)
+
+Stage Summary:
+- 8 grey zones found and fixed in 2 phases
+- Every backend feature now has a frontend interface
+- The Driver continues — next cycle will scan for new zones
