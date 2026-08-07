@@ -65,6 +65,7 @@ declare module "next-auth/jwt" {
     isDemo?: boolean;
     agencyId?: string | null;
     activeAgencyClientId?: string | null;
+    sessionVersion?: number;
   }
 }
 
@@ -260,6 +261,9 @@ export const authOptions: NextAuthOptions = {
         token.companyId = (user as { companyId?: string | null }).companyId;
         token.status = (user as { status?: string }).status;
         token.isDemo = (user as { isDemo?: boolean }).isDemo;
+        // YGGDRASIL-N40: store sessionVersion at sign-in so we can
+        // detect revocation on subsequent JWT refreshes.
+        token.sessionVersion = (user as { sessionVersion?: number }).sessionVersion ?? 0;
         // Brick 8 — agency white-label: persist agencyId claim so the
         // agency-session module can short-circuit when there's no
         // active sub-client workspace.
@@ -312,6 +316,32 @@ export const authOptions: NextAuthOptions = {
         token.status = demoUser.status;
         token.isDemo = true;
       }
+
+      // ─── YGGDRASIL-N40: Session Revocation Check ───────────────
+      // On every JWT refresh (not initial sign-in), check if the user's
+      // sessionVersion in DB matches the one in the token. If the admin
+      // bumped it (via /api/admin/revoke-session), the token is stale →
+      // return an empty token, effectively signing the user out.
+      // Skip for demo users (no DB row) and tokens without an id.
+      if (token.id && token.email && !isDemoEmail(token.email) && !user) {
+        try {
+          const dbVersion = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { sessionVersion: true, status: true },
+          });
+          if (!dbVersion || dbVersion.status === "suspended") {
+            // User deleted or suspended → kill the token
+            return {} as typeof token;
+          }
+          if (dbVersion.sessionVersion !== token.sessionVersion) {
+            // Session revoked → kill the token
+            return {} as typeof token;
+          }
+        } catch {
+          // DB error — don't kill the session on transient failures
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

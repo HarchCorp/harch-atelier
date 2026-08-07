@@ -679,6 +679,13 @@ model User {
   agency         Agency?  @relation("AgencyAdmins", fields: [agencyId], references: [id], onDelete: SetNull)
   agencyId       String?
 
+  // ─── Task: YGGDRASIL-N40 — Session Revocation ──────────────────
+  // sessionVersion: bumped by admin to invalidate ALL existing JWTs for
+  // this user. The JWT callback checks token.sessionVersion against the
+  // DB value — if they differ, the token is rejected (user must re-sign-in).
+  // This gives real-time revocation without a Redis blacklist.
+  sessionVersion  Int  @default(0)
+
   @@index([companyId])
   @@index([status])
   @@index([isDemo])
