@@ -19,7 +19,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { C } from "../components/tokens";
-import { BrandBadge } from "../components/HarchLogo";
+import BrandBadge from "@/components/BrandBadge";
 
 export interface StandbyBannerProps {
   featureName: string;

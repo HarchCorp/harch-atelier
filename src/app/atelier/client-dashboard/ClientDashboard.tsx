@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { C } from "../components/tokens";
-import { BrandBadge } from "../components/HarchLogo";
+import BrandBadge from "@/components/BrandBadge";
 
 // ═══════════════════════════════════════════════════════════════
 //  CLIENT DASHBOARD — the page a paying client sees
