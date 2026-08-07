@@ -57,7 +57,7 @@ export function StandbyBanner({
         display: "flex",
         alignItems: "center",
         gap: "12px",
-        background: C.surface,
+        background: C.bg,
       }}>
         <BrandBadge size="sm" theme="light" />
         <span style={{
@@ -224,7 +224,7 @@ export function StandbyBanner({
       <footer style={{
         padding: "12px 24px",
         borderTop: `1px solid ${C.border}`,
-        background: C.surface,
+        background: C.bg,
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
