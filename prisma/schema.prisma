@@ -630,6 +630,18 @@ model SuperAdminAudit {
   @@index([createdAt])
 }
 
+// ─── Task: YGGDRASIL-N38 — System Flags (DEFCON) ──────────────
+// Key-value store for system-wide flags (defcon_level, tamper_incident,
+// maintenance_mode). The Sentinel cron sets defcon_level=1 when the
+// audit chain is broken — super_admin UI reads it to trigger lockdown.
+model SystemFlag {
+  key       String   @id  // "defcon_level" | "tamper_incident" | "maintenance_mode"
+  value     String   // JSON-encoded value
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
 // ─── AUTH ───────────────────────────────────────────────────────
 
 model User {
