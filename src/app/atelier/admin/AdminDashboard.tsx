@@ -2724,6 +2724,8 @@ function tabTitle(tab: Tab): string {
   switch (tab) {
     case "requests": return "Access Requests";
     case "accounts": return "Accounts";
+    case "permissions": return "Role-Based Access Control";
+    case "security": return "Security & Sessions";
     case "logs": return "Errors & Logs";
     case "audit": return "Audit Trail";
     case "whatsapp": return "WhatsApp Import";
@@ -2734,6 +2736,8 @@ function tabSubtitle(tab: Tab): string {
   switch (tab) {
     case "requests": return "Review and triage inbound access requests";
     case "accounts": return "All users in the system + custom account creation";
+    case "permissions": return "Manage user roles — changes take effect on next request (JWT sessionVersion)";
+    case "security": return "Revoke sessions + audit watchdog + device management";
     case "logs": return "SystemLog — errors, warnings, info";
     case "audit": return "Loi 09-08 / CNDP — every sensitive action is recorded";
     case "whatsapp": return "Paste a conversation → GLM-4 extracts → create account";

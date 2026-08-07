@@ -111,3 +111,76 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  PATCH /api/admin/users
+//
+//  Body: { userId, role? }
+//
+//  Updates a user's role. Bumps sessionVersion to invalidate their
+//  current JWT (they must re-sign-in to get a new token with the
+//  updated role).
+//
+//  Auth: admin or super_admin only.
+//  Task: YGGDRASIL-N25 (Permission UI)
+// ═══════════════════════════════════════════════════════════════
+
+const VALID_ROLES = [
+  "super_admin", "admin", "agency-admin", "company-admin",
+  "manager", "analyst", "viewer",
+  "legacy_user_v1", "legacy_trial", "legacy_beta",
+];
+
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Only admin+ can change roles
+  if (session.user.role !== "admin" && session.user.role !== "super_admin") {
+    return NextResponse.json({ error: "Forbidden — admin role required" }, { status: 403 });
+  }
+
+  let body: { userId?: string; role?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.userId || !body.role) {
+    return NextResponse.json({ error: "userId and role are required" }, { status: 400 });
+  }
+
+  if (!VALID_ROLES.includes(body.role)) {
+    return NextResponse.json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}` }, { status: 400 });
+  }
+
+  // Prevent self-demotion (admin can't remove their own admin role)
+  if (body.userId === session.user.id) {
+    return NextResponse.json({ error: "Cannot modify your own role" }, { status: 409 });
+  }
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: body.userId },
+      data: {
+        role: body.role,
+        // Bump sessionVersion → invalidates current JWT
+        // User must re-sign-in to get a token with the new role
+        sessionVersion: { increment: 1 },
+      },
+      select: { id: true, email: true, role: true, sessionVersion: true },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      user: updated,
+      message: `Role updated to ${body.role}. User must re-sign-in (sessionVersion bumped).`,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "Failed to update user", detail: msg }, { status: 500 });
+  }
+}
