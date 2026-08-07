@@ -80,28 +80,37 @@ interface PolymorphicBoxProps extends React.HTMLAttributes<HTMLDivElement> {
 
 /**
  * A box that automatically applies the polymorphic tokens:
- * - font-size scaled by baseFontSize
- * - line-height scaled by density
- * - transition speed scaled by animationSpeed
- * - background tinted by backgroundWarmth
+ * - font-size scaled by baseFontSize (clamped 10-24px — NEMESIS defense)
+ * - line-height scaled by density (clamped 0.7-1.3)
+ * - transition speed scaled by animationSpeed (clamped 0.3-2.0)
+ * - background tinted by backgroundWarmth (clamped 0-1)
+ * - opacity scaled by contrast (clamped 0.7-1.0)
  *
- * Pass any standard div props (style, className, onClick, etc.).
+ * NEMESIS defense: even if the context is hijacked with absurd values
+ * (baseFontSize: -50, backgroundWarmth: NaN), the clamp prevents the
+ * UI from becoming invisible or unusable. Number.isFinite guards
+ * against NaN/Infinity injection.
  */
+function safeClamp(v: number | undefined, min: number, max: number, fallback: number): number {
+  if (v === undefined || !Number.isFinite(v)) return fallback;
+  return Math.max(min, Math.min(max, v));
+}
+
 export function PolymorphicBox({ children, as: Tag = "div", style, ...rest }: PolymorphicBoxProps) {
   const ctx = usePolymorphic();
   const tokens = ctx?.tokens;
 
   const adaptiveStyle: React.CSSProperties = tokens
     ? {
-        fontSize: `${tokens.baseFontSize}px`,
-        lineHeight: String(1.5 * tokens.density),
-        transitionDuration: `${Math.round(200 / tokens.animationSpeed)}ms`,
-        // Warmth: shift background slightly toward warm tones
+        // NEMESIS defense: clamp every value — no matter what the context says,
+        // font size stays between 10 and 24px. Text can never disappear.
+        fontSize: `${safeClamp(tokens.baseFontSize, 10, 24, 15)}px`,
+        lineHeight: String(safeClamp(1.5 * tokens.density, 1.0, 2.0, 1.5)),
+        transitionDuration: `${Math.round(200 / safeClamp(tokens.animationSpeed, 0.3, 2.0, 1.0))}ms`,
         background: tokens.backgroundWarmth > 0
-          ? `hsl(40, 20%, ${99 - tokens.backgroundWarmth * 3}%)`
+          ? `hsl(40, 20%, ${Math.max(90, 99 - safeClamp(tokens.backgroundWarmth, 0, 1, 0) * 3)}%)`
           : undefined,
-        // Contrast: scale opacity slightly for fatigue
-        opacity: tokens.contrast,
+        opacity: safeClamp(tokens.contrast, 0.7, 1.0, 1.0),
       }
     : {};
 

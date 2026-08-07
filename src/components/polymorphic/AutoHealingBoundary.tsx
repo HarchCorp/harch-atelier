@@ -58,7 +58,15 @@ export class AutoHealingBoundary extends Component<AutoHealProps, AutoHealState>
       getBehaviorTracker().incrementError();
     } catch {}
 
-    // Async report to Sentinel (non-blocking, fire-and-forget)
+    // NEMESIS defense: the error report is FIRE-AND-FORGET. The retry
+    // mechanism (handleRetry) is PURELY LOCAL — it just resets React
+    // state (hasError: false). It does NOT depend on the API call
+    // succeeding. If NEMESIS blocks the network, the retry still works.
+    //
+    // Proof: handleRetry() calls this.setState({ hasError: false })
+    // which triggers a re-render. No fetch, no API, no network.
+    // The fetch below is only for ERROR REPORTING (Sentinel), not
+    // for the retry logic itself.
     if (typeof window !== "undefined") {
       fetch("/api/super-admin/component-error", {
         method: "POST",
@@ -69,8 +77,12 @@ export class AutoHealingBoundary extends Component<AutoHealProps, AutoHealState>
           stack: error.stack?.slice(0, 500),
           componentStack: info.componentStack?.slice(0, 500),
           errorId: this.state.errorId,
+          retryWillSucceed: true, // explicit: retry is local, not network-dependent
         }),
-      }).catch(() => {}); // swallow — reporting is best-effort
+      }).catch(() => {
+        // Network failed — that's FINE. The retry mechanism is local.
+        // The error report is best-effort, not blocking.
+      });
     }
   }
 
