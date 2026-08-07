@@ -176,20 +176,20 @@ export function LoginPage() {
 
           {/* Demo access — one-click sign-in with a demo account that
               bypasses the database entirely. Safe for evaluation. */}
-          <div style={{ marginTop: "20px", padding: "16px", background: "#fafaf9", border: `1px solid ${C.border}`, borderRadius: "6px" }}>
-            <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "8px" }}>
+          <div style={{ marginTop: "20px", padding: "24px", background: "#fafaf9", border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+            <div style={{ fontFamily: C.fontMono, fontSize: "11px", color: C.textSecondary, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px" }}>
               Evaluate without an account
             </div>
             <button
               type="button"
               onClick={() => { setEmail("demo-brand@harch.atelier"); setPassword("demo"); }}
-              style={{ width: "100%", padding: "10px 14px", background: "#ffffff", border: `1px solid ${C.borderStrong}`, borderRadius: "4px", fontFamily: C.fontMono, fontSize: "12px", color: C.text, cursor: "pointer", marginBottom: "8px", transition: "border-color 0.15s" }}
+              style={{ width: "100%", padding: "12px 16px", background: "#ffffff", border: `1px solid ${C.borderStrong}`, borderRadius: "6px", fontFamily: C.fontMono, fontSize: "12px", color: C.text, cursor: "pointer", marginBottom: "10px", transition: "border-color 0.15s" }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.borderStrong; }}
             >
               Fill demo credentials →  demo-brand@harch.atelier
             </button>
-            <p style={{ margin: 0, fontSize: "11px", color: C.textMuted, fontFamily: C.fontMono, lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: "12px", color: C.textSecondary, fontFamily: C.fontMono, lineHeight: 1.6 }}>
               Demo account runs on in-memory data. The console, dashboard, and account flows are fully interactive. Trader and investor desks are on standby.
             </p>
           </div>

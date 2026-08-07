@@ -645,7 +645,7 @@ function TierCard({ tier }: { tier: Tier }) {
 
       {/* Features */}
       <div style={{ marginBottom: "24px" }}>
-        <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "14px" }}>
+        <div style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.textSecondary, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "14px" }}>
           What's included
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -654,7 +654,7 @@ function TierCard({ tier }: { tier: Tier }) {
               <span style={{ flexShrink: 0, marginTop: "2px" }}>
                 <IconCheck size={14} color={tier.highlighted ? C.sage : C.accentDark} />
               </span>
-              <span style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.5 }}>{f}</span>
+              <span style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.6 }}>{f}</span>
             </div>
           ))}
         </div>
@@ -663,7 +663,7 @@ function TierCard({ tier }: { tier: Tier }) {
       {/* Not included */}
       {tier.notIncluded.length > 0 && (
         <div style={{ marginBottom: "24px", paddingTop: "16px", borderTop: `1px solid ${C.borderLight}` }}>
-          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "10px" }}>
+          <div style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.textSecondary, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "10px" }}>
             Not included
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

@@ -135,11 +135,11 @@ export default function LabIndexPage() {
                 {exp.desc}
               </p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.04em" }}>
+                <span style={{ fontFamily: C.fontMono, fontSize: "11px", color: C.textBody, letterSpacing: "0.04em" }}>
                   {exp.node}
                 </span>
                 {exp.nemesis && (
-                  <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: "#10b981", fontWeight: 600 }}>
+                  <span style={{ fontFamily: C.fontMono, fontSize: "11px", color: "#10b981", fontWeight: 600 }}>
                     ✓ {exp.nemesis}
                   </span>
                 )}
