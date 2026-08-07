@@ -142,25 +142,28 @@ export const CoreAnalyticsEngine = {
         };
       });
     }
-    // GLM batch
+    // GLM batch — analyzeArticles mutates articles in place, adding sentiment
     const { analyzeArticles } = await import("@/lib/analyzers/sentiment-analyzer");
-    const articles = texts.map((t, i) => ({
+    const articles = texts.map((t) => ({
       title: t.slice(0, 200),
       url: "",
       content: t,
       publishedAt: new Date(),
     })) as any[];
-    const results = await analyzeArticles(articles, options.trackedCompany ?? "");
-    return results.map((r) => ({
-      score: r.score,
-      label: r.sentiment,
-      confidence: r.relevanceScore / 100,
-      engine: "glm" as const,
-      keyPhrases: r.topics,
-      entitySentiments: Object.fromEntries(
-        r.entities.map((e: string) => [e, r.sentiment])
-      ),
-    }));
+    const analyzed = await analyzeArticles(articles, options.trackedCompany ?? "");
+    return analyzed.map((a: any) => {
+      const sentiment = (a.sentiment ?? "neutral") as "positive" | "neutral" | "negative";
+      return {
+        score: typeof a.sentimentScore === "number" ? a.sentimentScore : 0,
+        label: sentiment,
+        confidence: typeof a.relevanceScore === "number" ? a.relevanceScore / 100 : 0.5,
+        engine: "glm" as const,
+        keyPhrases: Array.isArray(a.topics) ? a.topics : [],
+        entitySentiments: Object.fromEntries(
+          (Array.isArray(a.entities) ? a.entities : []).map((e: string) => [e, sentiment])
+        ),
+      };
+    });
   },
 
   /**
@@ -180,7 +183,7 @@ export const CoreAnalyticsEngine = {
     companyName: string,
   ) {
     const { calculateReputationScore } = await import("@/lib/analyzers/sentiment-analyzer");
-    return calculateReputationScore(articles as any, companyName);
+    return calculateReputationScore(articles as any[], companyName);
   },
 };
 
