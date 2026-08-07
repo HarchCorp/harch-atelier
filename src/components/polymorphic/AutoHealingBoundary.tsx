@@ -1,6 +1,7 @@
 "use client";
 
-import { Component, type ErrorInfo, type ReactNode, useState, useCallback } from "react";
+import { Component, type ErrorInfo, type ReactNode, useState } from "react";
+import { getBehaviorTracker } from "@/lib/polymorphic/engine";
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTO-HEALING DOM — N(30, 80, 100)
@@ -54,7 +55,6 @@ export class AutoHealingBoundary extends Component<AutoHealProps, AutoHealState>
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Report to behavior tracker (→ triggers beginner mode if 3+ errors)
     try {
-      const { getBehaviorTracker } = require("@/lib/polymorphic/engine");
       getBehaviorTracker().incrementError();
     } catch {}
 
