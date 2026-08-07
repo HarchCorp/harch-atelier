@@ -102,10 +102,14 @@ export default function ZKPAuthPage() {
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "24px", marginBottom: "24px" }}>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.surface, boxSizing: "border-box", marginBottom: "12px" }} />
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (stays in browser)" style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.surface, boxSizing: "border-box", marginBottom: "16px" }} />
-          <button onClick={mode === "register" ? handleRegister : handleLogin} disabled={loading || !email || !password} style={{
-            width: "100%", padding: "14px", background: loading || !email || !password ? C.border : C.cta, color: "#fff",
-            border: "none", borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600, cursor: loading || !email || !password ? "not-allowed" : "pointer",
-          }}>{loading ? "Computing cryptographic proof…" : mode === "register" ? "Register (derive + send public key)" : "Login (sign challenge)"}</button>
+          <button
+            onClick={mode === "register" ? handleRegister : handleLogin}
+            disabled={loading || !email || !password}
+            data-testid="zkp-submit"
+            style={{
+              width: "100%", padding: "14px", background: loading || !email || !password ? C.border : C.cta, color: "#fff",
+              border: "none", borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", fontWeight: 600, cursor: loading || !email || !password ? "not-allowed" : "pointer",
+            }}>{loading ? "Computing cryptographic proof…" : mode === "register" ? "Register (derive + send public key)" : "Login (sign challenge)"}</button>
         </div>
         {result && <div style={{ padding: "16px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "8px", fontSize: "13px", color: "#065f46", marginBottom: "16px" }}>{result}</div>}
         {error && <div style={{ padding: "16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", color: "#991b1b", marginBottom: "16px" }}>✕ {error}</div>}

@@ -90,10 +90,17 @@ interface NemesisResult {
   // Fill the form
   await page.fill('input[type="email"]', TEST_EMAIL);
   await page.fill('input[type="password"]', TEST_PASSWORD);
+  await page.waitForTimeout(500);
 
-  // Click register
-  await page.click("button:has-text('Register')");
-  await page.waitForTimeout(5000); // wait for the crypto + network
+  // Click register — use data-testid for reliability
+  await page.click('[data-testid="zkp-submit"]').catch(async () => {
+    // Fallback: click any visible button with "Register" text
+    const btn = await page.$("button:has-text('Register')");
+    if (btn) await btn.click().catch(() => {});
+  });
+
+  // Wait for the crypto (PBKDF2 150k iterations takes ~1-2s) + network
+  await page.waitForTimeout(8000);
 
   // Analyze captured requests
   const registerReq = capturedRequests.find(r => r.url.includes("/api/auth/zkp-register"));
@@ -130,17 +137,20 @@ interface NemesisResult {
   console.log("--- TEST 2: ZKP Login MITM ---");
   capturedRequests.length = 0; // clear
 
-  // Switch to login mode
-  await page.click("button:has-text('Login')");
+  // Switch to login mode — click the Login toggle button
+  await page.click("button:has-text('Login')").catch(() => {});
   await page.waitForTimeout(500);
 
   // Fill the form (same email + password)
   await page.fill('input[type="email"]', TEST_EMAIL);
   await page.fill('input[type="password"]', TEST_PASSWORD);
+  await page.waitForTimeout(500);
 
-  // Click login
-  await page.click("button:has-text('Login')");
-  await page.waitForTimeout(8000); // wait for challenge + sign + verify
+  // Click the submit button via data-testid
+  await page.click('[data-testid="zkp-submit"]').catch(() => {});
+
+  // Wait for challenge + crypto + sign + verify
+  await page.waitForTimeout(12000);
 
   // Analyze ALL captured requests during login
   const challengeReq = capturedRequests.find(r => r.url.includes("/api/auth/zkp-challenge"));
