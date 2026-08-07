@@ -838,3 +838,25 @@ Work Log:
   process.env only (Vercel production).
 
 Commit 1c3c9cb pushed. Build should now pass on Vercel.
+
+---
+Task ID: 13
+Agent: main
+Task: Task 11 Step X completed — CoreAnalyticsEngine created
+
+Work Log:
+- STEP X (Refactor & Fusion): created src/lib/engine/CoreAnalyticsEngine.ts (190 lines)
+- Unified facade for 2 scattered sentiment analyzers:
+  • harchiq/sentiment-analyzer.ts (746 lines, lexicon, sync)
+  • analyzers/sentiment-analyzer.ts (334 lines, GLM-4, async)
+- Strategy pattern: CoreAnalyticsEngine.analyzeSentiment(text, {engine: 'lexicon'|'glm'})
+- UnifiedSentimentResult normalizes both engines to same shape
+- Re-exports both modules with disambiguated names for backward compat
+- 0 TypeScript errors (fixed 3 rounds: SentimentResult fields, Article return type, calculateReputationScore arg order)
+- Commits: f8927bb, 3635144, e3fddbe
+
+Stage Summary:
+- Step X DONE: CoreAnalyticsEngine operational
+- Step Y NEXT: verify crisis-detector + bayesian-risk + darija imports
+- Step Z AFTER: unit tests + PDF generator migration
+- Loop back to X: perf benchmark on 10k articles
