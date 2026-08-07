@@ -29,7 +29,7 @@ export default async function Page() {
   }
 
   // Super-admin can also access (useful for previewing/auditing)
-  if (session.user?.role !== "company-admin" && session.user?.role !== "admin") {
+  if (session.user?.role !== "company-admin" && session.user?.role !== "admin" && session.user?.role !== "super_admin") {
     redirect("/atelier/console");
   }
 

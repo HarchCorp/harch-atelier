@@ -36,11 +36,11 @@ export default async function BrandMonitorConsolePage() {
   const email = session.user.email ?? "";
   const isDemo = email.startsWith("demo-") && email.endsWith("@harch.atelier");
 
-  if (session.user.role !== "admin" && session.user.accountType !== "brand-monitor") {
+  if (session.user.role !== "admin" && session.user.role !== "super_admin" && session.user.accountType !== "brand-monitor") {
     redirect(`/atelier/console/${session.user.accountType || "brand-monitor"}`);
   }
 
-  if (!isDemo && session.user.role !== "admin") {
+  if (!isDemo && session.user.role !== "admin" && session.user.role !== "super_admin") {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { onboardingCompleted: true },

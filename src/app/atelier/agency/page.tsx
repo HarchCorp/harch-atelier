@@ -35,7 +35,7 @@ export default async function AgencyPage() {
   }
 
   const role = session.user.role;
-  if (role !== "agency-admin" && role !== "admin") {
+  if (role !== "agency-admin" && role !== "admin" && role !== "super_admin") {
     redirect("/atelier/console");
   }
 
