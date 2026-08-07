@@ -256,7 +256,7 @@ export function AdminDashboard() {
   }, [fetchCore]);
 
   useEffect(() => {
-    if (tab === "accounts") fetchUsers();
+    if (tab === "accounts" || tab === "permissions" || tab === "security") fetchUsers();
   }, [tab, fetchUsers]);
 
   const pendingRequests = requests.filter((r) => r.status === "pending");
@@ -514,7 +514,7 @@ export function AdminDashboard() {
 
         {/* Tab content */}
         <main style={{ flex: 1, padding: "28px 32px 64px", maxWidth: "1440px", width: "100%" }}>
-          {loading && tab !== "audit" && tab !== "logs" && tab !== "whatsapp" ? (
+          {loading && tab !== "audit" && tab !== "logs" && tab !== "whatsapp" && tab !== "permissions" && tab !== "security" ? (
             <LoadingState />
           ) : tab === "requests" ? (
             <RequestsTab

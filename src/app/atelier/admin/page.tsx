@@ -14,7 +14,7 @@ export default async function Page() {
   if (!session) {
     redirect("/atelier/admin-x7k2m9");
   }
-  if (session.user?.role !== "admin") {
+  if (session.user?.role !== "admin" && session.user?.role !== "super_admin") {
     redirect("/atelier/console");
   }
   return <AdminDashboard />;
