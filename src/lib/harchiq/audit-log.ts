@@ -44,7 +44,10 @@ export type AuditAction =
   | "whatsapp_import"
   | "master_code_generate"
   | "master_code_activate"
-  | "master_code_failed";
+  | "master_code_failed"
+  | "session_revoked"
+  | "invitation_accepted"
+  | "role_changed";
 
 export type AuditResult = "success" | "denied" | "error";
 
