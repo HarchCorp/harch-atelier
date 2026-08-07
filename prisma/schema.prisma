@@ -606,6 +606,30 @@ model AuditLog {
   @@index([action])
 }
 
+// ─── Task: YGGDRASIL-N35 — SuperAdmin Audit Trail ──────────────
+// Immutable, tamper-evident audit log for super_admin actions.
+// Each entry chains to the previous one via prevHash (SHA-256 of
+// the previous entry's hash). Deleting or modifying any entry
+// breaks the chain → tamper is detected immediately.
+model SuperAdminAudit {
+  id            String   @id @default(cuid())
+  userId        String   // the super_admin who performed the action
+  userEmail     String   // denormalized for query speed
+  action        String   // master_code_generate | session_revoked | role_changed | etc.
+  resource      String   // what was acted upon (user:xxx, company:xxx)
+  result        String   // success | denied | error
+  ipAddress     String?
+  userAgent     String?
+  metadata      Json?
+  entryHash     String   @unique  // SHA-256 of (prevHash + userId + action + resource + timestamp)
+  prevHash      String?  // hash of the previous entry (null for the first)
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([createdAt])
+}
+
 // ─── AUTH ───────────────────────────────────────────────────────
 
 model User {
