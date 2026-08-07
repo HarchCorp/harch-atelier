@@ -183,7 +183,7 @@ export const CoreAnalyticsEngine = {
     companyName: string,
   ) {
     const { calculateReputationScore } = await import("@/lib/analyzers/sentiment-analyzer");
-    return calculateReputationScore(articles as any[], companyName);
+    return calculateReputationScore(companyName, articles as any[], 0);
   },
 };
 
