@@ -75,48 +75,56 @@ export const CoreAnalyticsEngine = {
   /**
    * Unified sentiment analysis — picks the engine based on options.
    *
-   * - engine: 'lexicon' (default) → instant, local, no API call
-   * - engine: 'glm' → GLM-4 LLM call (async, needs ZAI_API_KEY)
-   *
-   * Returns a normalized UnifiedSentimentResult regardless of engine.
+   * PALANTIR MINDSET: every computation is now wrapped with
+   * ProvenanceTracker — the result is traceable to its source data,
+   * engine, and model version. No score is a black box.
    */
   async analyzeSentiment(
     text: string,
     options: AnalyzeSentimentOptions = {},
   ): Promise<UnifiedSentimentResult> {
     const engine = options.engine ?? "lexicon";
+    const modelVersion = engine === "glm" ? "glm-4" : "lexicon-v3";
 
-    if (engine === "lexicon") {
-      const { analyzeSentiment } = await import("@/lib/harchiq/sentiment-analyzer");
-      const result = analyzeSentiment(text);
-      return {
-        score: result.score,
-        label: result.label,
-        confidence: 1.0,
-        engine: "lexicon",
-        keyPhrases: result.keyPhrases,
-      };
-    }
-
-    // GLM engine
-    const { analyzeSentiment: analyzeGLM } = await import("@/lib/analyzers/sentiment-analyzer");
-    const article = {
-      title: options.articleTitle ?? text.slice(0, 200),
-      url: options.articleUrl ?? "",
-      content: text,
-      publishedAt: options.articlePublishedAt ?? new Date(),
-    } as any; // Article interface adapter
-    const result = await analyzeGLM(article, options.trackedCompany ?? "");
-    return {
-      score: result.score,
-      label: result.sentiment,
-      confidence: result.relevanceScore / 100,
-      engine: "glm",
-      keyPhrases: result.topics,
-      entitySentiments: Object.fromEntries(
-        result.entities.map((e: string) => [e, result.sentiment])
-      ),
-    };
+    const { ProvenanceTracker } = await import("@/lib/provenance/tracker");
+    const { result } = await ProvenanceTracker.track(
+      "ArticleSentiment",
+      `sent_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      (options as any).companyId ?? "unknown",
+      (options as any).articleId ? [(options as any).articleId] : [],
+      async () => {
+        if (engine === "lexicon") {
+          const { analyzeSentiment } = await import("@/lib/harchiq/sentiment-analyzer");
+          const r = analyzeSentiment(text);
+          return {
+            score: r.score, label: r.label, confidence: 1.0,
+            engine: "lexicon" as const, keyPhrases: r.keyPhrases,
+          };
+        }
+        const { analyzeSentiment: analyzeGLM } = await import("@/lib/analyzers/sentiment-analyzer");
+        const article = {
+          title: options.articleTitle ?? text.slice(0, 200),
+          url: options.articleUrl ?? "", content: text,
+          publishedAt: options.articlePublishedAt ?? new Date(),
+        } as any;
+        const glmResult = await analyzeGLM(article, options.trackedCompany ?? "");
+        return {
+          score: glmResult.score, label: glmResult.sentiment,
+          confidence: glmResult.relevanceScore / 100,
+          engine: "glm" as const, keyPhrases: glmResult.topics,
+          entitySentiments: Object.fromEntries(
+            glmResult.entities.map((e: string) => [e, glmResult.sentiment]),
+          ),
+        };
+      },
+      {
+        engine, modelVersion,
+        inputParams: { textLength: text.length, trackedCompany: options.trackedCompany },
+        computedBy: "CoreAnalyticsEngine.analyzeSentiment",
+        confidence: engine === "lexicon" ? 1.0 : 0.8,
+      },
+    );
+    return result;
   },
 
   /**
