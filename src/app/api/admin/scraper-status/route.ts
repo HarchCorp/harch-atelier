@@ -40,7 +40,7 @@ interface FeedStatus {
 export async function GET() {
   // 1. AUTH — admin only
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "admin") {
+  if (!session || session.user?.role !== "admin" && session.user?.role !== "super_admin") {
     return NextResponse.json(
       { error: "Forbidden — admin only" },
       { status: 403 },

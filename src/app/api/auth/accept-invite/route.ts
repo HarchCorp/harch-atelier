@@ -126,7 +126,6 @@ export async function POST(req: NextRequest) {
         passwordHash,
         role: invitation.role,
         accountType: invitation.accountType,
-        company: invitation.company,
         status: "active",
         onboardingCompleted: false, // user must complete onboarding
       },

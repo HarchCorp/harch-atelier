@@ -77,7 +77,7 @@ export default function ZKPAuthPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: C.fontSans, color: C.text }}>
-      <header style={{ padding: "16px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: "12px", background: C.surface }}>
+      <header style={{ padding: "16px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: "12px", background: C.bg }}>
         <BrandBadge subsidiary="Atelier" size="sm" theme="light" />
         <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", borderLeft: `1px solid ${C.border}`, paddingLeft: "10px" }}>
           Lab · ZKP Authentication
@@ -93,15 +93,15 @@ export default function ZKPAuthPage() {
         <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
           {(["register", "login"] as const).map((m) => (
             <button key={m} onClick={() => { setMode(m); setResult(null); setError(null); setNetworkPayload(null); }} style={{
-              padding: "8px 16px", background: mode === m ? C.accent : C.surface, color: mode === m ? "#fff" : C.textBody,
+              padding: "8px 16px", background: mode === m ? C.accent : C.bg, color: mode === m ? "#fff" : C.textBody,
               border: `1px solid ${mode === m ? C.accent : C.border}`, borderRadius: "6px", fontFamily: C.fontMono,
               fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer",
             }}>{m}</button>
           ))}
         </div>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "24px", marginBottom: "24px" }}>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.surface, boxSizing: "border-box", marginBottom: "12px" }} />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (stays in browser)" style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.surface, boxSizing: "border-box", marginBottom: "16px" }} />
+        <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "24px", marginBottom: "24px" }}>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box", marginBottom: "12px" }} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (stays in browser)" style={{ width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "14px", color: C.text, background: C.bg, boxSizing: "border-box", marginBottom: "16px" }} />
           <button
             onClick={mode === "register" ? handleRegister : handleLogin}
             disabled={loading || !email || !password}

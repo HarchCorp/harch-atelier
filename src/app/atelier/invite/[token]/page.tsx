@@ -159,7 +159,7 @@ export default function InvitePage() {
 
         {/* Invitation card */}
         <div style={{
-          background: C.surface,
+          background: C.bg,
           border: `1px solid ${C.border}`,
           borderRadius: "12px",
           padding: "32px 28px",
@@ -262,7 +262,7 @@ export default function InvitePage() {
                   fontFamily: C.fontSans,
                   fontSize: "14px",
                   color: C.text,
-                  background: C.surface,
+                  background: C.bg,
                   boxSizing: "border-box",
                 }}
               />
@@ -294,7 +294,7 @@ export default function InvitePage() {
                   fontFamily: C.fontSans,
                   fontSize: "14px",
                   color: C.text,
-                  background: C.surface,
+                  background: C.bg,
                   boxSizing: "border-box",
                 }}
               />
@@ -343,7 +343,7 @@ export default function InvitePage() {
 
         {/* Footer */}
         <div style={{ marginTop: "24px", textAlign: "center" }}>
-          <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textFaint, letterSpacing: "0.05em" }}>
+          <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.05em" }}>
             Expires {invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "soon"}
           </span>
         </div>

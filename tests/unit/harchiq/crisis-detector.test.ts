@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { describe, it, expect } from "vitest";
-import { detectCrisis, type CrisisInput } from "@/lib/harchiq/crisis-detector";
+import { detectCrisis } from "@/lib/harchiq/crisis-detector";
 
 describe("crisis-detector", () => {
   const baseAlert = {
@@ -15,11 +15,11 @@ describe("crisis-detector", () => {
     source: "test",
     severity: "medium" as const,
     sentimentScore: -0.3,
-    publishedAt: new Date().toISOString(),
+    publishedAt: new Date(),
   };
 
   it("returns safe level when no alerts", () => {
-    const input: CrisisInput = {
+    const input = {
       recentAlerts: [],
       baselineAlerts: [],
     };
@@ -63,12 +63,12 @@ describe("crisis-detector", () => {
       baselineAlerts: [],
     });
     for (const factor of result.factors) {
-      expect(factor.value).toBeGreaterThanOrEqual(0);
+      expect(factor.score).toBeGreaterThanOrEqual(0);
     }
   });
 
   it("score is always in [0, 100]", () => {
-    const inputs: CrisisInput[] = [
+    const inputs = [
       { recentAlerts: [], baselineAlerts: [] },
       {
         recentAlerts: Array.from({ length: 100 }, (_, i) => ({

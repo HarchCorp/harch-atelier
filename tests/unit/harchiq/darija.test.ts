@@ -58,12 +58,12 @@ describe("darija NLP", () => {
 
   describe("analyzeSentiment", () => {
     it("returns positive for positive Darija", () => {
-      const result = analyzeSentiment("ممتاز خبر زوين بزاف");
+      const result = analyzeSentiment("ممتاز خبر زوين بزاف", "ar");
       expect(result.score).toBeGreaterThan(0);
     });
 
     it("returns negative for negative Darija", () => {
-      const result = analyzeSentiment("خبار خايبة أزمة كبيرة");
+      const result = analyzeSentiment("خبار خايبة أزمة كبيرة", "ar");
       expect(result.score).toBeLessThan(0);
     });
 
@@ -76,14 +76,14 @@ describe("darija NLP", () => {
         "mixed text with بعض الكلمات",
       ];
       for (const text of texts) {
-        const result = analyzeSentiment(text);
+        const result = analyzeSentiment(text, "ar");
         expect(result.score).toBeGreaterThanOrEqual(-1);
         expect(result.score).toBeLessThanOrEqual(1);
       }
     });
 
     it("handles empty text without crashing", () => {
-      const result = analyzeSentiment("");
+      const result = analyzeSentiment("", "ar");
       expect(result.score).toBe(0);
     });
   });

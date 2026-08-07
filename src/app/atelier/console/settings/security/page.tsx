@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { C } from "../../../../components/tokens";
+import { C } from "../../../components/tokens";
 import { BrandBadge } from "@/components/BrandBadge";
 
 // ═══════════════════════════════════════════════════════════════
@@ -127,7 +127,7 @@ export default function SecuritySettingsPage() {
         display: "flex",
         alignItems: "center",
         gap: "12px",
-        background: C.surface,
+        background: C.bg,
       }}>
         <BrandBadge subsidiary="Atelier" size="sm" theme="light" />
         <span style={{
@@ -182,7 +182,7 @@ export default function SecuritySettingsPage() {
 
         {/* Sessions table */}
         <div style={{
-          background: C.surface,
+          background: C.bg,
           border: `1px solid ${C.border}`,
           borderRadius: "12px",
           overflow: "hidden",
@@ -224,7 +224,7 @@ export default function SecuritySettingsPage() {
                     gridTemplateColumns: "1fr 120px 100px 140px 120px",
                     gap: "12px",
                     padding: "14px 16px",
-                    borderBottom: `1px solid ${C.borderLight}`,
+                    borderBottom: `1px solid ${C.border}`,
                     fontSize: "13px",
                     color: C.text,
                     alignItems: "center",

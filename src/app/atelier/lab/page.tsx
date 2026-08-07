@@ -1,6 +1,6 @@
 "use client";
 
-import { C } from "../../components/tokens";
+import { C } from "../components/tokens";
 import { BrandBadge } from "@/components/BrandBadge";
 
 // ═══════════════════════════════════════════════════════════════
@@ -72,7 +72,7 @@ export default function LabIndexPage() {
         display: "flex",
         alignItems: "center",
         gap: "12px",
-        background: C.surface,
+        background: C.bg,
       }}>
         <BrandBadge subsidiary="Atelier" size="sm" theme="light" />
         <span style={{
@@ -105,7 +105,7 @@ export default function LabIndexPage() {
               style={{
                 display: "block",
                 padding: "20px",
-                background: C.surface,
+                background: C.bg,
                 border: `1px solid ${C.border}`,
                 borderRadius: "12px",
                 textDecoration: "none",

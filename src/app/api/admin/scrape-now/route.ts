@@ -30,7 +30,7 @@ export const maxDuration = 300;
 export async function POST() {
   // 1. AUTH — admin only
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "admin") {
+  if (!session || session.user?.role !== "admin" && session.user?.role !== "super_admin") {
     return NextResponse.json(
       { success: false, error: "Forbidden — admin only" },
       { status: 403 },

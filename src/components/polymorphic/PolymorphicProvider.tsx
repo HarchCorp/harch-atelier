@@ -43,7 +43,7 @@ export function PolymorphicProvider({ children }: { children: ReactNode }) {
     errorCount: 0,
     sessionDuration: 0,
     totalClicks: 0,
-    totalScroll: 0,
+    totalScroll: 0, botDetected: false,
   });
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export function PolymorphicProvider({ children }: { children: ReactNode }) {
 interface PolymorphicBoxProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   /** Override the tag (default: div). */
-  as?: keyof JSX.IntrinsicElements;
+  as?: string;
 }
 
 /**

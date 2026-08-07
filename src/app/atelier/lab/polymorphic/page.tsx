@@ -54,7 +54,7 @@ export default function PolymorphicLabPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: C.surface,
+          background: C.bg,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <BrandBadge subsidiary="Atelier" size="sm" theme="light" />
@@ -90,7 +90,7 @@ export default function PolymorphicLabPage() {
           {/* Behavior guide */}
           <PolymorphicBox style={{
             padding: "20px",
-            background: C.surface,
+            background: C.bg,
             border: `1px solid ${C.border}`,
             borderRadius: "12px",
             marginBottom: "24px",
@@ -137,7 +137,7 @@ export default function PolymorphicLabPage() {
           {/* Auto-Healing DOM demo */}
           <PolymorphicBox style={{
             padding: "20px",
-            background: C.surface,
+            background: C.bg,
             border: `1px solid ${C.border}`,
             borderRadius: "12px",
             marginBottom: "24px",
@@ -186,7 +186,7 @@ export default function PolymorphicLabPage() {
           {/* Live adaptive content */}
           <PolymorphicBox style={{
             padding: "20px",
-            background: C.surface,
+            background: C.bg,
             border: `1px solid ${C.border}`,
             borderRadius: "12px",
           }}>

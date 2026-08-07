@@ -87,7 +87,7 @@ export default function AuditWatchdogPage() {
   // DEFCON 1 theme override
   const theme = defcon
     ? { bg: "#1a0000", surface: "#2a0000", border: "#ef4444", text: "#fef2f2", accent: "#ef4444" }
-    : { bg: C.bg, surface: C.surface, border: C.border, text: C.text, accent: C.accent };
+    : { bg: C.bg, surface: C.bg, border: C.border, text: C.text, accent: C.accent };
 
   if (loading) {
     return (
@@ -236,7 +236,7 @@ export default function AuditWatchdogPage() {
                     gridTemplateColumns: "120px 1fr 140px 100px 140px 120px",
                     gap: "12px",
                     padding: "12px 16px",
-                    borderBottom: i < data.entries.length - 1 ? `1px solid ${C.borderLight}` : "none",
+                    borderBottom: i < data.entries.length - 1 ? `1px solid ${C.border}` : "none",
                     fontFamily: C.fontMono,
                     fontSize: "11px",
                     color: theme.text,
@@ -274,7 +274,7 @@ export default function AuditWatchdogPage() {
                     {shortHash(entry.entryHash)}
                     {isBroken && " ⚠"}
                   </span>
-                  <span style={{ color: C.textFaint }}>
+                  <span style={{ color: C.textMuted }}>
                     {entry.prevHash ? shortHash(entry.prevHash) : "— genesis —"}
                   </span>
                 </div>
