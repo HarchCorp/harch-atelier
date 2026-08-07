@@ -244,6 +244,10 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
       ],
     },
   },
+  {
+    label: "Lab",
+    href: "/atelier/lab",
+  },
 ];
 
 export const ATELIER_FOOTER_LINKS = {

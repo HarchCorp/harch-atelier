@@ -34,11 +34,12 @@ interface AdminUser {
   lastLoginAt: string | null;
   createdAt: string;
   onboardingCompleted: boolean;
+  sessionVersion: number;
 }
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "admin") {
+  if (!session || (session.user?.role !== "admin" && session.user?.role !== "super_admin")) {
     return NextResponse.json(
       { error: "Forbidden — admin only" },
       { status: 403 },
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
         lastLoginAt: true,
         createdAt: true,
         onboardingCompleted: true,
+        sessionVersion: true,
         company: {
           select: { id: true, name: true, slug: true },
         },
@@ -99,6 +101,7 @@ export async function GET(req: NextRequest) {
       lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
       createdAt: u.createdAt.toISOString(),
       onboardingCompleted: u.onboardingCompleted,
+      sessionVersion: u.sessionVersion,
     }));
 
     return NextResponse.json({ users: out, count: out.length });
