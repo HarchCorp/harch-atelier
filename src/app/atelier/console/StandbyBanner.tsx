@@ -59,7 +59,7 @@ export function StandbyBanner({
         gap: "12px",
         background: C.bg,
       }}>
-        <BrandBadge size="sm" theme="light" />
+        <BrandBadge size="sm" subsidiary="Atelier" theme="light" />
         <span style={{
           fontFamily: C.fontMono,
           fontSize: "10px",
