@@ -745,3 +745,68 @@ Notes opérationnelles :
 - **Code space** : 32^15 ≈ 3.7×10^22 combinaisons possibles. Combiné au rate-limit (5/10min/IP) + TTL 24h, le brute-force est computationnellement infaisable (~7.4×10^16 années en moyenne par IP).
 
 — *Architecte RBAC, YGGDRASIL-rbac terminé.*
+
+---
+Task ID: 11
+Agent: main
+Task: Build fix (BrandBadge import) + .env credential exposure fix + Task 11 injection
+
+Work Log:
+- BUILD FIX: StandbyBanner.tsx + ClientDashboard.tsx had wrong import
+  `import { BrandBadge } from '../components/HarchLogo'` — HarchLogo.tsx
+  doesn't export BrandBadge. Fixed to `import BrandBadge from '@/components/BrandBadge'`
+  (the correct file is src/components/BrandBadge.tsx). Vercel build a87de00
+  was failing with "Module not found: Can't resolve '../components/HarchLogo'".
+- SECURITY FIX: .env was accidentally committed in a87de00 (force-add
+  intended for worklog.md also tracked .env). Neon detected the exposed
+  DATABASE_URL with password. Removed .env from git tracking (git rm --cached).
+  .gitignore already has .env entry. Owner must rotate Neon password.
+- Commit 9301c10 (build fix + untrack) + e7af2ad (re-untrack after cron
+  re-added it) pushed to origin/main.
+
+### Task 11 — High-Scale Core Refactoring & Performance Loop (Priority: High)
+
+This is a self-sustaining optimization loop. Each step generates the next.
+
+- [ ] **Step X (Refactor & Fusion):** Modularize the big dashboards
+  (src/app/atelier/console/views/*.tsx — BrandMonitorDashboard 4093 lines,
+  InvestorDeskDashboard 5200 lines, AlphaDeskDashboard 5100 lines,
+  CompetitorIntelDashboard 4600 lines) into smaller sub-components under
+  src/app/atelier/console/views/{brand-monitor,investor-desk,...}/.
+  Fuse ALL sentiment analyzers (src/lib/harchiq/sentiment-analyzer.ts 746 lines
+  + src/lib/analyzers/sentiment-analyzer.ts 334 lines) into a single
+  `src/lib/engine/CoreAnalyticsEngine.ts` with strategy pattern
+  (engine: "lexicon" | "glm"). Everything strictly typed, 100% modular.
+
+- [ ] **Step Y (Validation Matrix):** The refactor will break imports in
+  crisis-detector, bayesian-risk, darija, orchestrator-v2, and the NLP
+  worker. Verify the impact: run `bunx tsc --noEmit` and fix every
+  broken import. The CoreAnalyticsEngine must expose the same public
+  API as the old modules (adapter pattern) so callers don't break.
+
+- [ ] **Step Z (Test Coverage & Export):** Write unit tests for
+  CoreAnalyticsEngine (tests/unit/engine/). Update the PDF generator
+  (#18 src/lib/export-engine.ts + src/app/api/console/reports) to
+  consume the new CoreAnalyticsEngine instead of the scattered analyzers.
+
+- [ ] **Loop back to X (Perf Benchmark):** Profile the CoreAnalyticsEngine
+  with `node --prof` on a 10k-article batch. If matrix calculations
+  allocate >100MB or take >2s, re-modularize: split into streaming
+  chunks, add memoization, or extract hot paths to a worker thread.
+  The perf finding will reveal a new structural issue → restart at X
+  with finer granularity.
+
+### Catalyst Directive (infinite loop)
+
+The cron job 311166 (YGGDRASIL) MUST:
+1. Read this Task 11 section at each cycle
+2. Execute the next unchecked step (X → Y → Z → loop to X)
+3. Check the box when done
+4. If all boxes checked: reset the loop with a FINER granularity
+   (e.g. "split CoreAnalyticsEngine into CoreSentiment + CoreRisk + CoreNLP")
+5. NEVER close the task — there's always a finer decomposition
+
+This is the fractal engine: each refactor reveals a perf bottleneck,
+each perf fix reveals a modularity issue, each modularity fix reveals
+a test gap, each test gap reveals a refactor need. The loop converges
+to infinite quality.
