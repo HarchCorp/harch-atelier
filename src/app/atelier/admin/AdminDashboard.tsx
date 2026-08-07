@@ -39,7 +39,7 @@ import {
 
 // ─── TYPES ────────────────────────────────────────────────────────
 
-type Tab = "requests" | "accounts" | "logs" | "audit" | "whatsapp";
+type Tab = "requests" | "accounts" | "permissions" | "logs" | "audit" | "whatsapp" | "security";
 
 type RequestStatus =
   | "pending"
@@ -339,6 +339,18 @@ export function AdminDashboard() {
             badge={stats?.users.total}
           />
           <SidebarItem
+            active={tab === "permissions"}
+            onClick={() => setTab("permissions")}
+            icon={<ShieldCheck size={16} />}
+            label="Permissions"
+          />
+          <SidebarItem
+            active={tab === "security"}
+            onClick={() => setTab("security")}
+            icon={<AlertTriangle size={16} />}
+            label="Security"
+          />
+          <SidebarItem
             active={tab === "logs"}
             onClick={() => setTab("logs")}
             icon={<AlertTriangle size={16} />}
@@ -520,6 +532,10 @@ export function AdminDashboard() {
             />
           ) : tab === "accounts" ? (
             <AccountsTab users={users} loading={loading} onCreate={() => openCreateModal()} />
+          ) : tab === "permissions" ? (
+            <PermissionsTab users={users} loading={loading} onRefresh={fetchUsers} />
+          ) : tab === "security" ? (
+            <SecurityTab users={users} loading={loading} onRefresh={fetchUsers} />
           ) : tab === "logs" ? (
             <LogsTab />
           ) : tab === "audit" ? (
@@ -2733,4 +2749,249 @@ function sizeLabel(size: string | null | undefined): string | null {
     enterprise: "Enterprise (500+)",
   };
   return labels[size] || size;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PERMISSIONS TAB — RBAC Matrix UI (N25,60,50)
+//
+//  Shows every user with their role + permission level. Admin can
+//  change a user's role (which updates their permissions instantly).
+//  Displays the full RBAC matrix (role × permission) as a reference.
+// ═══════════════════════════════════════════════════════════════
+
+function PermissionsTab({ users, loading, onRefresh }: {
+  users: Array<{ id: string; email: string; name: string | null; role: string; accountType: string; status: string }>;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const [changing, setChanging] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const ROLES = [
+    { value: "super_admin", label: "Super Admin", level: 100, color: "#ef4444" },
+    { value: "admin", label: "Admin", level: 50, color: "#f59e0b" },
+    { value: "agency-admin", label: "Agency Admin", level: 40, color: "#8b5cf6" },
+    { value: "company-admin", label: "Company Admin", level: 30, color: "#3b82f6" },
+    { value: "manager", label: "Manager", level: 20, color: "#10b981" },
+    { value: "analyst", label: "Analyst", level: 10, color: "#71717a" },
+    { value: "viewer", label: "Viewer", level: 0, color: "#a1a1aa" },
+  ];
+
+  const handleRoleChange = async (userId: string, email: string, newRole: string) => {
+    setChanging(userId);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      setSuccess(`Role updated for ${email} → ${newRole}`);
+      onRefresh();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update role");
+    } finally {
+      setChanging(null);
+    }
+  };
+
+  return (
+    <div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+      {/* Header */}
+      <div style={{ marginBottom: "24px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>Role-Based Access Control</h2>
+        <p style={{ fontSize: "13px", color: "#a1a1aa", margin: 0 }}>Manage user roles and permissions. Changes take effect on the user's next request (JWT sessionVersion check).</p>
+      </div>
+
+      {/* Success/Error banners */}
+      {success && <div style={{ padding: "12px 16px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "8px", fontSize: "13px", color: "#065f46", marginBottom: "16px" }}>✓ {success}</div>}
+      {error && <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", color: "#991b1b", marginBottom: "16px" }}>✕ {error}</div>}
+
+      {/* RBAC Matrix reference */}
+      <div style={{ background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717a", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "12px" }}>Role Hierarchy</div>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          {ROLES.map(r => (
+            <div key={r.value} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "4px", background: `${r.color}15`, border: `1px solid ${r.color}40` }}>
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: r.color }} />
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "#fff" }}>{r.label}</span>
+              <span style={{ fontSize: "10px", color: "#71717a", fontFamily: "'JetBrains Mono', monospace" }}>L{r.level}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Users table */}
+      <div style={{ background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "12px 16px", borderBottom: "1px solid #262626", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717a", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <span>User</span>
+          <span>Current Role</span>
+          <span>Status</span>
+          <span>Change Role</span>
+        </div>
+        <div style={{ maxHeight: "500px", overflowY: "auto" }}>
+          {loading ? (
+            <div style={{ padding: "32px", textAlign: "center", color: "#71717a", fontSize: "13px" }}>Loading users…</div>
+          ) : users.length === 0 ? (
+            <div style={{ padding: "32px", textAlign: "center", color: "#71717a", fontSize: "13px" }}>No users found.</div>
+          ) : users.map(u => {
+            const roleInfo = ROLES.find(r => r.value === u.role) || ROLES[6];
+            return (
+              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "14px 16px", borderBottom: "1px solid #262626", fontSize: "13px", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: "#fff", fontSize: "13px" }}>{u.name || u.email}</div>
+                  <div style={{ fontSize: "11px", color: "#71717a", fontFamily: "'JetBrains Mono', monospace" }}>{u.email}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: roleInfo.color }} />
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: "#fff" }}>{roleInfo.label}</span>
+                </div>
+                <span style={{ fontSize: "11px", color: u.status === "active" ? "#10b981" : "#ef4444", fontWeight: 600 }}>{u.status}</span>
+                <select
+                  value={u.role}
+                  onChange={(e) => handleRoleChange(u.id, u.email, e.target.value)}
+                  disabled={changing === u.id}
+                  style={{
+                    padding: "6px 10px",
+                    background: "#0a0a0a",
+                    border: "1px solid #262626",
+                    borderRadius: "4px",
+                    color: "#fff",
+                    fontSize: "11px",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    cursor: changing === u.id ? "not-allowed" : "pointer",
+                    opacity: changing === u.id ? 0.5 : 1,
+                  }}
+                >
+                  {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY TAB — Session Revocation + Audit Watchdog links
+//
+//  Shows active sessions (users with their sessionVersion) and
+//  provides a "Revoke" button per user. Links to the full audit
+//  watchdog page and the super-admin security settings.
+// ═══════════════════════════════════════════════════════════════
+
+function SecurityTab({ users, loading, onRefresh }: {
+  users: Array<{ id: string; email: string; name: string | null; role: string; status: string }>;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleRevoke = async (userId: string, email: string) => {
+    setRevoking(userId);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/revoke-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      setSuccess(`Session revoked for ${email}. User must re-sign-in.`);
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Revoke failed");
+    } finally {
+      setRevoking(null);
+    }
+  };
+
+  return (
+    <div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+      {/* Header */}
+      <div style={{ marginBottom: "24px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>Security & Session Management</h2>
+        <p style={{ fontSize: "13px", color: "#a1a1aa", margin: 0 }}>Revoke any user's session instantly. They will be forced to re-sign-in on their next request.</p>
+      </div>
+
+      {/* Links to advanced security pages */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+        <a href="/atelier/super-admin/audit-logs" style={{ display: "block", padding: "16px", background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", textDecoration: "none", color: "inherit" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <ScrollText size={16} color="#10b981" />
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Audit Watchdog</span>
+          </div>
+          <p style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>View the tamper-evident hash chain. Real-time integrity monitoring.</p>
+        </a>
+        <a href="/atelier/console/settings/security" style={{ display: "block", padding: "16px", background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", textDecoration: "none", color: "inherit" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <ShieldCheck size={16} color="#3b82f6" />
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Device Management</span>
+          </div>
+          <p style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>Full session management UI with optimistic revoke.</p>
+        </a>
+      </div>
+
+      {/* Banners */}
+      {success && <div style={{ padding: "12px 16px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "8px", fontSize: "13px", color: "#065f46", marginBottom: "16px" }}>✓ {success}</div>}
+      {error && <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", color: "#991b1b", marginBottom: "16px" }}>✕ {error}</div>}
+
+      {/* Sessions table */}
+      <div style={{ background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "12px 16px", borderBottom: "1px solid #262626", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717a", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <span>User</span>
+          <span>Role</span>
+          <span>Status</span>
+          <span>Action</span>
+        </div>
+        <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+          {loading ? (
+            <div style={{ padding: "32px", textAlign: "center", color: "#71717a", fontSize: "13px" }}>Loading…</div>
+          ) : users.map(u => (
+            <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "14px 16px", borderBottom: "1px solid #262626", fontSize: "13px", alignItems: "center", opacity: revoking === u.id ? 0.4 : 1, transition: "opacity 0.2s" }}>
+              <div>
+                <div style={{ fontWeight: 600, color: "#fff", fontSize: "13px" }}>{u.name || u.email}</div>
+                <div style={{ fontSize: "11px", color: "#71717a", fontFamily: "'JetBrains Mono', monospace" }}>{u.email}</div>
+              </div>
+              <span style={{ fontSize: "11px", color: "#a1a1aa", fontWeight: 600 }}>{u.role}</span>
+              <span style={{ fontSize: "11px", color: u.status === "active" ? "#10b981" : "#ef4444", fontWeight: 600 }}>{u.status}</span>
+              <button
+                onClick={() => handleRevoke(u.id, u.email)}
+                disabled={revoking === u.id}
+                style={{
+                  padding: "6px 10px",
+                  background: revoking === u.id ? "#262626" : "#fef2f2",
+                  color: revoking === u.id ? "#71717a" : "#991b1b",
+                  border: "1px solid #fecaca",
+                  borderRadius: "4px",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  cursor: revoking === u.id ? "not-allowed" : "pointer",
+                }}
+              >
+                {revoking === u.id ? "…" : "Revoke"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }

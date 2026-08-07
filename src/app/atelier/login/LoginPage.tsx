@@ -220,6 +220,16 @@ export function LoginPage() {
           <div style={{ marginTop: "12px", textAlign: "center" }}>
             <a href="/atelier" style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textDecoration: "none" }}>← Back to Harch Atelier</a>
           </div>
+
+          {/* ZKP Auth link — the server never knows your password */}
+          <div style={{ marginTop: "20px", padding: "12px 16px", background: C.bgSubtle, borderRadius: "8px", textAlign: "center" }}>
+            <div style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
+              🔐 Zero-Knowledge Proof Auth
+            </div>
+            <a href="/atelier/lab/zkp" style={{ fontSize: "12px", color: C.accent, fontFamily: C.fontMono, textDecoration: "none", fontWeight: 600 }}>
+              Try passwordless authentication →
+            </a>
+          </div>
         </div>
       </main>
     </div>
