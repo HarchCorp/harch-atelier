@@ -907,3 +907,31 @@ Stage Summary:
 - DEFCON 1: if tamper detected, UI switches to crimson + locks super_admin
 - Optimistic UI: revoke feels instant (no 3s spinner)
 - Next: device-level revocation (deviceId in JWT), offline-first sync queue
+
+---
+Task ID: 16
+Agent: main
+Task: Cartographie x100 — Polymorphic UI Engine + Auto-Healing DOM
+
+Work Log:
+- N(20,50,100) Polymorphic UI Engine:
+  • src/lib/polymorphic/engine.ts: BehaviorTracker (click velocity, scroll velocity, dwell time, error count, session duration)
+  • 5 archetypes: beginner, standard, power, skimmer, reader
+  • 8 dynamic tokens: density, baseFontSize, animationSpeed, backgroundWarmth, contrast, showTooltips, compact, reason
+  • Fatigue detection (30+ min → warmer colors)
+  • 100% client-side, privacy-preserving
+  • src/components/polymorphic/PolymorphicProvider.tsx: <PolymorphicProvider> + <PolymorphicBox> + <ArchetypeBadge>
+  • src/app/atelier/lab/polymorphic/page.tsx: live demo (try clicking fast, scrolling fast, dwelling)
+- N(30,80,100) Auto-Healing DOM:
+  • src/components/polymorphic/AutoHealingBoundary.tsx: catches render errors, auto-retries 3×, fallback, reports to Sentinel
+  • withAutoHeal() HOC for function components
+  • Crash test button on the lab page
+- Cartography x100 updated: 12 nodes at Z=100, 9 at Z=50, 2 at Z=30, 1 at Z=10
+
+Commits: b9ba159 (polymorphic+autoheal), d92247e (lint fix)
+
+Stage Summary:
+- 2 nodes Z=100 delivered (Polymorphic UI + Auto-Healing DOM)
+- The UI now ADAPTS to user behavior — no more static interfaces
+- Components self-heal on crash — no more white screens
+- Next: ZKP auth (N10,10,100), then Agent-to-Agent B2B (N40,100,50)
