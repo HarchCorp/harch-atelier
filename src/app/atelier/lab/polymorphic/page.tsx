@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { C } from "../../../components/tokens";
+import { C } from "../../components/tokens";
 import { BrandBadge } from "@/components/BrandBadge";
 import {
   PolymorphicProvider,
