@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCrisisWebSocket } from "@/hooks/useCrisisWebSocket";
 
 // ═══════════════════════════════════════════════════════════════
 //  CRISIS ALERT FEED
@@ -164,33 +165,50 @@ function timeAgo(ts: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export function CrisisAlertFeed() {
+export function CrisisAlertFeed({ companyId }: { companyId?: string }) {
   const [alerts, setAlerts] = useState<Alert[]>(DEMO_ALERTS);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Severity | "all">("all");
 
+  // Real-time WebSocket — pushes new alerts without page reload
+  const { connected: wsConnected, liveAlerts, acknowledge: wsAcknowledge } = useCrisisWebSocket(companyId);
+
   useEffect(() => {
-    // AbortController prevents memory leak: if the component unmounts
-    // before the fetch resolves (e.g. user switches tab), the request
-    // is aborted and setState is never called on the dead component.
     const controller = new AbortController();
     fetch("/api/console/crisis-alerts", { signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.alerts) setAlerts(d.alerts); setLoading(false); })
       .catch((err) => {
-        if (err instanceof DOMException && err.name === "AbortError") return; // expected on unmount
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setLoading(false);
       });
     return () => controller.abort();
   }, []);
 
-  const filtered = filter === "all" ? alerts : alerts.filter((a) => a.severity === filter);
+  // Merge live alerts (from WebSocket) with fetched alerts
+  const allAlerts: Alert[] = [...liveAlerts.map(la => ({
+    id: la.id,
+    title: la.title,
+    source: la.source,
+    url: la.url ?? null,
+    sentimentScore: la.sentimentScore ?? null,
+    severity: la.severity as Severity,
+    publishedAt: la.publishedAt ?? null,
+    acknowledged: false,
+    sourceType: "",
+    language: "",
+    cascade: undefined,
+    summary: "",
+    timestamp: la.publishedAt ?? null,
+  } as unknown as Alert)), ...alerts];
+
+  const filtered = filter === "all" ? allAlerts : allAlerts.filter((a) => a.severity === filter);
 
   const counts = {
-    critical: alerts.filter((a) => a.severity === "critical" && !a.acknowledged).length,
-    warning: alerts.filter((a) => a.severity === "warning" && !a.acknowledged).length,
-    watch: alerts.filter((a) => a.severity === "watch" && !a.acknowledged).length,
-    info: alerts.filter((a) => a.severity === "info" && !a.acknowledged).length,
+    critical: allAlerts.filter((a) => a.severity === "critical" && !a.acknowledged).length,
+    warning: allAlerts.filter((a) => a.severity === "warning" && !a.acknowledged).length,
+    watch: allAlerts.filter((a) => a.severity === "watch" && !a.acknowledged).length,
+    info: allAlerts.filter((a) => a.severity === "info" && !a.acknowledged).length,
   };
 
   const acknowledge = (id: string) => {
@@ -232,15 +250,22 @@ export function CrisisAlertFeed() {
           <span style={{ fontFamily: C.fontMono, fontSize: "12px", fontWeight: 700, color: C.text, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Real-time Alert Feed
           </span>
+          {/* WebSocket live indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: "4px", padding: "2px 6px", borderRadius: "3px", background: wsConnected ? "#ecfdf5" : C.surfaceAlt }}>
+            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: wsConnected ? "#10b981" : "#a1a1aa", animation: wsConnected ? "pulse 2s infinite" : "none" }} />
+            <span style={{ fontFamily: C.fontMono, fontSize: "9px", fontWeight: 700, color: wsConnected ? "#065f46" : C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              {wsConnected ? "LIVE" : "OFFLINE"}
+            </span>
+          </div>
           <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted }}>
-            {alerts.filter((a) => !a.acknowledged).length} unacknowledged
+            {allAlerts.filter((a) => !a.acknowledged).length} unacknowledged
           </span>
         </div>
 
         {/* Filter tabs */}
         <div style={{ display: "flex", gap: "4px" }}>
           {(["all", "critical", "warning", "watch", "info"] as const).map((f) => {
-            const count = f === "all" ? alerts.length : counts[f as Severity] || alerts.filter((a) => a.severity === f).length;
+            const count = f === "all" ? allAlerts.length : counts[f as Severity] || allAlerts.filter((a) => a.severity === f).length;
             const isActive = filter === f;
             return (
               <button

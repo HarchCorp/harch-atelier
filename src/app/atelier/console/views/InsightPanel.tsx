@@ -467,6 +467,22 @@ export function InsightPanel({ accountType, className }: InsightPanelProps) {
               <span style={{ color: data.cached || false ? C.textMuted : persona.accent }}>
                 {data.cached || false ? "CACHED" : "FRESH"} · {data.model || "glm-4"}
               </span>
+              {/* Provenance link — Palantir-grade traceability */}
+              <a
+                href="/api/console/provenance?entityType=ArticleSentiment&limit=10"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 9,
+                  fontFamily: C.fontMono,
+                  color: C.textMuted,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                }}
+                title="View the evidence chain — which articles, which engine, which model version produced these insights"
+              >
+                🔗 provenance
+              </a>
               <span>
                 {safeFormatDate(data.generatedAt, {
                   hour: "2-digit",

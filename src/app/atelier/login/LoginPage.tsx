@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { C } from "../components/tokens";
 import { BrandingProvider, type BrandingPayload } from "../components/BrandingProvider";
+import { PasskeyButton } from "@/components/auth/PasskeyButton";
 
 // ═══════════════════════════════════════════════════════════════
 //  LOGIN PAGE — For invited users only
@@ -229,6 +230,18 @@ export function LoginPage() {
             <a href="/atelier/lab/zkp" style={{ fontSize: "12px", color: C.accent, fontFamily: C.fontMono, textDecoration: "none", fontWeight: 600 }}>
               Try passwordless authentication →
             </a>
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "20px" }}>
+            <div style={{ flex: 1, height: "1px", background: C.border }} />
+            <span style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>or</span>
+            <div style={{ flex: 1, height: "1px", background: C.border }} />
+          </div>
+
+          {/* Passkey / WebAuthn — biometric authentication */}
+          <div style={{ marginTop: "16px" }}>
+            <PasskeyButton mode="login" email={email} />
           </div>
         </div>
       </main>
