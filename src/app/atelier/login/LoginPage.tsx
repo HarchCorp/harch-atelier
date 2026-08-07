@@ -177,7 +177,7 @@ export function LoginPage() {
           {/* Demo access — one-click sign-in with a demo account that
               bypasses the database entirely. Safe for evaluation. */}
           <div style={{ marginTop: "20px", padding: "24px", background: "#fafaf9", border: `1px solid ${C.border}`, borderRadius: "8px" }}>
-            <div style={{ fontFamily: C.fontMono, fontSize: "11px", color: C.textSecondary, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px" }}>
+            <div style={{ fontFamily: C.fontMono, fontSize: "11px", color: C.textBody, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px" }}>
               Evaluate without an account
             </div>
             <button
@@ -189,7 +189,7 @@ export function LoginPage() {
             >
               Fill demo credentials →  demo-brand@harch.atelier
             </button>
-            <p style={{ margin: 0, fontSize: "12px", color: C.textSecondary, fontFamily: C.fontMono, lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: "12px", color: C.textBody, fontFamily: C.fontMono, lineHeight: 1.6 }}>
               Demo account runs on in-memory data. The console, dashboard, and account flows are fully interactive. Trader and investor desks are on standby.
             </p>
           </div>
