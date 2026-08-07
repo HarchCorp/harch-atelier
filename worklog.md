@@ -810,3 +810,31 @@ This is the fractal engine: each refactor reveals a perf bottleneck,
 each perf fix reveals a modularity issue, each modularity fix reveals
 a test gap, each test gap reveals a refactor need. The loop converges
 to infinite quality.
+
+---
+Task ID: 12
+Agent: main
+Task: Build fix (C.surface type error) + .env permanent deletion + db.ts env-agnostic
+
+Work Log:
+- BUILD FIX: ClientDashboard.tsx + StandbyBanner.tsx used `C.surface` which
+  doesn't exist in tokens.ts (the token is `C.bg` = #ffffff). 4 occurrences
+  replaced. Vercel build c56b916 was failing with TypeScript error:
+  "Property 'surface' does not exist on type { bg, bgSubtle, ... }"
+- .env PERMANENTLY DELETED from filesystem + git tracking. .env exists
+  ONLY on Vercel dashboard (Project → Settings → Environment Variables).
+  It must NEVER be a file in the repo. .gitignore already blocks .env*.
+- db.ts rewritten to be env-agnostic: existsSync(.env) check loads .env
+  only if it exists (local dev), otherwise falls back to process.env
+  (Vercel injects vars). NEVER crashes if .env missing.
+
+⚠ PERMANENT RULE FOR ALL CRONS AND AGENTS:
+- .env is a VERCEL-ONLY concept. NEVER create .env as a file in the repo.
+- If a cron needs env vars locally for testing, use `export VAR=value`
+  in the shell, NOT a .env file.
+- Any agent that recreates .env locally must NOT commit it (gitignore
+  blocks it, but be explicit).
+- The db.ts module handles both cases: .env present (local dev) or
+  process.env only (Vercel production).
+
+Commit 1c3c9cb pushed. Build should now pass on Vercel.
