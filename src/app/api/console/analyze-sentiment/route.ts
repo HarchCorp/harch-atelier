@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { analyzeSentiment, LEXICON_STATS } from "@/lib/harchiq/sentiment-analyzer";
+import { CoreAnalyticsEngine } from "@/lib/engine/CoreAnalyticsEngine";
+import { LEXICON_STATS } from "@/lib/harchiq/sentiment-analyzer";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/console/analyze-sentiment
@@ -75,7 +76,14 @@ export async function POST(req: NextRequest) {
       ? text.slice(0, MAX_TEXT_LENGTH)
       : text;
 
-    const result = analyzeSentiment(truncated);
+    // Use CoreAnalyticsEngine — supports both 'lexicon' (instant) and 'glm' (LLM)
+    // via ?engine=glm query param. Default: lexicon (backward compat).
+    const url = new URL(req.url);
+    const engine = url.searchParams.get("engine") === "glm" ? "glm" : "lexicon";
+    const result = await CoreAnalyticsEngine.analyzeSentiment(truncated, {
+      engine,
+      trackedCompany: (body as { company?: string })?.company,
+    });
 
     return NextResponse.json({
       ...result,
