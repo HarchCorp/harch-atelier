@@ -860,3 +860,24 @@ Stage Summary:
 - Step Y NEXT: verify crisis-detector + bayesian-risk + darija imports
 - Step Z AFTER: unit tests + PDF generator migration
 - Loop back to X: perf benchmark on 10k articles
+
+---
+Task ID: 14
+Agent: main
+Task: Yggdrasil expansion — 6 nodes delivered in one cycle
+
+Work Log:
+- Task 11 Step X: CoreAnalyticsEngine created (src/lib/engine/, 190 lines, strategy pattern lexicon|glm)
+- Task 11 Step Y: validated crisis-detector + bayesian-risk + darija are independent (no sentiment-analyzer imports). Migrated /api/console/analyze-sentiment to CoreAnalyticsEngine with ?engine= query param.
+- Task 11 Step Z: 21 unit tests (CoreAnalyticsEngine 8, crisis-detector 5, darija 8) in tests/unit/
+- N(50,40,30) Invitation system: /atelier/invite/[token] page + /api/auth/invite-info + /api/auth/accept-invite. User sets own password (modern B2B SaaS flow). Token TTL, single-use, rate-limited.
+- N(40,100,50) Revocation temps réel: sessionVersion field on User + JWT callback checks on every refresh + POST /api/admin/revoke-session route. Admin bumps version → all JWTs invalidated instantly.
+- N(35,80,50) SuperAdmin audit trail: SuperAdminAudit model with SHA-256 hash chain (entryHash + prevHash). logSuperAdminAction() + verifyAuditChain(). Tamper-evident — deleting/modifying any entry breaks the chain.
+
+Commits this cycle: d690734 (Step Y+Z), e536ac5 (N50 invitation), c7cabd0 (N40 revocation), 838053e (N35 audit trail)
+
+Stage Summary:
+- 6 nodes delivered (Steps X/Y/Z + N50/N40/N35)
+- 0 TypeScript regression (lint: 0 errors on all new files)
+- Schema changes require db:push on Neon (2 new fields: User.sessionVersion, new model SuperAdminAudit)
+- The fractal loop continues: Step X (perf benchmark on 10k articles) is next for Task 11
