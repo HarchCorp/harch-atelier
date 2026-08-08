@@ -630,6 +630,30 @@ model SuperAdminAudit {
   @@index([createdAt])
 }
 
+// ─── Task: WIRE-UI-PROV — Provenance Record (Palantir-grade evidence chain) ──
+// Every computed score in HarchIQ (SentimentScore, CrisisScore, ReputationScore,
+// ArticleSentiment, …) is traceable to its source data, computation engine,
+// model version, and confidence interval. Replaces the in-memory store in
+// src/lib/provenance/tracker.ts with a durable Neon-backed table.
+model ProvenanceRecord {
+  id              String   @id @default(cuid())
+  entityType      String   // SentimentScore | CrisisScore | ArticleSentiment | etc.
+  entityId        String
+  companyId       String
+  sourceArticleIds String[] // array of Article IDs
+  engine          String   // lexicon | glm | bayesian | crisis-detector
+  modelVersion    String   // e.g. "glm-4", "lexicon-v3"
+  inputParams     Json?
+  outputSnapshot  Json?
+  confidence      Float    @default(1.0)
+  computedBy      String   @default("system")
+  createdAt       DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([companyId, createdAt])
+  @@index([engine])
+}
+
 // ─── Task: YGGDRASIL-N38 — System Flags (DEFCON) ──────────────
 // Key-value store for system-wide flags (defcon_level, tamper_incident,
 // maintenance_mode). The Sentinel cron sets defcon_level=1 when the

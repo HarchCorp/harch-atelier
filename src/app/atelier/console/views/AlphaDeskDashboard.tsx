@@ -21,6 +21,7 @@ import {
 import { C } from "../../components/tokens";
 import { SkeletonLoader, ErrorState } from "./SkeletonLoader";
 import { DashboardErrorBoundary } from "./DashboardErrorBoundary";
+import { AutoHealingBoundary } from "@/components/polymorphic/AutoHealingBoundary";
 import { InsightPanel } from "./InsightPanel";
 import { usePriceStream, type PriceTick } from "./usePriceStream";
 import {
@@ -3469,6 +3470,7 @@ export function AlphaDeskDashboard({
   };
 
   return (
+    <AutoHealingBoundary componentName="AlphaDeskDashboard" maxRetries={3}>
     <div
       className="dash-main"
       data-template={template}
@@ -5339,5 +5341,6 @@ export function AlphaDeskDashboard({
         </>
       )}
     </div>
+    </AutoHealingBoundary>
   );
 }

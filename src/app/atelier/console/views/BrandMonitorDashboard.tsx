@@ -65,6 +65,12 @@ import {
   RadialBar,
   PolarAngleAxis,
 } from "recharts";
+import {
+  PolymorphicProvider,
+  PolymorphicBox,
+  ArchetypeBadge,
+} from "@/components/polymorphic/PolymorphicProvider";
+import { AutoHealingBoundary } from "@/components/polymorphic/AutoHealingBoundary";
 
 // Type-only imports for deck.gl / maplibre (erased at compile time, no SSR risk)
 type DeckGL = InstanceType<typeof import("@deck.gl/core").Deck>;
@@ -2012,44 +2018,47 @@ export function BrandMonitorDashboard({
   // ═══ RENDER ═══
 
   return (
-    <div
-      className="dash-main"
-      data-template={template}
-      data-template-account="brand-monitor"
-      style={{ padding: "16px", background: C.bg, overflowX: "hidden" }}
-    >
-      {/* Template visibility CSS — hides [data-template-row] elements
-          based on the active template.Emitted once per mount. */}
-      <TemplateVisibilityStyle accountType="brand-monitor" />
+    <AutoHealingBoundary componentName="BrandMonitorDashboard" maxRetries={3}>
+      <PolymorphicProvider>
+        <PolymorphicBox
+          className="dash-main"
+          data-template={template}
+          data-template-account="brand-monitor"
+          style={{ padding: "16px", background: C.bg, overflowX: "hidden" }}
+        >
+          {/* Template visibility CSS — hides [data-template-row] elements
+              based on the active template.Emitted once per mount. */}
+          <TemplateVisibilityStyle accountType="brand-monitor" />
 
-      {/* Responsive collapse for narrow screens + mobile KPI 2x2 grid */}
-      <style>{`
-        @media (max-width: 900px) {
-          .bm-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .bm-grid > section { grid-column: span 2 !important; }
-          .bm-grid > section > div { grid-column: span 2 !important; }
-        }
-        @media (max-width: 600px) {
-          .bm-grid { grid-template-columns: 1fr !important; }
-          .bm-grid > section { grid-column: span 1 !important; }
-          .bm-grid > section > div { grid-column: span 1 !important; }
-        }
-      `}</style>
+          {/* Responsive collapse for narrow screens + mobile KPI 2x2 grid */}
+          <style>{`
+            @media (max-width: 900px) {
+              .bm-grid { grid-template-columns: repeat(2, 1fr) !important; }
+              .bm-grid > section { grid-column: span 2 !important; }
+              .bm-grid > section > div { grid-column: span 2 !important; }
+            }
+            @media (max-width: 600px) {
+              .bm-grid { grid-template-columns: 1fr !important; }
+              .bm-grid > section { grid-column: span 1 !important; }
+              .bm-grid > section > div { grid-column: span 1 !important; }
+            }
+          `}</style>
 
-      {/* ─── HarchIQ Insight Panel (replaces the generic "Good morning" banner) ─── */}
-      {/*  Task: signal-aiq-engine — pre-generated, LLM-grounded, 15-min cached
-          insights per persona. The panel sits at the TOP of the Overview tab,
-          above the KPI strip, so the Dircom sees AI-generated intelligence
-          before the raw metrics. */}
-      <DashboardErrorBoundary accent={ACCENT}>
-        <InsightPanel accountType="brand-monitor" />
-      </DashboardErrorBoundary>
+          {/* ─── HarchIQ Insight Panel (replaces the generic "Good morning" banner) ─── */}
+          {/*  Task: signal-aiq-engine — pre-generated, LLM-grounded, 15-min cached
+              insights per persona. The panel sits at the TOP of the Overview tab,
+              above the KPI strip, so the Dircom sees AI-generated intelligence
+              before the raw metrics. */}
+          <DashboardErrorBoundary accent={ACCENT}>
+            <InsightPanel accountType="brand-monitor" />
+          </DashboardErrorBoundary>
 
       {/* ─── Page title + toolbar ─── */}
-      <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+      <PolymorphicBox style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <div style={labelStyle}>
+          <div style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "8px" }}>
             {companyName}
+            <ArchetypeBadge />
           </div>
           <h3 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: "2px 0 0 0", letterSpacing: "-0.02em" }}>
             Brand Monitor Command Center
@@ -2128,7 +2137,7 @@ export function BrandMonitorDashboard({
             <span>CSV</span>
           </button>
         </div>
-      </div>
+      </PolymorphicBox>
 
       {/* ─── Loading / Error gate for the whole grid ─── */}
       {loading ? (
@@ -2179,7 +2188,7 @@ export function BrandMonitorDashboard({
 
           {/* ═══ OVERVIEW MODE: 5 key widgets ═══ */}
           {viewMode === "overview" && (
-          <div className="bm-grid" style={gridWrapStyle}>
+          <PolymorphicBox className="bm-grid" style={gridWrapStyle}>
 
             {/* ─── ROW 1: Executive Strip (4 × span-6) ─── */}
             <section data-template-row="1" style={{ display: "contents" }}>
@@ -2713,7 +2722,7 @@ export function BrandMonitorDashboard({
 
             </section>
 
-          </div>
+          </PolymorphicBox>
           )}
 
           {/* ═══ DEEP DIVE MODE: full analytics ═══ */}
@@ -4074,9 +4083,11 @@ export function BrandMonitorDashboard({
           )}
           </>
           )}
-        </>
+          </>
       )}
-    </div>
+        </PolymorphicBox>
+      </PolymorphicProvider>
+    </AutoHealingBoundary>
   );
 }
 

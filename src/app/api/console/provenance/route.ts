@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   // If entityId is provided, return the full evidence chain
   if (entityType && entityId) {
-    const chain = ProvenanceTracker.getEvidenceChain(entityType as any, entityId);
+    const chain = await ProvenanceTracker.getEvidenceChain(entityType as any, entityId);
     if (!chain) {
       return NextResponse.json({ error: "No provenance record found" }, { status: 404 });
     }
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Otherwise, query provenance records
-  const records = ProvenanceTracker.query({
+  const records = await ProvenanceTracker.query({
     entityType: entityType as any,
     entityId,
     companyId,
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     limit,
   });
 
-  const stats = ProvenanceTracker.getStats();
+  const stats = await ProvenanceTracker.getStats();
 
   return NextResponse.json({
     records,
