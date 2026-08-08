@@ -15,7 +15,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════
 //
 // Product: AI Reputation Intelligence — 3 tiers, transparent pricing.
-// Émergence 15K · Corporate 40K · Sovereign 75K MAD / month
+// Three institutional audit tiers — pricing on request
 // (Aligned with legal contracts: Executive 450K MAD/yr · Sovereign 850K MAD/yr)
 //
 // Palette (LOCKED — light):
@@ -248,9 +248,9 @@ const COMPARISON_ROWS: { category: string; features: { name: string; emergence: 
 ];
 
 const ADDONS = [
-  { name: "Brand addition", price: "+2,000 MAD/month", desc: "Each additional brand or subsidiary tracked on top of your tier allowance." },
-  { name: "Custom source", price: "+1,500 MAD/month", desc: "Add a niche or industry source we don't cover yet (forum, blog, trade press)." },
-  { name: "Custom AI engine", price: "+3,000 MAD/month", desc: "Track a regional or vertical AI engine (e.g. regional chatbot, voice assistant)." },
+  { name: "Brand addition", price: "Sur devis", desc: "Each additional brand or subsidiary tracked on top of your tier allowance." },
+  { name: "Custom source", price: "Sur devis", desc: "Add a niche or industry source we don't cover yet (forum, blog, trade press)." },
+  { name: "Custom AI engine", price: "Sur devis", desc: "Track a regional or vertical AI engine (e.g. regional chatbot, voice assistant)." },
   { name: "Extra report", price: "+1,000 MAD", desc: "Additional PDF report — quarterly, board prep, or one-off deep dive." },
   { name: "Onboarding call", price: "+2,000 MAD", desc: "2-hour onboarding with our analyst team to set up your taxonomy and alerts." },
   { name: "Workshop", price: "+8,000 MAD", desc: "Half-day workshop with your comms team on reputation strategy and tools." },
@@ -259,7 +259,7 @@ const ADDONS = [
 const FAQ_MINI = [
   {
     q: "Pourquoi pas de carte bancaire?",
-    a: "We invoice by bank transfer, in MAD or EUR. No long-term commitment — you pay month by month, you cancel whenever you want.",
+    a: "Facturation sur devis. Virement bancaire. Conditions contractuelles adaptées au profil institutionnel.",
   },
   {
     q: "Is there a long-term commitment?",

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { ConsoleShell } from "../ConsoleShell";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { StandbyBanner } from "../StandbyBanner";
 
 export const metadata: Metadata = {
   title: "Harch Alpha — Trader Console",
@@ -12,12 +13,15 @@ export const metadata: Metadata = {
 // ═══════════════════════════════════════════════════════════════
 //  /atelier/console/harch-alpha
 //
-//  STANDBY (Task ID: 5-standby). The Harch Alpha trader desk is on
-//  hold while the team focuses on the core Brand Monitor console.
-//  Authenticated users see a clean banner; anonymous users are sent
-//  to login. No Prisma call — the previous onboarding gate would
-//  crash with PrismaClientInitializationError against the current
-//  SQLite/PostgreSQL schema mismatch.
+//  Auth + onboarding gate. Renders ConsoleShell only when:
+//    1. User is signed in
+//    2. accountType === "harch-alpha" (or role === "admin")
+//    3. onboardingCompleted === true (else → /atelier/onboarding)
+//
+//  Demo users (demo-*@harch.atelier) are auto-onboarded in
+//  /api/auth/demo so they skip the wizard too.
+//
+//  Task: BUILD-MARKET (exit standby)
 // ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
@@ -28,5 +32,33 @@ export default async function HarchAlphaConsolePage() {
     redirect("/atelier/login?callbackUrl=/atelier/console/harch-alpha");
   }
 
-  return <StandbyBanner featureName="Harch Alpha — Trader Desk" />;
+  // Demo users bypass the onboarding check (they're auto-onboarded).
+  const email = session.user.email ?? "";
+  const isDemo = email.startsWith("demo-") && email.endsWith("@harch.atelier");
+
+  if (
+    session.user.role !== "admin" &&
+    session.user.role !== "super_admin" &&
+    session.user.accountType !== "harch-alpha"
+  ) {
+    redirect(`/atelier/console/${session.user.accountType || "brand-monitor"}`);
+  }
+
+  if (!isDemo && session.user.role !== "admin" && session.user.role !== "super_admin") {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { onboardingCompleted: true },
+    });
+    if (!user?.onboardingCompleted) {
+      redirect("/atelier/onboarding");
+    }
+  }
+
+  return (
+    <ConsoleShell
+      accountType="harch-alpha"
+      userName={session.user.name}
+      userEmail={session.user.email}
+    />
+  );
 }
