@@ -30,6 +30,7 @@ import {
   type ScrapedArticle,
 } from "../../scrapers/rss-scraper";
 import { RSS_SOURCES, getCompanyBySlug } from "../../scrapers/sources-config";
+import { logInfo, logError, logWarn } from "@/lib/logger";
 
 // ─── JOB PAYLOAD / RESULT TYPES ──────────────────────────────────
 
@@ -110,10 +111,7 @@ async function upsertArticle(
     const full = await fetchArticleContent(article.url);
     if (full && full.length > content.length) content = full;
   } catch (err) {
-    console.warn(
-      `[scraper-worker] fetchArticleContent failed for ${article.url}:`,
-      err instanceof Error ? err.message : err,
-    );
+    logWarn("scraper-worker", `fetchArticleContent failed for ${article.url}: ${err instanceof Error ? err.message : err}`);
   }
 
   await prisma.article.create({
@@ -169,7 +167,7 @@ async function upsertArticlesBatch(
       else if (r.status === "rejected") {
         const msg =
           r.reason instanceof Error ? r.reason.message : String(r.reason);
-        console.warn(`[scraper-worker] upsertArticle rejected: ${msg}`);
+        logWarn("scraper-worker", `upsertArticle rejected: ${msg}`);
       }
     }
   }
@@ -206,7 +204,7 @@ async function logScrape(params: {
       },
     });
   } catch (err) {
-    console.error("[scraper-worker] ScraperLog write failed:", err);
+    logError("scraper-worker", `ScraperLog write failed: ${err instanceof Error ? err.message : err}`);
   }
 }
 
@@ -218,8 +216,9 @@ async function processScraperJob(
   const { companyName, companySlug } = job.data;
   const startedAt = Date.now();
 
-  console.log(
-    `[scraper-worker] ▶ job ${job.id} — scraping "${companyName}" (slug: ${companySlug})`,
+  logInfo(
+    "scraper-worker",
+    `▶ job ${job.id} — scraping "${companyName}" (slug: ${companySlug})`,
   );
 
   const company = await ensureCompany({ companyName, companySlug });
@@ -255,12 +254,10 @@ async function processScraperJob(
       durationMs: Date.now() - t0,
     });
 
-    console.log(
-      `[scraper-worker] Google News: ${gFound} found, ${gNew} new`,
-    );
+    logInfo("scraper-worker", `Google News: ${gFound} found, ${gNew} new`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[scraper-worker] Google News scrape failed: ${msg}`);
+    logError("scraper-worker", `Google News scrape failed: ${msg}`);
     await logScrape({
       sourceId: "google-news-ma",
       sourceName: "Google News Morocco",
@@ -308,12 +305,10 @@ async function processScraperJob(
         durationMs: Date.now() - t0,
       });
 
-      console.log(
-        `[scraper-worker] ${src.name}: ${dFound} found, ${dNew} new`,
-      );
+      logInfo("scraper-worker", `${src.name}: ${dFound} found, ${dNew} new`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[scraper-worker] ${src.name} scrape failed: ${msg}`);
+      logError("scraper-worker", `${src.name} scrape failed: ${msg}`);
       await logScrape({
         sourceId: src.id,
         sourceName: src.name,
@@ -328,9 +323,7 @@ async function processScraperJob(
   }
 
   const elapsed = Date.now() - startedAt;
-  console.log(
-    `[scraper-worker] ✔ job ${job.id} done in ${elapsed}ms — ${articlesFound} found / ${articlesNew} new`,
-  );
+  logInfo("scraper-worker", `✔ job ${job.id} done in ${elapsed}ms — ${articlesFound} found / ${articlesNew} new`);
 
   return { articlesFound, articlesNew };
 }
@@ -353,18 +346,13 @@ export const scraperWorker = new Worker<ScraperJobPayload, ScraperJobResult>(
 );
 
 scraperWorker.on("completed", (job, result) => {
-  console.log(
-    `[scraper-worker] ✓ job ${job.id} completed —`,
-    result ?? "(no result)",
-  );
+  logInfo("scraper-worker", `✓ job ${job.id} completed — ${result ?? "(no result)"}`);
 });
 
 scraperWorker.on("failed", (job, err) => {
-  console.error(
-    `[scraper-worker] ✗ job ${job?.id ?? "?"} failed: ${err.message}`,
-  );
+  logError("scraper-worker", `✗ job ${job?.id ?? "?"} failed: ${err.message}`);
 });
 
 scraperWorker.on("error", (err) => {
-  console.error("[scraper-worker] worker error:", err.message);
+  logError("scraper-worker", `worker error: ${err.message}`);
 });

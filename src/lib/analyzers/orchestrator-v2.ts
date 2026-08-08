@@ -26,6 +26,7 @@ import {
   ReputationPillars,
 } from "./risk-intelligence";
 import { COMPANY_CATEGORIES, COMPANY_ALIASES, COMPANY_COMPETITORS } from "../scrapers/sources";
+import { logInfo, logError } from "@/lib/logger";
 
 export interface AuditResultV2 {
   companyName: string;
@@ -49,11 +50,11 @@ export interface AuditResultV2 {
  */
 export async function runFullAuditV2(companyName: string): Promise<AuditResultV2> {
   const startTime = Date.now();
-  console.log(`[orchestrator-v2] Starting audit for: ${companyName}`);
+  logInfo("orchestrator-v2", `Starting audit for: ${companyName}`);
 
   // STEP 1: Scrape
   const articles = await scrapeForCompany(companyName);
-  console.log(`[orchestrator-v2] Scraped ${articles.length} articles`);
+  logInfo("orchestrator-v2", `Scraped ${articles.length} articles`);
 
   // STEP 2: Analyze sentiment (v1 for batch, v2 for entity-level)
   const analyzed = await analyzeArticles(articles, companyName);
@@ -69,20 +70,20 @@ export async function runFullAuditV2(companyName: string): Promise<AuditResultV2
 
   // STEP 3: Topic clustering
   const topics = clusterTopics(analyzed);
-  console.log(`[orchestrator-v2] Found ${topics.length} topic clusters`);
+  logInfo("orchestrator-v2", `Found ${topics.length} topic clusters`);
 
   // STEP 4: Narrative detection
   const narratives = detectNarratives(analyzed, companyName);
-  console.log(`[orchestrator-v2] Found ${narratives.length} narratives`);
+  logInfo("orchestrator-v2", `Found ${narratives.length} narratives`);
 
   // STEP 5: Risk assessment (basic)
   const risk = assessRisk(analyzed, topics);
-  console.log(`[orchestrator-v2] Risk: ${risk.riskLevel} (${risk.overallRisk}/100)`);
+  logInfo("orchestrator-v2", `Risk: ${risk.riskLevel} (${risk.overallRisk}/100)`);
 
   // STEP 5b: NEW — 32-category risk detection (Signal AI style)
   const industry = COMPANY_CATEGORIES[companyName];
   const risks = detectRisks(analyzed, industry);
-  console.log(`[orchestrator-v2] Detected ${risks.length} risks across 32 categories`);
+  logInfo("orchestrator-v2", `Detected ${risks.length} risks across 32 categories`);
 
   // STEP 6: AI visibility check (simulated for now)
   const aiMetrics = await checkAIVisibilityAll(companyName);
@@ -101,7 +102,7 @@ export async function runFullAuditV2(companyName: string): Promise<AuditResultV2
   // STEP 8b: NEW — Calculate Signal AI-style pillars (Innovation/Performance/Purpose)
   const totalIndustryArticles = analyzed.length; // Approximation — in production would be all industry articles
   const pillars = calculateReputationPillars(analyzed, totalIndustryArticles);
-  console.log(`[orchestrator-v2] Pillars: Innovation=${pillars.innovation.score}, Performance=${pillars.performance.score}, Purpose=${pillars.purpose.score}`);
+  logInfo("orchestrator-v2", `Pillars: Innovation=${pillars.innovation.score}, Performance=${pillars.performance.score}, Purpose=${pillars.purpose.score}`);
 
   // STEP 9: Get top 5 most relevant articles
   const topArticles = analyzed
@@ -109,7 +110,7 @@ export async function runFullAuditV2(companyName: string): Promise<AuditResultV2
     .slice(0, 5);
 
   const elapsed = Date.now() - startTime;
-  console.log(`[orchestrator-v2] Audit complete in ${elapsed}ms`);
+  logInfo("orchestrator-v2", `Audit complete in ${elapsed}ms`);
 
   return {
     companyName,
@@ -133,10 +134,10 @@ export async function runFullAuditV2(companyName: string): Promise<AuditResultV2
  */
 export async function runHarch100V2(): Promise<ReputationScoreV2[]> {
   const startTime = Date.now();
-  console.log("[orchestrator-v2] Starting Harch 100 computation");
+  logInfo("orchestrator-v2", "Starting Harch 100 computation");
 
   const allArticles = await scrapeAllSources();
-  console.log(`[orchestrator-v2] Total articles: ${allArticles.length}`);
+  logInfo("orchestrator-v2", `Total articles: ${allArticles.length}`);
 
   const companies = Object.keys(COMPANY_CATEGORIES);
   const scores: ReputationScoreV2[] = [];
@@ -198,7 +199,7 @@ export async function runHarch100V2(): Promise<ReputationScoreV2[]> {
   }
 
   scores.sort((a, b) => b.score - a.score);
-  console.log(`[orchestrator-v2] Harch 100 done in ${Date.now() - startTime}ms — ${scores.length} companies`);
+  logInfo("orchestrator-v2", `Harch 100 done in ${Date.now() - startTime}ms — ${scores.length} companies`);
 
   return scores;
 }
@@ -279,12 +280,12 @@ async function checkAIVisibilityAll(companyName: string): Promise<ReputationScor
     const positions = [chatgpt, perplexity, googleAI, glm].filter(e => e.cited).map(e => parseInt(e.position.replace("#", "")) || 1);
     const avgPosition = positions.length > 0 ? `#${Math.round(positions.reduce((a, b) => a + b, 0) / positions.length)}` : "Not cited";
 
-    console.log(`[AEGIS] AI Visibility for ${companyName}: GLM knows=${result.known}, confidence=${result.confidence}, citations=${totalCitations}/4`);
+    logInfo("AEGIS", `AI Visibility for ${companyName}: GLM knows=${result.known}, confidence=${result.confidence}, citations=${totalCitations}/4`);
 
     return { chatgpt, perplexity, googleAI, glm, totalCitations, avgPosition };
   } catch (error) {
     // AEGIS: Fallback to conservative defaults if GLM API is unavailable
-    console.error(`[AEGIS] GLM AI visibility check failed, using fallback:`, error);
+    logError("AEGIS", `GLM AI visibility check failed, using fallback: ${error instanceof Error ? error.message : error}`);
     const chatgpt = { cited: false, position: "Not cited", sentiment: "neutral" };
     const perplexity = { cited: false, position: "Not cited", sentiment: "neutral" };
     const googleAI = { cited: false, position: "Not cited", sentiment: "neutral" };

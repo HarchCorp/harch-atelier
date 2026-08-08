@@ -35,6 +35,7 @@ import {
   type ArticleInput,
 } from "../../ai/glm-orchestrator";
 import type { ArticleEntity } from "../types";
+import { logInfo, logError } from "@/lib/logger";
 
 // ─── RESULT INTERFACES ────────────────────────────────────────────
 
@@ -198,19 +199,17 @@ export async function processArticle(
   const text = articleToText(article);
   const usePremium = false; // standard model by default; batch opts override
 
-  console.log(
-    `[HarchIQ-Understand] → NLP pipeline for article: "${article.title.slice(0, 80)}"`,
-  );
+  logInfo("HarchIQ-Understand", `→ NLP pipeline for article: "${article.title.slice(0, 80)}"`);
 
   // ─── STEP 1/4: SUMMARIZE ──────────────────────────────────
   let summary: SummarizationResult;
   try {
     summary = await summarizeArticle(text, usePremium);
-    console.log(`[HarchIQ-Understand]   1/4 ✓ Summarized (${summary.summary.length} chars)`);
+    logInfo("HarchIQ-Understand", `  1/4 ✓ Summarized (${summary.summary.length} chars)`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push(`summarize: ${msg}`);
-    console.error(`[HarchIQ-Understand]   1/4 ✗ Summarize failed: ${msg}`);
+    logError("HarchIQ-Understand", `  1/4 ✗ Summarize failed: ${msg}`);
     summary = fallbackSummary(text);
   }
 
@@ -218,13 +217,11 @@ export async function processArticle(
   let sentiment: SentimentResult;
   try {
     sentiment = await analyzeSentiment(text, companyName, usePremium);
-    console.log(
-      `[HarchIQ-Understand]   2/4 ✓ Sentiment: ${sentiment.overall_sentiment} (score=${sentiment.score}, conf=${sentiment.confidence.toFixed(2)})`,
-    );
+    logInfo("HarchIQ-Understand", `  2/4 ✓ Sentiment: ${sentiment.overall_sentiment} (score=${sentiment.score}, conf=${sentiment.confidence.toFixed(2)})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push(`sentiment: ${msg}`);
-    console.error(`[HarchIQ-Understand]   2/4 ✗ Sentiment failed: ${msg}`);
+    logError("HarchIQ-Understand", `  2/4 ✗ Sentiment failed: ${msg}`);
     sentiment = fallbackSentiment(companyName);
   }
 
@@ -232,13 +229,11 @@ export async function processArticle(
   let entities: NERResult;
   try {
     entities = await extractEntities(text, usePremium);
-    console.log(
-      `[HarchIQ-Understand]   3/4 ✓ NER: ${entities.entities.length} entities (P=${entities.summary.person_count}, O=${entities.summary.organization_count}, L=${entities.summary.location_count})`,
-    );
+    logInfo("HarchIQ-Understand", `  3/4 ✓ NER: ${entities.entities.length} entities (P=${entities.summary.person_count}, O=${entities.summary.organization_count}, L=${entities.summary.location_count})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push(`entities: ${msg}`);
-    console.error(`[HarchIQ-Understand]   3/4 ✗ NER failed: ${msg}`);
+    logError("HarchIQ-Understand", `  3/4 ✗ NER failed: ${msg}`);
     entities = fallbackNER();
   }
 
@@ -246,13 +241,11 @@ export async function processArticle(
   let topics: TopicResult;
   try {
     topics = await classifyTopics(text, usePremium);
-    console.log(
-      `[HarchIQ-Understand]   4/4 ✓ Topics: ${topics.topics.length} (primary="${topics.primary_topic}")`,
-    );
+    logInfo("HarchIQ-Understand", `  4/4 ✓ Topics: ${topics.topics.length} (primary="${topics.primary_topic}")`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push(`topics: ${msg}`);
-    console.error(`[HarchIQ-Understand]   4/4 ✗ Topics failed: ${msg}`);
+    logError("HarchIQ-Understand", `  4/4 ✗ Topics failed: ${msg}`);
     topics = fallbackTopics();
   }
 
@@ -305,12 +298,8 @@ export async function processArticles(
   const batchErrors: Array<{ articleUrl: string; step: string; error: string }> =
     [];
 
-  console.log(
-    `[HarchIQ-Understand] ═══ NLP batch starting for "${companyName}" ═══`,
-  );
-  console.log(
-    `[HarchIQ-Understand] Input: ${articles.length} articles | Processing: ${truncated.length} | Model: ${usePremium ? "premium" : "standard"} | Rate limit: ${rateLimitMs}ms`,
-  );
+  logInfo("HarchIQ-Understand", `═══ NLP batch starting for "${companyName}" ═══`);
+  logInfo("HarchIQ-Understand", `Input: ${articles.length} articles | Processing: ${truncated.length} | Model: ${usePremium ? "premium" : "standard"} | Rate limit: ${rateLimitMs}ms`);
 
   const startTime = Date.now();
 
@@ -336,9 +325,7 @@ export async function processArticles(
       // Catastrophic failure — processArticle itself threw (shouldn't
       // normally happen, but we never let one bad article kill the batch).
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[HarchIQ-Understand] Article ${i + 1} failed catastrophically: ${msg}`,
-      );
+      logError("HarchIQ-Understand", `Article ${i + 1} failed catastrophically: ${msg}`);
       batchErrors.push({
         articleUrl: article.url,
         step: "processArticle",
@@ -354,17 +341,13 @@ export async function processArticles(
     // Progress log every N articles, plus the final article.
     if ((i + 1) % logEveryN === 0 || i + 1 === truncated.length) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(
-        `[HarchIQ-Understand] Progress: ${i + 1}/${truncated.length} articles processed (${elapsed}s elapsed)`,
-      );
+      logInfo("HarchIQ-Understand", `Progress: ${i + 1}/${truncated.length} articles processed (${elapsed}s elapsed)`);
     }
   }
 
   const durationMs = Date.now() - startTime;
   const errored = processed.filter((p) => p.errors.length > 0).length;
-  console.log(
-    `[HarchIQ-Understand] ═══ NLP batch complete in ${(durationMs / 1000).toFixed(1)}s | processed=${processed.length} | with-errors=${errored} | batch-errors=${batchErrors.length} ═══`,
-  );
+  logInfo("HarchIQ-Understand", `═══ NLP batch complete in ${(durationMs / 1000).toFixed(1)}s | processed=${processed.length} | with-errors=${errored} | batch-errors=${batchErrors.length} ═══`);
 
   return processed;
 }

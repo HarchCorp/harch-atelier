@@ -46,6 +46,7 @@ import {
   type InferenceResult,
 } from "@/lib/inference/hybrid-pipeline";
 import { getCompanyBySlug } from "../../scrapers/sources-config";
+import { logInfo, logError } from "@/lib/logger";
 
 // ─── JOB PAYLOAD / RESULT TYPES ──────────────────────────────────
 
@@ -170,10 +171,7 @@ async function updateArticleWithNlp(
       },
     });
   } catch (err) {
-    console.error(
-      `[nlp-worker] updateArticleWithNlp failed for ${articleId}:`,
-      err instanceof Error ? err.message : err,
-    );
+    logError("nlp-worker", `updateArticleWithNlp failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
   }
 }
 
@@ -208,10 +206,7 @@ async function persistEntities(
     } catch (err) {
       // Entity + EntityMention are analytics-only — never crash the
       // worker on a graph write failure.
-      console.error(
-        `[nlp-worker] EntityMention write failed for "${entity.text}":`,
-        err instanceof Error ? err.message : err,
-      );
+      logError("nlp-worker", `EntityMention write failed for "${entity.text}": ${err instanceof Error ? err.message : err}`);
     }
   }
 }
@@ -258,10 +253,7 @@ async function persistSentimentScore(
       },
     });
   } catch (err) {
-    console.error(
-      "[nlp-worker] SentimentScore write failed:",
-      err instanceof Error ? err.message : err,
-    );
+    logError("nlp-worker", `SentimentScore write failed: ${err instanceof Error ? err.message : err}`);
   }
 }
 
@@ -294,10 +286,7 @@ async function persistRiskAssessment(
         },
       });
     } catch (err) {
-      console.error(
-        `[nlp-worker] RiskAssessment write failed for "${risk.category}":`,
-        err instanceof Error ? err.message : err,
-      );
+      logError("nlp-worker", `RiskAssessment write failed for "${risk.category}": ${err instanceof Error ? err.message : err}`);
     }
   }
 }
@@ -331,10 +320,7 @@ async function updateArticleWithHybrid(
       },
     });
   } catch (err) {
-    console.error(
-      `[nlp-worker] updateArticleWithHybrid failed for ${articleId}:`,
-      err instanceof Error ? err.message : err,
-    );
+    logError("nlp-worker", `updateArticleWithHybrid failed for ${articleId}: ${err instanceof Error ? err.message : err}`);
   }
 }
 
@@ -432,10 +418,7 @@ async function persistHybridSentimentScore(
       },
     });
   } catch (err) {
-    console.error(
-      "[nlp-worker] persistHybridSentimentScore write failed:",
-      err instanceof Error ? err.message : err,
-    );
+    logError("nlp-worker", `persistHybridSentimentScore write failed: ${err instanceof Error ? err.message : err}`);
   }
 }
 
@@ -445,8 +428,9 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
   const { companySlug, articleIds } = job.data;
   const startedAt = Date.now();
 
-  console.log(
-    `[nlp-worker] ▶ job ${job.id} — NLP for company "${companySlug}"` +
+  logInfo(
+    "nlp-worker",
+    `▶ job ${job.id} — NLP for company "${companySlug}"` +
       (articleIds ? ` (filtered to ${articleIds.length} ids)` : ""),
   );
 
@@ -474,13 +458,11 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
   });
 
   if (articles.length === 0) {
-    console.log(`[nlp-worker] ⊘ no unprocessed articles for ${companySlug}`);
+    logInfo("nlp-worker", `⊘ no unprocessed articles for ${companySlug}`);
     return { articlesProcessed: 0, errors: [] };
   }
 
-  console.log(
-    `[nlp-worker] processing ${articles.length} articles for ${company.name}`,
-  );
+  logInfo("nlp-worker", `processing ${articles.length} articles for ${company.name}`);
 
   // ─── 2. RUN HYBRID PIPELINE (Level 0/1/2) ───────────────────
   // analyzeArticleHybrid routes each article through:
@@ -506,9 +488,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[nlp-worker] analyzeArticleHybrid crashed (${msg}) — falling back to runFullAnalysis`,
-    );
+    logError("nlp-worker", `analyzeArticleHybrid crashed (${msg}) — falling back to runFullAnalysis`);
     hybridResults = null;
   }
 
@@ -553,9 +533,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
         processed++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(
-          `[nlp-worker] per-article persist failed for ${article.id}: ${msg}`,
-        );
+        logError("nlp-worker", `per-article persist failed for ${article.id}: ${msg}`);
         errors.push({ articleId: article.id, error: msg });
       }
     }
@@ -568,8 +546,9 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
     );
 
     const elapsed = Date.now() - startedAt;
-    console.log(
-      `[nlp-worker] ✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${level2Count} L2, ${errors.length} errors, ~${totalCost.toFixed(2)} MAD`,
+    logInfo(
+      "nlp-worker",
+      `✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${level2Count} L2, ${errors.length} errors, ~${totalCost.toFixed(2)} MAD`,
     );
 
     return { articlesProcessed: processed, errors };
@@ -579,7 +558,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
   // Used only if the hybrid pipeline crashed. Preserves the original
   // behaviour so the worker never goes dark. Same skipSteps as before
   // — high-level synthesis is handled by the ai-visibility-worker.
-  console.log(`[nlp-worker] ↻ using legacy runFullAnalysis fallback`);
+  logInfo("nlp-worker", "↻ using legacy runFullAnalysis fallback");
   const articleInputs = articles.map(toArticleInput);
   let analysis: FullAnalysisResult;
   try {
@@ -594,7 +573,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[nlp-worker] runFullAnalysis failed: ${msg}`);
+    logError("nlp-worker", `runFullAnalysis failed: ${msg}`);
     return {
       articlesProcessed: 0,
       errors: articles.map((a) => ({ articleId: a.id, error: msg })),
@@ -632,9 +611,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
       processed++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[nlp-worker] per-article persist failed for ${article.id}: ${msg}`,
-      );
+      logError("nlp-worker", `per-article persist failed for ${article.id}: ${msg}`);
       errors.push({ articleId: article.id, error: msg });
     }
   }
@@ -648,8 +625,9 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
   await persistRiskAssessment(company.id, analysis.steps.risks);
 
   const elapsed = Date.now() - startedAt;
-  console.log(
-    `[nlp-worker] ✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${errors.length} errors (fallback path)`,
+  logInfo(
+    "nlp-worker",
+    `✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${errors.length} errors (fallback path)`,
   );
 
   return { articlesProcessed: processed, errors };
@@ -670,16 +648,16 @@ export const nlpWorker = new Worker<NlpJobPayload, NlpJobResult>(
 );
 
 nlpWorker.on("completed", (job, result) => {
-  console.log(
-    `[nlp-worker] ✓ job ${job.id} completed —`,
-    result ?? "(no result)",
+  logInfo(
+    "nlp-worker",
+    `✓ job ${job.id} completed — ${result ?? "(no result)"}`,
   );
 });
 
 nlpWorker.on("failed", (job, err) => {
-  console.error(`[nlp-worker] ✗ job ${job?.id ?? "?"} failed: ${err.message}`);
+  logError("nlp-worker", `✗ job ${job?.id ?? "?"} failed: ${err.message}`);
 });
 
 nlpWorker.on("error", (err) => {
-  console.error("[nlp-worker] worker error:", err.message);
+  logError("nlp-worker", `worker error: ${err.message}`);
 });

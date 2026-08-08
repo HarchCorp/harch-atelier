@@ -34,6 +34,7 @@ import {
   detectLanguage as detectDarijaLanguage,
   type LanguageLabel,
 } from "@/lib/harchiq/darija";
+import { logInfo, logError, logWarn } from "@/lib/logger";
 
 // ─── CORE TYPES (NEW SPEC) ────────────────────────────────────────
 
@@ -565,26 +566,21 @@ export async function scrapeFeed(feed: RSSFeed): Promise<ScrapedArticle[]> {
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
-      console.warn(
-        `[rss-scraper] scrapeFeed(${feed.name}) → HTTP ${res.status} ${res.statusText}`,
-      );
+      logWarn("rss-scraper", `scrapeFeed(${feed.name}) → HTTP ${res.status} ${res.statusText}`);
       return [];
     }
     const xml = await res.text();
     if (!xml || xml.length < 32) {
-      console.warn(`[rss-scraper] scrapeFeed(${feed.name}) → empty body`);
+      logWarn("rss-scraper", `scrapeFeed(${feed.name}) → empty body`);
       return [];
     }
     return parseRSS(xml, feed);
   } catch (err: unknown) {
     const name = (err as { name?: string })?.name;
     if (name === "TimeoutError" || name === "AbortError") {
-      console.warn(`[rss-scraper] scrapeFeed(${feed.name}) → timeout (15s)`);
+      logWarn("rss-scraper", `scrapeFeed(${feed.name}) → timeout (15s)`);
     } else {
-      console.warn(
-        `[rss-scraper] scrapeFeed(${feed.name}) → error:`,
-        err instanceof Error ? err.message : String(err),
-      );
+      logWarn("rss-scraper", `scrapeFeed(${feed.name}) → error: ${err instanceof Error ? err.message : err}`);
     }
     return [];
   }
@@ -892,9 +888,7 @@ async function resilientFetch(
 
       // 403 / 429 → rotate UA immediately and back off before retrying
       if (response.status === 403 || response.status === 429) {
-        console.warn(
-          `[scraper-v3] HTTP ${response.status} on attempt ${attempt + 1}/${retryCount} — rotating UA, backing off`,
-        );
+        logWarn("scraper-v3", `HTTP ${response.status} on attempt ${attempt + 1}/${retryCount} — rotating UA, backing off`);
       } else {
         // 4xx other than 403/429: probably permanent, give up early
         if (response.status >= 400 && response.status < 500) {
@@ -905,12 +899,9 @@ async function resilientFetch(
       clearTimeout(timer);
       const name = (err as { name?: string })?.name;
       if (name === "AbortError") {
-        console.warn(`[scraper-v3] timeout on attempt ${attempt + 1}/${retryCount}`);
+        logWarn("scraper-v3", `timeout on attempt ${attempt + 1}/${retryCount}`);
       } else {
-        console.warn(
-          `[scraper-v3] fetch error on attempt ${attempt + 1}/${retryCount}:`,
-          err,
-        );
+        logWarn("scraper-v3", `fetch error on attempt ${attempt + 1}/${retryCount}: ${err instanceof Error ? err.message : err}`);
       }
     }
 
@@ -956,16 +947,16 @@ export async function scrapeGoogleNewsRSS(
     `https://news.google.com/rss/search?q=${encodeURIComponent(query)}` +
     `&hl=${language}&gl=${country}&ceid=${country}:${language}`;
 
-  console.log(`[scraper-v3] Google News RSS → ${url}`);
+  logInfo("scraper-v3", `Google News RSS → ${url}`);
 
   const result = await resilientFetch(url, { timeout, retryCount });
   if (!result.ok) {
-    console.error(`[scraper-v3] Google News fetch failed (HTTP ${result.status})`);
+    logError("scraper-v3", `Google News fetch failed (HTTP ${result.status})`);
     return [];
   }
 
   const articles = parseRSSXML(result.body, maxArticles);
-  console.log(`[scraper-v3] Google News parsed ${articles.length} articles`);
+  logInfo("scraper-v3", `Google News parsed ${articles.length} articles`);
 
   return dedupeByHash(articles);
 }
@@ -995,7 +986,7 @@ export async function scrapeDirectRSS(
 
   if (!feedUrl) return [];
 
-  console.log(`[scraper-v3] Direct RSS → ${feedUrl}`);
+  logInfo("scraper-v3", `Direct RSS → ${feedUrl}`);
 
   const result = await resilientFetch(feedUrl, {
     timeout,
@@ -1007,9 +998,7 @@ export async function scrapeDirectRSS(
   if (rateLimitMs > 0) await sleep(rateLimitMs);
 
   if (!result.ok) {
-    console.error(
-      `[scraper-v3] Direct RSS fetch failed for ${feedUrl} (HTTP ${result.status})`,
-    );
+    logError("scraper-v3", `Direct RSS fetch failed for ${feedUrl} (HTTP ${result.status})`);
     return [];
   }
 
@@ -1027,9 +1016,7 @@ export async function scrapeDirectRSS(
     });
   }
 
-  console.log(
-    `[scraper-v3] ${feedUrl} → ${articles.length} articles mentioning "${companyName}"`,
-  );
+  logInfo("scraper-v3", `${feedUrl} → ${articles.length} articles mentioning "${companyName}"`);
 
   return dedupeByHash(articles);
 }
@@ -1180,7 +1167,7 @@ function toLegacyArticle(s: ScrapedArticle, country: string): Article {
  *  3. Merge, filter by company mention, dedupe by URL
  */
 export async function scrapeForCompany(companyName: string): Promise<Article[]> {
-  console.log(`[scraper-v3] scrapeForCompany → ${companyName}`);
+  logInfo("scraper-v3", `scrapeForCompany → ${companyName}`);
   const startTime = Date.now();
 
   // STEP 1: Google News company-specific RSS
@@ -1190,7 +1177,7 @@ export async function scrapeForCompany(companyName: string): Promise<Article[]> 
     country: "MA",
     maxArticles: 50,
   });
-  console.log(`[scraper-v3] Google News: ${googleArticles.length} articles`);
+  logInfo("scraper-v3", `Google News: ${googleArticles.length} articles`);
 
   // STEP 2: Direct RSS feeds — pulled lazily so this file does not
   //         hard-depend on sources-config.ts at module load time.
@@ -1216,11 +1203,11 @@ export async function scrapeForCompany(companyName: string): Promise<Article[]> 
         if (r.status === "fulfilled") directArticles.push(...r.value);
       }
     }
-    console.log(`[scraper-v3] Direct RSS: ${directArticles.length} articles`);
+    logInfo("scraper-v3", `Direct RSS: ${directArticles.length} articles`);
   } catch (err) {
     // sources-config.ts might not be present in some stripped-down
     // deployments — Google News alone is still a working fallback.
-    console.warn("[scraper-v3] sources-config unavailable, skipping direct feeds:", err);
+    logWarn("scraper-v3", `sources-config unavailable, skipping direct feeds: ${err instanceof Error ? err.message : err}`);
   }
 
   // STEP 3: Merge + filter by company mention + dedupe
@@ -1233,9 +1220,7 @@ export async function scrapeForCompany(companyName: string): Promise<Article[]> 
   const unique = dedupeByHash(filtered);
 
   const elapsed = Date.now() - startTime;
-  console.log(
-    `[scraper-v3] scrapeForCompany done in ${elapsed}ms — ${unique.length} unique articles for ${companyName}`,
-  );
+  logInfo("scraper-v3", `scrapeForCompany done in ${elapsed}ms — ${unique.length} unique articles for ${companyName}`);
 
   return unique.map((s) => toLegacyArticle(s, "MA"));
 }
@@ -1247,7 +1232,7 @@ export async function scrapeForCompany(companyName: string): Promise<Article[]> 
  * direct feeds, returns a single deduplicated Article[] list.
  */
 export async function scrapeAllSources(): Promise<Article[]> {
-  console.log("[scraper-v3] scrapeAllSources starting");
+  logInfo("scraper-v3", "scrapeAllSources starting");
   const startTime = Date.now();
 
   const googleArticles = await scrapeGoogleNewsRSS({
@@ -1280,14 +1265,12 @@ export async function scrapeAllSources(): Promise<Article[]> {
       }
     }
   } catch (err) {
-    console.warn("[scraper-v3] sources-config unavailable:", err);
+    logWarn("scraper-v3", `sources-config unavailable: ${err instanceof Error ? err.message : err}`);
   }
 
   const all = [...googleArticles, ...directArticles];
   const unique = dedupeByHash(all);
 
-  console.log(
-    `[scraper-v3] scrapeAllSources done in ${Date.now() - startTime}ms — ${unique.length} unique articles`,
-  );
+  logInfo("scraper-v3", `scrapeAllSources done in ${Date.now() - startTime}ms — ${unique.length} unique articles`);
   return unique.map((s) => toLegacyArticle(s, "MA"));
 }

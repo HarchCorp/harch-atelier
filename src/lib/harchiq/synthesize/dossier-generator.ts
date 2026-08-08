@@ -46,6 +46,7 @@ import type {
 import type { ProcessedArticle } from "../understand/nlp-pipeline";
 import type { CompanyThreatAssessment } from "../predict/threat-scoring";
 import type { Entity, Relationship } from "../connect/graph-engine";
+import { logInfo, logError } from "@/lib/logger";
 
 // ─── TYPES ────────────────────────────────────────────────────────
 
@@ -82,9 +83,7 @@ export async function generateIntelligenceDossier(
   threatAssessment?: CompanyThreatAssessment | null,
   options?: DossierGenerationOptions,
 ): Promise<IntelligenceDossier> {
-  console.log(
-    `[HarchIQ-Synthesize] ═══ Dossier generation starting for "${companyName}" ═══`,
-  );
+  logInfo("HarchIQ-Synthesize", `═══ Dossier generation starting for "${companyName}" ═══`);
   const startTime = Date.now();
   const usePremium = options?.usePremiumModel ?? false;
 
@@ -98,22 +97,16 @@ export async function generateIntelligenceDossier(
     sourceName: pa.article.source,
     publishedAt: pa.article.publishedAt,
   }));
-  console.log(
-    `[HarchIQ-Synthesize] Step 1/7: Prepared ${articleInputs.length} article inputs for GLM`,
-  );
+  logInfo("HarchIQ-Synthesize", `Step 1/7: Prepared ${articleInputs.length} article inputs for GLM`);
 
   // ─── STEP 2/7: ASSESS REPUTATION ─────────────────────────
   let reputation: ReputationResult;
   try {
     reputation = await assessReputation(companyName, articleInputs, usePremium);
-    console.log(
-      `[HarchIQ-Synthesize] Step 2/7: ✓ Reputation score: ${reputation.overall_score}/100 (outlook: ${reputation.outlook})`,
-    );
+    logInfo("HarchIQ-Synthesize", `Step 2/7: ✓ Reputation score: ${reputation.overall_score}/100 (outlook: ${reputation.outlook})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[HarchIQ-Synthesize] Step 2/7: ✗ Reputation assessment failed: ${msg}`,
-    );
+    logError("HarchIQ-Synthesize", `Step 2/7: ✗ Reputation assessment failed: ${msg}`);
     reputation = defaultReputation(companyName);
   }
 
@@ -121,20 +114,16 @@ export async function generateIntelligenceDossier(
   let narratives: NarrativeResult;
   try {
     narratives = await detectNarratives(articleInputs, usePremium);
-    console.log(
-      `[HarchIQ-Synthesize] Step 3/7: ✓ Detected ${narratives.narratives.length} narratives (dominant: "${narratives.dominant_narrative || "none"}")`,
-    );
+    logInfo("HarchIQ-Synthesize", `Step 3/7: ✓ Detected ${narratives.narratives.length} narratives (dominant: "${narratives.dominant_narrative || "none"}")`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[HarchIQ-Synthesize] Step 3/7: ✗ Narrative detection failed: ${msg}`,
-    );
+    logError("HarchIQ-Synthesize", `Step 3/7: ✗ Narrative detection failed: ${msg}`);
     narratives = defaultNarratives();
   }
 
   // ─── STEP 4/7: RECOMMENDATIONS (V4.1: SKIPPED — no advisory content) ───
   const recommendations = null;
-  console.log("[HarchIQ-Synthesize] Step 4/7: ⊘ Recommendations (SKIPPED — V4.1 Raw Intelligence mode)");
+  logInfo("HarchIQ-Synthesize", "Step 4/7: ⊘ Recommendations (SKIPPED — V4.1 Raw Intelligence mode)");
 
   // ─── STEP 5/7: GENERATE COMPREHENSIVE DOSSIER ────────────
   let dossier: DossierResult;
@@ -151,12 +140,10 @@ export async function generateIntelligenceDossier(
       recommendations,
     };
     dossier = await generateDossier(companyName, dossierData, usePremium);
-    console.log(`[HarchIQ-Synthesize] Step 5/7: ✓ Dossier generated`);
+    logInfo("HarchIQ-Synthesize", "Step 5/7: ✓ Dossier generated");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[HarchIQ-Synthesize] Step 5/7: ✗ Dossier generation failed: ${msg}`,
-    );
+    logError("HarchIQ-Synthesize", `Step 5/7: ✗ Dossier generation failed: ${msg}`);
     dossier = defaultDossier(companyName);
   }
 
@@ -168,19 +155,15 @@ export async function generateIntelligenceDossier(
       options?.sector,
       usePremium,
     );
-    console.log(
-      `[HarchIQ-Synthesize] Step 6/7: ✓ AI visibility: ${aiVisibility.known ? "known" : "unknown"} (position #${aiVisibility.estimated_position})`,
-    );
+    logInfo("HarchIQ-Synthesize", `Step 6/7: ✓ AI visibility: ${aiVisibility.known ? "known" : "unknown"} (position #${aiVisibility.estimated_position})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[HarchIQ-Synthesize] Step 6/7: ✗ AI visibility check failed: ${msg}`,
-    );
+    logError("HarchIQ-Synthesize", `Step 6/7: ✗ AI visibility check failed: ${msg}`);
     aiVisibility = defaultAIVisibility(companyName);
   }
 
   // ─── STEP 7/7: COMPILE INTO IntelligenceDossier ─────────
-  console.log(`[HarchIQ-Synthesize] Step 7/7: Compiling IntelligenceDossier`);
+  logInfo("HarchIQ-Synthesize", "Step 7/7: Compiling IntelligenceDossier");
 
   const executiveSummary = compileExecutiveSummary(
     companyName,
@@ -234,9 +217,7 @@ export async function generateIntelligenceDossier(
     informationGaps,
   };
 
-  console.log(
-    `[HarchIQ-Synthesize] ═══ Dossier compiled in ${elapsedSec}s | reputation=${output.reputationScore}/100 | risk=${output.riskAssessment.overall}/100 | confidence=${(output.confidenceLevel * 100).toFixed(0)}% | gaps=${output.informationGaps.length} ═══`,
-  );
+  logInfo("HarchIQ-Synthesize", `═══ Dossier compiled in ${elapsedSec}s | reputation=${output.reputationScore}/100 | risk=${output.riskAssessment.overall}/100 | confidence=${(output.confidenceLevel * 100).toFixed(0)}% | gaps=${output.informationGaps.length} ═══`);
 
   return output;
 }

@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createHash } from "crypto";
+import { logInfo, logError, logWarn } from "@/lib/logger";
 
 // ─── TYPES ────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ const responseCache = new Map<string, CacheEntry>();
 export function clearGLMCache(): { cleared: number } {
   const count = responseCache.size;
   responseCache.clear();
-  console.log(`[glm-client] Cache cleared: ${count} entries removed`);
+  logInfo("glm-client", `Cache cleared: ${count} entries removed`);
   return { cleared: count };
 }
 
@@ -178,7 +179,7 @@ function evictExpired(): void {
     }
   }
   if (evicted > 0) {
-    console.log(`[glm-client] Evicted ${evicted} expired cache entries`);
+    logInfo("glm-client", `Evicted ${evicted} expired cache entries`);
   }
 }
 
@@ -215,7 +216,7 @@ export async function callGLM(
   const cacheKey = generateCacheKey(options);
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    console.log(`[glm-client] Cache HIT (key=${cacheKey.slice(0, 12)}…)`);
+    logInfo("glm-client", `Cache HIT (key=${cacheKey.slice(0, 12)}…)`);
     return cached.value;
   }
 
@@ -245,8 +246,9 @@ export async function callGLM(
     const timeoutTimer = setTimeout(() => controller.abort(), timeout);
 
     try {
-      console.log(
-        `[glm-client] → POST ${url} (model=${model}, attempt=${attempt}/${maxRetries})`
+      logInfo(
+        "glm-client",
+        `→ POST ${url} (model=${model}, attempt=${attempt}/${maxRetries})`,
       );
       const startTime = Date.now();
 
@@ -268,9 +270,7 @@ export async function callGLM(
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get("retry-after")) || 0;
         const backoffMs = retryAfter > 0 ? retryAfter * 1000 : Math.pow(2, attempt) * 1000;
-        console.warn(
-          `[glm-client] 429 rate limited — backing off ${backoffMs}ms (attempt ${attempt})`
-        );
+        logWarn("glm-client", `429 rate limited — backing off ${backoffMs}ms (attempt ${attempt})`);
         lastError = new Error(`GLM API rate limited (429)`);
         await sleep(backoffMs);
         continue;
@@ -279,9 +279,7 @@ export async function callGLM(
       // ─── 5xx: retry with exponential backoff ───────────────
       if (res.status >= 500) {
         const backoffMs = Math.pow(2, attempt) * 1000;
-        console.warn(
-          `[glm-client] ${res.status} server error — retrying in ${backoffMs}ms (attempt ${attempt})`
-        );
+        logWarn("glm-client", `${res.status} server error — retrying in ${backoffMs}ms (attempt ${attempt})`);
         lastError = new Error(`GLM API server error (${res.status})`);
         await sleep(backoffMs);
         continue;
@@ -301,9 +299,7 @@ export async function callGLM(
         throw new Error("GLM API returned no choices");
       }
 
-      console.log(
-        `[glm-client] ← ${res.status} OK in ${latencyMs}ms (tokens: ${data.usage?.total_tokens ?? "n/a"})`
-      );
+      logInfo("glm-client", `← ${res.status} OK in ${latencyMs}ms (tokens: ${data.usage?.total_tokens ?? "n/a"})`);
 
       // ─── Cache the successful response ─────────────────────
       responseCache.set(cacheKey, {
@@ -316,9 +312,7 @@ export async function callGLM(
       clearTimeout(timeoutTimer);
 
       if (err instanceof Error && err.name === "AbortError") {
-        console.warn(
-          `[glm-client] Request timeout after ${timeout}ms (attempt ${attempt})`
-        );
+        logWarn("glm-client", `Request timeout after ${timeout}ms (attempt ${attempt})`);
         lastError = new Error(`GLM API request timeout after ${timeout}ms`);
         if (attempt < maxRetries) {
           await sleep(Math.pow(2, attempt) * 1000);
@@ -329,9 +323,7 @@ export async function callGLM(
       // Network / fetch errors → retry
       if (err instanceof Error) {
         lastError = err;
-        console.warn(
-          `[glm-client] Fetch error: ${err.message} (attempt ${attempt}/${maxRetries})`
-        );
+        logWarn("glm-client", `Fetch error: ${err.message} (attempt ${attempt}/${maxRetries})`);
         if (attempt < maxRetries) {
           await sleep(Math.pow(2, attempt) * 500);
           continue;
@@ -416,8 +408,7 @@ export async function promptGLMJSON<T = unknown>(
   try {
     return JSON.parse(cleaned) as T;
   } catch (err) {
-    console.error("[glm-client] JSON parse failed. Raw output:");
-    console.error(cleaned.slice(0, 1000));
+    logError("glm-client", `JSON parse failed. Raw output: ${cleaned.slice(0, 1000)}`);
     throw new Error(
       `GLM JSON parse failed: ${err instanceof Error ? err.message : String(err)}`
     );

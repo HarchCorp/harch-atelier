@@ -7,6 +7,7 @@
 import { scrapeForCompany, scrapeAllSources, Article } from "../scrapers/rss-scraper";
 import { analyzeArticles, calculateReputationScore, detectTrends, CompanyReputationScore, TrendResult } from "./sentiment-analyzer";
 import { COMPANY_CATEGORIES } from "../scrapers/sources";
+import { logInfo, logError } from "@/lib/logger";
 
 export interface AuditResult {
   companyName: string;
@@ -34,32 +35,32 @@ export interface AuditResult {
  * 7. Return full AuditResult
  */
 export async function runFullAudit(companyName: string): Promise<AuditResult> {
-  console.log(`[orchestrator] Starting full audit for: ${companyName}`);
+  logInfo("orchestrator", `Starting full audit for: ${companyName}`);
   const startTime = Date.now();
 
   // ─── STEP 1: SCRAPE ──────────────────────────────────────────
-  console.log("[orchestrator] Step 1: Scraping media sources...");
+  logInfo("orchestrator", "Step 1: Scraping media sources...");
   const articles = await scrapeForCompany(companyName);
-  console.log(`[orchestrator] Scraped ${articles.length} articles`);
+  logInfo("orchestrator", `Scraped ${articles.length} articles`);
 
   // ─── STEP 2: ANALYZE SENTIMENT ───────────────────────────────
-  console.log("[orchestrator] Step 2: Analyzing sentiment...");
+  logInfo("orchestrator", "Step 2: Analyzing sentiment...");
   const analyzedArticles = await analyzeArticles(articles, companyName);
-  console.log(`[orchestrator] Analyzed ${analyzedArticles.length} articles`);
+  logInfo("orchestrator", `Analyzed ${analyzedArticles.length} articles`);
 
   // ─── STEP 3: DETECT TRENDS ───────────────────────────────────
-  console.log("[orchestrator] Step 3: Detecting trends...");
+  logInfo("orchestrator", "Step 3: Detecting trends...");
   const trends = detectTrends(analyzedArticles);
   const alertingTrends = trends.filter(t => t.alert);
-  console.log(`[orchestrator] Found ${trends.length} trends, ${alertingTrends.length} alerting`);
+  logInfo("orchestrator", `Found ${trends.length} trends, ${alertingTrends.length} alerting`);
 
   // ─── STEP 4: CHECK AI VISIBILITY ─────────────────────────────
-  console.log("[orchestrator] Step 4: Checking AI visibility...");
+  logInfo("orchestrator", "Step 4: Checking AI visibility...");
   const aiVisibility = await checkAIVisibility(companyName);
-  console.log(`[orchestrator] AI visibility: ${aiVisibility.cited ? "Cited" : "Not cited"} on ${aiVisibility.engine}`);
+  logInfo("orchestrator", `AI visibility: ${aiVisibility.cited ? "Cited" : "Not cited"} on ${aiVisibility.engine}`);
 
   // ─── STEP 5: CALCULATE REPUTATION SCORE ──────────────────────
-  console.log("[orchestrator] Step 5: Calculating reputation score...");
+  logInfo("orchestrator", "Step 5: Calculating reputation score...");
   const score = calculateReputationScore(
     companyName,
     analyzedArticles,
@@ -68,7 +69,7 @@ export async function runFullAudit(companyName: string): Promise<AuditResult> {
     "Competitor", // competitorName — would be from DB
     80 // competitorScore — would be from DB
   );
-  console.log(`[orchestrator] Reputation score: ${score.score}/100`);
+  logInfo("orchestrator", `Reputation score: ${score.score}/100`);
 
   // ─── STEP 6: GET TOP 5 MOST RELEVANT ARTICLES ────────────────
   const topArticles = analyzedArticles
@@ -92,7 +93,7 @@ export async function runFullAudit(companyName: string): Promise<AuditResult> {
   };
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`[orchestrator] Audit complete in ${elapsed}s`);
+  logInfo("orchestrator", `Audit complete in ${elapsed}s`);
 
   return result;
 }
@@ -102,19 +103,19 @@ export async function runFullAudit(companyName: string): Promise<AuditResult> {
  * Returns ranked list of companies by reputation score
  */
 export async function runHarch100(): Promise<CompanyReputationScore[]> {
-  console.log("[orchestrator] Starting Harch 100 computation");
+  logInfo("orchestrator", "Starting Harch 100 computation");
   const startTime = Date.now();
 
   // Get all articles from all sources
   const allArticles = await scrapeAllSources();
-  console.log(`[orchestrator] Total articles fetched: ${allArticles.length}`);
+  logInfo("orchestrator", `Total articles fetched: ${allArticles.length}`);
 
   // For each tracked company, filter mentions and calculate score
   const companies = Object.keys(COMPANY_CATEGORIES);
   const scores: CompanyReputationScore[] = [];
 
   for (const company of companies) {
-    console.log(`[orchestrator] Processing: ${company}`);
+    logInfo("orchestrator", `Processing: ${company}`);
     
     const companyArticles = allArticles.filter(a => {
       const text = `${a.title} ${a.summary}`.toLowerCase();
@@ -137,7 +138,7 @@ export async function runHarch100(): Promise<CompanyReputationScore[]> {
   });
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`[orchestrator] Harch 100 complete in ${elapsed}s — ${scores.length} companies ranked`);
+  logInfo("orchestrator", `Harch 100 complete in ${elapsed}s — ${scores.length} companies ranked`);
 
   return scores;
 }
@@ -165,7 +166,7 @@ async function checkAIVisibility(companyName: string): Promise<{ engine: string;
       position,
     };
   } catch (error) {
-    console.error("[orchestrator] AI visibility check failed:", error);
+    logError("orchestrator", `AI visibility check failed: ${error instanceof Error ? error.message : error}`);
     return {
       engine: "ChatGPT",
       cited: false,

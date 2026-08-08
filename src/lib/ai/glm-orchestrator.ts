@@ -34,6 +34,7 @@ import {
   getCachedGLMResult,
   cacheGLMResult,
 } from "./llm-cache";
+import { logInfo, logError } from "@/lib/logger";
 
 // Re-export health check for consumers of this module
 export { checkGLMHealth, type GLMHealthStatus } from "./glm-client";
@@ -57,10 +58,10 @@ async function cachedGLMCall<T>(
 ): Promise<T> {
   const cached = await dbGLMCache.get(promptType, inputPayload);
   if (cached !== null) {
-    console.log(`[GLM Cache] HIT for ${step}`);
+    logInfo("GLM Cache", `HIT for ${step}`);
     return cached as T;
   }
-  console.log(`[GLM Cache] MISS for ${step} — caching result`);
+  logInfo("GLM Cache", `MISS for ${step} — caching result`);
   const start = Date.now();
   const result = await fn();
   const latencyMs = Date.now() - start;
@@ -668,15 +669,11 @@ export async function runFullAnalysis(
   const errors: Array<{ step: string; error: string }> = [];
   const model = selectModel(usePremium);
 
-  console.log(
-    `[orchestrator] ═══ Starting full analysis for: ${companyName} ═══`
-  );
-  console.log(
-    `[orchestrator] Articles: ${articles.length} | Model: ${model} | Skipped steps: ${skipSteps.size}`
-  );
+  logInfo("orchestrator", `═══ Starting full analysis for: ${companyName} ═══`);
+  logInfo("orchestrator", `Articles: ${articles.length} | Model: ${model} | Skipped steps: ${skipSteps.size}`);
 
   // ─── STEP 1: SUMMARIZE ALL ARTICLES ─────────────────────────
-  console.log("[orchestrator] Step 1/10: Summarizing articles…");
+  logInfo("orchestrator", "Step 1/10: Summarizing articles…");
   const summaries: SummarizationResult[] = [];
   if (!skipSteps.has("summarize")) {
     for (const article of articles) {
@@ -693,20 +690,18 @@ export async function runFullAnalysis(
         summaries.push(summary);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[orchestrator] Summarization failed: ${msg}`);
+        logError("orchestrator", `Summarization failed: ${msg}`);
         errors.push({ step: "summarize", error: msg });
         summaries.push(defaultSummarization(text));
       }
     }
-    console.log(
-      `[orchestrator] ✓ Summarized ${summaries.length}/${articles.length} articles`
-    );
+    logInfo("orchestrator", `✓ Summarized ${summaries.length}/${articles.length} articles`);
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: summarize");
+    logInfo("orchestrator", "⊘ Step skipped: summarize");
   }
 
   // ─── STEP 2: SENTIMENT ANALYSIS PER ARTICLE ─────────────────
-  console.log("[orchestrator] Step 2/10: Analyzing sentiment per article…");
+  logInfo("orchestrator", "Step 2/10: Analyzing sentiment per article…");
   const sentiments: SentimentResult[] = [];
   if (!skipSteps.has("sentiment")) {
     for (const article of articles) {
@@ -723,20 +718,18 @@ export async function runFullAnalysis(
         sentiments.push(sentiment);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[orchestrator] Sentiment failed: ${msg}`);
+        logError("orchestrator", `Sentiment failed: ${msg}`);
         errors.push({ step: "sentiment", error: msg });
         sentiments.push(defaultSentiment(companyName));
       }
     }
-    console.log(
-      `[orchestrator] ✓ Sentiment analysis complete (${sentiments.length} articles)`
-    );
+    logInfo("orchestrator", `✓ Sentiment analysis complete (${sentiments.length} articles)`);
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: sentiment");
+    logInfo("orchestrator", "⊘ Step skipped: sentiment");
   }
 
   // ─── STEP 3: ENTITY EXTRACTION PER ARTICLE ──────────────────
-  console.log("[orchestrator] Step 3/10: Extracting entities per article…");
+  logInfo("orchestrator", "Step 3/10: Extracting entities per article…");
   const entities: NERResult[] = [];
   if (!skipSteps.has("ner")) {
     for (const article of articles) {
@@ -753,20 +746,18 @@ export async function runFullAnalysis(
         entities.push(ner);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[orchestrator] NER failed: ${msg}`);
+        logError("orchestrator", `NER failed: ${msg}`);
         errors.push({ step: "ner", error: msg });
         entities.push(defaultNER());
       }
     }
-    console.log(
-      `[orchestrator] ✓ Entity extraction complete (${entities.length} articles)`
-    );
+    logInfo("orchestrator", `✓ Entity extraction complete (${entities.length} articles)`);
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: ner");
+    logInfo("orchestrator", "⊘ Step skipped: ner");
   }
 
   // ─── STEP 4: TOPIC CLASSIFICATION PER ARTICLE ───────────────
-  console.log("[orchestrator] Step 4/10: Classifying topics per article…");
+  logInfo("orchestrator", "Step 4/10: Classifying topics per article…");
   const topics: TopicResult[] = [];
   if (!skipSteps.has("topics")) {
     for (const article of articles) {
@@ -783,20 +774,18 @@ export async function runFullAnalysis(
         topics.push(topic);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[orchestrator] Topic classification failed: ${msg}`);
+        logError("orchestrator", `Topic classification failed: ${msg}`);
         errors.push({ step: "topics", error: msg });
         topics.push(defaultTopics());
       }
     }
-    console.log(
-      `[orchestrator] ✓ Topic classification complete (${topics.length} articles)`
-    );
+    logInfo("orchestrator", `✓ Topic classification complete (${topics.length} articles)`);
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: topics");
+    logInfo("orchestrator", "⊘ Step skipped: topics");
   }
 
   // ─── STEP 5: RISK ASSESSMENT (AGGREGATE) ────────────────────
-  console.log("[orchestrator] Step 5/10: Assessing risks (aggregate)…");
+  logInfo("orchestrator", "Step 5/10: Assessing risks (aggregate)…");
   let risks: RiskResult | null = null;
   if (!skipSteps.has("risks")) {
     const aggregateText = articles
@@ -812,21 +801,19 @@ export async function runFullAnalysis(
         model,
         () => assessRisks(aggregateText, companyName, usePremium)
       );
-      console.log(
-        `[orchestrator] ✓ Risk assessment: ${risks.overall_risk_level} (score ${risks.overall_risk_score})`
-      );
+      logInfo("orchestrator", `✓ Risk assessment: ${risks.overall_risk_level} (score ${risks.overall_risk_score})`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[orchestrator] Risk assessment failed: ${msg}`);
+      logError("orchestrator", `Risk assessment failed: ${msg}`);
       errors.push({ step: "risks", error: msg });
       risks = defaultRisks(companyName);
     }
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: risks");
+    logInfo("orchestrator", "⊘ Step skipped: risks");
   }
 
   // ─── STEP 6: NARRATIVE DETECTION ────────────────────────────
-  console.log("[orchestrator] Step 6/10: Detecting narratives…");
+  logInfo("orchestrator", "Step 6/10: Detecting narratives…");
   let narratives: NarrativeResult | null = null;
   if (!skipSteps.has("narratives")) {
     try {
@@ -837,21 +824,19 @@ export async function runFullAnalysis(
         model,
         () => detectNarratives(articles, usePremium)
       );
-      console.log(
-        `[orchestrator] ✓ Detected ${narratives.narratives.length} narratives (dominant: "${narratives.dominant_narrative || "none"}")`
-      );
+      logInfo("orchestrator", `✓ Detected ${narratives.narratives.length} narratives (dominant: "${narratives.dominant_narrative || "none"}")`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[orchestrator] Narrative detection failed: ${msg}`);
+      logError("orchestrator", `Narrative detection failed: ${msg}`);
       errors.push({ step: "narratives", error: msg });
       narratives = defaultNarratives();
     }
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: narratives");
+    logInfo("orchestrator", "⊘ Step skipped: narratives");
   }
 
   // ─── STEP 7: REPUTATION ASSESSMENT ──────────────────────────
-  console.log("[orchestrator] Step 7/10: Assessing reputation…");
+  logInfo("orchestrator", "Step 7/10: Assessing reputation…");
   let reputation: ReputationResult | null = null;
   if (!skipSteps.has("reputation")) {
     try {
@@ -862,21 +847,19 @@ export async function runFullAnalysis(
         model,
         () => assessReputation(companyName, articles, usePremium)
       );
-      console.log(
-        `[orchestrator] ✓ Reputation score: ${reputation.overall_score}/100 (${reputation.outlook})`
-      );
+      logInfo("orchestrator", `✓ Reputation score: ${reputation.overall_score}/100 (${reputation.outlook})`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[orchestrator] Reputation assessment failed: ${msg}`);
+      logError("orchestrator", `Reputation assessment failed: ${msg}`);
       errors.push({ step: "reputation", error: msg });
       reputation = defaultReputation(companyName);
     }
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: reputation");
+    logInfo("orchestrator", "⊘ Step skipped: reputation");
   }
 
   // ─── STEP 8: AI VISIBILITY CHECK ────────────────────────────
-  console.log("[orchestrator] Step 8/10: Checking AI visibility…");
+  logInfo("orchestrator", "Step 8/10: Checking AI visibility…");
   let aiVisibility: AIVisibilityResult | null = null;
   if (!skipSteps.has("aiVisibility")) {
     try {
@@ -887,25 +870,23 @@ export async function runFullAnalysis(
         model,
         () => checkAIVisibility(companyName, undefined, usePremium)
       );
-      console.log(
-        `[orchestrator] ✓ AI visibility: ${aiVisibility.known ? "known" : "unknown"} (position #${aiVisibility.estimated_position})`
-      );
+      logInfo("orchestrator", `✓ AI visibility: ${aiVisibility.known ? "known" : "unknown"} (position #${aiVisibility.estimated_position})`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[orchestrator] AI visibility check failed: ${msg}`);
+      logError("orchestrator", `AI visibility check failed: ${msg}`);
       errors.push({ step: "aiVisibility", error: msg });
       aiVisibility = defaultAIVisibility(companyName);
     }
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: aiVisibility");
+    logInfo("orchestrator", "⊘ Step skipped: aiVisibility");
   }
 
   // ─── STEP 9: RECOMMENDATIONS (V4.1: REMOVED — no advisory content) ───
-  console.log("[orchestrator] Step 9/10: Recommendations (SKIPPED — V4.1 Raw Intelligence mode)");
+  logInfo("orchestrator", "Step 9/10: Recommendations (SKIPPED — V4.1 Raw Intelligence mode)");
   const recommendations: RecommendationResult | null = null;
 
   // ─── STEP 10: COMPREHENSIVE DOSSIER ─────────────────────────
-  console.log("[orchestrator] Step 10/10: Generating comprehensive dossier…");
+  logInfo("orchestrator", "Step 10/10: Generating comprehensive dossier…");
   let dossier: DossierResult | null = null;
   if (!skipSteps.has("dossier")) {
     const dossierData: DossierInputData = {
@@ -927,23 +908,21 @@ export async function runFullAnalysis(
         model,
         () => generateDossier(companyName, dossierData, usePremium)
       );
-      console.log(`[orchestrator] ✓ Dossier generated`);
+      logInfo("orchestrator", `✓ Dossier generated`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[orchestrator] Dossier generation failed: ${msg}`);
+      logError("orchestrator", `Dossier generation failed: ${msg}`);
       errors.push({ step: "dossier", error: msg });
       dossier = defaultDossier(companyName);
     }
   } else {
-    console.log("[orchestrator] ⊘ Step skipped: dossier");
+    logInfo("orchestrator", "⊘ Step skipped: dossier");
   }
 
   const completedAt = new Date().toISOString();
   const durationMs = Date.now() - startTime;
 
-  console.log(
-    `[orchestrator] ═══ Full analysis complete in ${(durationMs / 1000).toFixed(1)}s (${errors.length} errors) ═══`
-  );
+  logInfo("orchestrator", `═══ Full analysis complete in ${(durationMs / 1000).toFixed(1)}s (${errors.length} errors) ═══`);
 
   return {
     company: companyName,

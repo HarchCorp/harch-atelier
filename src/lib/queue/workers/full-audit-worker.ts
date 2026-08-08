@@ -46,6 +46,7 @@ import {
   type RawIntelligenceReport,
   type IntelligenceReportArticle,
 } from "../../ai/glm-prompts";
+import { logInfo, logError } from "@/lib/logger";
 
 // ─── JOB PAYLOAD / RESULT TYPES ──────────────────────────────────
 
@@ -71,8 +72,9 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
     const { companySlug, jobId } = job.data;
     const startedAt = job.timestamp || Date.now();
 
-    console.log(
-      `[full-audit-worker] ▶ job ${job.id} (db:${jobId}) — V4.1 raw intelligence audit for slug "${companySlug}"`,
+    logInfo(
+      "full-audit-worker",
+      `▶ job ${job.id} (db:${jobId}) — V4.1 raw intelligence audit for slug "${companySlug}"`,
     );
 
     // ─── STEP 1 (progress 10): VALIDATE + SCRAPE ───────────────
@@ -102,8 +104,9 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
       query: company.name,
       maxArticles: 10,
     });
-    console.log(
-      `[full-audit-worker]   ✓ scraped ${scrapedArticles.length} articles for "${company.name}"`,
+    logInfo(
+      "full-audit-worker",
+      `  ✓ scraped ${scrapedArticles.length} articles for "${company.name}"`,
     );
     await prisma.job.update({ where: { id: jobId }, data: { progress: 30 } });
 
@@ -129,8 +132,9 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
           : new Date().toISOString(),
       });
     }
-    console.log(
-      `[full-audit-worker]   ✓ prepared ${articlesForAnalysis.length} articles for GLM analysis`,
+    logInfo(
+      "full-audit-worker",
+      `  ✓ prepared ${articlesForAnalysis.length} articles for GLM analysis`,
     );
     await prisma.job.update({ where: { id: jobId }, data: { progress: 50 } });
 
@@ -150,10 +154,10 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
         cacheKeyInput,
       );
       if (cached) {
-        console.log("[full-audit] GLM cache HIT");
+        logInfo("full-audit", "GLM cache HIT");
         report = cached as RawIntelligenceReport;
       } else {
-        console.log("[full-audit] GLM cache MISS — calling API");
+        logInfo("full-audit", "GLM cache MISS — calling API");
         const glmStart = Date.now();
         const glmResponse = await callGLM({
           messages: [
@@ -192,7 +196,7 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
         );
       }
     } catch (error) {
-      console.error("[full-audit] GLM analysis failed:", error);
+      logError("full-audit", `GLM analysis failed: ${error instanceof Error ? error.message : error}`);
       throw new Error(
         `GLM analysis failed: ${(error as Error).message}`,
       );
@@ -239,8 +243,9 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
           },
         });
       }
-      console.log(
-        `[full-audit-worker]   ✓ persisted 1 sentiment + ${report.risks.length} risk rows`,
+      logInfo(
+        "full-audit-worker",
+        `  ✓ persisted 1 sentiment + ${report.risks.length} risk rows`,
       );
     }
 
@@ -256,8 +261,9 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
       },
     });
 
-    console.log(
-      `[full-audit-worker] ✔ job ${job.id} (db:${jobId}) completed in ${Date.now() - startedAt}ms`,
+    logInfo(
+      "full-audit-worker",
+      `✔ job ${job.id} (db:${jobId}) completed in ${Date.now() - startedAt}ms`,
     );
 
     return { success: true, report };
@@ -273,11 +279,11 @@ export const fullAuditWorker = new Worker<FullAuditJobPayload, FullAuditJobResul
 // ─── EVENT HANDLERS ──────────────────────────────────────────────
 
 fullAuditWorker.on("completed", (job) => {
-  console.log(`[full-audit-worker] ✓ job ${job.id} completed`);
+  logInfo("full-audit-worker", `✓ job ${job.id} completed`);
 });
 
 fullAuditWorker.on("failed", (job, err) => {
-  console.error(`[full-audit-worker] ✗ job ${job?.id ?? "?"} failed: ${err.message}`);
+  logError("full-audit-worker", `✗ job ${job?.id ?? "?"} failed: ${err.message}`);
   if (job?.data?.jobId) {
     prisma.job
       .update({
@@ -291,5 +297,5 @@ fullAuditWorker.on("failed", (job, err) => {
 });
 
 fullAuditWorker.on("error", (err) => {
-  console.error("[full-audit-worker] worker error:", err.message);
+  logError("full-audit-worker", `worker error: ${err.message}`);
 });
