@@ -1,17 +1,21 @@
 // ═══════════════════════════════════════════════════════════════
 //  HARCHIQ — REAL AI VISIBILITY PROBING
 //
-//  Probes 8 AI engines to measure brand visibility for a company.
-//  Since we only have 1 LLM available via z-ai-web-dev-sdk, we:
-//    • Use the real LLM for 1 engine ("HarchIQ-LLM")
-//    • Re-run the SAME queries through the LLM with different
-//      system prompts that simulate each engine's known behavior.
-//      This is HONEST because the UI labels them as "(simulated)".
+//  Probes 9 AI engines to measure brand visibility for a company.
+//
+//  Two-tier probing strategy (Task REAL-AUTH → AI Visibility):
+//    • Tier 1 (real): when an engine's API key is configured in
+//      process.env (OPENAI_API_KEY, ANTHROPIC_API_KEY, …), we call
+//      that engine's REAL API via the LLMProvider registry.
+//    • Tier 2 (simulated): when the key is missing, we fall back to
+//      the HarchIQ-LLM (z-ai SDK) with an engine-specific system
+//      prompt that emulates the missing engine's voice. The result
+//      is flagged `simulated: true` so the UI never misleads.
 //
 //  Pipeline (per probe run):
 //    1. Build the 10 probe queries (some templated on company name).
-//    2. For each of the 8 engines × 10 queries, call the LLM with
-//       the engine-specific system prompt (max 5 concurrent).
+//    2. For each of the 9 engines × 10 queries, call the LLM (max 5
+//       concurrent). Each call dispatches to its engine's provider.
 //    3. For each response, analyze:
 //         - mentioned     (boolean)
 //         - rank          (1-based position of first mention)
@@ -19,8 +23,9 @@
 //         - share         (% of response about this company)
 //         - sentiment     (positive / negative / neutral)
 //         - sentimentScore (-1 to 1, from keyword analysis)
+//         - simulated     (true if we fell back to HarchIQ-LLM emulation)
 //    4. Aggregate per-engine + cross-engine summary.
-//    5. Persist all 80 rows to AIVisibility with a shared batchId.
+//    5. Persist all rows to AIVisibility with a shared batchId.
 //
 //  SERVER-SIDE ONLY — z-ai-web-dev-sdk is dynamically imported
 //  so the bundler never ships it to a client component.
@@ -28,17 +33,29 @@
 
 import { prisma } from "@/lib/db";
 import { logInfo, logError } from "@/lib/logger";
+import {
+  getProvider,
+  logProviderAvailability,
+  type LLMProvider,
+} from "@/lib/harchiq/llm-providers";
 
 // ─── Types ──────────────────────────────────────────────────────
 
 export type Sentiment = "positive" | "negative" | "neutral";
 
 export interface EngineSpec {
-  /** Display name. Use "HarchIQ-LLM" for the real engine; append " (simulated)" for the rest. */
+  /** Display name. Use "HarchIQ-LLM" for the real engine; append " (simulated)"
+   *  for the rest — the suffix is STRIPPED at runtime when the real API is
+   *  actually used, so the UI never shows "(simulated)" for a real call. */
   name: string;
-  /** The system prompt that simulates this engine's voice. */
+  /** Provider key (matches LLMProvider.key). When the provider is available
+   *  (env key set), the real API is called. When missing, we fall back to
+   *  HarchIQ-LLM emulation and flag the result `simulated: true`. */
+  providerKey?: string;
+  /** The system prompt used when simulating this engine via HarchIQ-LLM. */
   systemPrompt: string;
-  /** True for the 7 simulated engines — surfaced in the UI as an honesty label. */
+  /** Default simulated flag (static). The runtime flag is computed per-call
+   *  based on whether the real provider was used. */
   simulated: boolean;
   /** Sampling temperature — slightly varied per engine for behavioral drift. */
   temperature: number;
@@ -54,6 +71,10 @@ export interface ProbeQueryResult {
   share: number; // 0-100, share of response about this company
   excerpt: string; // ~240 chars of the raw response
   response: string; // full response text (kept for the detail drawer)
+  /** True when this specific call fell back to HarchIQ-LLM emulation
+   *  (provider key missing OR provider call failed). False when the
+   *  engine's real API was used. */
+  simulated: boolean;
 }
 
 export interface EngineResult {
@@ -100,12 +121,19 @@ export const PROBE_QUERIES: readonly string[] = [
   "What do people say about {COMPANY}?",
 ] as const;
 
-/** 8 engines — 1 real, 7 simulated. The system prompts are HONEST about
- *  the simulation: they ask the LLM to "answer as if you were X engine".
- *  The UI also labels each as "(simulated)" so the user is never misled. */
+/** 9 engines — each maps to a real LLM provider via `providerKey`.
+ *  When the provider's env key is set, the real API is called and the
+ *  result is flagged `simulated: false`. When the key is missing, we
+ *  fall back to HarchIQ-LLM with the engine's systemPrompt — flagged
+ *  `simulated: true`. The display name keeps the "(simulated)" suffix
+ *  so the UI can show it when no real key is configured.
+ *
+ *  The 9 engines cover the full ChatGPT/Claude/Gemini/Perplexity/Copilot/
+ *  Mistral/Grok/Llama ecosystem + HarchIQ-LLM as the in-house baseline. */
 export const ENGINE_SPECS: EngineSpec[] = [
   {
     name: "HarchIQ-LLM",
+    providerKey: "harchiq",
     systemPrompt:
       "You are a helpful AI assistant. Answer truthfully based on your knowledge.",
     simulated: false,
@@ -113,6 +141,7 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "ChatGPT (simulated)",
+    providerKey: "openai",
     systemPrompt:
       "You are ChatGPT, a large language model trained by OpenAI. Answer in a helpful, conversational tone.",
     simulated: true,
@@ -120,6 +149,7 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "Claude (simulated)",
+    providerKey: "anthropic",
     systemPrompt:
       "You are Claude, made by Anthropic. Be thoughtful and nuanced in your response.",
     simulated: true,
@@ -127,6 +157,7 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "Gemini (simulated)",
+    providerKey: "gemini",
     systemPrompt:
       "You are Gemini, Google's AI. Be concise and factual.",
     simulated: true,
@@ -134,6 +165,7 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "Perplexity (simulated)",
+    providerKey: "perplexity",
     systemPrompt:
       "You are Perplexity AI. Provide a comprehensive answer with citations style.",
     simulated: true,
@@ -141,6 +173,7 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "Copilot (simulated)",
+    providerKey: "copilot",
     systemPrompt:
       "You are Microsoft Copilot. Be professional and business-focused.",
     simulated: true,
@@ -148,6 +181,7 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "Llama (simulated)",
+    providerKey: "llama",
     systemPrompt:
       "You are Llama by Meta. Be open and direct.",
     simulated: true,
@@ -155,10 +189,19 @@ export const ENGINE_SPECS: EngineSpec[] = [
   },
   {
     name: "Mistral (simulated)",
+    providerKey: "mistral",
     systemPrompt:
       "You are Mistral AI. Be efficient and European in perspective.",
     simulated: true,
     temperature: 0.5,
+  },
+  {
+    name: "Grok (simulated)",
+    providerKey: "grok",
+    systemPrompt:
+      "You are Grok, made by xAI. Be witty, irreverent, and answer with a touch of humor when appropriate.",
+    simulated: true,
+    temperature: 0.7,
   },
 ];
 
@@ -310,11 +353,14 @@ function makeExcerpt(text: string, maxLen = 240): string {
   return cut.trim() + "…";
 }
 
-/** Analyze a single LLM response. Pure function — no I/O. */
+/** Analyze a single LLM response. Pure function — no I/O.
+ *  The `simulated` flag is passed through unchanged (caller decides
+ *  based on whether the real provider was used). */
 export function analyzeResponse(
   response: string,
   companyName: string,
   aliases: string[] = [],
+  simulated = false,
 ): ProbeQueryResult {
   const variants = nameVariants(companyName, aliases);
   const mentions = countMentions(response, variants);
@@ -332,6 +378,7 @@ export function analyzeResponse(
     share,
     excerpt: makeExcerpt(response),
     response,
+    simulated,
   };
 }
 
@@ -342,17 +389,51 @@ const LLM_TIMEOUT_MS = 20_000;
 
 interface LLMCallResult {
   text: string;
+  /** True when the call hit a real LLM API (HarchIQ-LLM or a provider). */
   live: boolean;
+  /** True when the call was a fallback SIMULATION (provider key missing
+   *  OR provider call failed → HarchIQ-LLM emulation). */
+  simulated: boolean;
 }
 
-/** Call the real LLM (z-ai-web-dev-sdk) with a system + user message.
- *  Falls back to a deterministic stub when the SDK is unavailable so
- *  the route still returns *something* (clearly labeled `live=false`). */
+/** Call the LLM for an engine.
+ *
+ *  Dispatch strategy:
+ *    1. If the engine has a `providerKey` and that provider's API key is
+ *       configured, call the REAL provider API.
+ *    2. If the real provider throws (network / 401 / 429 / 500) OR there
+ *       is no providerKey, fall back to HarchIQ-LLM (z-ai SDK) running
+ *       the engine's systemPrompt — this is the SIMULATION.
+ *    3. If HarchIQ-LLM also throws, return a deterministic stub so the
+ *       pipeline keeps moving. The summary will be flagged `live=false`.
+ *
+ *  The `simulated` flag in the result reflects tier 2/3 (NOT a real API
+ *  call to this engine's official endpoint). */
 async function callLLM(
-  systemPrompt: string,
+  engine: EngineSpec,
   userQuery: string,
-  temperature: number,
 ): Promise<LLMCallResult> {
+  const provider: LLMProvider | null = getProvider(engine.providerKey);
+
+  // Tier 1: real provider API
+  if (provider && provider.isAvailable()) {
+    try {
+      const text = await provider.call(
+        engine.systemPrompt,
+        userQuery,
+        engine.temperature,
+      );
+      return { text, live: true, simulated: false };
+    } catch (err) {
+      logError(
+        "ai-probe.llm",
+        `Real provider "${engine.providerKey}" failed for engine "${engine.name}": ${(err as Error).message} — falling back to HarchIQ-LLM simulation`,
+      );
+      // Fall through to tier 2 (simulation)
+    }
+  }
+
+  // Tier 2: simulation via HarchIQ-LLM (z-ai SDK) + engine systemPrompt
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
   try {
@@ -360,24 +441,22 @@ async function callLLM(
     const zai = await ZAI.create();
     const completion = await zai.chat.completions.create({
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: engine.systemPrompt },
         { role: "user", content: userQuery },
       ],
-      temperature,
+      temperature: engine.temperature,
       max_tokens: 600,
       thinking: { type: "disabled" as const },
     });
     const text = completion?.choices?.[0]?.message?.content ?? "";
-    return { text, live: true };
+    return { text, live: true, simulated: true };
   } catch (err) {
     logError(
       "ai-probe.llm",
-      `LLM call failed (system="${systemPrompt.slice(0, 60)}…", query="${userQuery.slice(0, 60)}…"): ${(err as Error).message}`,
+      `HarchIQ-LLM simulation failed for engine "${engine.name}": ${(err as Error).message}`,
     );
-    // Deterministic stub — keeps the pipeline moving when the SDK is
-    // unavailable. The summary will be flagged `live=false` so the UI
-    // can warn the user that this is fallback data, not real probing.
-    return { text: stubResponse(userQuery), live: false };
+    // Tier 3: deterministic stub — keeps the pipeline moving
+    return { text: stubResponse(userQuery), live: false, simulated: true };
   } finally {
     clearTimeout(timeout);
   }
@@ -420,16 +499,16 @@ async function runWithConcurrency<T, R>(
 export interface ProbeCompanyOptions {
   companyName: string;
   aliases?: string[];
-  /** Optional companyId — when provided, all 80 rows are persisted
+  /** Optional companyId — when provided, all rows are persisted
    *  to AIVisibility with a shared batchId. */
   companyId?: string;
   /** Optional progress callback (called once per finished LLM call). */
   onProgress?: (done: number, total: number) => void;
 }
 
-/** Probe a company across 8 engines × 10 queries = 80 LLM calls.
+/** Probe a company across 9 engines × 10 queries = 90 LLM calls.
  *  Returns a fully-aggregated ProbeSummary. When `companyId` is set,
- *  also persists all 80 rows to AIVisibility. */
+ *  also persists all rows to AIVisibility. */
 export async function probeCompany(opts: ProbeCompanyOptions): Promise<ProbeSummary> {
   const companyName = opts.companyName.trim();
   if (!companyName) {
@@ -440,7 +519,11 @@ export async function probeCompany(opts: ProbeCompanyOptions): Promise<ProbeSumm
   const batchId = `probe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const probedAt = new Date().toISOString();
 
-  // Build the 80 (engine, query) work items.
+  // Log which LLM providers have their API keys configured — this is
+  // the single source of truth for "why is engine X simulated?".
+  logProviderAvailability();
+
+  // Build the (engine, query) work items — 9 engines × 10 queries.
   type WorkItem = { engine: EngineSpec; query: string };
   const workItems: WorkItem[] = [];
   for (const engine of ENGINE_SPECS) {
@@ -460,18 +543,14 @@ export async function probeCompany(opts: ProbeCompanyOptions): Promise<ProbeSumm
     workItems,
     5,
     async (item) => {
-      const { text, live } = await callLLM(
-        item.engine.systemPrompt,
-        item.query,
-        item.engine.temperature,
-      );
-      const analysis = analyzeResponse(text, companyName, aliases);
+      const { text, live, simulated } = await callLLM(item.engine, item.query);
+      const analysis = analyzeResponse(text, companyName, aliases, simulated);
       return { ...analysis, query: item.query, engine: item.engine, live };
     },
     opts.onProgress,
   );
 
-  // Track whether ANY call hit the real LLM (used for the `live` flag).
+  // Track whether ANY call hit a real LLM API (used for the `live` flag).
   const anyLive = rawResults.some((r) => r.live);
 
   // Group results by engine (preserve ENGINE_SPECS order).
@@ -585,9 +664,16 @@ function aggregateEngine(engine: EngineSpec, results: ProbeQueryResult[]): Engin
         ? "negative"
         : "neutral";
 
+  // Dynamic `simulated` flag — true when ALL results for this engine
+  // were simulations (no real provider API was hit). If ANY call used
+  // the real provider, the engine is "real" for this batch.
+  // When results is empty (shouldn't happen), fall back to the static flag.
+  const dynamicSimulated =
+    results.length === 0 ? engine.simulated : results.every((r) => r.simulated);
+
   return {
     engine: engine.name,
-    simulated: engine.simulated,
+    simulated: dynamicSimulated,
     queriesRun: results.length,
     mentionCount,
     avgRank,
@@ -599,8 +685,11 @@ function aggregateEngine(engine: EngineSpec, results: ProbeQueryResult[]): Engin
 
 // ─── Persistence ────────────────────────────────────────────────
 
-/** Write 80 rows to AIVisibility — one per (engine, query).
- *  Uses createMany for a single round-trip. */
+/** Write all probe rows to AIVisibility — one per (engine, query).
+ *  Uses createMany for a single round-trip. The `simulated` flag is
+ *  per-row (set from r.simulated, NOT engine.simulated) so a partial
+ *  batch where some calls hit the real API and others fell back to
+ *  HarchIQ-LLM emulation is faithfully persisted. */
 async function persistProbeResults(
   companyId: string,
   summary: ProbeSummary,
@@ -621,7 +710,7 @@ async function persistProbeResults(
       rank: r.rank,
       mentions: r.mentions,
       shareOfVoice: r.share,
-      simulated: engine.simulated,
+      simulated: r.simulated,
       responseExcerpt: r.excerpt,
       sentimentScore: r.sentimentScore,
       batchId: summary.batchId,
@@ -728,12 +817,15 @@ export async function loadLatestProbeBatch(companyId: string): Promise<ProbeSumm
       batchId: { not: null },
     },
     orderBy: { checkedAt: "desc" },
-    take: 80, // one full batch
+    // One full batch is 9 engines × 10 queries = 90 rows. We take 200
+    // to safely cross into the previous batch when needed (the filter
+    // below keeps only the latest batchId).
+    take: 200,
   });
   if (rows.length === 0) return null;
 
   // Find the batchId of the most recent row, then keep only rows from
-  // that batch (in case the take:80 crossed into the previous batch).
+  // that batch (in case the take crossed into the previous batch).
   const latestBatchId = rows[0].batchId!;
   const batchRows = rows.filter((r) => r.batchId === latestBatchId);
   const probedAt = batchRows[0].checkedAt.toISOString();
@@ -757,6 +849,10 @@ export async function loadLatestProbeBatch(companyId: string): Promise<ProbeSumm
       share: r.shareOfVoice ?? 0,
       excerpt: r.responseExcerpt ?? r.summary ?? "",
       response: r.responseExcerpt ?? r.summary ?? "",
+      // Historical rows carry their own per-row simulated flag (set at
+      // persist time). Default to the engine's static flag for legacy
+      // rows written before the per-row flag existed.
+      simulated: r.simulated ?? engine.simulated,
     }));
     return aggregateEngine(engine, results);
   });
@@ -782,6 +878,9 @@ export async function loadLatestProbeBatch(companyId: string): Promise<ProbeSumm
   const topEngine = sortedByMentions[0]?.engine ?? ENGINE_SPECS[0].name;
   const weakestEngine = sortedByMentions[sortedByMentions.length - 1]?.engine ?? ENGINE_SPECS[0].name;
 
+  // Historical batches: live=true (they were persisted after a real
+  // probe run). The per-row simulated flag in the DB tells which rows
+  // were simulated — surfaced via the engine-level `simulated` flag.
   return {
     companyName: "", // caller fills from session
     probedAt,

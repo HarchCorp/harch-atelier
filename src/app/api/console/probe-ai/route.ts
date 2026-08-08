@@ -2,7 +2,7 @@
 //  POST /api/console/probe-ai
 //
 //  Triggers a real AI-visibility probe for the given company:
-//    • 10 probe queries × 8 engines (1 real + 7 simulated) = 80 LLM calls
+//    • 10 probe queries × 9 engines = 90 LLM calls
 //    • Max 5 concurrent LLM calls (see src/lib/harchiq/ai-probe.ts)
 //    • Results persisted to AIVisibility with a shared batchId
 //    • Returns a fully-aggregated ProbeSummary
@@ -15,11 +15,15 @@
 //  SERVER-SIDE ONLY — z-ai-web-dev-sdk is dynamically imported from
 //  inside ai-probe.ts so the bundler never ships it to the client.
 //
-//  Honesty contract:
-//    • "HarchIQ-LLM" rows are real LLM responses.
-//    • All other engines are labeled "(simulated)" in the response
-//      payload AND persisted with simulated=true in the DB. The UI
-//      surfaces this flag so the user is never misled.
+//  Honesty contract (Task REAL-AUTH → AI Visibility):
+//    • Each engine maps to a real LLM provider via `providerKey`.
+//    • When the provider's API key is set in env (OPENAI_API_KEY,
+//      ANTHROPIC_API_KEY, …), the REAL provider API is called and
+//      the row is persisted with simulated=false.
+//    • When the key is missing, we fall back to HarchIQ-LLM with an
+//      engine-specific system prompt (emulation) — persisted with
+//      simulated=true. The UI surfaces this flag so the user is
+//      never misled.
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from "next/server";
