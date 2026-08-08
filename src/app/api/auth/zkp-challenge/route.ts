@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { findZKPVerifier } from "@/lib/auth/credential-store";
 import { generateChallenge, storeChallenge } from "@/lib/crypto/zkp/protocol";
 
 export const runtime = "nodejs";
@@ -43,13 +44,13 @@ export async function POST(req: NextRequest) {
 
   const { email } = parsed.data;
 
-  // Find the user + their ZKP verifier
+  // Find the user — only need the id to look up the ZKP verifier
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true, useCaseNote: true },
+    select: { id: true },
   });
 
-  if (!user || !user.useCaseNote) {
+  if (!user) {
     // Don't reveal whether the email exists (anti-enumeration)
     // Return a dummy challenge so the timing is the same
     const dummyChallenge = generateChallenge();
@@ -63,12 +64,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Parse the ZKP verifier from useCaseNote
-  let verifier: { publicKey: JsonWebKey; salt: string; iterations: number } | null = null;
-  try {
-    const parsed = JSON.parse(user.useCaseNote);
-    verifier = parsed.zkpVerifier;
-  } catch {}
+  // Load the ZKP verifier — dedicated ZKPVerifier table (Task REAL-AUTH)
+  // with transparent useCaseNote fallback when the table doesn't exist.
+  const verifier = await findZKPVerifier(user.id);
 
   if (!verifier) {
     return NextResponse.json(

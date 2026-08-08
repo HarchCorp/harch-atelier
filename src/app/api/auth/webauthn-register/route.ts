@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
-import { prisma } from "@/lib/db";
 import {
   generateWebAuthnChallenge,
   bufToBase64Url,
   getRpId,
   storeWebAuthnChallenge,
 } from "@/lib/auth/zkp-passkeys";
+import {
+  listWebAuthnCredentials,
+  createWebAuthnCredential,
+} from "@/lib/auth/credential-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,23 +50,14 @@ export async function POST(req: NextRequest) {
     const userId = bufToBase64Url(new TextEncoder().encode(session.user.id));
 
     // Get existing credentials to exclude (prevent re-registration)
-    const existingCreds = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { useCaseNote: true },
-    });
+    // Uses dedicated WebAuthnCredential table (Task REAL-AUTH) with
+    // transparent useCaseNote fallback when the table doesn't exist yet.
+    const existingCreds = await listWebAuthnCredentials(session.user.id);
 
-    let excludeCredentials: { id: string; type: "public-key" }[] = [];
-    if (existingCreds?.useCaseNote) {
-      try {
-        const parsed = JSON.parse(existingCreds.useCaseNote);
-        if (parsed.webauthnCredentials && Array.isArray(parsed.webauthnCredentials)) {
-          excludeCredentials = parsed.webauthnCredentials.map((c: { id: string }) => ({
-            id: c.id,
-            type: "public-key" as const,
-          }));
-        }
-      } catch {}
-    }
+    const excludeCredentials = existingCreds.map((c) => ({
+      id: c.credentialId,
+      type: "public-key" as const,
+    }));
 
     storeWebAuthnChallenge(challengeId, session.user.email || "", challenge, "registration", session.user.id);
 
@@ -93,35 +87,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Challenge expired or invalid" }, { status: 401 });
   }
 
-  // Fetch current user to append the credential
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { useCaseNote: true },
-  });
-
-  let existingData: Record<string, unknown> = {};
-  if (user?.useCaseNote) {
-    try { existingData = JSON.parse(user.useCaseNote); } catch {}
-  }
-
-  const credentials = Array.isArray(existingData.webauthnCredentials)
-    ? existingData.webauthnCredentials
-    : [];
-
-  credentials.push({
-    id: credentialId,
+  // Persist the credential — dedicated table with useCaseNote fallback
+  await createWebAuthnCredential({
+    userId: session.user.id,
+    credentialId,
     publicKey,
-    counter: 0,
-    transports: transports || [],
+    transports: Array.isArray(transports) ? transports : [],
     deviceType: deviceType || "Unknown",
-    createdAt: new Date().toISOString(),
-  });
-
-  existingData.webauthnCredentials = credentials;
-
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { useCaseNote: JSON.stringify(existingData) },
   });
 
   return NextResponse.json({

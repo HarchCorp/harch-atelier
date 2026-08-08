@@ -654,6 +654,45 @@ model ProvenanceRecord {
   @@index([engine])
 }
 
+// ─── Task: REAL-AUTH — WebAuthn credentials (Passkeys) ──────────
+// Production-grade storage for WebAuthn credentials, replacing the
+// `User.useCaseNote` JSON hack. One row per registered passkey — a
+// user may have several (TouchID on laptop, FaceID on phone, YubiKey).
+// The private key NEVER leaves the device; we store only the public
+// key (base64url JWK) + a monotonic counter for replay protection.
+model WebAuthnCredential {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId  String   @unique // base64url — the authenticator's stable id
+  publicKey     String          // base64url JWK (EC P-256 or RSA)
+  counter       Int      @default(0) // monotonic — bumped on each assertion
+  transports    String[] @default([]) // ["internal","hybrid","usb","nfc","ble"]
+  deviceType    String?  // "TouchID" | "FaceID" | "YubiKey" | "Android" | "WindowsHello" | "Unknown"
+  createdAt     DateTime @default(now())
+  lastUsedAt    DateTime?
+
+  @@index([userId])
+  @@index([credentialId])
+}
+
+// ─── Task: REAL-AUTH — ZKP verifiers (zero-knowledge password proof) ──
+// Stores the public key (verifier) + KDF parameters for ZKP auth.
+// The password was NEVER transmitted — the client derived the keypair
+// locally (PBKDF2 → EC P-256) and sends only the public key + salt +
+// iterations. One row per user (re-registration replaces the row).
+model ZKPVerifier {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicKey   Json             // JWK EC P-256 public key
+  salt        String           // base64 — KDF salt
+  iterations  Int              // PBKDF2 iterations
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
 // ─── Task: YGGDRASIL-N38 — System Flags (DEFCON) ──────────────
 // Key-value store for system-wide flags (defcon_level, tamper_incident,
 // maintenance_mode). The Sentinel cron sets defcon_level=1 when the
@@ -745,6 +784,12 @@ model User {
   // DB value — if they differ, the token is rejected (user must re-sign-in).
   // This gives real-time revocation without a Redis blacklist.
   sessionVersion  Int  @default(0)
+
+  // ─── Task: REAL-AUTH — Passkey + ZKP relations ─────────────────
+  // A user may own many WebAuthn credentials (one per device) and at
+  // most one ZKP verifier (re-registration replaces the row).
+  webauthnCredentials  WebAuthnCredential[]
+  zkpVerifiers         ZKPVerifier[]
 
   @@index([companyId])
   @@index([status])

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { upsertZKPVerifier } from "@/lib/auth/credential-store";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const runtime = "nodejs";
@@ -59,27 +60,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Store the ZKP verifier (public key + salt + iterations)
-  // We store this in the User's metadata (or a dedicated field if schema allows)
-  // For now, we store it as a JSON blob in the whatsappNumber field's
-  // sibling — we'll use a separate ZKPVerifier model in production.
-  // For this implementation, we store it in the User record's topics
-  // array (hack for sandbox) — production should add a dedicated table.
-
-  await prisma.user.update({
-    where: { email },
-    data: {
-      // Store the ZKP verifier as a JSON string in useCaseNote
-      // (this field is free-text and available on the User model)
-      useCaseNote: JSON.stringify({
-        zkpVerifier: {
-          publicKey,
-          salt,
-          iterations,
-          createdAt: new Date().toISOString(),
-        },
-      }),
-    },
+  // Store the ZKP verifier (public key + salt + iterations) — dedicated
+  // ZKPVerifier table (Task REAL-AUTH) with transparent useCaseNote
+  // fallback when the table doesn't exist yet on the DB.
+  await upsertZKPVerifier({
+    userId: existing.id,
+    publicKey: publicKey as JsonWebKey,
+    salt,
+    iterations,
   });
 
   await logAudit({

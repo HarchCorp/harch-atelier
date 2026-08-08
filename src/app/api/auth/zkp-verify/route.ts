@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { findZKPVerifier } from "@/lib/auth/credential-store";
 import { consumeChallenge, verifySignature } from "@/lib/crypto/zkp/protocol";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 import { logInfo, logError } from "@/lib/logger";
@@ -81,21 +82,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3. Fetch the stored verifier (public key)
+  // 3. Fetch the user (we only need identity fields — the ZKP
+  //    verifier is loaded separately via the credential store).
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true, role: true, accountType: true, useCaseNote: true, status: true },
+    select: { id: true, email: true, role: true, accountType: true, status: true },
   });
 
-  if (!user || !user.useCaseNote) {
+  if (!user) {
     return NextResponse.json({ error: "Account not found" }, { status: 404 });
   }
 
-  let verifier: { publicKey: JsonWebKey; salt: string; iterations: number } | null = null;
-  try {
-    const parsed = JSON.parse(user.useCaseNote);
-    verifier = parsed.zkpVerifier;
-  } catch {}
+  // Load the ZKP verifier — dedicated ZKPVerifier table (Task REAL-AUTH)
+  // with transparent useCaseNote fallback when the table doesn't exist.
+  const verifier = await findZKPVerifier(user.id);
 
   if (!verifier) {
     return NextResponse.json(
