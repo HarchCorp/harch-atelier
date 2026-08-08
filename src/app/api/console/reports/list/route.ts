@@ -15,6 +15,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoReportsListResponse } from "@/lib/demo-console-api";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export async function GET() {
       total: reports.length,
     });
   } catch (err) {
-    console.error("[reports.list] error:", err);
+    logError("console.reports.list", `[reports.list] error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

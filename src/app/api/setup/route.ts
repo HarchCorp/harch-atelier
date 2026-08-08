@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/setup — Create the first admin user
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
       message: "Admin user created. You can now sign in at /atelier/login. Remove SETUP_TOKEN from your env to disable this route.",
     });
   } catch (err) {
-    console.error("Setup error:", err);
+    logError("setup", `Setup error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Setup failed" },
       { status: 500 }

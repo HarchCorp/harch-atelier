@@ -7,6 +7,7 @@ import {
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
 import ZAI from "z-ai-web-dev-sdk";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/console/ask
@@ -429,7 +430,7 @@ Answer concisely (max 3 paragraphs). Cite specific alerts/topics/AI engines/comp
         "No response generated.";
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("[/api/console/ask] LLM call failed:", message);
+      logError("console.ask", `[/api/console/ask] LLM call failed: ${message}`);
       return NextResponse.json(
         { error: "AI request failed", detail: message },
         { status: 502 },
@@ -517,7 +518,7 @@ Answer concisely (max 3 paragraphs). Cite specific alerts/topics/AI engines/comp
     return NextResponse.json(response);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[/api/console/ask] Unexpected error:", message);
+    logError("console.ask", `[/api/console/ask] Unexpected error: ${message}`);
     return NextResponse.json(
       { error: "Internal server error", detail: message },
       { status: 500 },

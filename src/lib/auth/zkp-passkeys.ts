@@ -1,3 +1,4 @@
+import { logError } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  WEBAUTHN / PASSKEYS — Passwordless authentication via biometrics
 //
@@ -234,7 +235,7 @@ export async function verifyWebAuthnAssertion(
 
     return isValid;
   } catch (err) {
-    console.error("[webauthn] Verification error:", err);
+    logError("lib.auth.zkp-passkeys", `[webauthn] Verification error: ${err instanceof Error ? err.message : err}`);
     return false;
   }
 }

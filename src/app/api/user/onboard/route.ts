@@ -27,7 +27,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 import { classifySector, slugify } from "@/lib/harchiq/sector-classifier";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
@@ -465,7 +465,7 @@ export async function POST(req: NextRequest) {
       portfolioId,
     });
   } catch (err) {
-    console.error("Onboarding API error:", err);
+    logError("user.onboard", `Onboarding API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Onboarding failed" },
       { status: 500 },

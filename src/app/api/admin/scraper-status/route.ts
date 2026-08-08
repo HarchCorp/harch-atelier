@@ -19,6 +19,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { MOROCCAN_FEEDS } from "@/lib/scrapers/rss-scraper";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -161,7 +162,7 @@ export async function GET() {
       feeds,
     });
   } catch (err) {
-    console.error("[/api/admin/scraper-status] error:", err);
+    logError("admin.scraper-status", `[/api/admin/scraper-status] error: ${err}`);
     return NextResponse.json(
       {
         success: false,

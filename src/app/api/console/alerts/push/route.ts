@@ -29,8 +29,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
-import { logInfo, logWarn } from "@/lib/logger";
-
+import { logInfo, logWarn, logError } from "@/lib/logger";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 

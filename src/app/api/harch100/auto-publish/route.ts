@@ -98,23 +98,50 @@ export async function GET(req: NextRequest) {
       .map((c, i) => ({ ...c, rank: i + 1 }));
 
     // 3. Store the ranking snapshot
-    // In production, this would be stored in a Harch100Snapshot model.
-    // For now, we log it and return it.
+    // Period is "YYYY-MM" for the current month (UTC). One snapshot
+    // per month max — upsert updates the existing row if the cron is
+    // re-run the same month. `publishedAt` is set immediately because
+    // the auto-publish cron is the public-publication path.
+    const period = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+
+    // Prisma's Json field accepts InputJsonValue — cast through unknown
+    // because the ranked array includes extra fields (companySlug,
+    // avgSentiment, etc.) beyond the documented minimum set.
+    const rankingsJson = ranked.slice(0, 100) as unknown as import("@prisma/client").Prisma.InputJsonValue;
+
+    const snapshot = await prisma.harch100Snapshot.upsert({
+      where: { period },
+      create: {
+        period,
+        rankings: rankingsJson,
+        generatedAt: now,
+        publishedAt: now,
+      },
+      update: {
+        rankings: rankingsJson,
+        generatedAt: now,
+        publishedAt: now,
+      },
+    });
+
     logInfo("harch100", `Generated ranking: ${ranked.length} companies. Top 5:`);
     ranked.slice(0, 5).forEach((c) => {
       logInfo("harch100", `  #${c.rank} ${c.companyName} — score: ${c.reputationScore} (${c.totalArticles} articles, ${c.positiveCount} pos, ${c.negativeCount} neg)`);
     });
+    logInfo("harch100", `Snapshot persisted: period=${period} id=${snapshot.id}`);
 
     return NextResponse.json({
       ok: true,
+      snapshotId: snapshot.id,
+      period,
       generatedAt: now.toISOString(),
-      period: `${periodStart.toISOString().slice(0, 10)} → ${now.toISOString().slice(0, 10)}`,
+      publishedAt: snapshot.publishedAt?.toISOString() ?? null,
       totalCompanies: ranked.length,
       top100: ranked.slice(0, 100),
       top5: ranked.slice(0, 5),
     });
   } catch (err) {
-    logError("harch100", `Error: ${err instanceof Error ? err.message : err}`);
+    logError("harch100", `Error: ${err}`);
     return NextResponse.json(
       { error: "Harch 100 generation failed", detail: err instanceof Error ? err.message : "unknown" },
       { status: 500 },

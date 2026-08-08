@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logError } from "@/lib/logger";
 import {
   switchActiveClient,
   clearActiveClient,
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
     if (err instanceof AgencyAuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error("[/api/agency/switch] error:", err);
+    logError("agency.switch", `[/api/agency/switch] error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

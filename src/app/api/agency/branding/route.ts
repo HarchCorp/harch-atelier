@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBrandingFromHost, buildBrandingPayload } from "@/lib/agency/branding";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/agency/branding
@@ -31,7 +32,7 @@ export async function GET() {
       },
     });
   } catch (err) {
-    console.error("[/api/agency/branding] error:", err);
+    logError("agency.branding", `[/api/agency/branding] error: ${err}`);
     // Fall back to Harch default — never 500 on a branding lookup.
     const payload = buildBrandingPayload({
       agencyClientId: null,

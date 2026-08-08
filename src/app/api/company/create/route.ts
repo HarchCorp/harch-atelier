@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { logError } from "@/lib/logger";
 import {
   findOrCreateCompany,
   findDuplicateCandidates,
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
           },
     });
   } catch (err) {
-    console.error("[/api/company/create] error:", err);
+    logError("company.create", `[/api/company/create] error: ${err}`);
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : "Unknown error",

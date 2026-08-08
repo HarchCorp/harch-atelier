@@ -32,6 +32,7 @@ import { isDemoEmail } from "@/lib/demo-session";
 import { runInboundPipeline } from "@/lib/whatsapp/inbound-pipeline";
 import { persistInboundMessage } from "@/lib/persistence";
 import { get as getInboundMessage } from "@/lib/whatsapp/inbound-store";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -170,7 +171,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[/api/whatsapp/simulate] pipeline crashed:", message);
+    logError("whatsapp.simulate", `[/api/whatsapp/simulate] pipeline crashed: ${message}`);
     return NextResponse.json(
       { error: "Pipeline crashed", message },
       { status: 500 },

@@ -8,6 +8,7 @@ import {
 } from "@/lib/harchiq/company-session";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoAiVisibilityResponse } from "@/lib/demo-console-api";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/ai-visibility
@@ -103,7 +104,7 @@ export async function GET(req: Request) {
       visibilityScore: totalCount > 0 ? Math.round((citedCount / totalCount) * 100) : 0,
     });
   } catch (err) {
-    console.error("AI visibility API error:", err);
+    logError("console.ai-visibility", `AI visibility API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

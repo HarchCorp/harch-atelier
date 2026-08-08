@@ -29,6 +29,7 @@ import {
 } from "@/lib/scrapers/sources-config";
 import { authOptions } from "@/lib/auth/auth.config";
 import { checkRateLimit } from "@/lib/rate-limiter";
+import { logError } from "@/lib/logger";
 
 // ─── SLUG HELPER ─────────────────────────────────────────────────
 // Matches the COMPANIES[].slug convention: lowercase, accents
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
       { status: 202 },
     );
   } catch (error) {
-    console.error("[api/audit] POST error:", error);
+    logError("atelier.api.audit", `[api/audit] POST error: ${error}`);
     return NextResponse.json(
       {
         error: "Failed to enqueue audit",

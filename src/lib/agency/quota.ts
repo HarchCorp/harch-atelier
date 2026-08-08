@@ -35,6 +35,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAgencyContext } from "./agency-session";
+import { logError } from "@/lib/logger";
 
 export type QuotaResource =
   | "apiRequest"
@@ -551,15 +552,12 @@ export function withQuotaCheck(
           }
           // Best-effort increment — never block the handler on accounting.
           incrementUsage(agency.activeAgencyClientId, resource, 1).catch((err) => {
-            console.error(
-              `[quota] failed to increment ${resource} for agencyClient ${agency.activeAgencyClientId}:`,
-              err,
-            );
+            logError("lib.agency.quota", `[quota] failed to increment ${resource} for agencyClient ${agency.activeAgencyClientId}: ${err}`);
           });
         }
       }
     } catch (err) {
-      console.error(`[quota] check failed for resource ${resource}:`, err);
+      logError("lib.agency.quota", `[quota] check failed for resource ${resource}: ${err}`);
     }
     return handler(req, ctx);
   };

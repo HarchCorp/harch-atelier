@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/admin/invitations — list all invitations (admin only)
@@ -62,7 +63,7 @@ export async function GET() {
 
     return NextResponse.json({ invitations });
   } catch (err) {
-    console.error("Admin invitations GET error:", err);
+    logError("admin.invitations", `Admin invitations GET error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Admin invitations POST error:", err);
+    logError("admin.invitations", `Admin invitations POST error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

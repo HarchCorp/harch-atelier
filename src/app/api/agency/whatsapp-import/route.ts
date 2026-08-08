@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/harchiq/audit-log";
 import { z } from "zod";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/agency/whatsapp-import
@@ -192,7 +193,7 @@ Return ONLY valid JSON. No markdown, no explanation.`;
     const rawParsed = JSON.parse(jsonStr);
     extracted = validateExtractedData(rawParsed);
   } catch (e) {
-    console.error("[agency/whatsapp-import] GLM-4 error:", e);
+    logError("agency.whatsapp-import", `[agency/whatsapp-import] GLM-4 error: ${e}`);
     return NextResponse.json(
       { error: "AI extraction failed", detail: e instanceof Error ? e.message : String(e) },
       { status: 502 },
@@ -326,7 +327,7 @@ Return ONLY valid JSON. No markdown, no explanation.`;
         message: `Sub-client "${extracted.company_name}" created. Plan: ${planTier} (${monthlyPrice} MAD/mo).`,
       });
     } catch (e) {
-      console.error("[agency/whatsapp-import] create error:", e);
+      logError("agency.whatsapp-import", `[agency/whatsapp-import] create error: ${e}`);
       return NextResponse.json({
         extracted,
         created: false,

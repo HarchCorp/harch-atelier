@@ -8,6 +8,7 @@ import {
 } from "@/lib/harchiq/company-session";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoTopicsResponse } from "@/lib/demo-console-api";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/topics
@@ -108,7 +109,7 @@ export async function GET(req: Request) {
       totalArticles: articles.length,
     });
   } catch (err) {
-    console.error("Topics API error:", err);
+    logError("console.topics", `Topics API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

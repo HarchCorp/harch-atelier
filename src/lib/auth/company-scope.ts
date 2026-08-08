@@ -17,6 +17,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export interface CompanyScope {
   userId: string;
@@ -170,7 +171,7 @@ export function toErrorResponse(err: unknown): Response {
       headers: { "Content-Type": "application/json" },
     });
   }
-  console.error("[company API] unexpected error:", err);
+  logError("lib.auth.company-scope", `[company API] unexpected error: ${err instanceof Error ? err.message : err}`);
   return new Response(
     JSON.stringify({
       error: err instanceof Error ? err.message : "Unknown error",

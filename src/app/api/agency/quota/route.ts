@@ -4,6 +4,7 @@ import {
   AgencyAuthError,
 } from "@/lib/agency/agency-session";
 import { getUsageStats } from "@/lib/agency/quota";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/agency/quota
@@ -48,7 +49,7 @@ export async function GET() {
     if (err instanceof AgencyAuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error("[/api/agency/quota] error:", err);
+    logError("agency.quota", `[/api/agency/quota] error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

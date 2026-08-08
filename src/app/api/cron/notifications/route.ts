@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorizeCron } from "@/lib/auth/cron";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/cron/notifications
@@ -204,7 +205,7 @@ export async function GET(req: Request) {
       since: since.toISOString(),
     });
   } catch (err) {
-    console.error("Cron notifications error:", err);
+    logError("cron.notifications", `Cron notifications error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

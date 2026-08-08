@@ -51,6 +51,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -188,11 +189,9 @@ export const ProvenanceTracker = {
     } catch (err) {
       // Provenance is best-effort persistence — never block the
       // computation result. Log so the operator can investigate.
-      console.error(
-        "[ProvenanceTracker] Failed to persist record (entityType=%s entityId=%s):",
-        entityType,
-        entityId,
-        err,
+      logError(
+        "lib.provenance.tracker",
+        `Failed to persist record (entityType=${entityType} entityId=${entityId}): ${err instanceof Error ? err.message : err}`,
       );
     }
 
@@ -217,7 +216,7 @@ export const ProvenanceTracker = {
       });
       return records.map(mapPrismaToRecord);
     } catch (err) {
-      console.error("[ProvenanceTracker] query failed:", err);
+      logError("lib.provenance.tracker", `[ProvenanceTracker] query failed: ${err instanceof Error ? err.message : err}`);
       return [];
     }
   },
@@ -238,7 +237,7 @@ export const ProvenanceTracker = {
       });
       return record ? mapPrismaToRecord(record) : null;
     } catch (err) {
-      console.error("[ProvenanceTracker] getEvidenceChain failed:", err);
+      logError("lib.provenance.tracker", `[ProvenanceTracker] getEvidenceChain failed: ${err instanceof Error ? err.message : err}`);
       return null;
     }
   },
@@ -255,7 +254,7 @@ export const ProvenanceTracker = {
       });
       return records.map(mapPrismaToRecord);
     } catch (err) {
-      console.error("[ProvenanceTracker] getByCompany failed:", err);
+      logError("lib.provenance.tracker", `[ProvenanceTracker] getByCompany failed: ${err instanceof Error ? err.message : err}`);
       return [];
     }
   },
@@ -296,7 +295,7 @@ export const ProvenanceTracker = {
         byEntityType: entityMap,
       };
     } catch (err) {
-      console.error("[ProvenanceTracker] getStats failed:", err);
+      logError("lib.provenance.tracker", `[ProvenanceTracker] getStats failed: ${err instanceof Error ? err.message : err}`);
       return { total: 0, byEngine: {}, byEntityType: {} };
     }
   },

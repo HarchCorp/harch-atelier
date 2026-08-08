@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/access-request
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
       message: "Your request has been received. The Harch Atelier team will review it and send you an access link if approved.",
     });
   } catch (err) {
-    console.error("Access request error:", err);
+    logError("access-request", `Access request error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Request failed" },
       { status: 500 }

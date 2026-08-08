@@ -34,8 +34,7 @@ import {
   extractEntities,
   detectLanguage as detectDarijaLanguage,
 } from "@/lib/harchiq/darija";
-import { logInfo, logWarn } from "@/lib/logger";
-
+import { logInfo, logWarn, logError } from "@/lib/logger";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -272,7 +271,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, summary, sources });
   } catch (err) {
-    console.error("[/api/admin/source-health] GET error:", err);
+    logError("admin.source-health", `[/api/admin/source-health] GET error: ${err}`);
     return NextResponse.json(
       {
         success: false,

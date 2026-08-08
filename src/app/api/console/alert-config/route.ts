@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isDemoEmail } from "@/lib/demo-session";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true, source: "neon" });
   } catch (err) {
-    console.error("[alert-config] error:", err);
+    logError("console.alert-config", `[alert-config] error: ${err}`);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isDemoEmail } from "@/lib/demo-session";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ rows: [], error: "Unknown type" });
   } catch (err) {
-    console.error("[export-data] error:", err);
+    logError("console.export-data", `[export-data] error: ${err}`);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

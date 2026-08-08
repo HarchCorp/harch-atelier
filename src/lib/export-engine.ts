@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  EXPORT ENGINE — Multi-format data export and report generation
 //
@@ -267,7 +268,7 @@ export class ExcelExporter {
     const csv = CSVExporter.export(data, { bom: true });
 
     // Log the export options for audit
-    console.log(`[Excel Export] Sheet: ${sheetName}, Freeze: ${freezeHeader}, AutoFilter: ${autoFilter}`);
+    logInfo("lib.export-engine", `[Excel Export] Sheet: ${sheetName}, Freeze: ${freezeHeader}, AutoFilter: ${autoFilter}`);
 
     return csv;
   }
@@ -304,7 +305,7 @@ export class PDFExporter {
       footerTemplate: footerTemplate || "",
     });
 
-    console.log(`[PDF Export] Pages: ~${Math.ceil(document.sections.length / 2)}, Size: ${pageSize}, Orientation: ${orientation}`);
+    logInfo("lib.export-engine", `[PDF Export] Pages: ~${Math.ceil(document.sections.length / 2)}, Size: ${pageSize}, Orientation: ${orientation}`);
 
     return html;
   }

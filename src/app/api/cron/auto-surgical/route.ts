@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       durationMs: elapsed,
     });
   } catch (err) {
-    logError("auto-surgical", `Error: ${err instanceof Error ? err.message : err}`);
+    logError("auto-surgical", `Error: ${err}`);
     return NextResponse.json(
       { error: "Auto-surgical failed", detail: err instanceof Error ? err.message : "unknown" },
       { status: 500 },

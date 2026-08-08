@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 import {
   requireUserCompany,
   demoFilterFromSession,
@@ -258,7 +259,7 @@ export async function GET(req: NextRequest) {
       sourceCount: influencers.length,
     });
   } catch (err) {
-    console.error("Influencers API error:", err);
+    logError("console.narratives", `Influencers API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/influencers-db/[id]
@@ -160,7 +161,7 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error("Influencer detail API error:", err);
+    logError("console.influencers-db.id", `Influencer detail API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

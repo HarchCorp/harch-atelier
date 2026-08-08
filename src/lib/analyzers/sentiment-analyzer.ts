@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { Article } from "../scrapers/rss-scraper";
+import { logInfo, logError } from "@/lib/logger";
 
 export interface SentimentResult {
   sentiment: "positive" | "neutral" | "negative";
@@ -80,7 +81,7 @@ async function callGLM4(prompt: string, systemPrompt?: string): Promise<string> 
     // Fallback to heuristic analysis
     return heuristicAnalysis(prompt);
   } catch (error) {
-    console.error("[analyzer] GLM-4 call failed, using heuristic:", error);
+    logError("lib.analyzers.sentiment-analyzer", `[analyzer] GLM-4 call failed, using heuristic: ${error instanceof Error ? error.message : error}`);
     return heuristicAnalysis(prompt);
   }
 }
@@ -186,7 +187,7 @@ export async function analyzeArticles(
   articles: Article[],
   trackedCompany: string
 ): Promise<Article[]> {
-  console.log(`[analyzer] Analyzing ${articles.length} articles for ${trackedCompany}`);
+  logInfo("lib.analyzers.sentiment-analyzer", `[analyzer] Analyzing ${articles.length} articles for ${trackedCompany}`);
 
   const analyzed: Article[] = [];
 
@@ -220,7 +221,7 @@ export async function analyzeArticles(
     }
   }
 
-  console.log(`[analyzer] Analyzed ${analyzed.length}/${articles.length} articles`);
+  logInfo("lib.analyzers.sentiment-analyzer", `[analyzer] Analyzed ${analyzed.length}/${articles.length} articles`);
   return analyzed;
 }
 

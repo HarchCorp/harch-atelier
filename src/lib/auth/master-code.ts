@@ -24,6 +24,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@/lib/auth/rbac";
 import { logAudit } from "@/lib/harchiq/audit-log";
+import { logError } from "@/lib/logger";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────
 
@@ -266,7 +267,7 @@ export async function validateMasterCode(
       select: { id: true, codeHash: true, codeSalt: true, expiresAt: true },
     });
   } catch (err) {
-    console.error("[master-code] DB error fetching candidates", err);
+    logError("lib.auth.master-code", `[master-code] DB error fetching candidates — ${err instanceof Error ? err.message : err}`);
     await logAudit({
       userId: user.id,
       action: "master_code_failed",
@@ -322,7 +323,7 @@ export async function validateMasterCode(
       return { ok: false, reason: "already_used" };
     }
   } catch (err) {
-    console.error("[master-code] DB error marking code used", err);
+    logError("lib.auth.master-code", `[master-code] DB error marking code used — ${err instanceof Error ? err.message : err}`);
     await logAudit({
       userId: user.id,
       action: "master_code_failed",
@@ -343,10 +344,9 @@ export async function validateMasterCode(
     // Critical: the code is consumed but the upgrade failed. We still
     // return db_error so the operator knows to manually fix the user
     // row (the audit log will show which code + user was involved).
-    console.error(
-      "[master-code] CODE CONSUMED but user upgrade failed — manual fix required",
-      { codeId: matchedId, userId: user.id },
-      err,
+    logError(
+      "lib.auth.master-code",
+      `CODE CONSUMED but user upgrade failed — manual fix required (codeId=${matchedId} userId=${user.id}): ${err instanceof Error ? err.message : err}`,
     );
     await logAudit({
       userId: user.id,

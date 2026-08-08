@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export interface DashboardData {
   hasData: boolean;
@@ -75,7 +76,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       companies: companies.map(c => ({ id: c.id, name: c.name, slug: c.slug })),
     };
   } catch (e) {
-    console.error("[dashboard-data]", e);
+    logError("lib.dashboard-data", `[dashboard-data] — ${e instanceof Error ? e.message : e}`);
     return EMPTY;
   }
 }

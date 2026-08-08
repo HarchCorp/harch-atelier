@@ -20,6 +20,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 import {
   formatTestMessage,
   sendWhatsAppMessage,
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
     // we only 5xx on unexpected internal errors (caught below).
     return NextResponse.json(result);
   } catch (err) {
-    console.error("[whatsapp test] error:", err);
+    logError("user.whatsapp.test", `[whatsapp test] error: ${err}`);
     return NextResponse.json(
       {
         sent: false,

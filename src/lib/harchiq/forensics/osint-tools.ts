@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT AEGIS v3.1 — HarchIQ OSINT FORENSICS MODULE
 //  Infrastructure risk assessment, image metadata, shadow-based
@@ -286,11 +287,9 @@ export function assessInfrastructureRisk(profile: InfrastructureProfile): string
     }
   }
 
-  console.log(
-    `[HarchIQ-Forensics] Infrastructure risk for ${profile.domain}: ` +
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] Infrastructure risk for ${profile.domain}: ` +
       `${indicators.length} indicators (ASN=${profile.asn}, ports=[${profile.openPorts.join(",")}], ` +
-      `ssl=${profile.sslStatus ?? "n/a"}, tech=${profile.techStack.length} entries)`,
-  );
+      `ssl=${profile.sslStatus ?? "n/a"}, tech=${profile.techStack.length} entries)`);
 
   return indicators;
 }
@@ -309,10 +308,8 @@ export function assessInfrastructureRisk(profile: InfrastructureProfile): string
  * @returns        ImageMetadata if EXIF data is available, else null
  */
 export function analyzeImageMetadata(imageUrl: string): ImageMetadata | null {
-  console.log(
-    `[HarchIQ-Forensics] Image metadata extraction not yet configured ` +
-      `(url=${imageUrl}). TODO: integrate exiftool-vendored.`,
-  );
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] Image metadata extraction not yet configured ` +
+      `(url=${imageUrl}). TODO: integrate exiftool-vendored.`);
   // TODO: integrate exiftool-vendored or sharp for real EXIF extraction.
   // Expected fields: GPSLatitude/GPSLongitude, DateTimeOriginal,
   // Make/Model, Software, ImageWidth/ImageHeight.
@@ -403,11 +400,9 @@ export function calculateShadowAzimuth(
     }
   }
 
-  console.log(
-    `[HarchIQ-Forensics] Shadow analysis: shadow=${sd.toFixed(1)}°, ` +
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] Shadow analysis: shadow=${sd.toFixed(1)}°, ` +
       `sun=${sunAzimuth.toFixed(1)}°, hemisphere=${hemisphere}, ` +
-      `time≈${estimatedTimeOfDay}`,
-  );
+      `time≈${estimatedTimeOfDay}`);
 
   return {
     shadowDirection: Number(sd.toFixed(1)),
@@ -494,12 +489,10 @@ export function crossReferenceSources(
     diversityScore >= 0.5 &&
     refutingCount === 0;
 
-  console.log(
-    `[HarchIQ-Forensics] Cross-reference: claim="${claim.slice(0, 60)}…" ` +
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] Cross-reference: claim="${claim.slice(0, 60)}…" ` +
       `sources=${sourceCount} (refuting=${refutingCount}), ` +
       `diversity=${diversityScore.toFixed(2)}, temporal=${temporalConsistency.toFixed(2)}, ` +
-      `verified=${verified}, confidence=${confidence.toFixed(2)}`,
-  );
+      `verified=${verified}, confidence=${confidence.toFixed(2)}`);
 
   return {
     verified,
@@ -525,7 +518,7 @@ export function crossReferenceSources(
  * @returns   DigitalForensicsReport
  */
 export function extractDigitalForensics(url: string): DigitalForensicsReport {
-  console.log(`[HarchIQ-Forensics] Digital forensics triage: ${url}`);
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] Digital forensics triage: ${url}`);
 
   const riskIndicators: string[] = [];
 
@@ -601,10 +594,8 @@ export function extractDigitalForensics(url: string): DigitalForensicsReport {
   // WHOIS lookups. RDAP is the modern replacement for WHOIS and returns
   // structured JSON.
   const whoisInfo: DigitalForensicsReport["whoisInfo"] = {};
-  console.log(
-    `[HarchIQ-Forensics] WHOIS lookup not yet configured for ${registeredDomain}. ` +
-      `TODO: integrate RDAP.`,
-  );
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] WHOIS lookup not yet configured for ${registeredDomain}. ` +
+      `TODO: integrate RDAP.`);
 
   // ── SSL info (stub) ──────────────────────────────────────
   // TODO: integrate `tls-socket` or call out to a CT-log API for SSL
@@ -614,10 +605,8 @@ export function extractDigitalForensics(url: string): DigitalForensicsReport {
     status: usesHttps ? "unknown" : "unknown",
   };
   if (usesHttps) {
-    console.log(
-      `[HarchIQ-Forensics] SSL certificate inspection not yet configured for ${registeredDomain}. ` +
-        `TODO: integrate tls-socket / certstream.`,
-    );
+    logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] SSL certificate inspection not yet configured for ${registeredDomain}. ` +
+        `TODO: integrate tls-socket / certstream.`);
   }
 
   // ── URL age (stub — derived from WHOIS when available) ───
@@ -632,10 +621,8 @@ export function extractDigitalForensics(url: string): DigitalForensicsReport {
     }
   }
 
-  console.log(
-    `[HarchIQ-Forensics] Triage complete: ${registeredDomain}, ` +
-      `${riskIndicators.length} indicators`,
-  );
+  logInfo("lib.harchiq.forensics.osint-tools", `[HarchIQ-Forensics] Triage complete: ${registeredDomain}, ` +
+      `${riskIndicators.length} indicators`);
 
   return {
     url,

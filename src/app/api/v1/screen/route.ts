@@ -13,6 +13,7 @@ import {
   getCacheStatus,
 } from "@/lib/sanctions/cache";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/v1/screen?name=<entity>&threshold=0.86&type=individual
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
   try {
     cachedLists = await getSanctionsLists();
   } catch (err) {
-    console.error("[/api/v1/screen] failed to load sanctions lists:", err);
+    logError("v1.screen", `[/api/v1/screen] failed to load sanctions lists: ${err}`);
     return NextResponse.json(
       { error: "Sanctions lists unavailable. Try again later." },
       { status: 503 },

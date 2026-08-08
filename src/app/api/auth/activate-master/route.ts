@@ -7,6 +7,7 @@ import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { logAudit, extractUserAgent } from "@/lib/harchiq/audit-log";
 import { validateMasterCode } from "@/lib/auth/master-code";
 import { UserRole } from "@/lib/auth/rbac";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/auth/activate-master
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
       select: { id: true, email: true, role: true, status: true },
     });
   } catch (err) {
-    console.error("[activate-master] DB error fetching user", err);
+    logError("auth.activate-master", `[activate-master] DB error fetching user — ${err}`);
     return NextResponse.json(
       { ok: false, error: "Database unavailable." },
       { status: 500 },

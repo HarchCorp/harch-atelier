@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[API] /admin/scraper-logs GET error:", error);
+    logError("admin.scraper-logs", `[API] /admin/scraper-logs GET error: ${error}`);
     return NextResponse.json(
       { success: false, error: "Failed to fetch scraper logs" },
       { status: 500 }

@@ -13,8 +13,7 @@ import {
   touchWebAuthnCredential,
 } from "@/lib/auth/credential-store";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
-import { logInfo } from "@/lib/logger";
-
+import { logInfo, logError } from "@/lib/logger";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

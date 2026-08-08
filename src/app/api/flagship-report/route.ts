@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -371,7 +372,7 @@ export async function GET() {
       cached: false,
     });
   } catch (error) {
-    console.error("[API] /flagship-report GET error:", error);
+    logError("flagship-report", `[API] /flagship-report GET error: ${error}`);
     return NextResponse.json(
       { success: false, error: "Failed to generate flagship report" },
       { status: 500 }

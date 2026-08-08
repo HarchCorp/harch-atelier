@@ -7,6 +7,7 @@ import {
   type ScrapeResult,
 } from "@/lib/scrapers/hespress-comments";
 import { persistScrapedComments } from "@/lib/persistence";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/scrape/hespress-comments
@@ -240,7 +241,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[/api/scrape/hespress-comments] error:", message);
+    logError("scrape.hespress-comments", `[/api/scrape/hespress-comments] error: ${message}`);
     return NextResponse.json(
       {
         error: "Scraper crashed",

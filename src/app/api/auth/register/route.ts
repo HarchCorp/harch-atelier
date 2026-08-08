@@ -14,8 +14,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { logInfo, logWarn } from "@/lib/logger";
-
+import { logInfo, logWarn, logError } from "@/lib/logger";
 const RegisterSchema = z.object({
   name: z.string().min(1, "Name is required").max(80),
   email: z.string().email("Invalid email address").max(255),

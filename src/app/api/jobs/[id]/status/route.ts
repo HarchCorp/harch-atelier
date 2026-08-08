@@ -27,6 +27,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,7 @@ export async function GET(
       isRunning: job.status === "processing",
     });
   } catch (error) {
-    console.error("[api/jobs/[id]/status] GET error:", error);
+    logError("jobs.id.status", `[api/jobs/[id]/status] GET error: ${error}`);
     return NextResponse.json(
       {
         error: "Failed to fetch job status",

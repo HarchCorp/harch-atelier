@@ -8,6 +8,7 @@ import {
 } from "@/lib/harchiq/company-session";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoNeighborsResponse } from "@/lib/demo-console-api";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/neighbors
@@ -234,7 +235,7 @@ export async function GET(req: Request) {
       totalTracked: neighbors.length,
     });
   } catch (err) {
-    console.error("Neighbors API error:", err);
+    logError("console.neighbors", `Neighbors API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

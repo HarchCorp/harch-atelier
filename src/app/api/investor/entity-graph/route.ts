@@ -59,7 +59,7 @@ import {
   type ScreeningResult,
 } from "@/lib/sanctions/matcher";
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";
@@ -570,7 +570,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (err) {
-    console.error("Entity graph API error:", err);
+    logError("investor.entity-graph", `Entity graph API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

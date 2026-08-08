@@ -47,7 +47,7 @@ import {
   type AggregateScreeningResult,
   type AggregateScreeningInput,
 } from "@/lib/sanctions/matcher";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";

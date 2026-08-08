@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/access?token=XXX
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
       message: "Your account is ready. You can now sign in.",
     });
   } catch (err) {
-    console.error("Access acceptance error:", err);
+    logError("access", `Access acceptance error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Acceptance failed" },
       { status: 500 }
@@ -176,7 +177,7 @@ export async function GET(req: NextRequest) {
       status: "valid",
     });
   } catch (err) {
-    console.error("Invitation lookup error:", err);
+    logError("access", `Invitation lookup error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Lookup failed" },
       { status: 500 }

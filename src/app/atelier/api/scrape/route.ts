@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { scrapeForCompany } from "@/lib/scrapers/rss-scraper";
+import { logError } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       scrapedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[api/scrape] Error:", error);
+    logError("atelier.api.scrape", `[api/scrape] Error: ${error}`);
     return NextResponse.json(
       { error: "Scrape failed" },
       { status: 500 }

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/investor/dossiers
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ dossiers: formatted });
   } catch (err) {
-    console.error("Investor dossiers error:", err);
+    logError("investor.dossiers", `Investor dossiers error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

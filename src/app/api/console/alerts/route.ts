@@ -9,6 +9,7 @@ import {
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoAlertsResponse } from "@/lib/demo-console-api";
 import { withQuotaCheck } from "@/lib/agency/quota";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/alerts
@@ -125,7 +126,7 @@ export async function getHandler(req: Request) {
       criticalCount: [...alerts, ...riskAlerts].filter((a) => a.severity === "critical").length,
     });
   } catch (err) {
-    console.error("Alerts API error:", err);
+    logError("console.alerts", `Alerts API error: ${err}`);
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }

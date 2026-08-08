@@ -33,6 +33,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -216,7 +217,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[audit-logs] GET failed:", err);
+    logError("admin.audit-logs", `[audit-logs] GET failed: ${err}`);
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : "Unknown error",

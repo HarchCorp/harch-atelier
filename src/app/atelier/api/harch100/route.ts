@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { runHarch100V2 } from "@/lib/analyzers/orchestrator-v2";
+import { logError } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[api/harch100-v2] Error:", error);
+    logError("atelier.api.harch100", `[api/harch100-v2] Error: ${error}`);
     return NextResponse.json(
       { error: "Harch 100 computation failed" },
       { status: 500 }

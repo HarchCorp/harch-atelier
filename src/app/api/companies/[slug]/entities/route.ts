@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -108,7 +109,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("[API] /companies/[slug]/entities GET error:", error);
+    logError("companies.slug.entities", `[API] /companies/[slug]/entities GET error: ${error}`);
     return NextResponse.json(
       { success: false, error: "Failed to fetch entities" },
       { status: 500 }

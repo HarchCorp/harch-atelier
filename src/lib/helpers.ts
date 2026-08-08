@@ -1,3 +1,4 @@
+import { logWarn } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  ADDITIONAL HELPERS — Utility functions and type guards
 // ═══════════════════════════════════════════════════════════════
@@ -694,7 +695,7 @@ export function withTimeout<T>(fn: () => T, ms: number): T {
   const result = fn();
   const elapsed = Date.now() - start;
   if (elapsed > ms) {
-    console.warn(`Function took ${elapsed}ms (timeout: ${ms}ms)`);
+    logWarn("lib.helpers", `Function took ${elapsed}ms (timeout: ${ms}ms)`);
   }
   return result;
 }

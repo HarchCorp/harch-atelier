@@ -24,6 +24,7 @@ import { createHash, createHmac, randomBytes } from "crypto";
 import crypto from "crypto";
 
 import type { RateLimitTier } from "../types";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 
 // ─── TIMING-SAFE COMPARISON ───────────────────────────────────────
 
@@ -347,14 +348,10 @@ function getFieldEncryptionKey(): Buffer {
   if (envKey) {
     const buf = Buffer.from(envKey, envKey.length === 64 ? "hex" : "base64");
     if (buf.length === 32) return buf;
-    console.warn(
-      "[HarchIQ-Defend] HARCHIQ_FIELD_ENC_KEY is set but not 32 bytes — falling back to ephemeral key",
-    );
+    logWarn("lib.harchiq.defend.security", "[HarchIQ-Defend] HARCHIQ_FIELD_ENC_KEY is set but not 32 bytes — falling back to ephemeral key");
   }
   if (process.env.NODE_ENV === "production") {
-    console.error(
-      "[HarchIQ-Defend] CRITICAL: field encryption key not configured in production — using ephemeral key (data will not survive restart)",
-    );
+    logError("lib.harchiq.defend.security", "[HarchIQ-Defend] CRITICAL: field encryption key not configured in production — using ephemeral key (data will not survive restart)");
   }
   return randomBytes(32);
 }
@@ -538,16 +535,14 @@ export function logAuditEvent(event: Partial<AuditEvent>): void {
     }
 
     // Structured-log to stdout (ingested by the persistent sink).
-    console.log(
-      JSON.stringify({
-        level: "audit",
-        module: "harchiq.defend.security",
-        ...full,
-      }),
-    );
+    logInfo("lib.harchiq.defend.security", JSON.stringify({
+      level: "audit",
+      module: "harchiq.defend.security",
+      ...full,
+    }));
   } catch (err) {
     // Best-effort — never break the caller.
-    console.error("[HarchIQ-Defend] logAuditEvent failed:", err);
+    logError("lib.harchiq.defend.security", `[HarchIQ-Defend] logAuditEvent failed: ${err instanceof Error ? err.message : err}`);
   }
 }
 

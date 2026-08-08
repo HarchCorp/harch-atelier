@@ -40,6 +40,7 @@ import type {
   RiskResult,
 } from "../../ai/glm-orchestrator";
 import type { ProcessedArticle } from "../understand/nlp-pipeline";
+import { logInfo } from "@/lib/logger";
 
 // ─── TYPES ────────────────────────────────────────────────────────
 
@@ -461,9 +462,7 @@ export function assessCompanyThreatLevel(
   // 5. Coarse level bucket.
   const level = scoreToLevel(overallScore);
 
-  console.log(
-    `[HarchIQ-Predict] Company threat assessment: ${companyName} → score=${overallScore}/100, level=${level}, trajectory=${trajectory}, top=${topThreats.length}`,
-  );
+  logInfo("lib.harchiq.predict.threat-scoring", `[HarchIQ-Predict] Company threat assessment: ${companyName} → score=${overallScore}/100, level=${level}, trajectory=${trajectory}, top=${topThreats.length}`);
 
   return {
     companyName,

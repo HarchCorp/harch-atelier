@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { scrapeForCompany } from "@/lib/scrapers/rss-scraper";
 import { analyzeArticles, detectTrends } from "@/lib/analyzers/sentiment-analyzer";
 import { generateWhatsAppDigest } from "@/lib/analyzers/orchestrator";
+import { logError } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[api/whatsapp] Error:", error);
+    logError("atelier.api.whatsapp", `[api/whatsapp] Error: ${error}`);
     return NextResponse.json(
       { error: "WhatsApp digest generation failed" },
       { status: 500 }

@@ -9,6 +9,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import type { PDFDocumentType } from '@/pdf';
 import { getPDFMeta } from '@/pdf';
 import { createPDFDocument } from '@/pdf/factory';
+import { logError } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -71,7 +72,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('PDF generation error:', error);
+    logError("pdf.type", `PDF generation error: ${error}`);
     return NextResponse.json(
       { error: 'Failed to generate PDF' },
       { status: 500 }

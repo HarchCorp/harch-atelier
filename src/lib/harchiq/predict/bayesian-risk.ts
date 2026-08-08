@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT AEGIS v3.1 — HarchIQ BAYESIAN PREDICTIVE SCORING
 //  Risk-network inference + ARIMA-style anomaly detection +
@@ -416,11 +417,9 @@ export function propagateRiskScores(
   // Log the top 5 hottest risks for analyst attention.
   const sorted = Object.entries(result).sort((a, b) => b[1] - a[1]);
   const top5 = sorted.slice(0, 5).map(([k, v]) => `${k}=${v.toFixed(2)}`);
-  console.log(
-    `[HarchIQ-Predict] Bayesian propagation: observed={${Object.keys(
+  logInfo("lib.harchiq.predict.bayesian-risk", `[HarchIQ-Predict] Bayesian propagation: observed={${Object.keys(
       observedRisks,
-    ).join(",")}}, top5=[${top5.join(", ")}]`,
-  );
+    ).join(",")}}, top5=[${top5.join(", ")}]`);
 
   return result;
 }
@@ -502,10 +501,8 @@ export function detectAnomalies(
   }
 
   const flagged = results.filter((r) => r.isAnomaly).length;
-  console.log(
-    `[HarchIQ-Predict] Anomaly detection: ${timeSeries.length} points, ` +
-      `window=${window}, threshold=${threshold}, ${flagged} anomalies`,
-  );
+  logInfo("lib.harchiq.predict.bayesian-risk", `[HarchIQ-Predict] Anomaly detection: ${timeSeries.length} points, ` +
+      `window=${window}, threshold=${threshold}, ${flagged} anomalies`);
 
   return results;
 }
@@ -598,11 +595,9 @@ export function predictRiskVelocity(
   const sampleFactor = Math.min(1, 0.3 + historicalScores.length / 50);
   const confidence = Number((consistency * sampleFactor).toFixed(3));
 
-  console.log(
-    `[HarchIQ-Predict] Velocity: current=${currentScore.toFixed(1)}, ` +
+  logInfo("lib.harchiq.predict.bayesian-risk", `[HarchIQ-Predict] Velocity: current=${currentScore.toFixed(1)}, ` +
       `meanRate=${meanRate.toFixed(3)}/h, accel=${meanAcceleration.toFixed(4)}/h², ` +
-      `trend=${currentTrend}, +24h=${prediction.toFixed(1)}, conf=${confidence.toFixed(2)}`,
-  );
+      `trend=${currentTrend}, +24h=${prediction.toFixed(1)}, conf=${confidence.toFixed(2)}`);
 
   return {
     currentTrend,

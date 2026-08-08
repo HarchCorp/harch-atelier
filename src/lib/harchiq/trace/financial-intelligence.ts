@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT AEGIS v3.1 — HarchIQ FINANCIAL INTELLIGENCE MODULE
 //  Crypto address clustering, shell-company detection via graph
@@ -219,9 +220,7 @@ export interface Graph {
  * @returns            ClusterResult with clusters + address→cluster map
  */
 export function clusterAddresses(transactions: CryptoTransaction[]): ClusterResult {
-  console.log(
-    `[HarchIQ-Trace] Multi-input clustering: ${transactions.length} transactions`,
-  );
+  logInfo("lib.harchiq.trace.financial-intelligence", `[HarchIQ-Trace] Multi-input clustering: ${transactions.length} transactions`);
 
   // ── Union-find (disjoint-set) with path compression + union by rank ──
   const parent = new Map<string, string>();
@@ -324,10 +323,8 @@ export function clusterAddresses(transactions: CryptoTransaction[]): ClusterResu
   // exchange / major wallet).
   clusters.sort((a, b) => b.addresses.length - a.addresses.length);
 
-  console.log(
-    `[HarchIQ-Trace] Clustering complete: ${clusters.length} clusters ` +
-      `from ${parent.size} addresses, total value=${totalValueAll}`,
-  );
+  logInfo("lib.harchiq.trace.financial-intelligence", `[HarchIQ-Trace] Clustering complete: ${clusters.length} clusters ` +
+      `from ${parent.size} addresses, total value=${totalValueAll}`);
 
   return { clusters, addressToCluster, totalValue: totalValueAll };
 }
@@ -364,9 +361,7 @@ export function clusterAddresses(transactions: CryptoTransaction[]): ClusterResu
 export function detectShellCompanies(
   companies: CompanyNode[],
 ): ShellCompanyDetection[] {
-  console.log(
-    `[HarchIQ-Trace] Shell-company detection: ${companies.length} companies`,
-  );
+  logInfo("lib.harchiq.trace.financial-intelligence", `[HarchIQ-Trace] Shell-company detection: ${companies.length} companies`);
 
   // ── Build the graph ──────────────────────────────────────
   const nodeIds = new Set<string>();
@@ -472,12 +467,10 @@ export function detectShellCompanies(
   });
 
   const shellCount = results.filter((r) => r.classification === "shell_company").length;
-  console.log(
-    `[HarchIQ-Trace] Shell-company detection: ${shellCount} shell, ` +
+  logInfo("lib.harchiq.trace.financial-intelligence", `[HarchIQ-Trace] Shell-company detection: ${shellCount} shell, ` +
       `${results.filter((r) => r.classification === "bridge_company").length} bridge, ` +
       `${results.filter((r) => r.classification === "holding_company").length} holding, ` +
-      `${results.filter((r) => r.classification === "operating_company").length} operating`,
-  );
+      `${results.filter((r) => r.classification === "operating_company").length} operating`);
 
   return results;
 }
@@ -511,9 +504,7 @@ export function traceFundFlow(
   transactions: CryptoTransaction[],
   maxDepth: number = 5,
 ): FundFlowTrace {
-  console.log(
-    `[HarchIQ-Trace] Fund-flow trace from ${fromAddress}, maxDepth=${maxDepth}`,
-  );
+  logInfo("lib.harchiq.trace.financial-intelligence", `[HarchIQ-Trace] Fund-flow trace from ${fromAddress}, maxDepth=${maxDepth}`);
 
   // ── Index: input address → outgoing transactions ─────────
   const outgoingByAddress = new Map<string, CryptoTransaction[]>();
@@ -587,11 +578,9 @@ export function traceFundFlow(
     }
   }
 
-  console.log(
-    `[HarchIQ-Trace] Fund-flow complete: ${path.length} hops visited, ` +
+  logInfo("lib.harchiq.trace.financial-intelligence", `[HarchIQ-Trace] Fund-flow complete: ${path.length} hops visited, ` +
       `${finalDestinations.length} final destinations, ` +
-      `total traced=${totalAmountTraced}`,
-  );
+      `total traced=${totalAmountTraced}`);
 
   return {
     fromAddress,

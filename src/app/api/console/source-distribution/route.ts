@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isDemoEmail } from "@/lib/demo-session";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export async function GET() {
 
     return NextResponse.json({ sources: sorted, total: articles.length, source: "neon" });
   } catch (err) {
-    console.error("[source-distribution] error:", err);
+    logError("console.source-distribution", `[source-distribution] error: ${err}`);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

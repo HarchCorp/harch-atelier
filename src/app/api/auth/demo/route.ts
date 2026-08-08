@@ -37,7 +37,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 
 export const dynamic = "force-dynamic";

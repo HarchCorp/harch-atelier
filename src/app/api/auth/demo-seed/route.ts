@@ -29,7 +29,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
-import { logInfo } from "@/lib/logger";
+import { logInfo, logError } from "@/lib/logger";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, seeded: true, counts });
   } catch (err) {
-    console.error("Demo seed error:", err);
+    logError("auth.demo-seed", `Demo seed error: ${err}`);
     return NextResponse.json(
       {
         ok: false,

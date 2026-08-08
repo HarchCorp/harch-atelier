@@ -19,6 +19,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +86,7 @@ export async function GET() {
       ),
     });
   } catch (err) {
-    console.error("[whatsapp GET] error:", err);
+    logError("user.whatsapp", `[whatsapp GET] error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },
@@ -208,7 +209,7 @@ export async function PATCH(req: Request) {
       ),
     });
   } catch (err) {
-    console.error("[whatsapp PATCH] error:", err);
+    logError("user.whatsapp", `[whatsapp PATCH] error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

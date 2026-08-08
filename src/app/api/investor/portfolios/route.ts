@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/investor/portfolios
@@ -116,7 +117,7 @@ export async function GET() {
 
     return NextResponse.json({ portfolios: formatted });
   } catch (err) {
-    console.error("Investor portfolios error:", err);
+    logError("investor.portfolios", `Investor portfolios error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

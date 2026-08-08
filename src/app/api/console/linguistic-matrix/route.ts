@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isDemoEmail } from "@/lib/demo-session";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 import {
   LINGUISTIC_MATRIX,
   LINGUISTIC_WEIGHTS_SUMMARY,
@@ -103,7 +104,7 @@ export async function GET() {
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error("[linguistic-matrix] error:", err);
+    logError("console.linguistic-matrix", `[linguistic-matrix] error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

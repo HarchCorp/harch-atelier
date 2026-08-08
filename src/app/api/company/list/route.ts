@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/company/list
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ companies, total: companies.length });
   } catch (err) {
-    console.error("[/api/company/list] error:", err);
+    logError("company.list", `[/api/company/list] error: ${err}`);
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : "Unknown error",

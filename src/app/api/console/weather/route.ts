@@ -9,6 +9,7 @@ import {
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoWeatherResponse } from "@/lib/demo-console-api";
 import { withQuotaCheck } from "@/lib/agency/quota";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/weather
@@ -211,7 +212,7 @@ export async function getHandler(req: Request) {
       articleCount: total,
     });
   } catch (err) {
-    console.error("Weather API error:", err);
+    logError("console.weather", `Weather API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -205,7 +206,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[API] /search GET error:", error);
+    logError("search", `[API] /search GET error: ${error}`);
     return NextResponse.json(
       { success: false, error: "Search failed" },
       { status: 500 }

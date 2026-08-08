@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT AEGIS v3.1 — HarchIQ PROBABILISTIC ENTITY RESOLVER
 //  Fellegi-Sunter record linkage + temporal knowledge graph.
@@ -359,9 +360,7 @@ export function resolveEntities(
   records: EntityRecord[],
   threshold: number = AUTO_MERGE_THRESHOLD,
 ): ResolutionResult {
-  console.log(
-    `[HarchIQ-Connect] Probabilistic resolution: ${records.length} records, threshold=${threshold}`,
-  );
+  logInfo("lib.harchiq.connect.entity-resolver-probabilistic", `[HarchIQ-Connect] Probabilistic resolution: ${records.length} records, threshold=${threshold}`);
 
   const possibleMatches: PossibleMatch[] = [];
   let comparisons = 0;
@@ -487,11 +486,9 @@ export function resolveEntities(
     skipped,
   };
 
-  console.log(
-    `[HarchIQ-Connect] Resolution complete: ${mergedEntities.length} entities ` +
+  logInfo("lib.harchiq.connect.entity-resolver-probabilistic", `[HarchIQ-Connect] Resolution complete: ${mergedEntities.length} entities ` +
       `from ${records.length} records, ${possibleMatches.length} possible matches, ` +
-      `${skipped} skipped pairs`,
-  );
+      `${skipped} skipped pairs`);
 
   return { mergedEntities, possibleMatches, stats };
 }

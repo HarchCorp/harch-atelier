@@ -32,7 +32,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 import { extractDomainFromEmail } from "@/lib/harchiq/domain-extract";
 
 export const dynamic = "force-dynamic";
@@ -231,7 +231,7 @@ export async function POST(req: Request) {
     };
     return NextResponse.json(response, { status: 201 });
   } catch (err) {
-    console.error("Register-company user create error:", err);
+    logError("auth.register-company", `Register-company user create error: ${err}`);
     return NextResponse.json(
       {
         success: false,

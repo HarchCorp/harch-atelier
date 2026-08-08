@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT AEGIS v3.1 — HarchIQ COGNITIVE WARFARE MODULE
 //  Narrative propagation & Coordinated Inauthentic Behavior (CIB)
@@ -412,9 +413,7 @@ export function temporalEntropy(timestamps: string[]): number {
     if (d > dMax) dMax = d;
   }
 
-  console.log(
-    `[HarchIQ-Cognitive] temporalEntropy: N=${parsed}, H=${normalized.toFixed(3)}, KS-D=${dMax.toFixed(3)}`,
-  );
+  logInfo("lib.harchiq.cognitive.narrative-propagation", `[HarchIQ-Cognitive] temporalEntropy: N=${parsed}, H=${normalized.toFixed(3)}, KS-D=${dMax.toFixed(3)}`);
 
   return normalized;
 }
@@ -519,11 +518,9 @@ export function calculateNarrativeR0(
   else if (r0 > 0.5) classification = "endemic";
   else classification = "dying";
 
-  console.log(
-    `[HarchIQ-Cognitive] R0("${narrativeId}"): ` +
+  logInfo("lib.harchiq.cognitive.narrative-propagation", `[HarchIQ-Cognitive] R0("${narrativeId}"): ` +
       `β=${beta.toFixed(4)}, γ=${gamma.toFixed(4)} /h, ` +
-      `⟨k⟩=${meanDegree.toFixed(2)} → R0=${r0.toFixed(3)} (${classification})`,
-  );
+      `⟨k⟩=${meanDegree.toFixed(2)} → R0=${r0.toFixed(3)} (${classification})`);
 
   return {
     narrativeId,
@@ -569,9 +566,7 @@ export function detectCoordinatedInauthenticBehavior(
   graph: PropagationGraph,
   posts: SocialPost[],
 ): CIBDetectionResult {
-  console.log(
-    `[HarchIQ-Cognitive] CIB detection: ${posts.length} posts, ${graph.nodes.length} nodes`,
-  );
+  logInfo("lib.harchiq.cognitive.narrative-propagation", `[HarchIQ-Cognitive] CIB detection: ${posts.length} posts, ${graph.nodes.length} nodes`);
 
   // ── Step 1: build bipartite index ────────────────────────
   // userItemMap: userId → Set of items (urls + hashtags)
@@ -651,9 +646,7 @@ export function detectCoordinatedInauthenticBehavior(
   const largest = clusters[0] ?? [];
 
   if (largest.length < CIB_CLUSTER_SIZE_THRESHOLD) {
-    console.log(
-      `[HarchIQ-Cognitive] CIB: largest cluster (${largest.length}) below threshold → not coordinated`,
-    );
+    logInfo("lib.harchiq.cognitive.narrative-propagation", `[HarchIQ-Cognitive] CIB: largest cluster (${largest.length}) below threshold → not coordinated`);
     return {
       isCoordinated: false,
       clusterSize: largest.length,
@@ -705,11 +698,9 @@ export function detectCoordinatedInauthenticBehavior(
     `Signals: ${signals.join("; ")}. ` +
     `Confidence ${confidence.toFixed(2)} (${isCoordinated ? "COORDINATED" : "organic"}).`;
 
-  console.log(
-    `[HarchIQ-Cognitive] CIB result: cluster=${largest.length}, ` +
+  logInfo("lib.harchiq.cognitive.narrative-propagation", `[HarchIQ-Cognitive] CIB result: cluster=${largest.length}, ` +
       `entropy=${tsEntropy.toFixed(3)}, lexVar=${lexVar.toFixed(1)}, ` +
-      `coordinated=${isCoordinated}, confidence=${confidence.toFixed(2)}`,
-  );
+      `coordinated=${isCoordinated}, confidence=${confidence.toFixed(2)}`);
 
   return {
     isCoordinated,
@@ -805,10 +796,8 @@ export function trackNarrativePropagation(
     if (velocity > peakVelocity) peakVelocity = velocity;
   }
 
-  console.log(
-    `[HarchIQ-Cognitive] Propagation timeline "${narrativeId}": ` +
-      `${entries.length} slots, ${totalInfections} infections, peak velocity ${peakVelocity.toFixed(2)}/h`,
-  );
+  logInfo("lib.harchiq.cognitive.narrative-propagation", `[HarchIQ-Cognitive] Propagation timeline "${narrativeId}": ` +
+      `${entries.length} slots, ${totalInfections} infections, peak velocity ${peakVelocity.toFixed(2)}/h`);
 
   return {
     narrativeId,

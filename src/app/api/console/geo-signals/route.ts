@@ -9,6 +9,7 @@ import {
 import { aggregateAlertsByCity, knownCities, type GeoAlertInput } from "@/lib/harchiq/geo-mapper";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoGeoSignalsResponse } from "@/lib/demo-console-api";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/geo-signals?range=7d|30d|all
@@ -178,7 +179,7 @@ export async function GET(req: NextRequest) {
       totals,
     });
   } catch (err) {
-    console.error("Geo-signals API error:", err);
+    logError("console.geo-signals", `Geo-signals API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

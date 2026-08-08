@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { logError } from "@/lib/logger";
 import {
   analyzeDarijaText,
   type DarijaAnalysis,
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(analysis);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[/api/console/darija-analyze] error:", message);
+    logError("console.darija-analyze", `[/api/console/darija-analyze] error: ${message}`);
     return NextResponse.json(
       { error: "Analysis failed", detail: message },
       { status: 500 },

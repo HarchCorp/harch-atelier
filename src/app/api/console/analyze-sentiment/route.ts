@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { CoreAnalyticsEngine } from "@/lib/engine/CoreAnalyticsEngine";
 import { LEXICON_STATS } from "@/lib/harchiq/sentiment-analyzer";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/console/analyze-sentiment
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
       lexiconStats: LEXICON_STATS,
     });
   } catch (err) {
-    console.error("Analyze-sentiment API error:", err);
+    logError("console.analyze-sentiment", `Analyze-sentiment API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

@@ -29,6 +29,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[api/jobs] GET error:", error);
+    logError("jobs", `[api/jobs] GET error: ${error}`);
     return NextResponse.json(
       {
         error: "Failed to list jobs",

@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import IORedis, { type Redis } from "ioredis";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 
 const redisUrl = process.env.REDIS_URL || "";
 
@@ -21,9 +22,7 @@ if (!redisUrl) {
   // We only warn — the workers won't run on Vercel (they need a VPS),
   // but the module must still load so Next.js route handlers can
   // import the queue index without crashing on cold boots.
-  console.warn(
-    "[queue/connection] REDIS_URL is not set — BullMQ queues will be inert until a worker process boots with a valid URL.",
-  );
+  logWarn("lib.queue.connection", "[queue/connection] REDIS_URL is not set — BullMQ queues will be inert until a worker process boots with a valid URL.");
 }
 
 /**
@@ -52,15 +51,15 @@ redisConnection.on("error", (err: Error) => {
   // Log + swallow — BullMQ workers tolerate transient Redis errors and
   // will reconnect automatically. Crashing the process here would take
   // down the whole job runner for a single blip.
-  console.error("[queue/connection] Redis error:", err.message);
+  logError("lib.queue.connection", `[queue/connection] Redis error: ${err.message}`);
 });
 
 redisConnection.on("connect", () => {
-  console.log("[queue/connection] Connected to Redis");
+  logInfo("lib.queue.connection", "[queue/connection] Connected to Redis");
 });
 
 redisConnection.on("ready", () => {
-  console.log("[queue/connection] Redis ready (BullMQ commands enabled)");
+  logInfo("lib.queue.connection", "[queue/connection] Redis ready (BullMQ commands enabled)");
 });
 
 /**

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/admin/requests
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ requests });
   } catch (err) {
-    console.error("Admin requests error:", err);
+    logError("admin.requests", `Admin requests error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

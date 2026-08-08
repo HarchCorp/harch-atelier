@@ -22,7 +22,7 @@
 
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/auth/cron";
-import { logWarn } from "@/lib/logger";
+import { logWarn, logError } from "@/lib/logger";
 import { runRssScrape } from "@/lib/scrapers/run-scrape";
 
 export const dynamic = "force-dynamic";

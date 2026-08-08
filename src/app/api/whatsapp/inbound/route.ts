@@ -47,6 +47,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runInboundPipeline, sendOutboundFollowup } from "@/lib/whatsapp/inbound-pipeline";
 import { buildReceiptResponse, buildErrorResponse } from "@/lib/whatsapp/twiml";
+import { logWarn, logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -80,10 +81,9 @@ async function validateTwilioSignature(
   // Dev mode — no token configured. Allow the request through.
   if (!authToken) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        "[whatsapp/inbound] DEV MODE: TWILIO_AUTH_TOKEN not set — " +
-          "skipping signature validation. Set it in production to " +
-          "enforce Twilio signature checks.",
+      logWarn(
+        "whatsapp.inbound",
+        "DEV MODE: TWILIO_AUTH_TOKEN not set — skipping signature validation. Set it in production to enforce Twilio signature checks.",
       );
     }
     return { ok: true, reason: "dev-mode", isDev: true };
@@ -124,7 +124,7 @@ async function validateTwilioSignature(
       ? { ok: true, reason: "validated", isDev: false }
       : { ok: false, reason: "mismatch", isDev: false };
   } catch (err) {
-    console.error("[whatsapp/inbound] signature validation error:", err);
+    logError("whatsapp.inbound", `[whatsapp/inbound] signature validation error: ${err}`);
     // Fail-closed in production: if we can't validate, reject.
     return { ok: false, reason: "mismatch", isDev: false };
   }
@@ -177,16 +177,14 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (err) {
-    console.error("[whatsapp/inbound] body parse error:", err);
+    logError("whatsapp.inbound", `[whatsapp/inbound] body parse error: ${err}`);
     return twimlResponse(buildErrorResponse("Body parse error"), 400);
   }
 
   // ── 2. Validate Twilio signature (or allow in dev mode)
   const validation = await validateTwilioSignature(req, params);
   if (!validation.ok) {
-    console.warn(
-      `[whatsapp/inbound] rejecting webhook: ${validation.reason}`,
-    );
+    logWarn("whatsapp.inbound", `Rejecting webhook: ${validation.reason}`);
     return twimlResponse(buildErrorResponse("Signature invalide"), 403);
   }
 
@@ -219,7 +217,7 @@ export async function POST(req: NextRequest) {
       isDemo: false,
     });
   } catch (err) {
-    console.error("[whatsapp/inbound] pipeline crashed:", err);
+    logError("whatsapp.inbound", `[whatsapp/inbound] pipeline crashed: ${err}`);
     return twimlResponse(
       buildErrorResponse("Erreur d'analyse"),
       500,
@@ -236,7 +234,7 @@ export async function POST(req: NextRequest) {
   //         to Twilio's API). In dev mode this is a no-op.
   void sendOutboundFollowup(from, pipelineResult.outboundBody).catch(
     (err) => {
-      console.error("[whatsapp/inbound] outbound followup failed:", err);
+      logError("whatsapp.inbound", `[whatsapp/inbound] outbound followup failed: ${err}`);
     },
   );
 

@@ -22,6 +22,7 @@ import React from "react";
 import type { DocumentProps } from "@react-pdf/renderer";
 import { ReportPDF, type ReportData, type ReportAlert, type ReportAiEngine, type ReportSentimentDay, type ReportSourceRow } from "@/app/atelier/console/views/ReportPDF";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -161,7 +162,7 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error("[reports.pdf] renderToBuffer failed:", err);
+    logError("console.reports.id.pdf", `[reports.pdf] renderToBuffer failed: ${err}`);
     // ─── Audit log (Loi 09-08) — PDF render failed ──────────────
     await logAudit({
       userId,

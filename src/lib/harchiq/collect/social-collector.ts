@@ -23,6 +23,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { CollectionResult } from "../types";
+import { logWarn } from "@/lib/logger";
 
 // Re-export for ergonomic imports from this module.
 export type { CollectionResult } from "../types";
@@ -81,9 +82,7 @@ export async function collectFromTwitter(
   const _opts = { ...DEFAULTS, ...options };
 
   // TODO: Twitter API v2 integration — see roadmap in file header.
-  console.warn(
-    `[HarchIQ-Collect] Social media collection not yet configured for Twitter (company: "${companyName}")`,
-  );
+  logWarn("lib.harchiq.collect.social-collector", `[HarchIQ-Collect] Social media collection not yet configured for Twitter (company: "${companyName}")`);
 
   return [];
 }
@@ -112,9 +111,7 @@ export async function collectFromLinkedIn(
   const _opts = { ...DEFAULTS, ...options };
 
   // TODO: LinkedIn Marketing API integration — see roadmap in file header.
-  console.warn(
-    `[HarchIQ-Collect] Social media collection not yet configured for LinkedIn (company: "${companyName}")`,
-  );
+  logWarn("lib.harchiq.collect.social-collector", `[HarchIQ-Collect] Social media collection not yet configured for LinkedIn (company: "${companyName}")`);
 
   return [];
 }
@@ -144,9 +141,7 @@ export async function collectFromFacebook(
   const _opts = { ...DEFAULTS, ...options };
 
   // TODO: Facebook Graph API integration — see roadmap in file header.
-  console.warn(
-    `[HarchIQ-Collect] Social media collection not yet configured for Facebook (company: "${companyName}")`,
-  );
+  logWarn("lib.harchiq.collect.social-collector", `[HarchIQ-Collect] Social media collection not yet configured for Facebook (company: "${companyName}")`);
 
   return [];
 }

@@ -22,6 +22,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export type AuditAction =
   | "sanctions_screen"
@@ -89,11 +90,9 @@ export async function logAudit(params: LogAuditParams): Promise<void> {
       },
     });
   } catch (err) {
-    console.error(
-      "[audit-log] failed to write audit entry",
-      params.action,
-      params.resource,
-      err instanceof Error ? err.message : err,
+    logError(
+      "lib.harchiq.audit-log",
+      `Failed to write audit entry (action=${params.action} resource=${params.resource ?? "n/a"}): ${err instanceof Error ? err.message : err}`,
     );
   }
 }

@@ -29,6 +29,7 @@ import {
 } from "../../scrapers/rss-scraper";
 import { RSS_SOURCES, getActiveSources } from "../../scrapers/sources-config";
 import type { CollectionResult } from "../types";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 
 // Re-export CollectionResult so callers can `import { CollectionResult }`
 // directly from this module without reaching into the types package.
@@ -102,51 +103,39 @@ export async function collectFromRSS(
   options: CollectFromRSSOptions = {},
 ): Promise<CollectionResult[]> {
   if (!companyName || !companyName.trim()) {
-    console.warn("[HarchIQ-Collect] collectFromRSS called with empty companyName");
+    logWarn("lib.harchiq.collect.rss-collector", "[HarchIQ-Collect] collectFromRSS called with empty companyName");
     return [];
   }
 
   const opts = { ...DEFAULTS, ...options };
   const startedAt = Date.now();
-  console.log(
-    `[HarchIQ-Collect] RSS collection starting for "${companyName}"`,
-  );
+  logInfo("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] RSS collection starting for "${companyName}"`);
 
   // ── STEP 1: Google News RSS ──────────────────────────────────
   const googleArticles = await collectGoogleNews(companyName, opts);
-  console.log(
-    `[HarchIQ-Collect] Google News → ${googleArticles.length} articles`,
-  );
+  logInfo("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] Google News → ${googleArticles.length} articles`);
 
   // ── STEP 2: Direct RSS feeds (batched, rate-limit-aware) ─────
   let directArticles: ScrapedArticle[] = [];
   if (!opts.googleNewsOnly) {
     directArticles = await collectDirectFeeds(companyName, opts);
-    console.log(
-      `[HarchIQ-Collect] Direct feeds → ${directArticles.length} articles`,
-    );
+    logInfo("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] Direct feeds → ${directArticles.length} articles`);
   }
 
   // ── STEP 3: Merge + dedupe by URL hash ───────────────────────
   const merged = dedupeByHash([...googleArticles, ...directArticles]);
-  console.log(
-    `[HarchIQ-Collect] Merged + deduped → ${merged.length} unique articles`,
-  );
+  logInfo("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] Merged + deduped → ${merged.length} unique articles`);
 
   // ── STEP 4: Enrich top articles with full content ────────────
   const top = pickTopArticles(merged, opts.maxFullContentFetch);
   const enriched = await enrichWithFullContent(top, opts.timeoutMs);
-  console.log(
-    `[HarchIQ-Collect] Enriched ${enriched.size}/${top.length} articles with full content`,
-  );
+  logInfo("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] Enriched ${enriched.size}/${top.length} articles with full content`);
 
   // ── STEP 5: Convert to CollectionResult[] ────────────────────
   const results = merged.map((a) => toCollectionResult(a, enriched.get(a.urlHash)));
 
   const elapsed = Date.now() - startedAt;
-  console.log(
-    `[HarchIQ-Collect] RSS collection complete in ${elapsed}ms — ${results.length} results for "${companyName}"`,
-  );
+  logInfo("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] RSS collection complete in ${elapsed}ms — ${results.length} results for "${companyName}"`);
 
   return results;
 }
@@ -174,10 +163,7 @@ async function collectGoogleNews(
       timeout: opts.timeoutMs,
     });
   } catch (err) {
-    console.error(
-      `[HarchIQ-Collect] Google News collection failed for "${companyName}":`,
-      err,
-    );
+    logError("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] Google News collection failed for "${companyName}": ${err}`);
     return [];
   }
 }
@@ -203,9 +189,7 @@ async function collectDirectFeeds(
   );
 
   if (sources.length === 0) {
-    console.warn(
-      "[HarchIQ-Collect] No active direct feeds in RSS_SOURCES — skipping direct collection",
-    );
+    logWarn("lib.harchiq.collect.rss-collector", "[HarchIQ-Collect] No active direct feeds in RSS_SOURCES — skipping direct collection");
     return [];
   }
 
@@ -235,10 +219,7 @@ async function collectDirectFeeds(
         all.push(...r.value);
       } else {
         const src = batch[j];
-        console.warn(
-          `[HarchIQ-Collect] Direct feed "${src.id}" failed:`,
-          r.reason,
-        );
+        logWarn("lib.harchiq.collect.rss-collector", `[HarchIQ-Collect] Direct feed "${src.id}" failed: ${r.reason}`);
       }
     }
   }

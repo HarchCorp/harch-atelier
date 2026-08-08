@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     logError(
       "audit-sentinel",
-      `Sentinel crash: ${err instanceof Error ? err.message : err}`,
+      `Sentinel crash: ${err}`,
     );
     return NextResponse.json(
       { error: "Sentinel failed", detail: err instanceof Error ? err.message : "unknown" },

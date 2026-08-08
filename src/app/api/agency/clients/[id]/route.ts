@@ -5,6 +5,7 @@ import {
   AgencyAuthError,
 } from "@/lib/agency/agency-session";
 import { getUsageStats } from "@/lib/agency/quota";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/agency/clients/[id]
@@ -206,7 +207,7 @@ function agencyError(err: unknown): NextResponse {
   if (err instanceof AgencyAuthError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
-  console.error("[/api/agency/clients/[id]] error:", err);
+  logError("agency.clients.id", `[/api/agency/clients/[id]] error: ${err}`);
   return NextResponse.json(
     { error: err instanceof Error ? err.message : "Unknown error" },
     { status: 500 },

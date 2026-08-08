@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     signature,
     challengeEntry.challenge,
   ).catch((err) => {
-    logError("zkp-verify", `Signature verification error: ${err instanceof Error ? err.message : err}`);
+    logError("zkp-verify", `Signature verification error: ${err}`);
     return false;
   });
 

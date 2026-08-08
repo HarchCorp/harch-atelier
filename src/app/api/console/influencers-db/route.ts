@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/influencers-db
@@ -201,7 +202,7 @@ export async function GET(req: NextRequest) {
       platformBreakdown,
     });
   } catch (err) {
-    console.error("Influencer DB API error:", err);
+    logError("console.influencers-db", `Influencer DB API error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

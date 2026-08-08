@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -107,7 +108,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ users: out, count: out.length });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[/api/admin/users] GET failed:", msg);
+    logError("admin.users", `[/api/admin/users] GET failed: ${msg}`);
     return NextResponse.json(
       { error: "Failed to fetch users", detail: msg },
       { status: 500 },

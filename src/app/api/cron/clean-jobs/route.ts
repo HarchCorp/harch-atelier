@@ -25,8 +25,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorizeCron } from "@/lib/auth/cron";
-import { logInfo, logWarn } from "@/lib/logger";
-
+import { logInfo, logWarn, logError } from "@/lib/logger";
 export const dynamic = "force-dynamic";
 // Vercel Cron routes are invoked server-side and must never be
 // cached — every invocation should run a fresh DELETE.

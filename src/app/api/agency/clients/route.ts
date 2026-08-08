@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAgencyAdmin, AgencyAuthError } from "@/lib/agency/agency-session";
 import { getQuota, currentPeriod, getPlanDefaults } from "@/lib/agency/quota";
 import { getBranding } from "@/lib/agency/branding";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/agency/clients
@@ -260,7 +261,7 @@ function agencyError(err: unknown): NextResponse {
   if (err instanceof AgencyAuthError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
-  console.error("[/api/agency/clients] error:", err);
+  logError("agency.clients", `[/api/agency/clients] error: ${err}`);
   return NextResponse.json(
     { error: err instanceof Error ? err.message : "Unknown error" },
     { status: 500 },

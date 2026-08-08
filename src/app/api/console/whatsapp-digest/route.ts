@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isDemoEmail } from "@/lib/demo-session";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,7 @@ AI Visibility: ${aiVis.map(a => `${a.platform} ${Math.round((a.confidence ?? 0) 
       source: "neon",
     });
   } catch (err) {
-    console.error("[whatsapp-digest] error:", err);
+    logError("console.whatsapp-digest", `[whatsapp-digest] error: ${err}`);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

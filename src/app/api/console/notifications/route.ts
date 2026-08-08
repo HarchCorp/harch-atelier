@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoNotificationsResponse } from "@/lib/demo-console-api";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/console/notifications
@@ -71,7 +72,7 @@ export async function GET() {
       total: notifications.length,
     });
   } catch (err) {
-    console.error("Notifications GET error:", err);
+    logError("console.notifications", `Notifications GET error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
@@ -122,7 +123,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ marked: 1, scope: "single", id });
   } catch (err) {
-    console.error("Notifications PATCH error:", err);
+    logError("console.notifications", `Notifications PATCH error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/trader/assets/[ticker]/history?window=7|30|90
@@ -196,7 +197,7 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error("Trader asset history error:", err);
+    logError("trader.assets.ticker.history", `Trader asset history error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

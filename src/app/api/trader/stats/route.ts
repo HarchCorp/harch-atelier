@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { logError } from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/trader/stats
@@ -88,7 +89,7 @@ export async function GET() {
       alertsActive: 0, // TODO: implement alert rules
     });
   } catch (err) {
-    console.error("Trader stats error:", err);
+    logError("trader.stats", `Trader stats error: ${err}`);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

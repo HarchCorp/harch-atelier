@@ -30,6 +30,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logger";
 import {
   formatAlertMessage,
   isTwilioConfigured,
@@ -202,7 +203,7 @@ export async function getHandler(req: NextRequest) {
       })),
     ];
   } catch (err) {
-    console.error("[whatsapp-alerts] failed to query alerts:", err);
+    logError("cron.whatsapp-alerts", `[whatsapp-alerts] failed to query alerts: ${err}`);
     return NextResponse.json(
       {
         timestamp: startedAt.toISOString(),
@@ -242,7 +243,7 @@ export async function getHandler(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[whatsapp-alerts] failed to query users:", err);
+    logError("cron.whatsapp-alerts", `[whatsapp-alerts] failed to query users: ${err}`);
     return NextResponse.json(
       {
         timestamp: startedAt.toISOString(),
@@ -340,9 +341,9 @@ export async function getHandler(req: NextRequest) {
           // Quota check errored — log and PASS THROUGH (better to send
           // an extra alert than to silently drop a critical notification
           // because of a transient DB error in the quota subsystem).
-          console.error(
-            `[whatsapp-alerts] quota check failed for agencyClient ${agencyClientId}:`,
-            err,
+          logError(
+            "cron.whatsapp-alerts",
+            `Quota check failed for agencyClient ${agencyClientId}: ${err}`,
           );
         }
       }
@@ -456,7 +457,7 @@ export async function getHandler(req: NextRequest) {
   } catch (err) {
     // Best-effort: a webhook dispatch failure must never mask the
     // WhatsApp summary above. Log and continue.
-    console.error("[whatsapp-alerts] webhook dispatch failed:", err);
+    logError("cron.whatsapp-alerts", `[whatsapp-alerts] webhook dispatch failed: ${err}`);
   }
 
   const finishedAt = new Date();

@@ -211,9 +211,7 @@ export async function collectFinancialReports(
   companyName: string,
 ): Promise<FinancialReportData[] | null> {
   // TODO: AMMC document-repository integration planned.
-  console.warn(
-    `[HarchIQ-Collect] Financial-report collection not yet configured for "${companyName}" (AMMC repository integration planned)`,
-  );
+  logWarn("lib.harchiq.collect.financial-collector", `[HarchIQ-Collect] Financial-report collection not yet configured for "${companyName}" (AMMC repository integration planned)`);
   return null;
 }
 
@@ -241,15 +239,11 @@ export async function collectRegulatoryFilings(
   companyName: string,
 ): Promise<CollectionResult[]> {
   if (!companyName || !companyName.trim()) {
-    console.warn(
-      "[HarchIQ-Collect] collectRegulatoryFilings called with empty companyName",
-    );
+    logWarn("lib.harchiq.collect.financial-collector", "[HarchIQ-Collect] collectRegulatoryFilings called with empty companyName");
     return [];
   }
 
-  console.log(
-    `[HarchIQ-Collect] Regulatory-filing collection starting for "${companyName}"`,
-  );
+  logInfo("lib.harchiq.collect.financial-collector", `[HarchIQ-Collect] Regulatory-filing collection starting for "${companyName}"`);
   const startedAt = Date.now();
 
   // Look up the configured rate limits for the two feeds so we honor
@@ -279,16 +273,10 @@ export async function collectRegulatoryFilings(
     ammcArticles.status === "fulfilled" ? ammcArticles.value : [];
 
   if (bamArticles.status === "rejected") {
-    console.warn(
-      `[HarchIQ-Collect] BAM RSS fetch failed for "${companyName}":`,
-      bamArticles.reason,
-    );
+    logWarn("lib.harchiq.collect.financial-collector", `[HarchIQ-Collect] BAM RSS fetch failed for "${companyName}": ${bamArticles.reason}`);
   }
   if (ammcArticles.status === "rejected") {
-    console.warn(
-      `[HarchIQ-Collect] AMMC RSS fetch failed for "${companyName}":`,
-      ammcArticles.reason,
-    );
+    logWarn("lib.harchiq.collect.financial-collector", `[HarchIQ-Collect] AMMC RSS fetch failed for "${companyName}": ${ammcArticles.reason}`);
   }
 
   // Convert each batch to CollectionResult with the right collector tag.
@@ -304,9 +292,7 @@ export async function collectRegulatoryFilings(
   const merged = dedupeByHash([...bamCollectionResults, ...ammcCollectionResults]);
 
   const elapsed = Date.now() - startedAt;
-  console.log(
-    `[HarchIQ-Collect] Regulatory-filing collection complete in ${elapsed}ms — BAM: ${bamResults.length}, AMMC: ${ammcResults.length}, merged: ${merged.length}`,
-  );
+  logInfo("lib.harchiq.collect.financial-collector", `[HarchIQ-Collect] Regulatory-filing collection complete in ${elapsed}ms — BAM: ${bamResults.length}, AMMC: ${ammcResults.length}, merged: ${merged.length}`);
 
   return merged;
 }
