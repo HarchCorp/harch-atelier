@@ -90,9 +90,9 @@ const TIERS: Tier[] = [
   {
     id: "emergence",
     name: "Émergence",
-    price: "15,000",
-    period: "MAD / month",
-    tagline: "Le bouclier d'intelligence réputationnelle — pour l'entreprise qui prend la mesure du risque",
+    price: "Sur devis",
+    period: "Audit institutionnel",
+    tagline: "Pour l'entreprise qui prend la mesure du risque réputationnel",
     highlighted: false,
     features: [
       "30+ sources media marocaines surveillées",
@@ -129,8 +129,8 @@ const TIERS: Tier[] = [
   {
     id: "corporate",
     name: "Corporate",
-    price: "40,000",
-    period: "MAD / month",
+    price: "Sur devis",
+    period: "Audit institutionnel",
     tagline: "Pour le groupe structuré — multi-filiales, conformité, escalade Comex",
     highlighted: true,
     features: [
@@ -169,8 +169,8 @@ const TIERS: Tier[] = [
   {
     id: "sovereign",
     name: "Sovereign",
-    price: "75,000",
-    period: "MAD / month",
+    price: "Sur devis",
+    period: "Audit institutionnel",
     tagline: "Pour l'institution stratégique — souveraineté, multi-pays, conformité souveraine",
     highlighted: false,
     features: [
@@ -437,7 +437,7 @@ function Hero() {
             margin: "0 0 24px",
           }}
         >
-          Transparent pricing.
+          Audit institutionnel.
           <br />
           <span style={{ color: C.sage }}>No surprises.</span>
         </h1>
@@ -508,16 +508,16 @@ function Hero() {
           }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <IconCheck size={12} color={C.sage} /> No commitment
+            <IconCheck size={12} color={C.sage} /> Sans engagement
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <IconCheck size={12} color={C.sage} /> Virement bancaire
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <IconCheck size={12} color={C.sage} /> Free 7-day audit
+            <IconCheck size={12} color={C.sage} /> Rétro-audit gratuit
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <IconCheck size={12} color={C.sage} /> Annulation 1 clic
+            <IconCheck size={12} color={C.sage} /> Résiliation 30j
           </span>
         </div>
       </div>
