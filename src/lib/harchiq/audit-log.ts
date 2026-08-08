@@ -47,7 +47,8 @@ export type AuditAction =
   | "master_code_failed"
   | "session_revoked"
   | "invitation_accepted"
-  | "role_changed";
+  | "role_changed"
+  | "surgical_email_sent";
 
 export type AuditResult = "success" | "denied" | "error";
 
