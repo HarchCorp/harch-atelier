@@ -1075,3 +1075,44 @@ Unresolved Issues:
   prompt". This is now CONDITIONALLY true (only when no API key is set).
   The UI logic still works correctly because it reads the dynamic
   `simulated` flag — but the honesty contract doc could be updated.
+
+---
+
+Task ID: HARCH100-SNAPSHOT
+Agent: Architect (2nd pass)
+Task: Harch 100 snapshot model + publication + 2nd console.* cleanup pass
+
+Work Log:
+- TÂCHE 1 — Harch 100 persistance DB:
+  • Ajouté `model Harch100Snapshot` dans prisma/schema.prisma (id, period YYYY-MM unique, rankings Json, generatedAt, publishedAt?) + @@index([period]) + @@index([publishedAt]).
+  • Modifié src/app/api/harch100/auto-publish/route.ts: le cron calcule maintenant `period` = "YYYY-MM" (UTC mois en cours) et upsert dans Harch100Snapshot avec publishedAt=now. Retourne snapshotId + period + publishedAt dans la réponse.
+  • Créé src/app/api/harch100/latest/route.ts (GET, public, runtime=nodejs): retourne le dernier snapshot publié (findFirst where publishedAt not null, orderBy publishedAt desc). 404 si aucun snapshot.
+  • `bunx prisma generate` → Prisma Client v6.19.2 régénéré avec le nouveau modèle.
+  • `bunx tsc --noEmit --pretty false` → 0 erreurs après chaque étape.
+  • Note: `prisma db push` NON exécuté (sandbox sans accès Neon). L'opérateur Vercel doit le lancer au prochain déploiement — sinon la table Harch100Snapshot n'existera pas et les routes retourneront 500 (Prisma ERROR: relation "Harch100Snapshot" does not exist).
+
+- TÂCHE 2 — 2e passe console.* :
+  • Écrit scripts/migrate_console.py: state machine Python qui parse JS/TS en respectant strings (", ', `), commentaires (// /*), et regex literals (/.../flags) — la 1re version cassait sur `/^```json\s*/i` dans whatsapp-import (backticks dans regex traités comme ouverture de template literal).
+  • Détecte automatiquement les client components ("use client") et les SKIP — le logger @/lib/logger importe Prisma qui ne peut pas tourner dans le bundle browser. Les 43 fichiers client components touchés par erreur ont été revertés via scripts/revert_client_components.py.
+  • Patterns gérés: console.log/error/warn avec 1 ou 2 args, plain string literals, template literals, concatenations `tmpl1 + tmpl2 + "str"`. 3+ args ou args complexes (objets, function calls) → skip avec warning.
+  • Écrit scripts/fix_console_pass2.py: 
+    1. Étend les imports @/lib/logger existants pour inclure logError quand la 1re passe l'a introduit (bug: les imports `{ logInfo, logWarn }` n'étaient pas complétés → TS2552 Cannot find name 'logError').
+    2. Simplifie `${X instanceof Error ? X.message : X}` → `${X}` (gère aussi les vars dotted comme err.message) — évite TS2358 quand X est déjà un string.
+  • Migration manuelle des 4 patterns multi-line skippés (whatsapp/inbound, cron/whatsapp-alerts, provenance/tracker, defend/security, auth/master-code, audit-log).
+  • consoleLogSink() dans ingestion-pipeline.ts laissé intact: c'est un sink de log bas-niveau du pipeline — le migrer vers logError/logInfo créerait une boucle (le logger écrit dans SystemLog qui est ingéré par le pipeline qui appelle le sink qui appelle le logger...).
+
+Stage Summary:
+- 1 commit poussé (4a27a8a) — 135 fichiers, +1273/-350 lignes.
+- 0 erreurs TypeScript.
+- Compte console.* dans src/: 227 → 82 (bien sous le target < 100).
+  Breakdown restant:
+    • ~30 commentaires/strings contenant le mot "console" (false positives)
+    • 4 client components (.tsx avec "use client") — impossibles à migrer (Prisma ≠ browser)
+    • 1 src/lib/logger/index.ts — interdit (le logger ne peut pas se logger lui-même)
+    • 4 consoleLogSink dans ingestion-pipeline.ts — sink bas-niveau, migration créerait une boucle
+    • ~10 vrai calls résiduels dans des patterns trop complexes (multi-arg avec objets)
+- Routes /api/harch100/auto-publish et /api/harch100/latest prêtes. La table Harch100Snapshot doit être créée sur Neon via `bunx prisma db push` avant le prochain cron (1er du mois 06:00 UTC).
+
+Unresolved Issues:
+- Harch100Snapshot table NOT yet created on Neon — `bunx prisma db push` doit être lancé par un opérateur avec accès DB. Sans ça, /api/harch100/auto-publish retourne 500 (Prisma error) et /api/harch100/latest retourne 500 (pas 404).
+- Le prefix "console." dans les categories logError("console.X", ...) génère ~15 false positives dans le count `rg -c "console\."`. Pour un compte exact des vrai console.* calls, utiliser: `rg "console\.(log|error|warn|debug|info|trace)\s*\(" src/`. Renommer les categories en "console-X" (dash) éliminerait les false positives mais c'est cosmétique.
