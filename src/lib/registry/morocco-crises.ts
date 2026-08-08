@@ -22,7 +22,7 @@ export interface MoroccoCrisis {
   month: string;
   company: string;
   sector: string;
-  crisisType: "boycott" | "fraude" | "governance" | "accident" | "labor" | "regulatory" | "cyber" | "scandal" | "financial" | "political";
+  crisisType: "boycott" | "fraude" | "governance" | "accident" | "labor" | "regulatory" | "cyber" | "scandal" | "financial" | "political" | "operational";
   title: string;
   description: string;
   triggerEvent: string;

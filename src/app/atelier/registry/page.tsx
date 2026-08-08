@@ -53,7 +53,7 @@ export default function RegistryPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        background: C.surface,
+        background: C.bg,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <BrandBadge subsidiary="Atelier" size="sm" theme="light" />
@@ -106,19 +106,19 @@ export default function RegistryPage() {
           gap: "16px",
           marginBottom: "32px",
         }}>
-          <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+          <div style={{ padding: "20px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
             <div style={{ fontSize: "32px", fontWeight: 800, color: C.text, lineHeight: 1 }}>{stats.total}</div>
             <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "4px" }}>Crises documentées</div>
           </div>
-          <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+          <div style={{ padding: "20px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
             <div style={{ fontSize: "32px", fontWeight: 800, color: C.text, lineHeight: 1 }}>{Object.keys(stats.bySector).length}</div>
             <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "4px" }}>Secteurs couverts</div>
           </div>
-          <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+          <div style={{ padding: "20px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
             <div style={{ fontSize: "32px", fontWeight: 800, color: C.text, lineHeight: 1 }}>{stats.avgDuration}j</div>
             <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "4px" }}>Durée moyenne</div>
           </div>
-          <div style={{ padding: "20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+          <div style={{ padding: "20px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "8px" }}>
             <div style={{ fontSize: "32px", fontWeight: 800, color: C.text, lineHeight: 1 }}>{Object.keys(stats.byYear).length}</div>
             <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "4px" }}>Années couvertes</div>
           </div>
@@ -130,7 +130,7 @@ export default function RegistryPage() {
             onClick={() => setFilter("all")}
             style={{
               padding: "6px 14px",
-              background: filter === "all" ? C.text : C.surface,
+              background: filter === "all" ? C.text : C.bg,
               color: filter === "all" ? "#fff" : C.textBody,
               border: `1px solid ${filter === "all" ? C.text : C.border}`,
               borderRadius: "4px",
@@ -148,7 +148,7 @@ export default function RegistryPage() {
               onClick={() => setFilter(s)}
               style={{
                 padding: "6px 14px",
-                background: filter === s ? C.text : C.surface,
+                background: filter === s ? C.text : C.bg,
                 color: filter === s ? "#fff" : C.textBody,
                 border: `1px solid ${filter === s ? C.text : C.border}`,
                 borderRadius: "4px",
@@ -203,7 +203,7 @@ function CrisisCard({ crisis }: { crisis: MoroccoCrisis }) {
 
   return (
     <div style={{
-      background: C.surface,
+      background: C.bg,
       border: `1px solid ${C.border}`,
       borderRadius: "12px",
       overflow: "hidden",
