@@ -1,22 +1,25 @@
 // ═══════════════════════════════════════════════════════════════
-//  NLP WORKER — AEGIS v4.0
+//  NLP WORKER — AEGIS v4.1 (hybrid pipeline)
 //
 //  Consumes jobs from `nlp-queue`. For every unprocessed Article
-//  belonging to the target company, runs the GLM-4 pipeline:
-//    • summarize   → updates Article.summary
-//    • sentiment   → updates Article.sentimentLabel / sentimentScore
-//                    + creates a per-company SentimentScore rollup
-//    • NER         → creates Entity + EntityMention rows
-//    • topics      → folded into the SentimentScore sourceBreakdown
+//  belonging to the target company, routes through the hybrid
+//  inference pipeline (Level 0 → 1 → 2):
+//    • Level 0 (FREE, lexicon Darija)  → sentimentScore + label
+//    • Level 1 (FREE, heuristic)       → riskScore + escalation flag
+//    • Level 2 (~0.05 MAD, GLM-4)      → summary + topics + entities
+//      (only if Level 1 shouldEscalate = true, ~20% of articles)
 //
-//  Cache strategy:
-//  ───────────────
-//  Every GLM call goes through the orchestrator's `cachedGLMCall`
-//  wrapper, which hashes `{ promptType, inputPayload }` and looks up
-//  the GLMAnalysis table BEFORE issuing the call. On a hit the cached
-//  `outputPayload` is returned; on a miss the GLM response is
-//  persisted back to GLMAnalysis with model + latency metadata. So
-//  re-running the worker over already-processed articles is free.
+//  Per-article persistence:
+//  ────────────────────────
+//    • Level 1:  Article.sentimentLabel + Article.sentimentScore
+//    • Level 2:  same + Article.summary + Entity / EntityMention rows
+//
+//  Fallback strategy:
+//  ──────────────────
+//  If `analyzeArticleHybrid` throws (import failure, unexpected
+//  crash), the worker falls back to the legacy `runFullAnalysis`
+//  batch path — same GLM-4 calls as before, with the same cache.
+//  The worker NEVER goes dark.
 //
 //  Job payload:  { companySlug: string; articleIds?: string[] }
 //  Returns:      { articlesProcessed: number; errors: Array<{ articleId: string; error: string }> }
@@ -38,6 +41,10 @@ import {
   type TopicResult,
   type RiskResult,
 } from "../../ai/glm-orchestrator";
+import {
+  analyzeArticleHybrid,
+  type InferenceResult,
+} from "@/lib/inference/hybrid-pipeline";
 import { getCompanyBySlug } from "../../scrapers/sources-config";
 
 // ─── JOB PAYLOAD / RESULT TYPES ──────────────────────────────────
@@ -295,6 +302,143 @@ async function persistRiskAssessment(
   }
 }
 
+// ─── HYBRID PIPELINE PERSISTERS ──────────────────────────────────
+
+/**
+ * Persist a single InferenceResult back into the Article row.
+ *   • Level 1 (lexicon only): store just score + label
+ *   • Level 2 (GLM-4 ran): also store summary (topics folded into
+ *     the SentimentScore sourceBreakdown by `persistHybridSentimentScore`)
+ *
+ * Wrapped in try/catch so a single update failure doesn't roll back
+ * the entire batch.
+ */
+async function updateArticleWithHybrid(
+  articleId: string,
+  result: InferenceResult,
+): Promise<void> {
+  try {
+    await prisma.article.update({
+      where: { id: articleId },
+      data: {
+        // Level 1 has no summary — only Level 2 produced one.
+        summary: result.level === 2 ? (result.summary ?? null) : null,
+        sentimentLabel: result.sentimentLabel,
+        sentimentScore: result.sentimentScore,
+        // Use the heuristic risk score (0..100) as a relevance proxy.
+        // Higher risk → higher analytical signal → higher relevance.
+        relevanceScore: result.riskScore / 100,
+      },
+    });
+  } catch (err) {
+    console.error(
+      `[nlp-worker] updateArticleWithHybrid failed for ${articleId}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+/**
+ * Persist entities from a Level 2 result. The hybrid pipeline only
+ * returns plain entity NAMES (no NER type / position info — that's
+ * a Level-3 feature we may add later), so we wrap each name into a
+ * NEREntity with type `"ORGANIZATION"` (the most common entity type
+ * in financial news) and confidence 0.6 — above the 0.4 threshold
+ * in `persistEntities`, so they actually get persisted.
+ */
+async function persistHybridEntities(
+  articleId: string,
+  companyId: string,
+  sourceName: string,
+  mentionText: string,
+  entities: string[],
+  sentimentLabel: string,
+  sentimentScore: number,
+): Promise<void> {
+  if (!entities || entities.length === 0) return;
+
+  const nerEntities: NEREntity[] = entities.map((name) => ({
+    text: name,
+    normalized: name,
+    type: "ORGANIZATION",
+    start: 0,
+    end: name.length,
+    confidence: 0.6,
+  }));
+
+  await persistEntities(
+    articleId,
+    companyId,
+    sourceName,
+    mentionText,
+    nerEntities,
+    sentimentLabel,
+    sentimentScore,
+  );
+}
+
+/**
+ * Aggregate hybrid results into a single SentimentScore rollup for
+ * the company. Same shape as `persistSentimentScore`, but consumes
+ * the simpler `InferenceResult` type. Topics from all Level 2
+ * articles are folded into the sourceBreakdown JSON (so the
+ * reputation dashboard can still surface them), plus cost telemetry
+ * (totalCostMad, level1Count, level2Count) for the cost dashboard.
+ */
+async function persistHybridSentimentScore(
+  companyId: string,
+  results: InferenceResult[],
+  language: string | null,
+): Promise<void> {
+  if (results.length === 0) return;
+
+  const positive = results.filter((r) => r.sentimentLabel === "positive").length;
+  const neutral = results.filter((r) => r.sentimentLabel === "neutral").length;
+  const negative = results.filter((r) => r.sentimentLabel === "negative").length;
+  const total = results.length;
+  const avgScore = results.reduce((s, r) => s + r.sentimentScore, 0) / total;
+
+  const topics: string[] = [];
+  let totalCost = 0;
+  let level2Count = 0;
+  for (const r of results) {
+    if (r.level === 2) {
+      level2Count++;
+      if (r.topics) topics.push(...r.topics);
+    }
+    totalCost += r.cost;
+  }
+
+  try {
+    await prisma.sentimentScore.create({
+      data: {
+        companyId,
+        score: avgScore,
+        positivePct: (positive / total) * 100,
+        neutralPct: (neutral / total) * 100,
+        negativePct: (negative / total) * 100,
+        articleCount: total,
+        language: language ?? "unknown",
+        sourceBreakdown: {
+          positive,
+          neutral,
+          negative,
+          total,
+          topics,
+          level1Count: total - level2Count,
+          level2Count,
+          totalCostMad: Number(totalCost.toFixed(4)),
+        } as any,
+      },
+    });
+  } catch (err) {
+    console.error(
+      "[nlp-worker] persistHybridSentimentScore write failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
 // ─── JOB HANDLER ─────────────────────────────────────────────────
 
 async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
@@ -338,14 +482,104 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
     `[nlp-worker] processing ${articles.length} articles for ${company.name}`,
   );
 
-  // ─── 2. RUN GLM ANALYSIS (CACHE-AWARE VIA runFullAnalysis) ──
-  // runFullAnalysis internally calls cachedGLMCall for every step.
-  // cachedGLMCall checks the GLMAnalysis table BEFORE issuing any GLM
-  // request, so re-runs over already-analysed articles are free.
+  // ─── 2. RUN HYBRID PIPELINE (Level 0/1/2) ───────────────────
+  // analyzeArticleHybrid routes each article through:
+  //   Level 0 (lexicon, FREE) → Level 1 (heuristic, FREE)
+  //     → Level 2 (GLM-4, ~0.05 MAD) only if risk ≥ 40
+  // ~80% of articles stop at Level 0+1 (cost: 0 MAD).
+  // The GLM-4 call inside Level 2 goes through the orchestrator's
+  // cachedGLMCall, so re-runs over already-analysed articles are free.
   //
-  // We skip the high-level synthesis steps (narratives, reputation,
-  // aiVisibility, recommendations, dossier) — those are handled by
-  // the dedicated ai-visibility-worker and the report generator.
+  // If `analyzeArticleHybrid` throws (rare — it has its own internal
+  // try/catch around GLM-4), we fall back to the legacy batch path.
+  let hybridResults: InferenceResult[] | null = null;
+  try {
+    hybridResults = [];
+    for (const article of articles) {
+      const result = await analyzeArticleHybrid(
+        (article.content ?? "").slice(0, 5000),
+        article.source,
+        article.publishedAt ?? new Date(0),
+        company.name,
+      );
+      hybridResults.push(result);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[nlp-worker] analyzeArticleHybrid crashed (${msg}) — falling back to runFullAnalysis`,
+    );
+    hybridResults = null;
+  }
+
+  // ─── 2a. HYBRID PATH: persist per-article + rollups ─────────
+  if (hybridResults !== null) {
+    const errors: NlpJobError[] = [];
+    let processed = 0;
+    let level2Count = 0;
+    let totalCost = 0;
+
+    for (let i = 0; i < articles.length; i++) {
+      const article = articles[i];
+      const result = hybridResults[i];
+
+      try {
+        // 2a-1. Update the Article row (Level 1: score + label only,
+        //       Level 2: also summary).
+        await updateArticleWithHybrid(article.id, result);
+
+        // 2a-2. Persist extracted entities + per-company mentions.
+        //       Only Level 2 has entities — Level 1 is lexicon-only.
+        if (result.level === 2 && result.entities && result.entities.length > 0) {
+          await persistHybridEntities(
+            article.id,
+            company.id,
+            article.source,
+            `${article.title} ${article.content ?? ""}`,
+            result.entities,
+            result.sentimentLabel,
+            result.sentimentScore,
+          );
+        }
+
+        // 2a-3. The article is now "processed" — `updateArticleWithHybrid`
+        //       above already set sentimentLabel, which is our
+        //       "processed" sentinel (no dedicated column on the actual
+        //       Article table). Idempotent re-runs will skip it because
+        //       the NLP worker filters on `sentimentLabel: null`.
+
+        if (result.level === 2) level2Count++;
+        totalCost += result.cost;
+        processed++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[nlp-worker] per-article persist failed for ${article.id}: ${msg}`,
+        );
+        errors.push({ articleId: article.id, error: msg });
+      }
+    }
+
+    // Company-level rollup (one row per NLP run).
+    await persistHybridSentimentScore(
+      company.id,
+      hybridResults,
+      articles[0]?.language ?? null,
+    );
+
+    const elapsed = Date.now() - startedAt;
+    console.log(
+      `[nlp-worker] ✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${level2Count} L2, ${errors.length} errors, ~${totalCost.toFixed(2)} MAD`,
+    );
+
+    return { articlesProcessed: processed, errors };
+  }
+
+  // ─── 2b. FALLBACK PATH: runFullAnalysis (legacy GLM batch) ──
+  // Used only if the hybrid pipeline crashed. Preserves the original
+  // behaviour so the worker never goes dark. Same skipSteps as before
+  // — high-level synthesis is handled by the ai-visibility-worker.
+  console.log(`[nlp-worker] ↻ using legacy runFullAnalysis fallback`);
   const articleInputs = articles.map(toArticleInput);
   let analysis: FullAnalysisResult;
   try {
@@ -367,7 +601,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
     };
   }
 
-  // ─── 3. PERSIST PER-ARTICLE RESULTS ─────────────────────────
+  // ─── 3. PERSIST PER-ARTICLE RESULTS (legacy) ────────────────
   const errors: NlpJobError[] = [];
   let processed = 0;
 
@@ -395,12 +629,6 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
         );
       }
 
-      // 3c. The article is now "processed" — `updateArticleWithNlp`
-      //     above already set sentimentLabel, which is our
-      //     "processed" sentinel (no dedicated column on the actual
-      //     Article table). Idempotent re-runs will skip it because
-      //     the NLP worker filters on `sentimentLabel: null`.
-
       processed++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -411,9 +639,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
     }
   }
 
-  // ─── 4. PERSIST COMPANY-LEVEL ROLLUPS ───────────────────────
-  // These are aggregate rows — one per NLP run — that drive the
-  // historical charts on the company dashboard.
+  // ─── 4. PERSIST COMPANY-LEVEL ROLLUPS (legacy) ──────────────
   await persistSentimentScore(
     company.id,
     analysis.steps.sentiment,
@@ -423,7 +649,7 @@ async function processNlpJob(job: Job<NlpJobPayload>): Promise<NlpJobResult> {
 
   const elapsed = Date.now() - startedAt;
   console.log(
-    `[nlp-worker] ✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${errors.length} errors`,
+    `[nlp-worker] ✔ job ${job.id} done in ${elapsed}ms — ${processed}/${articles.length} processed, ${errors.length} errors (fallback path)`,
   );
 
   return { articlesProcessed: processed, errors };
