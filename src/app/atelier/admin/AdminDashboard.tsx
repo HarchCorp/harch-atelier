@@ -270,23 +270,24 @@ export function AdminDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bgSubtle, fontFamily: C.fontSans, display: "flex" }}>
-      {/* ═══ DARK SIDEBAR ═══ */}
+      {/* ═══ LIGHT SIDEBAR ═══ */}
       <aside
         style={{
           width: "248px",
           flexShrink: 0,
-          background: C.bgDark,
-          color: C.textOnDark,
+          background: C.bg,
+          color: C.text,
           display: "flex",
           flexDirection: "column",
           position: "sticky",
           top: 0,
           height: "100vh",
-          borderRight: `1px solid ${C.borderDark}`,
+          borderRight: `1px solid ${C.border}`,
+          boxShadow: "1px 0 0 rgba(0,0,0,0.02)",
         }}
       >
         {/* Brand */}
-        <div style={{ padding: "22px 22px 18px", borderBottom: `1px solid ${C.borderDark}` }}>
+        <div style={{ padding: "22px 22px 18px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div
               style={{
@@ -310,7 +311,7 @@ export function AdminDashboard() {
                 style={{
                   fontSize: "9px",
                   fontFamily: C.fontMono,
-                  color: C.textOnDarkMuted,
+                  color: C.textMuted,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
                   marginTop: "2px",
@@ -372,7 +373,7 @@ export function AdminDashboard() {
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: "16px 22px", borderTop: `1px solid ${C.borderDark}` }}>
+        <div style={{ padding: "16px 22px", borderTop: `1px solid ${C.border}` }}>
           <a
             href="/atelier/console"
             style={{
@@ -380,7 +381,7 @@ export function AdminDashboard() {
               alignItems: "center",
               gap: "8px",
               fontSize: "12px",
-              color: C.textOnDarkBody,
+              color: C.textBody,
               textDecoration: "none",
               marginBottom: "10px",
             }}
@@ -396,8 +397,8 @@ export function AdminDashboard() {
               width: "100%",
               padding: "8px 12px",
               background: "transparent",
-              border: `1px solid ${C.borderDark}`,
-              color: C.textOnDarkBody,
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
               borderRadius: "5px",
               fontSize: "11px",
               fontWeight: 600,
@@ -592,9 +593,9 @@ function SidebarItem({
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        background: active ? "rgba(255,255,255,0.06)" : "transparent",
+        background: active ? "rgba(74,123,95,0.08)" : "transparent",
         border: "none",
-        color: active ? C.textOnDark : C.textOnDarkBody,
+        color: active ? "#4A7B5F" : C.textBody,
         fontFamily: C.fontSans,
         fontSize: "13px",
         fontWeight: active ? 600 : 500,
@@ -606,7 +607,7 @@ function SidebarItem({
         position: "relative",
       }}
       onMouseEnter={(e) => {
-        if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)";
+        if (!active) (e.currentTarget as HTMLElement).style.background = "#F5F5F5";
       }}
       onMouseLeave={(e) => {
         if (!active) (e.currentTarget as HTMLElement).style.background = "transparent";
@@ -620,12 +621,12 @@ function SidebarItem({
             top: "8px",
             bottom: "8px",
             width: "3px",
-            background: highlight ? C.cta : C.textOnDark,
+            background: highlight ? C.cta : "#4A7B5F",
             borderRadius: "0 2px 2px 0",
           }}
         />
       )}
-      <span style={{ opacity: active ? 1 : 0.7, display: "flex", flexShrink: 0 }}>
+      <span style={{ display: "flex", flexShrink: 0, color: active ? "#4A7B5F" : "#71717A" }}>
         {icon}
       </span>
       <span style={{ flex: 1 }}>{label}</span>
@@ -637,8 +638,8 @@ function SidebarItem({
             fontWeight: 700,
             padding: "1px 7px",
             borderRadius: "8px",
-            background: highlight ? `${C.cta}25` : "rgba(255,255,255,0.1)",
-            color: highlight ? C.ctaHover : C.textOnDark,
+            background: highlight ? `${C.cta}25` : "rgba(74,123,95,0.10)",
+            color: highlight ? C.ctaHover : "#4A7B5F",
             minWidth: "20px",
             textAlign: "center",
           }}
@@ -1768,22 +1769,22 @@ function WhatsAppTab({
       <div
         style={{
           padding: "24px 28px",
-          background: `linear-gradient(135deg, ${C.bgDark} 0%, #1f1f1f 100%)`,
+          background: "rgba(74,123,95,0.06)",
           borderRadius: "10px",
-          color: C.textOnDark,
-          border: `1px solid ${C.borderDark}`,
+          color: C.text,
+          border: `1px solid rgba(74,123,95,0.20)`,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-          <Sparkles size={18} color={C.cta} />
-          <span style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.ctaHover, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700 }}>
+          <Sparkles size={18} color="#4A7B5F" />
+          <span style={{ fontSize: "11px", fontFamily: C.fontMono, color: "#4A7B5F", letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700 }}>
             Killer Feature
           </span>
         </div>
-        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 8px", letterSpacing: "-0.01em" }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 8px", letterSpacing: "-0.01em", color: C.text }}>
           WhatsApp → AI → Account Creation
         </h2>
-        <p style={{ fontSize: "13px", color: C.textOnDarkBody, margin: 0, lineHeight: 1.6, maxWidth: "640px" }}>
+        <p style={{ fontSize: "13px", color: C.textBody, margin: 0, lineHeight: 1.6, maxWidth: "640px" }}>
           Paste a WhatsApp conversation with a prospect. GLM-4 extracts the company name, contact, plan tier, pricing, topics, competitors, and use case — then you review & create the account in one click.
         </p>
       </div>
@@ -2811,8 +2812,8 @@ function PermissionsTab({ users, loading, onRefresh }: {
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
       {/* Header */}
       <div style={{ marginBottom: "24px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>Role-Based Access Control</h2>
-        <p style={{ fontSize: "13px", color: "#a1a1aa", margin: 0 }}>Manage user roles and permissions. Changes take effect on the user's next request (JWT sessionVersion check).</p>
+        <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: "0 0 4px" }}>Role-Based Access Control</h2>
+        <p style={{ fontSize: "13px", color: C.textBody, margin: 0 }}>Manage user roles and permissions. Changes take effect on the user's next request (JWT sessionVersion check).</p>
       </div>
 
       {/* Success/Error banners */}
@@ -2820,22 +2821,22 @@ function PermissionsTab({ users, loading, onRefresh }: {
       {error && <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", color: "#991b1b", marginBottom: "16px" }}>✕ {error}</div>}
 
       {/* RBAC Matrix reference */}
-      <div style={{ background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717a", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "12px" }}>Role Hierarchy</div>
+      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "20px", marginBottom: "24px", boxShadow: C.shadowSm }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717A", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "12px" }}>Role Hierarchy</div>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {ROLES.map(r => (
             <div key={r.value} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "4px", background: `${r.color}15`, border: `1px solid ${r.color}40` }}>
               <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: r.color }} />
-              <span style={{ fontSize: "11px", fontWeight: 600, color: "#fff" }}>{r.label}</span>
-              <span style={{ fontSize: "10px", color: "#71717a", fontFamily: "'JetBrains Mono', monospace" }}>L{r.level}</span>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: C.text }}>{r.label}</span>
+              <span style={{ fontSize: "10px", color: "#71717A", fontFamily: "'JetBrains Mono', monospace" }}>L{r.level}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Users table */}
-      <div style={{ background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "12px 16px", borderBottom: "1px solid #262626", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717a", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: C.shadowSm }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           <span>User</span>
           <span>Current Role</span>
           <span>Status</span>
@@ -2843,20 +2844,20 @@ function PermissionsTab({ users, loading, onRefresh }: {
         </div>
         <div style={{ maxHeight: "500px", overflowY: "auto" }}>
           {loading ? (
-            <div style={{ padding: "32px", textAlign: "center", color: "#71717a", fontSize: "13px" }}>Loading users…</div>
+            <div style={{ padding: "32px", textAlign: "center", color: "#71717A", fontSize: "13px" }}>Loading users…</div>
           ) : users.length === 0 ? (
-            <div style={{ padding: "32px", textAlign: "center", color: "#71717a", fontSize: "13px" }}>No users found.</div>
+            <div style={{ padding: "32px", textAlign: "center", color: "#71717A", fontSize: "13px" }}>No users found.</div>
           ) : users.map(u => {
             const roleInfo = ROLES.find(r => r.value === u.role) || ROLES[6];
             return (
-              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "14px 16px", borderBottom: "1px solid #262626", fontSize: "13px", alignItems: "center" }}>
+              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "14px 16px", borderBottom: `1px solid ${C.border}`, fontSize: "13px", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontWeight: 600, color: "#fff", fontSize: "13px" }}>{u.name || u.email}</div>
-                  <div style={{ fontSize: "11px", color: "#71717a", fontFamily: "'JetBrains Mono', monospace" }}>{u.email}</div>
+                  <div style={{ fontWeight: 600, color: C.text, fontSize: "13px" }}>{u.name || u.email}</div>
+                  <div style={{ fontSize: "11px", color: "#71717A", fontFamily: "'JetBrains Mono', monospace" }}>{u.email}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: roleInfo.color }} />
-                  <span style={{ fontSize: "11px", fontWeight: 600, color: "#fff" }}>{roleInfo.label}</span>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: C.text }}>{roleInfo.label}</span>
                 </div>
                 <span style={{ fontSize: "11px", color: u.status === "active" ? "#10b981" : "#ef4444", fontWeight: 600 }}>{u.status}</span>
                 <select
@@ -2865,10 +2866,10 @@ function PermissionsTab({ users, loading, onRefresh }: {
                   disabled={changing === u.id}
                   style={{
                     padding: "6px 10px",
-                    background: "#0a0a0a",
-                    border: "1px solid #262626",
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
                     borderRadius: "4px",
-                    color: "#fff",
+                    color: C.text,
                     fontSize: "11px",
                     fontFamily: "'JetBrains Mono', monospace",
                     cursor: changing === u.id ? "not-allowed" : "pointer",
@@ -2930,25 +2931,25 @@ function SecurityTab({ users, loading, onRefresh }: {
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
       {/* Header */}
       <div style={{ marginBottom: "24px" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>Security & Session Management</h2>
-        <p style={{ fontSize: "13px", color: "#a1a1aa", margin: 0 }}>Revoke any user's session instantly. They will be forced to re-sign-in on their next request.</p>
+        <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: "0 0 4px" }}>Security & Session Management</h2>
+        <p style={{ fontSize: "13px", color: C.textBody, margin: 0 }}>Revoke any user's session instantly. They will be forced to re-sign-in on their next request.</p>
       </div>
 
       {/* Links to advanced security pages */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
-        <a href="/atelier/super-admin/audit-logs" style={{ display: "block", padding: "16px", background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", textDecoration: "none", color: "inherit" }}>
+        <a href="/atelier/super-admin/audit-logs" style={{ display: "block", padding: "16px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", textDecoration: "none", color: "inherit", boxShadow: C.shadowSm }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <ScrollText size={16} color="#10b981" />
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Audit Watchdog</span>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>Audit Watchdog</span>
           </div>
-          <p style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>View the tamper-evident hash chain. Real-time integrity monitoring.</p>
+          <p style={{ fontSize: "12px", color: "#71717A", margin: 0 }}>View the tamper-evident hash chain. Real-time integrity monitoring.</p>
         </a>
-        <a href="/atelier/console/settings/security" style={{ display: "block", padding: "16px", background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", textDecoration: "none", color: "inherit" }}>
+        <a href="/atelier/console/settings/security" style={{ display: "block", padding: "16px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", textDecoration: "none", color: "inherit", boxShadow: C.shadowSm }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <ShieldCheck size={16} color="#3b82f6" />
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Device Management</span>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>Device Management</span>
           </div>
-          <p style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>Full session management UI with optimistic revoke.</p>
+          <p style={{ fontSize: "12px", color: "#71717A", margin: 0 }}>Full session management UI with optimistic revoke.</p>
         </a>
       </div>
 
@@ -2957,8 +2958,8 @@ function SecurityTab({ users, loading, onRefresh }: {
       {error && <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", color: "#991b1b", marginBottom: "16px" }}>✕ {error}</div>}
 
       {/* Sessions table */}
-      <div style={{ background: "#1a1a1a", border: "1px solid #262626", borderRadius: "12px", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "12px 16px", borderBottom: "1px solid #262626", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717a", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: C.shadowSm }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           <span>User</span>
           <span>Role</span>
           <span>Status</span>
@@ -2966,21 +2967,21 @@ function SecurityTab({ users, loading, onRefresh }: {
         </div>
         <div style={{ maxHeight: "400px", overflowY: "auto" }}>
           {loading ? (
-            <div style={{ padding: "32px", textAlign: "center", color: "#71717a", fontSize: "13px" }}>Loading…</div>
+            <div style={{ padding: "32px", textAlign: "center", color: "#71717A", fontSize: "13px" }}>Loading…</div>
           ) : users.map(u => (
-            <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "14px 16px", borderBottom: "1px solid #262626", fontSize: "13px", alignItems: "center", opacity: revoking === u.id ? 0.4 : 1, transition: "opacity 0.2s" }}>
+            <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "14px 16px", borderBottom: `1px solid ${C.border}`, fontSize: "13px", alignItems: "center", opacity: revoking === u.id ? 0.4 : 1, transition: "opacity 0.2s" }}>
               <div>
-                <div style={{ fontWeight: 600, color: "#fff", fontSize: "13px" }}>{u.name || u.email}</div>
-                <div style={{ fontSize: "11px", color: "#71717a", fontFamily: "'JetBrains Mono', monospace" }}>{u.email}</div>
+                <div style={{ fontWeight: 600, color: C.text, fontSize: "13px" }}>{u.name || u.email}</div>
+                <div style={{ fontSize: "11px", color: "#71717A", fontFamily: "'JetBrains Mono', monospace" }}>{u.email}</div>
               </div>
-              <span style={{ fontSize: "11px", color: "#a1a1aa", fontWeight: 600 }}>{u.role}</span>
+              <span style={{ fontSize: "11px", color: "#525252", fontWeight: 600 }}>{u.role}</span>
               <span style={{ fontSize: "11px", color: u.status === "active" ? "#10b981" : "#ef4444", fontWeight: 600 }}>{u.status}</span>
               <button
                 onClick={() => handleRevoke(u.id, u.email)}
                 disabled={revoking === u.id}
                 style={{
                   padding: "6px 10px",
-                  background: revoking === u.id ? "#262626" : "#fef2f2",
+                  background: revoking === u.id ? "#E5E5E5" : "#fef2f2",
                   color: revoking === u.id ? "#71717a" : "#991b1b",
                   border: "1px solid #fecaca",
                   borderRadius: "4px",

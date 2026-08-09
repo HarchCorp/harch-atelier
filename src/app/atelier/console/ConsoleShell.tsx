@@ -23,6 +23,7 @@ import { WhatsAppSettingsModal } from "./WhatsAppSettingsModal";
 import { CommandCenter } from "./CommandCenter";
 import { DailyBriefing } from "./DailyBriefing";
 import { HarchIQAssistant } from "./HarchIQAssistant";
+import { PresentationMode } from "./PresentationMode";
 import {
   TemplateSelector,
   buildTemplateCommands,
@@ -1566,6 +1567,11 @@ export function ConsoleShell({
           it above the top bar (40) but below the command palette (100)
           and global search (200). */}
       <HarchIQAssistant open={assistantOpen} onOpenChange={closeAssistant} />
+
+      {/* PRESENTATION MODE — floating "boss-ready" widget bottom-LEFT
+          (the assistant is bottom-right). One-click copy of an exec
+          summary, email export, and PowerPoint download. Task: PRESENT-1. */}
+      <PresentationMode />
 
       {/* DAILY BRIEFING — morning LLM briefing modal (Cmd+Shift+B).
           Rendered at the shell root so it overlays the dashboard.

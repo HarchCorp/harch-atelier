@@ -9,9 +9,10 @@ import { C as TOKENS } from "../components/tokens";
 //  Brandwatch Vizia-inspired presentation layer for the HarchIQ
 //  Console. Designed to run 24/7 on a TV/projector in a war room.
 //
-//  • Fullscreen 100vw × 100vh, no scroll, dark background (#0a0a0a)
-//    — the ONE intentional exception to the light theme, because
-//    war-room displays need dark surfaces for readability at distance
+//  • Fullscreen 100vw × 100vh, no scroll, light corporate background
+//    (#FAFAFA) — corporate incident-management dashboard aesthetic
+//    (PagerDuty / Statuspage style): white cards, charcoal text,
+//    red/amber/green crisis accents. NOT a spy movie.
 //  • Live UTC clock + LIVE indicator + exit button (Esc / click)
 //  • 6 widgets auto-fitted per accountType (4 layouts total)
 //  • Auto-refresh every 30s (AbortController cleanup on unmount)
@@ -214,17 +215,20 @@ const EMPTY_DATA: CommandData = {
   traderStats: null,
 };
 
-// ─── DESIGN TOKENS (dark theme — war room exception) ──────────────
+// ─── DESIGN TOKENS (corporate light theme — Stripe/Notion style) ────
+// War-room display uses the same corporate light palette as the rest of
+// the console: white surfaces, light borders, charcoal text. Functional
+// accent colors (green/red/amber) are preserved for status semantics.
 
 const DARK = {
-  bg: "#0a0a0a",
-  surface: "rgba(255,255,255,0.05)",
-  surfaceHover: "rgba(255,255,255,0.08)",
-  border: "rgba(255,255,255,0.10)",
-  borderStrong: "rgba(255,255,255,0.22)",
-  text: "#ffffff",
-  textBody: "#a3a3a3",
-  textMuted: "#737373",
+  bg: "#FAFAFA",            // was #0a0a0a — now neutral-50
+  surface: "#FFFFFF",       // was rgba(255,255,255,0.05) — now solid white
+  surfaceHover: "#F4F4F5",  // was rgba(255,255,255,0.08) — now neutral-100
+  border: "#E5E5E5",        // was rgba(255,255,255,0.10) — now neutral-200
+  borderStrong: "#D4D4D4",  // was rgba(255,255,255,0.22) — now neutral-300
+  text: "#0A0A0A",          // was #ffffff — now charcoal
+  textBody: "#525252",      // was #a3a3a3 — now neutral-600
+  textMuted: "#737373",     // neutral-500 (kept)
   danger: TOKENS.danger,    // #ef4444
   warning: TOKENS.warning,  // #f59e0b
   success: TOKENS.success,  // #10b981
@@ -987,10 +991,10 @@ function FeedList({
   scroll?: boolean;
 }) {
   const sevColor: Record<string, string> = {
-    critical: DARK.danger,
-    high: DARK.warning,
-    medium: "#a3a3a3",
-    low: "#737373",
+    critical: DARK.danger,   // #ef4444 — red (most prominent)
+    high: DARK.warning,      // #f59e0b — amber
+    medium: "#A1A1AA",       // zinc-400 — subtle gray
+    low: "#D4D4D4",          // zinc-300 — subdued (least prominent)
   };
 
   if (items.length === 0) {
@@ -1122,11 +1126,11 @@ function EscalationMatrix({ alerts }: { alerts: AlertItem[] }) {
             style={{
               background: c.lit
                 ? c.isCritical
-                  ? "rgba(239,68,68,0.85)"
+                  ? "rgba(239,68,68,0.90)"
                   : c.isHigh
-                    ? "rgba(245,158,11,0.65)"
-                    : "rgba(115,115,115,0.30)"
-                : "rgba(255,255,255,0.03)",
+                    ? "rgba(245,158,11,0.80)"
+                    : "rgba(115,115,115,0.55)"
+                : "#FFFFFF",
               border: `1px solid ${c.lit ? (c.isCritical ? DARK.danger : c.isHigh ? DARK.warning : DARK.border) : DARK.border}`,
               borderRadius: "4px",
               display: "flex",
@@ -1135,7 +1139,7 @@ function EscalationMatrix({ alerts }: { alerts: AlertItem[] }) {
               fontFamily: FONT.mono,
               fontSize: "14px",
               fontWeight: 700,
-              color: c.lit ? "#fff" : DARK.textMuted,
+              color: c.lit && (c.isCritical || c.isHigh) ? "#fff" : DARK.text,
               animation: c.lit && c.isCritical ? "cc-pulse 1.2s ease-in-out infinite" : "none",
               boxShadow: c.lit && c.isCritical ? "0 0 16px rgba(239,68,68,0.4)" : "none",
               transition: "background 0.4s ease",
@@ -1154,7 +1158,7 @@ function EscalationMatrix({ alerts }: { alerts: AlertItem[] }) {
           <span style={{ width: "8px", height: "8px", background: DARK.warning, borderRadius: "2px" }} /> High
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <span style={{ width: "8px", height: "8px", background: "#737373", borderRadius: "2px" }} /> Watch
+          <span style={{ width: "8px", height: "8px", background: "rgba(115,115,115,0.55)", borderRadius: "2px" }} /> Watch
         </span>
       </div>
     </div>

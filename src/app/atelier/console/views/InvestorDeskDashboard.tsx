@@ -354,14 +354,14 @@ const DD_STATUS_COLORS: Record<DdStatus, string> = {
 // ─── Shared styles (institutional terminal vibe, tight per spec) ───
 
 const chartTooltipStyle: React.CSSProperties = {
-  background: C.bgDarkest,
-  border: `1px solid ${ACCENT}`,
+  background: C.bg,
+  border: `1px solid ${C.border}`,
   borderRadius: "4px",
   padding: "8px 12px",
   fontSize: "11px",
   fontFamily: "'Space Mono', monospace",
-  color: "#ffffff",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  color: C.text,
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
 };
 
 const chartAxisStyle = {
@@ -1323,9 +1323,9 @@ function AdverseMediaTimeline({
     return {
       tooltip: {
         trigger: "axis",
-        backgroundColor: C.bgDarkest,
-        borderColor: ACCENT,
-        textStyle: { color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 11 },
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11 },
         formatter: (params: Array<{ data: Plot }>) => {
           const p = params[0];
           if (!p || !p.data) return "";
@@ -1413,9 +1413,9 @@ function CrossBorderHeatmap({ holdings, dossiers }: { holdings: InvestorHolding[
 
     return {
       tooltip: {
-        backgroundColor: C.bgDarkest,
-        borderColor: ACCENT,
-        textStyle: { color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 11 },
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11 },
         formatter: (p: { value: [number, number, number] }) => `<div style="font-weight:700">${sectors[p.value[1]]}</div><div style="font-size:10px;opacity:0.85">${riskTypes[p.value[0]]}: ${p.value[2]} signal${p.value[2] === 1 ? "" : "s"}</div>`,
       },
       grid: { left: 130, right: 24, top: 30, bottom: 60 },
@@ -1483,9 +1483,9 @@ function DossierPipelineFunnel({ dossiers }: { dossiers: InvestorDossier[] }) {
 
     return {
       tooltip: {
-        backgroundColor: C.bgDarkest,
-        borderColor: ACCENT,
-        textStyle: { color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 11 },
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11 },
         formatter: (p: { name: string; value: number; percent: number }) => `<div style="font-weight:700;text-transform:uppercase">${p.name}</div><div style="font-size:10px;opacity:0.85">${p.value} dossier${p.value === 1 ? "" : "s"} · ${p.percent}%</div>`,
       },
       series: [
@@ -1592,9 +1592,9 @@ function ThreatNetworkGraph({ holdings, dossiers }: { holdings: InvestorHolding[
 
     return {
       tooltip: {
-        backgroundColor: C.bgDarkest,
-        borderColor: ACCENT,
-        textStyle: { color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 11 },
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11 },
         formatter: (p: { data: GNode }) => `<div style="font-weight:700">${p.data.name}</div><div style="font-size:10px;opacity:0.85">${p.data.value}</div>`,
       },
       legend: {
@@ -1737,7 +1737,7 @@ function VirtualizedHoldingsTable({
 
       <div style={{ border: `1px solid ${C.border}`, borderRadius: "4px", overflow: "hidden" }}>
         {/* Header row */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.8fr 0.9fr 0.9fr 0.8fr", gap: 0, background: C.bgDarkest, minWidth: 720 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 0.8fr 0.9fr 0.9fr 0.8fr", gap: 0, background: C.bgSubtle, minWidth: 720 }}>
           {[
             { f: "companyName" as const, label: "Company" },
             { f: null, label: "Sector" },
@@ -1751,7 +1751,7 @@ function VirtualizedHoldingsTable({
                 <button
                   onClick={() => toggleSort(col.f as "companyName" | "weight" | "reputationScore" | "highRiskCount")}
                   style={{
-                    background: "none", border: "none", color: "#ffffff", font: "inherit",
+                    background: "none", border: "none", color: C.text, font: "inherit",
                     cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em",
                     padding: 0, fontSize: "10px", fontFamily: FONT.mono, fontWeight: 600,
                   }}
@@ -1759,7 +1759,7 @@ function VirtualizedHoldingsTable({
                   {col.label} {sortArrow(col.f)}
                 </button>
               ) : (
-                <span style={{ fontSize: "10px", fontFamily: FONT.mono, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{col.label}</span>
+                <span style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.text, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{col.label}</span>
               )}
             </div>
           ))}
@@ -2956,9 +2956,9 @@ function ComplianceRegistry({
 
       {/* Virtualized compliance table (32px rows, 100+ capacity, expandable) */}
       <div style={{ border: `1px solid ${C.border}`, borderRadius: "4px", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 0.8fr", gap: 0, background: C.bgDarkest, minWidth: 900 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 0.8fr", gap: 0, background: C.bgSubtle, minWidth: 900 }}>
           {["Holding", "Sector", "OFAC", "EU", "UN", "Last Screened", "Risk Band"].map((label) => (
-            <div key={label} style={{ padding: "8px 12px", fontSize: 10, fontFamily: FONT.mono, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{label}</div>
+            <div key={label} style={{ padding: "8px 12px", fontSize: 10, fontFamily: FONT.mono, color: C.text, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{label}</div>
           ))}
         </div>
         <div ref={parentRef} style={{ maxHeight: 320, overflowY: "auto", minWidth: 900 }}>
@@ -3207,9 +3207,9 @@ function AdverseMedia15yr({ skipFetch }: { skipFetch: boolean }) {
 
     return {
       tooltip: {
-        backgroundColor: C.bgDarkest,
-        borderColor: ACCENT,
-        textStyle: { color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 11 },
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11 },
         formatter: (p: { data: { eventId: string } }) => {
           const ev = events.find((x) => x.id === p.data.eventId);
           if (!ev) return "";
@@ -3271,9 +3271,9 @@ function AdverseMedia15yr({ skipFetch }: { skipFetch: boolean }) {
 
     return {
       tooltip: {
-        backgroundColor: C.bgDarkest,
-        borderColor: ACCENT,
-        textStyle: { color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 11 },
+        backgroundColor: C.bg,
+        borderColor: C.border,
+        textStyle: { color: C.text, fontFamily: "'Space Mono', monospace", fontSize: 11 },
         formatter: (p: { value: [number, number, number] }) => `<div style="font-weight:700">${years[p.value[0]]} · ${ADVERSE_CATEGORY_LIST[p.value[1]]}</div><div style="font-size:10px;opacity:0.85">${p.value[2]} event${p.value[2] === 1 ? "" : "s"}</div>`,
       },
       grid: { left: 90, right: 24, top: 10, bottom: 30 },

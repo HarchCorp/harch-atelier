@@ -1641,3 +1641,148 @@ Screenshots saved: /home/z/my-project/e2e-screenshots/
 
 Test scripts: /home/z/e2e-console.mjs + /home/z/e2e-settings.mjs (Playwright-based, reusable)
 Auth state: /home/z/auth-state.json (saved for future test runs)
+
+---
+Task ID: LIGHT-1
+Agent: Agent 1 — Admin Light
+Task: Admin portal dark → light corporate theme
+
+Stage Summary:
+- Sidebar: dark → white: YES
+- All backgrounds: dark → light: YES
+- Accent: sage green: YES
+- 0 TypeScript errors
+
+---
+Task ID: LIGHT-2
+Agent: Agent 2 — WarRoom Light
+Task: CrisisWarRoom dark → light corporate theme
+
+File note: The path `src/app/atelier/console/CrisisWarRoom.tsx` does not
+exist in the repo. The actual dark-themed "war room" component is
+`src/app/atelier/console/CommandCenter.tsx` (fullscreen war-room display,
+#0a0a0a bg, "4×4 escalation matrix — pulsing crimson cells", 2447 LOC).
+This matches the task description (dark bg, alerts feed, sentiment chart,
+source matrix, escalation matrix, pulsing crisis accents). All edits
+applied to CommandCenter.tsx. No file was renamed — CommandCenter.tsx is
+wired into ConsoleShell.tsx (top-bar monitor button + Cmd+Shift+C
+shortcut + Cmd+K palette), renaming would break those entry points.
+
+Stage Summary:
+- Background: dark → white: YES
+  - DARK.bg: #0a0a0a → #FAFAFA (warm neutral canvas)
+  - DARK.surface: rgba(255,255,255,0.05) → #FFFFFF (solid white cards)
+  - DARK.surfaceHover: rgba(255,255,255,0.08) → #F4F4F5
+  - DARK.border: rgba(255,255,255,0.10) → #E5E5E5
+  - DARK.borderStrong: rgba(255,255,255,0.22) → #D4D4D4
+  - EscalationMatrix unlit cell: rgba(255,255,255,0.03) → #FFFFFF
+  - EscalationMatrix lit watch cell: rgba(115,115,115,0.30) → rgba(115,115,115,0.55)
+    (bumped opacity for visibility on white)
+  - Lit critical cell: rgba(239,68,68,0.85) → rgba(239,68,68,0.90)
+  - Lit high cell: rgba(245,158,11,0.65) → rgba(245,158,11,0.80)
+- Crisis colors kept (red/amber/green): YES
+  - DARK.danger = TOKENS.danger = #ef4444 (red — crisis)
+  - DARK.warning = TOKENS.warning = #f59e0b (amber — elevated)
+  - DARK.success = TOKENS.success = #10b981 (green — resolved)
+  - DARK.cta = TOKENS.cta = #10b981 (primary action)
+  - Pulsing red crisis indicators (FeedList critical dot, ComplianceGrid
+    flagged dot, EscalationMatrix critical cells) all kept — they pulse
+    red on white surface via cc-pulse keyframes (boxShadow glow)
+- Text: white → charcoal: YES
+  - DARK.text: #ffffff → #0A0A0A (charcoal on white)
+  - DARK.textBody: #a3a3a3 → #525252 (secondary text)
+  - DARK.textMuted: #737373 (kept — neutral-500, works on white)
+- Severity indicator polish (FeedList sevColor):
+  - medium: #a3a3a3 → #A1A1AA (zinc-400 — subtle gray)
+  - low: #737373 → #D4D4D4 (zinc-300 — subdued)
+  - Restores sensible severity hierarchy on white (red > amber > med-gray > light-gray)
+- Watch legend swatch: #737373 → rgba(115,115,115,0.55) — matches the
+  lit watch cell bg exactly so legend swatch == cell appearance
+- File header comment + DESIGN TOKENS comment updated to describe
+  corporate light theme (PagerDuty / Statuspage aesthetic, NOT a spy movie)
+- Functional preservation: ALL functionality kept intact
+  - WebSocket / polling (useCommandData fetches every 30s, AbortController cleanup)
+  - Auto-rotation (3 highlight sets, 60s cycle)
+  - Esc / Cmd+Shift+C keyboard exit
+  - Body scroll lock on mount
+  - 4 widget layouts (brand-monitor, market-competitor, investment-bank, harch-alpha)
+  - 6 widgets per layout (BigNumber, AreaChart, FeedList, Donut, AIEngineMatrix,
+    EscalationMatrix, BarChart, MultiLineChart, HBarList, Gauge, ComplianceGrid,
+    VolatilityGauges, CorrelationMatrix, DualAxisChart)
+  - SVG-only charts (no echarts dep — keeps TV render fast)
+  - Count-up animation (useCountUp via requestAnimationFrame)
+  - Live UTC clock (useUTCClock updates every 1s)
+- 0 TypeScript errors (bunx tsc --noEmit --pretty false → 0 lines, exit 0)
+
+Note on variable name: the local theme constant is still named `DARK`
+(123 references throughout the 2447-line file) but now holds LIGHT values.
+Renaming DARK → THEME was considered but skipped to minimize regression
+risk on a working, typed file. The DESIGN TOKENS comment above the const
+clearly labels it "corporate light theme — Stripe/Notion style". Future
+cleanup task could rename for clarity.
+
+---
+Task ID: MELT-COPY
+Agent: Agent 5 — Meltwater Copy
+Task: Copy Meltwater's exact plan structure
+
+Stage Summary:
+- 4 plans matching Meltwater: YES
+  · Essentiel — small comms teams / start-ups
+  · Pro — regional teams / multichannel (highlighted "Le plus populaire")
+  · Grandes Entreprises — leading intl brands (+ Influencer marketing)
+  · Agences — RP agencies (3 sub-levels: Débutants / Croissance / Entreprise Agence)
+- Exact French copy from Meltwater: YES
+  · Capabilities (Veille médiatique, Social listening, Suivi de la visibilité IA GenAI Lens, Relations médias, Marketing d'influence)
+  · Best For bullets (3 per plan — verbatim Meltwater)
+  · Key Features (HarchIQ AI tiersed 50/200/Illimité/Avancé, Benchmarking concurrentiel, Intégrations API et MCP, Gouvernance workflows autorisations, Multi-clients + White-label)
+- Capabilities + Best For + Key Features per plan: YES (3 sections × 4 plans)
+- All prices Sur devis: YES (no visible amounts anywhere)
+- Comparison table with Meltwater categories: YES (18 rows × 5 categories — Capacités incluses / HarchIQ AI / Analyse & rapports / Intégrations & gouvernance / Multi-clients)
+- 5 solution areas section: YES (Veille médiatique · Social listening · Suivi visibilité IA GenAI Lens · Marketing d'influence · Relations médias)
+- Pro highlighted with green border (emerald-500) + "Le plus populaire" badge: YES
+- CTA changed to "Contacter le service commercial" per Meltwater: YES
+- Design: white bg, green accents, 12px radius, subtle shadow, mobile responsive: YES
+- 0 TypeScript errors (bunx tsc --noEmit — exit code 0)
+- 0 lint errors on PricingPage.tsx (pre-existing 28 errors elsewhere unchanged)
+
+---
+Task ID: PRESENT-1
+Agent: Agent 3 — Presentation Ready
+Task: Add presentation-ready features (copy summary, email, PPT)
+
+Stage Summary:
+- Copy executive summary: YES
+- Send by email (mailto): YES
+- Download PPT: YES
+- No HarchIQ branding in summary: YES
+- 0 TypeScript errors
+
+Files:
+- src/app/atelier/console/PresentationMode.tsx (CREATED — 1408 lines)
+- src/app/atelier/console/ConsoleShell.tsx (EDIT — import + render mount point, 2 lines)
+
+Features:
+1. "Copier le résumé" — one-click copy of exec summary to clipboard, "✓ Copié!" feedback (2s)
+2. "Email" — modal with To/Sujet/Message fields, mailto: send + copy-to-clipboard; boss-email persisted in localStorage
+3. "PPT" — downloads a 5-slide HTML deck (title, KPIs, top-5 topics, AI visibility, recommendations); print-to-PDF ready
+
+Data sources (all auth'd by NextAuth console session):
+- GET /api/console/brand-health  → score, trend, sentiment, mentions
+- GET /api/console/topics        → top 5 topics, totalArticles (30j)
+- GET /api/console/ai-visibility → LLM rankings (platforms[] real / engines[] demo)
+- GET /api/console/crisis-alerts → top alert for the ALERTE line
+
+Design:
+- C token system, white bg, emerald-500 accents (design-system green)
+- Inter for text, Space Mono for data
+- Floating bottom-LEFT (HarchIQ assistant is bottom-right)
+- Collapsible "Présentation" pill → expanded card with 3 buttons
+- Mobile (< 768px): full-width bar above bottom nav, safe-area-aware
+- All French, executive memo tone
+- No "HarchIQ AI generated this" disclaimer — summary ends with "Source: Harch Atelier · {company}"
+
+Verification:
+- bunx tsc --noEmit --pretty false --skipLibCheck → EXIT 0 (0 errors)
+- bun run lint → 0 errors/warnings on PresentationMode.tsx
+- Dev server compiles cleanly

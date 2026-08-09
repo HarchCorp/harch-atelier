@@ -17,7 +17,6 @@ import { useState, useRef, useEffect } from "react";
 const C = {
   surface: "#FFFFFF",
   surfaceAlt: "#F4F4F5",
-  surfaceDark: "#0A0A0A",
   border: "#E5E5E5",
   borderLight: "#F0F0F0",
   text: "#0A0A0A",

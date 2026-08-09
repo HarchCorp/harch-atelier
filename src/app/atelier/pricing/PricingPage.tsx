@@ -7,101 +7,143 @@ import { C } from "../components/tokens";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  HARCH ATELIER — PRICING PAGE
-//  4 plans · Tous « Sur devis » · Matrice 24 lignes · FAQ 5 questions
+//  4 plans · Structure Meltwater · Tous « Sur devis »
+//  Capacités + Idéal pour + Fonctions clés · Matrice comparative · 5 solutions
 // ═══════════════════════════════════════════════════════════════════════
 
 interface Plan {
   name: string;
   tagline: string;
   highlighted?: boolean;
-  bestFor: string;
   capabilities: string[];
+  bestFor: string[];
   keyFeatures: string[];
+  note?: string;
 }
 
+// ─── 4 PLANS — STRUCTURE MELTWATER EXACTE ─────────────────────────────
 const PLANS: Plan[] = [
   {
     name: "Essentiel",
-    tagline: "Pour l'entreprise qui démarre sa veille réputationnelle.",
-    bestFor: "PME, directions comms d'une personne, premiers indicateurs.",
+    tagline:
+      "Pour les petites équipes de communication et marketing qui démarrent leur veille réputationnelle et leur suivi de la visibilité IA.",
     capabilities: [
-      "5 entités surveillées",
-      "20+ sources marocaines",
-      "Analyse de sentiment hebdomadaire",
-      "Dashboard en lecture",
-      "1 utilisateur",
+      "Veille médiatique",
+      "Social listening",
+      "Suivi de la visibilité IA (GenAI Lens)",
+      "Relations médias",
+    ],
+    bestFor: [
+      "Les petites équipes de communication/marketing",
+      "Les start-ups et les entreprises en pleine croissance",
+      "Capacités d'analyse internes limitées",
     ],
     keyFeatures: [
-      "Rapport PDF mensuel",
-      "Score de réputation (5 piliers)",
-      "Alertes email (seuil critique)",
-      "Historique 90 jours",
+      "HarchIQ AI (50 questions/jour)",
+      "Alertes et rapports",
+      "Tableaux de bord prédéfinis",
     ],
   },
   {
     name: "Pro",
-    tagline: "Pour la direction comms qui doit anticiper.",
+    tagline:
+      "Pour les équipes régionales et les organisations de marketing multicanal qui doivent anticiper avec une analyse avancée.",
     highlighted: true,
-    bestFor: "ETI, directions comms de 2 à 5 personnes, suivi concurrentiel.",
     capabilities: [
-      "25 entités surveillées",
-      "20+ sources + réseaux sociaux",
-      "Analyse de sentiment en continu",
-      "Dashboard complet + comparateurs",
-      "5 utilisateurs",
-      "Veille IA (4 moteurs)",
+      "Veille médiatique",
+      "Social listening",
+      "Suivi de la visibilité IA (GenAI Lens)",
+      "Relations médias",
+    ],
+    bestFor: [
+      "Les équipes régionales",
+      "Les organisations de marketing multicanal",
+      "Équipes de communication axées sur les données",
     ],
     keyFeatures: [
-      "Alertes WhatsApp temps réel",
-      "Rapport PDF mensuel + brief exécutif hebdo",
-      "Suivi concurrentiel (3 concurrents)",
-      "Historique 12 mois",
-      "API lecture (1 000 appels/mois)",
+      "HarchIQ AI — Avancé (200 questions/jour)",
+      "Benchmarking concurrentiel",
+      "Tableaux de bord et rapports personnalisés",
     ],
   },
   {
     name: "Grandes Entreprises",
-    tagline: "Pour le groupe qui industrialise l'intelligence réputationnelle.",
-    bestFor: "Groups cotés, directions risques, conformité, boards.",
+    tagline:
+      "Pour les marques leaders et internationales qui industrialisent l'intelligence réputationnelle avec gouvernance et conformité.",
     capabilities: [
-      "Entités illimitées",
-      "20+ sources + 8 moteurs IA",
-      "Analyse multilingue (FR, AR, EN)",
-      "Dashboards personnalisés + SSO",
-      "Utilisateurs illimités",
-      "Veille IA (9 moteurs)",
+      "Veille médiatique",
+      "Social listening",
+      "Suivi de la visibilité IA (GenAI Lens)",
+      "Marketing d'influence",
+      "Relations médias",
+    ],
+    bestFor: [
+      "Les marques leaders et internationales",
+      "Marchés et parties prenantes multiples",
+      "Besoins analytiques avancés",
     ],
     keyFeatures: [
-      "Alertes WhatsApp + SMS + Teams",
-      "Rapports board-ready + sur-mesure",
-      "Module conformité CNDP + Loi 09-08",
-      "Historique illimité",
-      "API complète (100k appels/mois)",
-      "SLA 99,9 % + onboarding dédié",
+      "HarchIQ AI — Version entreprise (illimité)",
+      "Intégrations API et MCP",
+      "Gouvernance, workflows et autorisations",
     ],
   },
   {
     name: "Agences",
-    tagline: "Pour l'agence qui multi-clients et white-label.",
-    bestFor: "Agences RP, cabinets de conseil, intégrateurs.",
+    tagline:
+      "Pour les agences RP et cabinets de conseil qui gèrent plusieurs clients en portefeuille avec white-label et gouvernance multi-comptes.",
     capabilities: [
-      "Multi-comptes clients",
-      "Sources + veille IA complète",
-      "Tableaux de bord white-label",
-      "Gestion des droits par client",
-      "Utilisateurs illimités",
+      "Veille médiatique",
+      "Social listening",
+      "Suivi de la visibilité IA (GenAI Lens)",
+      "Marketing d'influence",
+      "Relations médias",
+    ],
+    bestFor: [
+      "Débutants (petites agences / peu de clients)",
+      "Croissance (équipes gérant plusieurs clients)",
+      "Entreprise Agence (portfolios importants, envergure internationale)",
     ],
     keyFeatures: [
-      "Rapports brandés aux couleurs du client",
-      "Facturation par compte",
-      "API complète + webhooks",
-      "Historique illimité",
-      "Support dédié + formation équipe",
+      "HarchIQ AI — Avancé",
+      "Intégrations API et MCP",
+      "Gouvernance, workflows et autorisations",
+      "Multi-clients + White-label",
     ],
+    note: "3 niveaux disponibles selon la taille de l'agence",
   },
 ];
 
-// Matrice de comparaison — 24 lignes × 4 colonnes
+// ─── 5 DOMAINES DE SOLUTION — MELTWATER EXACT ─────────────────────────
+const SOLUTIONS = [
+  {
+    title: "Veille médiatique",
+    desc: "Surveillez en temps réel les articles de presse, blogs, et médias marocains et internationaux qui mentionnent vos entités.",
+    icon: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z",
+  },
+  {
+    title: "Social listening",
+    desc: "Capturez les conversations sur X, LinkedIn, Facebook, Instagram et identifiez les tendances narratives émergentes.",
+    icon: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z",
+  },
+  {
+    title: "Suivi de la visibilité IA (GenAI Lens)",
+    desc: "Mesurez ce que ChatGPT, Perplexity, Gemini, Claude et Copilot disent de votre marque — l'avenir de la réputation.",
+    icon: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 2a8 8 0 1 1-8 8 8 8 0 0 1 8-8zm-1 13v-2h2v2zm.4-4h1.2l.4-1.5a2 2 0 1 0-2 0z",
+  },
+  {
+    title: "Marketing d'influence",
+    desc: "Identifiez, évaluez et mesurez l'impact des influenceurs pertinents pour votre marque et vos campagnes.",
+    icon: "M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 7.5a4 4 0 1 1 5 5l-1 1-1.5-1.5 1-1z",
+  },
+  {
+    title: "Relations médias",
+    desc: "Identifiez les journalistes pertinents, mesurez le share of voice et optimisez vos campagnes RP et l'impact médiatique.",
+    icon: "M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2M18 14h-8M15 18h-5M10 6h8v4h-8V6z",
+  },
+];
+
+// ─── MATRICE COMPARATIVE — STRUCTURE MELTWATER ───────────────────────
 interface Row {
   category: string;
   label: string;
@@ -109,36 +151,29 @@ interface Row {
 }
 
 const COMPARISON: Row[] = [
-  // ─── Sources & collecte ───────────────────────────────────────
-  { category: "Sources & collecte", label: "Sources marocaines surveillées", values: ["20+", "20+", "20+", "20+"] },
-  { category: "Sources & collecte", label: "Réseaux sociaux (X, LinkedIn, FB)", values: ["—", "✓", "✓", "✓"] },
-  { category: "Sources & collecte", label: "Moteurs IA surveillés", values: ["1", "4", "9", "9"] },
-  { category: "Sources & collecte", label: "Langues analysées", values: ["FR", "FR + AR", "FR + AR + EN", "FR + AR + EN"] },
-  { category: "Sources & collecte", label: "Entités surveillées", values: ["5", "25", "Illimité", "Illimité / client"] },
-  { category: "Sources & collecte", label: "Historique conservé", values: ["90 j", "12 mois", "Illimité", "Illimité"] },
-  // ─── Analyse ──────────────────────────────────────────────────
-  { category: "Analyse", label: "Score de réputation (5 piliers)", values: ["✓", "✓", "✓", "✓"] },
-  { category: "Analyse", label: "Analyse de sentiment par entité", values: ["Hebdo", "Continu", "Continu", "Continu"] },
-  { category: "Analyse", label: "32 catégories de risque", values: ["—", "✓", "✓", "✓"] },
-  { category: "Analyse", label: "Détection de crises", values: ["Manuel", "Auto", "Auto + prédictif", "Auto + prédictif"] },
-  { category: "Analyse", label: "Suivi concurrentiel", values: ["—", "3 concurrents", "Illimité", "Illimité"] },
-  // ─── Alertes & livrables ──────────────────────────────────────
-  { category: "Alertes & livrables", label: "Alertes email", values: ["✓", "✓", "✓", "✓"] },
-  { category: "Alertes & livrables", label: "Alertes WhatsApp", values: ["—", "✓", "✓", "✓"] },
-  { category: "Alertes & livrables", label: "Alertes SMS / Teams", values: ["—", "—", "✓", "✓"] },
-  { category: "Alertes & livrables", label: "Rapport PDF mensuel", values: ["✓", "✓", "✓", "✓"] },
-  { category: "Alertes & livrables", label: "Brief exécutif hebdo", values: ["—", "✓", "✓", "✓"] },
-  { category: "Alertes & livrables", label: "Rapports board-ready", values: ["—", "—", "✓", "✓"] },
-  // ─── Accès & intégration ──────────────────────────────────────
-  { category: "Accès & intégration", label: "Dashboard", values: ["Lecture", "Complet", "Complet + SSO", "White-label"] },
-  { category: "Accès & intégration", label: "Utilisateurs", values: ["1", "5", "Illimité", "Illimité"] },
-  { category: "Accès & intégration", label: "API lecture", values: ["—", "1k/mois", "100k/mois", "100k/mois"] },
-  { category: "Accès & intégration", label: "API écriture + webhooks", values: ["—", "—", "✓", "✓"] },
-  { category: "Accès & intégration", label: "SSO / SAML", values: ["—", "—", "✓", "✓"] },
-  // ─── Conformité & support ─────────────────────────────────────
-  { category: "Conformité & support", label: "Module CNDP / Loi 09-08", values: ["—", "—", "✓", "✓"] },
-  { category: "Conformité & support", label: "SLA", values: ["—", "99 %", "99,9 %", "99,9 %"] },
-  { category: "Conformité & support", label: "Onboarding dédié", values: ["—", "—", "✓", "✓"] },
+  // ─── Capacités incluses ───────────────────────────────────────
+  { category: "Capacités incluses", label: "Veille médiatique", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Capacités incluses", label: "Social listening", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Capacités incluses", label: "Suivi de la visibilité IA (GenAI Lens)", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Capacités incluses", label: "Relations médias", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Capacités incluses", label: "Marketing d'influence", values: ["—", "—", "✓", "✓"] },
+  // ─── HarchIQ AI ───────────────────────────────────────────────
+  { category: "HarchIQ AI", label: "Niveau HarchIQ AI", values: ["Standard", "Avancé", "Entreprise", "Avancé"] },
+  { category: "HarchIQ AI", label: "Questions par jour", values: ["50", "200", "Illimité", "200"] },
+  // ─── Analyse & rapports ──────────────────────────────────────
+  { category: "Analyse & rapports", label: "Alertes et rapports", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Analyse & rapports", label: "Tableaux de bord prédéfinis", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Analyse & rapports", label: "Benchmarking concurrentiel", values: ["—", "✓", "✓", "✓"] },
+  { category: "Analyse & rapports", label: "Tableaux de bord et rapports personnalisés", values: ["—", "✓", "✓", "✓"] },
+  { category: "Analyse & rapports", label: "Rapports board-ready", values: ["—", "—", "✓", "✓"] },
+  // ─── Intégrations & gouvernance ──────────────────────────────
+  { category: "Intégrations & gouvernance", label: "Intégrations API et MCP", values: ["—", "—", "✓", "✓"] },
+  { category: "Intégrations & gouvernance", label: "Gouvernance, workflows et autorisations", values: ["—", "—", "✓", "✓"] },
+  { category: "Intégrations & gouvernance", label: "SSO / SAML", values: ["—", "—", "✓", "✓"] },
+  // ─── Multi-clients ───────────────────────────────────────────
+  { category: "Multi-clients", label: "Multi-clients", values: ["—", "—", "—", "✓"] },
+  { category: "Multi-clients", label: "White-label", values: ["—", "—", "—", "✓"] },
+  { category: "Multi-clients", label: "Facturation par compte", values: ["—", "—", "—", "✓"] },
 ];
 
 const FAQ = [
@@ -203,6 +238,25 @@ const bodyStyle: React.CSSProperties = {
   lineHeight: 1.65,
 };
 
+// ─── Section header inside a plan card ────────────────────────────────
+function SectionLabel({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
+  return (
+    <div
+      style={{
+        fontSize: "11px",
+        fontFamily: C.fontMono,
+        color: dark ? C.textOnDarkBody : C.textMuted,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        marginBottom: "12px",
+        fontWeight: 700,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
@@ -223,22 +277,23 @@ export default function PricingPage() {
               letterSpacing: "-0.03em",
               lineHeight: 1.1,
               marginBottom: "20px",
-              maxWidth: "840px",
+              maxWidth: "880px",
               margin: "0 auto 20px",
             }}
           >
-            Quatre plans. Tous sur devis.
+            Choisissez la plateforme qui correspond à votre maturité.
           </h1>
           <p
             style={{
               ...bodyStyle,
               fontSize: "19px",
-              maxWidth: "680px",
+              maxWidth: "700px",
               margin: "0 auto 32px",
             }}
           >
-            Chaque périmètre est différent. Une démo de 30 minutes suffit à
-            établir un devis précis — sans engagement, sans carte bancaire.
+            Quatre formules, du premier réflexe de veille à l'industrialisation
+            de l'intelligence réputationnelle. Toutes les capacités, toutes les
+            intégrations, un seul devis — sans engagement, sans carte bancaire.
           </p>
           <div
             style={{
@@ -270,276 +325,299 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* ─── PLANS GRID ────────────────────────────────────────── */}
+        {/* ─── PLANS GRID (4 CARDS — MELTWATER STRUCTURE) ───────── */}
         <section style={{ ...sectionStyle, paddingTop: "16px" }}>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
               gap: "20px",
               alignItems: "stretch",
             }}
           >
-            {PLANS.map((plan) => (
-              <div
-                key={plan.name}
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  flexDirection: "column",
-                  padding: "28px",
-                  background: plan.highlighted ? C.bgDarkest : C.bg,
-                  border: plan.highlighted
-                    ? `1px solid ${C.bgDarkest}`
-                    : `1px solid ${C.border}`,
-                  borderRadius: "14px",
-                  color: plan.highlighted ? C.textOnDark : C.text,
-                  boxShadow: plan.highlighted ? C.shadowMd : "none",
-                }}
-              >
-                {plan.highlighted && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "-10px",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      padding: "4px 14px",
-                      background: C.cta,
-                      color: "#FFFFFF",
-                      fontSize: "11px",
-                      fontFamily: C.fontMono,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      fontWeight: 700,
-                      borderRadius: "999px",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Le plus demandé
-                  </div>
-                )}
-                <h3
+            {PLANS.map((plan) => {
+              const dark = false; // white cards on white bg, like Meltwater — Pro gets green border
+              return (
+                <div
+                  key={plan.name}
                   style={{
-                    fontSize: "22px",
-                    fontWeight: 700,
-                    fontFamily: C.fontSans,
-                    marginBottom: "8px",
-                    letterSpacing: "-0.01em",
-                    color: plan.highlighted ? C.textOnDark : C.text,
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    padding: "28px",
+                    background: C.bg,
+                    border: plan.highlighted
+                      ? `2px solid ${C.cta}`
+                      : `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    color: C.text,
+                    boxShadow: plan.highlighted ? C.shadowMd : C.shadowSm,
                   }}
                 >
-                  {plan.name}
-                </h3>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    color: plan.highlighted ? C.textOnDarkBody : C.textBody,
-                    fontFamily: C.fontSans,
-                    lineHeight: 1.5,
-                    marginBottom: "20px",
-                    minHeight: "56px",
-                  }}
-                >
-                  {plan.tagline}
-                </p>
-                <div style={{ marginBottom: "20px" }}>
-                  <div
-                    style={{
-                      fontSize: "32px",
-                      fontWeight: 700,
-                      color: plan.highlighted ? C.textOnDark : C.text,
-                      fontFamily: C.fontSans,
-                      letterSpacing: "-0.02em",
-                      lineHeight: 1,
-                    }}
-                  >
-                    Sur devis
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: plan.highlighted ? C.textOnDarkBody : C.textMuted,
-                      fontFamily: C.fontMono,
-                      letterSpacing: "0.04em",
-                      marginTop: "6px",
-                    }}
-                  >
-                    Engagement annuel · paiement mensuel
-                  </div>
-                </div>
-                <a
-                  href="/atelier/audit"
-                  style={{
-                    display: "block",
-                    textAlign: "center",
-                    padding: "12px 20px",
-                    background: plan.highlighted ? C.cta : "transparent",
-                    color: plan.highlighted ? "#FFFFFF" : C.text,
-                    border: plan.highlighted ? "none" : `1px solid ${C.borderStrong}`,
-                    fontFamily: C.fontSans,
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    borderRadius: "8px",
-                    marginBottom: "24px",
-                    transition: "background 0.2s, border-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (plan.highlighted) {
-                      e.currentTarget.style.background = C.ctaHover;
-                    } else {
-                      e.currentTarget.style.background = C.bgHover;
-                      e.currentTarget.style.borderColor = C.accent;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (plan.highlighted) {
-                      e.currentTarget.style.background = C.cta;
-                    } else {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.borderColor = C.borderStrong;
-                    }
-                  }}
-                >
-                  Demander une démo →
-                </a>
+                  {plan.highlighted && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "-12px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        padding: "5px 14px",
+                        background: C.cta,
+                        color: "#FFFFFF",
+                        fontSize: "11px",
+                        fontFamily: C.fontMono,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                        borderRadius: "999px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Le plus populaire
+                    </div>
+                  )}
 
-                <div style={{ marginBottom: "20px" }}>
-                  <div
+                  {/* ─── Plan name + tagline ──────────────────────────── */}
+                  <h3
                     style={{
-                      fontSize: "11px",
-                      fontFamily: C.fontMono,
-                      color: plan.highlighted ? C.textOnDarkBody : C.textMuted,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      marginBottom: "10px",
+                      fontSize: "22px",
                       fontWeight: 700,
+                      fontFamily: C.fontSans,
+                      marginBottom: "8px",
+                      letterSpacing: "-0.01em",
+                      color: C.text,
                     }}
                   >
-                    Idéal pour
-                  </div>
+                    {plan.name}
+                  </h3>
                   <p
                     style={{
                       fontSize: "13px",
-                      color: plan.highlighted ? C.textOnDarkBody : C.textBody,
+                      color: C.textBody,
                       fontFamily: C.fontSans,
                       lineHeight: 1.5,
+                      marginBottom: "20px",
+                      minHeight: "60px",
                     }}
                   >
-                    {plan.bestFor}
+                    {plan.tagline}
                   </p>
-                </div>
 
-                <div style={{ marginBottom: "20px" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontFamily: C.fontMono,
-                      color: plan.highlighted ? C.textOnDarkBody : C.textMuted,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      marginBottom: "10px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Capacités
+                  {/* ─── Price ───────────────────────────────────────── */}
+                  <div style={{ marginBottom: "20px" }}>
+                    <div
+                      style={{
+                        fontSize: "32px",
+                        fontWeight: 700,
+                        color: C.text,
+                        fontFamily: C.fontSans,
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1,
+                      }}
+                    >
+                      Sur devis
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: C.textMuted,
+                        fontFamily: C.fontMono,
+                        letterSpacing: "0.04em",
+                        marginTop: "6px",
+                      }}
+                    >
+                      Engagement annuel · paiement mensuel
+                    </div>
                   </div>
-                  <ul
+
+                  {/* ─── CTA ─────────────────────────────────────────── */}
+                  <a
+                    href="/atelier/contact"
                     style={{
-                      listStyle: "none",
-                      padding: 0,
-                      margin: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
+                      display: "block",
+                      textAlign: "center",
+                      padding: "12px 20px",
+                      background: plan.highlighted ? C.cta : "transparent",
+                      color: plan.highlighted ? "#FFFFFF" : C.text,
+                      border: plan.highlighted ? "none" : `1px solid ${C.borderStrong}`,
+                      fontFamily: C.fontSans,
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      textDecoration: "none",
+                      borderRadius: "8px",
+                      marginBottom: "24px",
+                      transition: "background 0.2s, border-color 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (plan.highlighted) {
+                        e.currentTarget.style.background = C.ctaHover;
+                      } else {
+                        e.currentTarget.style.background = C.bgHover;
+                        e.currentTarget.style.borderColor = C.accent;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (plan.highlighted) {
+                        e.currentTarget.style.background = C.cta;
+                      } else {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.borderColor = C.borderStrong;
+                      }
                     }}
                   >
-                    {plan.capabilities.map((cap) => (
-                      <li
-                        key={cap}
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          alignItems: "flex-start",
-                          fontSize: "13px",
-                          fontFamily: C.fontSans,
-                          lineHeight: 1.5,
-                          color: plan.highlighted ? C.textOnDarkBody : C.textBody,
-                        }}
-                      >
-                        <span
+                    Contacter le service commercial →
+                  </a>
+
+                  {/* ─── CHOISISSEZ VOS CAPACITÉS ───────────────────── */}
+                  <div style={{ marginBottom: "20px" }}>
+                    <SectionLabel dark={dark}>Choisissez vos capacités</SectionLabel>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      {plan.capabilities.map((cap) => (
+                        <li
+                          key={cap}
                           style={{
-                            color: C.cta,
-                            fontWeight: 700,
-                            flexShrink: 0,
+                            display: "flex",
+                            gap: "8px",
+                            alignItems: "flex-start",
+                            fontSize: "13px",
+                            fontFamily: C.fontSans,
+                            lineHeight: 1.5,
+                            color: C.textBody,
                           }}
                         >
-                          ✓
-                        </span>
-                        <span>{cap}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div style={{ marginTop: "auto" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontFamily: C.fontMono,
-                      color: plan.highlighted ? C.textOnDarkBody : C.textMuted,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      marginBottom: "10px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Fonctions clés
+                          <span
+                            style={{
+                              color: C.cta,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            ✓
+                          </span>
+                          <span>{cap}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul
-                    style={{
-                      listStyle: "none",
-                      padding: 0,
-                      margin: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
-                    {plan.keyFeatures.map((kf) => (
-                      <li
-                        key={kf}
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          alignItems: "flex-start",
-                          fontSize: "13px",
-                          fontFamily: C.fontSans,
-                          lineHeight: 1.5,
-                          color: plan.highlighted ? C.textOnDark : C.text,
-                        }}
-                      >
-                        <span
+
+                  {/* ─── IDÉAL POUR (Best For — 3 bullets) ──────────── */}
+                  <div style={{ marginBottom: "20px" }}>
+                    <SectionLabel dark={dark}>Idéal pour</SectionLabel>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      {plan.bestFor.map((bf) => (
+                        <li
+                          key={bf}
                           style={{
-                            color: plan.highlighted ? C.ctaHover : C.accent,
-                            fontWeight: 700,
-                            flexShrink: 0,
+                            display: "flex",
+                            gap: "8px",
+                            alignItems: "flex-start",
+                            fontSize: "13px",
+                            fontFamily: C.fontSans,
+                            lineHeight: 1.5,
+                            color: C.textBody,
                           }}
                         >
-                          →
-                        </span>
-                        <span>{kf}</span>
-                      </li>
-                    ))}
-                  </ul>
+                          <span
+                            style={{
+                              color: C.accent,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            •
+                          </span>
+                          <span>{bf}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* ─── FONCTIONS CLÉS (Key Features) ──────────────── */}
+                  <div style={{ marginTop: "auto" }}>
+                    <SectionLabel dark={dark}>Fonctions clés</SectionLabel>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      {plan.keyFeatures.map((kf) => (
+                        <li
+                          key={kf}
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            alignItems: "flex-start",
+                            fontSize: "13px",
+                            fontFamily: C.fontSans,
+                            lineHeight: 1.5,
+                            color: C.text,
+                            fontWeight: 500,
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: C.accent,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            →
+                          </span>
+                          <span>{kf}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* ─── Optional note (Agences 3 sub-levels) ───────── */}
+                  {plan.note && (
+                    <div
+                      style={{
+                        marginTop: "16px",
+                        padding: "10px 12px",
+                        background: C.bgSubtle,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        color: C.textMuted,
+                        fontFamily: C.fontMono,
+                        letterSpacing: "0.04em",
+                        textAlign: "center",
+                      }}
+                    >
+                      {plan.note}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
-        {/* ─── COMPARISON MATRIX ─────────────────────────────────── */}
+        {/* ─── 5 SOLUTION AREAS ──────────────────────────────────── */}
         <section
           style={{
             background: C.bgSubtle,
@@ -548,13 +626,109 @@ export default function PricingPage() {
           }}
         >
           <div style={sectionStyle}>
+            <div style={{ marginBottom: "40px", textAlign: "center" }}>
+              <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Domaines de solution</div>
+              <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
+                5 domaines. Une seule plateforme.
+              </h2>
+              <p style={{ ...bodyStyle, maxWidth: "640px", margin: "0 auto" }}>
+                Composez votre périmètre en fonction de votre maturité — du premier
+                réflexe de veille à l'industrialisation de l'intelligence
+                réputationnelle.
+              </p>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {SOLUTIONS.map((s) => (
+                <div
+                  key={s.title}
+                  style={{
+                    padding: "24px",
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    transition: "border-color 0.2s, box-shadow 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = C.cta;
+                    e.currentTarget.style.boxShadow = C.shadowSm;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = C.border;
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: C.bgSubtle,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: "8px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={C.cta}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d={s.icon} />
+                    </svg>
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      fontFamily: C.fontSans,
+                      color: C.text,
+                      marginBottom: "8px",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {s.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: C.textBody,
+                      fontFamily: C.fontSans,
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    {s.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── COMPARISON MATRIX ─────────────────────────────────── */}
+        <section>
+          <div style={sectionStyle}>
             <div style={{ marginBottom: "32px" }}>
               <div style={eyebrowStyle}>Comparatif détaillé</div>
               <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
-                24 critères. 4 plans.
+                18 critères. 4 formules.
               </h2>
               <p style={{ ...bodyStyle, maxWidth: "640px" }}>
                 Faites défiler horizontalement sur mobile pour comparer.
+                Le plan Pro est mis en avant pour les équipes régionales.
               </p>
             </div>
             <div
@@ -570,7 +744,7 @@ export default function PricingPage() {
                   width: "100%",
                   borderCollapse: "collapse",
                   fontFamily: C.fontSans,
-                  minWidth: "720px",
+                  minWidth: "760px",
                 }}
               >
                 <thead>
@@ -590,7 +764,7 @@ export default function PricingPage() {
                         letterSpacing: "0.1em",
                         textTransform: "uppercase",
                         fontWeight: 700,
-                        width: "40%",
+                        width: "44%",
                       }}
                     >
                       Critère
@@ -606,7 +780,7 @@ export default function PricingPage() {
                           color: p.highlighted ? C.cta : C.text,
                           fontFamily: C.fontSans,
                           letterSpacing: "-0.01em",
-                          background: p.highlighted ? C.bgSubtle : "transparent",
+                          background: p.highlighted ? "rgba(16,185,129,0.06)" : "transparent",
                           borderBottom: p.highlighted ? `2px solid ${C.cta}` : "none",
                         }}
                       >
@@ -691,64 +865,6 @@ export default function PricingPage() {
         </section>
 
         {/* ─── TRUST ─────────────────────────────────────────────── */}
-        <section style={sectionStyle}>
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Conformité</div>
-            <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
-              Vos données, encadrées par le droit marocain
-            </h2>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-              gap: "20px",
-            }}
-          >
-            {TRUST.map((t) => (
-              <div
-                key={t.label}
-                style={{
-                  padding: "28px",
-                  background: C.bgSubtle,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: "12px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "inline-block",
-                    padding: "6px 12px",
-                    background: C.bg,
-                    border: `1px solid ${C.accent}`,
-                    color: C.accent,
-                    fontSize: "12px",
-                    fontFamily: C.fontMono,
-                    letterSpacing: "0.1em",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    borderRadius: "4px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  {t.label}
-                </div>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: C.textBody,
-                    fontFamily: C.fontSans,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {t.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ─── FAQ ───────────────────────────────────────────────── */}
         <section
           style={{
             background: C.bgSubtle,
@@ -756,6 +872,66 @@ export default function PricingPage() {
             borderBottom: `1px solid ${C.border}`,
           }}
         >
+          <div style={sectionStyle}>
+            <div style={{ textAlign: "center", marginBottom: "40px" }}>
+              <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Conformité</div>
+              <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
+                Vos données, encadrées par le droit marocain
+              </h2>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {TRUST.map((t) => (
+                <div
+                  key={t.label}
+                  style={{
+                    padding: "28px",
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 12px",
+                      background: C.bgSubtle,
+                      border: `1px solid ${C.accent}`,
+                      color: C.accent,
+                      fontSize: "12px",
+                      fontFamily: C.fontMono,
+                      letterSpacing: "0.1em",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      borderRadius: "4px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    {t.label}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: C.textBody,
+                      fontFamily: C.fontSans,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {t.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── FAQ ───────────────────────────────────────────────── */}
+        <section>
           <div style={{ ...sectionStyle, maxWidth: "840px" }}>
             <div style={{ textAlign: "center", marginBottom: "40px" }}>
               <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>FAQ</div>
@@ -768,7 +944,7 @@ export default function PricingPage() {
                   <div
                     key={i}
                     style={{
-                      background: C.bg,
+                      background: C.bgSubtle,
                       border: `1px solid ${C.border}`,
                       borderRadius: "10px",
                       overflow: "hidden",
@@ -890,7 +1066,7 @@ export default function PricingPage() {
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
-              Parler à un expert →
+              Contacter le service commercial →
             </a>
           </div>
         </section>

@@ -24,8 +24,12 @@ export function SkeletonLoader({
   width?: string;
   dark?: boolean;
 }) {
-  const bgColor = dark ? "#262626" : "#f4f4f5";
-  const pulseColor = dark ? "#333333" : "#e5e5e5";
+  // NOTE: `dark` prop is retained for API backward-compatibility but is a
+  // no-op — the console is a corporate light theme only (white/green/blue).
+  // Skeletons always render as light gray on white, like Stripe/Notion.
+  void dark;
+  const bgColor = "#f4f4f5";
+  const pulseColor = "#e5e5e5";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -62,6 +66,9 @@ export function ErrorState({
   message?: string;
   dark?: boolean;
 }) {
+  // NOTE: `dark` prop is retained for API backward-compatibility but is a
+  // no-op — the console is a corporate light theme only.
+  void dark;
   return (
     <div
       style={{
@@ -69,7 +76,7 @@ export function ErrorState({
         textAlign: "center",
         borderRadius: "8px",
         border: `1px dashed ${accent}40`,
-        background: dark ? "#171717" : `${accent}08`,
+        background: `${accent}08`,
       }}
     >
       <div
@@ -86,7 +93,7 @@ export function ErrorState({
         style={{
           fontSize: "13px",
           fontFamily: "'Space Mono', monospace",
-          color: dark ? "#a3a3a3" : "#525252",
+          color: "#525252",
           lineHeight: 1.5,
         }}
       >

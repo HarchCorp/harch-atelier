@@ -2197,7 +2197,8 @@ function UpgradeCard() {
     <section
       className="rounded-[12px] p-5 sm:p-6"
       style={{
-        background: `linear-gradient(135deg, ${C.bgDarkest} 0%, ${C.bgDark} 100%)`,
+        background: `linear-gradient(135deg, ${C.bgSubtle} 0%, ${C.bg} 100%)`,
+        border: `1px solid ${C.border}`,
         borderRadius: 12,
       }}
     >
@@ -2209,10 +2210,10 @@ function UpgradeCard() {
           >
             Plan Essentiel
           </div>
-          <h3 className="text-[18px] sm:text-[20px] font-bold leading-tight" style={{ color: C.textOnDark }}>
+          <h3 className="text-[18px] sm:text-[20px] font-bold leading-tight" style={{ color: C.text }}>
             Passez à Pro pour débloquer le benchmarking complet
           </h3>
-          <p className="text-[13px] mt-1.5 max-w-[520px]" style={{ color: C.textOnDarkBody }}>
+          <p className="text-[13px] mt-1.5 max-w-[520px]" style={{ color: C.textBody }}>
             Rapports PDF board-ready · alertes WhatsApp 24/7 · 5+ concurrents ·
             matrix linguistique Darija/MSA/Français · API & MCP.
           </p>
@@ -2232,8 +2233,8 @@ function UpgradeCard() {
             href="/atelier/contact"
             className="text-[13px] font-medium px-5 py-2.5 rounded-lg text-center transition-colors"
             style={{
-              border: `1px solid ${C.borderDark}`,
-              color: C.textOnDark,
+              border: `1px solid ${C.borderStrong}`,
+              color: C.text,
             }}
           >
             Parler à un expert
