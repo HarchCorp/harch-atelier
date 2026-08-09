@@ -1,493 +1,896 @@
 "use client";
 
+import React from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
-import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+import { C } from "../components/tokens";
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 //  HARCH ATELIER — SOLUTIONS PAGE
-//  Signal AI-style: 4 solutions for PR & Comms teams
-//  Corporate Narrative Planning · Reputational Threat Sensing
-//  Benchmarking & Measurement · Media Monitoring
-// ═══════════════════════════════════════════════════════════════
+//  « Quatre problèmes. Une plateforme. »
+// ═══════════════════════════════════════════════════════════════════════
 
-const C = {
-  bg: "#FAFAFA", surface: "#FFFFFF", surfaceAlt: "#F4F4F5",
-  border: "#E5E5E5", borderLight: "#F0F0F0",
-  text: "#0A0A0A", textSec: "#525252", textMuted: "#71717A",
-  accent: "#4A5D6E", sage: "#4A7B5F", sageBright: "#6FA386",
-  red: "#A0524B", amber: "#B87333",
-  shadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-};
-
-interface Solution {
-  id: string;
-  title: string;
-  tagline: string;
-  description: string;
-  icon: string;
-  color: string;
-  capabilities: string[];
-  questions: string[]; // Big PR questions this answers
-  deliverable: string;
-  metric: { value: string; label: string };
-}
-
-const SOLUTIONS: Solution[] = [
+const CAPABILITIES = [
   {
-    id: "narrative-planning",
-    title: "Corporate Narrative Planning",
-    tagline: "Identify dominant narratives. Shape your story with powerful, industry-backed insights.",
-    description: "Stop reacting to the news cycle. Harch AI identifies the dominant narratives forming around your company, your competitors, and your industry — so you can shape the story before it shapes you. Our HarchIQ engine detects emerging narratives in real-time across 30+ Moroccan and African media sources, in French, Arabic, and English.",
-    icon: "◆",
-    color: C.sage,
-    capabilities: [
-      "5 dominant narrative detection per company with strength scoring (0-100)",
-      "Narrative trajectory tracking: emerging · growing · peak · declining",
-      "Sentiment per narrative — see which stories are positive vs negative",
-      "Topic clustering across 10 categories (financial results, leadership, products, ESG, M&A, digital, crisis, expansion, partnerships, regulation)",
-      "Innovation / Performance / Purpose pillar weighting (Signal AI 500 style)",
-      "9 key themes: Collaborations, Products & services, Technology, Governance, Growth, Operations, CSR, Culture, Sustainability",
-    ],
-    questions: [
-      "What do we want our company to be famous for?",
-      "What are the key drivers of trust in our brand?",
-      "Which narrative is gaining momentum this week?",
-      "Where are competitors winning the conversation?",
-    ],
-    deliverable: "Narrative Intelligence Report (PDF, monthly) + Real-time dashboard",
-    metric: { value: "5", label: "narratives tracked per company" },
+    icon: "📡",
+    title: "Veille médiatique",
+    desc: "20+ sources marocaines et africaines surveillées en continu. Presse nationale, presse régionale, TV, radio, web — chaque mention est collectée, horodatée et empreinte SHA-256.",
+    points: ["20+ sources", "Temps réel", "Empreinte cryptographique"],
   },
   {
-    id: "threat-sensing",
-    title: "Reputational Threat Sensing",
-    tagline: "Spot reputational risks ahead of time. Be proactive, not reactive.",
-    description: "Don't wait for a crisis to erupt. Harch AI scans 30+ media sources 24/7 and detects emerging threats before they escalate. With 32 risk event categories (geopolitical, operational, financial, environmental, legal, consumer, technology) and Frequency × Impact × Velocity scoring, you'll know which risks are rising — and what to do about them.",
-    icon: "⚠",
-    color: C.red,
-    capabilities: [
-      "32 risk event categories (Signal AI methodology)",
-      "Risk scoring: Frequency × Impact Severity × Velocity (0-100 composite)",
-      "Industry-specific risk weighting (Banking × 1.8 on fraud, Telecom × 1.7 on cyber, Mining × 1.7 on accidents)",
-      "Risk trajectory: rising · stable · declining",
-      "Real-time WhatsApp alerts when risk velocity > 50% in 24h",
-      "AI-generated mitigation recommendations per risk",
-      "Emerging risk detection — catch risks before they hit mainstream media",
-    ],
-    questions: [
-      "What threats and issues are emerging in my supply chain?",
-      "Which negative narrative is gaining traction this week?",
-      "When should we activate crisis communications?",
-      "What's the risk trajectory of our industry?",
-    ],
-    deliverable: "Risk Tracker Dashboard + WhatsApp crisis alerts + Quarterly risk review",
-    metric: { value: "32", label: "risk event categories monitored" },
+    icon: "💬",
+    title: "Social listening",
+    desc: "Surveillance des réseaux sociaux (X, LinkedIn, Facebook) et des forums. Détection des signaux faibles, des hashtags émergents et des influenceurs qui parlent de vous.",
+    points: ["Réseaux sociaux", "Détection signaux faibles", "Cartographie influenceurs"],
   },
   {
-    id: "benchmarking",
-    title: "Benchmarking & Measurement",
-    tagline: "Compare, assess, and align your reputation with top-tier industry players.",
-    description: "You can't improve what you can't compare. Harch AI benchmarks your reputation against your top 5 competitors across 10+ metrics — share of voice, sentiment gap, AI visibility gap, narrative strength, and more. The Harch 100 ranking shows where you stand among Morocco's most reputable companies, updated monthly.",
-    icon: "▲",
-    color: C.accent,
-    capabilities: [
-      "Competitor benchmarking across 5 metrics (score, share of voice, sentiment gap, AI visibility, narrative strength)",
-      "Harch 100 ranking — Morocco's top 100 companies by reputation score",
-      "Industry Risk Dashboard for 6 industries (Banking, Telecom, Mining, Retail, Aviation, Energy)",
-      "Quarterly trend tracking (4Q historical)",
-      "Share of conversation vs industry total",
-      "Reputation pillars comparison (Innovation / Performance / Purpose)",
-      "Pillar weight analysis — what % of your narrative is Innovation vs Performance vs Purpose",
-    ],
-    questions: [
-      "How do we measure the impact of our comms work?",
-      "Are we winning or losing share of voice this quarter?",
-      "Where does our industry rank us vs competitors?",
-      "What's our reputation trajectory over the last 12 months?",
-    ],
-    deliverable: "Competitor Benchmark Report + Harch 100 position + Quarterly trend analysis",
-    metric: { value: "100", label: "Moroccan companies ranked" },
+    icon: "🤖",
+    title: "Visibilité IA",
+    desc: "Ce que ChatGPT, Perplexity, Gemini, Copilot, Claude, Mistral et Grok disent de vous. 9 moteurs IA testés en continu. Vous voyez votre marque comme la verront vos clients demain.",
+    points: ["9 moteurs IA", "Tests hebdomadaires", "Comparaison concurrents"],
   },
   {
-    id: "media-monitoring",
-    title: "Media Monitoring",
-    tagline: "Evaluate and optimize your media campaigns, backed by quantifiable metrics.",
-    description: "Real-time media monitoring across 30+ Moroccan and African sources, with trilingual sentiment analysis (FR · AR · EN). Every article is analyzed at the entity level — not just keyword mentions — so you know exactly what's being said about you, by whom, and how it's being received.",
-    icon: "◉",
-    color: C.sageBright,
-    capabilities: [
-      "30+ Moroccan & African media sources (TelQuel, Medias24, Hespress, Aujourd'hui, Financial Afrik, Africa News, +24 more)",
-      "Google News aggregation — captures every Moroccan media mention",
-      "Trilingual sentiment analysis (FR · AR · EN) with 108+ word lexicon",
-      "Entity-level sentiment — track company vs competitors in same article",
-      "Source authority scoring — know which outlets matter most",
-      "Top 30 articles by relevance, ranked weekly",
-      "AI visibility monitoring — what ChatGPT, Perplexity, Gemini, Claude say about you",
-    ],
-    questions: [
-      "What is the media saying about my company today?",
-      "Which sources matter most for my industry?",
-      "Are we being cited by AI engines when prospects ask about us?",
-      "How has our sentiment evolved over the last 30 days?",
-    ],
-    deliverable: "Daily WhatsApp digest + Weekly media report + Live dashboard",
-    metric: { value: "30+", label: "media sources monitored" },
+    icon: "📰",
+    title: "Relations médias",
+    desc: "Suivi de votre share of voice vs concurrents. Identification des journalistes qui parlent de votre secteur. Mesure d'impact de vos campagnes RP et de vos communiqués.",
+    points: ["Share of voice", "Cartographie journalistes", "Mesure d'impact RP"],
+  },
+  {
+    icon: "⭐",
+    title: "Marketing d'influence",
+    desc: "Identification des influenceurs pertinents pour votre marque, suivi de leurs mentions, calcul du ROI de vos campagnes d'influence. Détection des faux engagement et faux followers.",
+    points: ["Identification influenceurs", "Suivi mentions", "Détection fraude"],
   },
 ];
 
+const PROBLEMS = [
+  {
+    problem: "Vous découvrez votre crise dans la presse",
+    before: "Découverte 48h après l'article. Réaction désordonnée.",
+    after: "Alerte WhatsApp < 15 min après publication. Plan de communication déclenché immédiatement.",
+    features: ["Alertes temps réel", "Détection pic négatif", "Historique traçable"],
+  },
+  {
+    problem: "Vous ignorez ce que les IA disent de vous",
+    before: "ChatGPT, Perplexity, Gemini — aveugle à 9 canaux majeurs.",
+    after: "Rapport mensuel « Visibilité IA » avec comparaison vs concurrents et tendances.",
+    features: ["9 moteurs IA", "Tests hebdomadaires", "Benchmark concurrentiel"],
+  },
+  {
+    problem: "Vous ne mesurez pas l'impact de vos RP",
+    before: "Comptage manuel d'articles. Pas de benchmark. Pas de sentiment.",
+    after: "Share of voice, sentiment par article, score d'impact par média. Mesure continue.",
+    features: ["Share of voice", "Sentiment par article", "Score d'impact média"],
+  },
+  {
+    problem: "Votre board décide sans vision réputationnelle",
+    before: "Pas de KPI consolidé. Décisions à l'instinct.",
+    after: "Score de réputation à 5 piliers, mis à jour en continu. Rapport PDF board-ready mensuel.",
+    features: ["Score 5 piliers", "Rapport board-ready", "Tendances 12 mois"],
+  },
+];
+
+const STEPS = [
+  {
+    num: "01",
+    title: "Connect",
+    desc: "Nous configurons vos entités, sources et concurrents. 20+ sources marocaines, 9 moteurs IA, réseaux sociaux. Configuration en 5 jours ouvrés.",
+  },
+  {
+    num: "02",
+    title: "Analyze",
+    desc: "HarchIQ analyse chaque mention : sentiment, catégorie de risque, entités citées, journaliste, média. Score de réputation calculé en continu sur 5 piliers.",
+  },
+  {
+    num: "03",
+    title: "Alert",
+    desc: "Alertes WhatsApp temps réel sur pic de sentiment négatif. Brief exécutif hebdo. Rapport PDF mensuel board-ready. Vous êtes prévenu avant tout le monde.",
+  },
+  {
+    num: "04",
+    title: "Act",
+    desc: "Décidez avec la vision complète. Pilotez votre communication, mesurez l'impact, anticipez les crises. Votre board dispose de KPI consolidés.",
+  },
+];
+
+const CASES = [
+  {
+    sector: "Banque",
+    title: "Anticipation d'une crise de confiance",
+    desc: "Une banque marocaine identifie une dérive de sentiment sur les réseaux 6 jours avant qu'elle n'atteigne la presse nationale. Plan de comms déclenché, crise évitée.",
+    metric: "−72 %",
+    metricLabel: "amplitude de la crise vs prévision initiale",
+  },
+  {
+    sector: "Télécom",
+    title: "Visibilité IA sur un lancement 5G",
+    desc: "Un opérateur suit pendant 3 mois ce que ChatGPT, Perplexity et Gemini répondent à la question « Quelle est la meilleure offre 5G au Maroc ? ». Ajustement SEO IA en continu.",
+    metric: "+34 pts",
+    metricLabel: "de mentions positives dans les réponses IA",
+  },
+  {
+    sector: "Distribution",
+    title: "Suivi d'un risque de boycott",
+    desc: "Une enseigne détecte la formation d'un hashtag de boycott 3 semaines avant son pic. Engagement d'influenceurs, refonte du discours. Boycott absorbé sans impact commercial.",
+    metric: "J+21",
+    metricLabel: "d'anticipation détectée",
+  },
+];
+
+const COMPARISON_VS_PR = [
+  { feature: "Sources surveillées", harch: "20+ marocaines + 9 IA", pr: "5–10 manuelles" },
+  { feature: "Latence d'alerte", harch: "< 15 minutes", pr: "24–72 heures" },
+  { feature: "Analyse de sentiment", harch: "Automatisée par entité", pr: "Manuelle, subjective" },
+  { feature: "Veille IA (ChatGPT, Perplexity…)", harch: "9 moteurs", pr: "Non couverte" },
+  { feature: "Score consolidé", harch: "5 piliers, continu", pr: "Ad hoc, ponctuel" },
+  { feature: "Rapport board-ready", harch: "Mensuel automatique", pr: "Sur demande, facturé" },
+  { feature: "Traçabilité source", harch: "SHA-256 horodatée", pr: "Capture écran" },
+  { feature: "Coût mensuel", harch: "Sur devis, fixe", pr: "Quotidienne × jours" },
+];
+
+const sectionStyle: React.CSSProperties = {
+  maxWidth: "1200px",
+  margin: "0 auto",
+  padding: "80px 24px",
+};
+
+const eyebrowStyle: React.CSSProperties = {
+  fontSize: "12px",
+  fontFamily: C.fontMono,
+  color: C.accent,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  fontWeight: 700,
+  marginBottom: "16px",
+};
+
+const headingStyle: React.CSSProperties = {
+  fontSize: "clamp(28px, 4vw, 42px)",
+  fontWeight: 700,
+  color: C.text,
+  fontFamily: C.fontSans,
+  letterSpacing: "-0.02em",
+  lineHeight: 1.15,
+  marginBottom: "16px",
+};
+
+const bodyStyle: React.CSSProperties = {
+  fontSize: "16px",
+  color: C.textBody,
+  fontFamily: C.fontSans,
+  lineHeight: 1.65,
+};
+
 export default function SolutionsPage() {
   return (
-    <>
-      <ScrollProgress />
-      <CursorGlow />
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg }}>
       <AtelierNav />
 
-      {/* HERO */}
-      <section style={{
-        background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
-        borderBottom: `1px solid ${C.border}`,
-        padding: "48px 16px 40px",
-      }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "10px",
-            padding: "6px 14px", background: C.surface,
-            border: `1px solid ${C.border}`, borderRadius: "100px",
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.sage, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "24px",
-          }}>
-            <span style={{
-              width: "6px", height: "6px", borderRadius: "50%",
-              background: C.sage, animation: "pulse 2s infinite",
-            }} />
-            Solutions · For Comms & PR leaders
-          </div>
-
-          <h1 style={{
-            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
-            letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
-            margin: "0 0 28px", maxWidth: "900px",
-          }}>
-            Actionable insights that answer<br />
-            <span style={{
-              background: `linear-gradient(90deg, ${C.sage} 0%, ${C.sageBright} 100%)`,
-              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}>big PR questions.</span>
+      <main style={{ flex: 1 }}>
+        {/* ─── HERO ──────────────────────────────────────────────── */}
+        <section style={{ ...sectionStyle, paddingTop: "96px", paddingBottom: "48px", textAlign: "center" }}>
+          <div style={eyebrowStyle}>Solutions · Harch Atelier</div>
+          <h1
+            style={{
+              fontSize: "clamp(36px, 5.5vw, 56px)",
+              fontWeight: 700,
+              color: C.text,
+              fontFamily: C.fontSans,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.1,
+              marginBottom: "20px",
+              maxWidth: "840px",
+              margin: "0 auto 20px",
+            }}
+          >
+            Quatre problèmes. Une plateforme.
           </h1>
-
-          <p style={{
-            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
-            maxWidth: "760px", marginBottom: "40px",
-          }}>
-            Our PR solution offers unparalleled insights based on the world's most valuable earned media.
-            With our product suite, you can quickly gain clarity on the topics shaping emerging narratives.
-            This empowers you to understand emerging trends and align your strategy with prevailing sentiments.
+          <p
+            style={{
+              ...bodyStyle,
+              fontSize: "19px",
+              maxWidth: "720px",
+              margin: "0 auto 32px",
+            }}
+          >
+            La réputation n'est plus une préoccupation de RP. C'est un actif
+            stratégique. Voici comment nous la surveillons, l'analyons et la
+            rendons actionnable.
           </p>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <a
+              href="/atelier/audit"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "14px 28px",
+                background: C.cta,
+                color: "#FFFFFF",
+                fontFamily: C.fontSans,
+                fontSize: "15px",
+                fontWeight: 600,
+                textDecoration: "none",
+                borderRadius: "8px",
+                transition: "background 0.2s, transform 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.ctaHover;
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.cta;
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Demander une démo →
+            </a>
+            <a
+              href="/atelier/method"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "14px 28px",
+                background: "transparent",
+                color: C.text,
+                border: `1px solid ${C.borderStrong}`,
+                fontFamily: C.fontSans,
+                fontSize: "15px",
+                fontWeight: 600,
+                textDecoration: "none",
+                borderRadius: "8px",
+                transition: "background 0.2s, border-color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.bgHover;
+                e.currentTarget.style.borderColor = C.accent;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = C.borderStrong;
+              }}
+            >
+              Voir la méthode
+            </a>
+          </div>
+        </section>
 
-          {/* Stats row */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
-            gap: "1px", background: C.border, border: `1px solid ${C.border}`,
-            borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
-          }}>
-            {[
-              { value: "100M+", label: "entities labeled/day" },
-              { value: "5M+", label: "articles ingested/day" },
-              { value: "120+", label: "languages translated" },
-              { value: "32", label: "risk categories" },
-            ].map(s => (
-              <div key={s.label} style={{ background: C.surface, padding: "20px 24px" }}>
-                <div style={{
-                  fontSize: "28px", fontWeight: 800, color: C.text,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  lineHeight: 1, marginBottom: "6px",
-                }}>
-                  {s.value}
+        {/* ─── CAPABILITIES ──────────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div style={{ marginBottom: "48px" }}>
+            <div style={eyebrowStyle}>Cinq capacités</div>
+            <h2 style={headingStyle}>Une seule plateforme, cinq usages</h2>
+            <p style={{ ...bodyStyle, maxWidth: "640px" }}>
+              Chaque capacité se configure indépendamment. Vous activez ce dont
+              vous avez besoin, sans payer pour le reste.
+            </p>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
+              gap: "20px",
+            }}
+          >
+            {CAPABILITIES.map((cap) => (
+              <div
+                key={cap.title}
+                style={{
+                  padding: "28px",
+                  background: C.bg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "12px",
+                  transition: "border-color 0.2s, transform 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = C.accent;
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = C.border;
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "28px",
+                    marginBottom: "14px",
+                    lineHeight: 1,
+                  }}
+                  aria-hidden
+                >
+                  {cap.icon}
                 </div>
-                <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {s.label}
+                <h3
+                  style={{
+                    fontSize: "19px",
+                    fontWeight: 700,
+                    color: C.text,
+                    fontFamily: C.fontSans,
+                    marginBottom: "10px",
+                  }}
+                >
+                  {cap.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: C.textBody,
+                    fontFamily: C.fontSans,
+                    lineHeight: 1.6,
+                    marginBottom: "16px",
+                  }}
+                >
+                  {cap.desc}
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {cap.points.map((p) => (
+                    <span
+                      key={p}
+                      style={{
+                        padding: "4px 10px",
+                        background: C.bgSubtle,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontFamily: C.fontMono,
+                        color: C.textBody,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {p}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* SOLUTIONS — One per section */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
-        {SOLUTIONS.map((sol, i) => (
-          <SolutionSection key={sol.id} solution={sol} index={i + 1} />
-        ))}
-      </section>
-
-      {/* STRATEGIC QUESTIONS — Signal AI whitepaper style */}
-      <section style={{
-        background: C.text, color: "#FFFFFF",
-        padding: "48px 16px",
-      }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
-          <div style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "16px",
-          }}>
-            The new era of reputation-based decision making
+        {/* ─── PROBLEMS MATRIX ───────────────────────────────────── */}
+        <section
+          style={{
+            background: C.bgSubtle,
+            borderTop: `1px solid ${C.border}`,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div style={sectionStyle}>
+            <div style={{ marginBottom: "40px" }}>
+              <div style={eyebrowStyle}>Quatre problèmes</div>
+              <h2 style={headingStyle}>Avant / Après Harch</h2>
+              <p style={{ ...bodyStyle, maxWidth: "640px" }}>
+                Quatre situations que nous voyons chaque semaine. Et la façon
+                dont nous les résolvons.
+              </p>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {PROBLEMS.map((p) => (
+                <div
+                  key={p.problem}
+                  style={{
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    padding: "28px",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      color: C.text,
+                      fontFamily: C.fontSans,
+                      marginBottom: "16px",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {p.problem}
+                  </h3>
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: C.dangerBg,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: "8px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        fontFamily: C.fontMono,
+                        color: C.danger,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Avant
+                    </div>
+                    <p
+                      style={{
+                        fontSize: "13px",
+                        color: C.textBody,
+                        fontFamily: C.fontSans,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {p.before}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: C.successBg,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: "8px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        fontFamily: C.fontMono,
+                        color: C.success,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Avec Harch
+                    </div>
+                    <p
+                      style={{
+                        fontSize: "13px",
+                        color: C.text,
+                        fontFamily: C.fontSans,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {p.after}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "auto",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                    }}
+                  >
+                    {p.features.map((f) => (
+                      <div
+                        key={f}
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          alignItems: "center",
+                          fontSize: "12px",
+                          fontFamily: C.fontSans,
+                          color: C.textBody,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: C.cta,
+                            fontWeight: 700,
+                          }}
+                        >
+                          ✓
+                        </span>
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <h2 style={{
-            fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 700,
-            letterSpacing: "-0.03em", margin: "0 0 24px", color: "#FFFFFF",
-            maxWidth: "800px",
-          }}>
-            When reputation is the biggest driver behind decisions, business leaders turn to Comms.
-          </h2>
-          <p style={{
-            fontSize: "17px", color: "rgba(255,255,255,0.7)",
-            lineHeight: 1.6, marginBottom: "48px", maxWidth: "760px",
-          }}>
-            85% of C-suite leaders prioritize reputation over profit margin when making decisions.
-            Comms leaders can flex their strategic muscle by taking advantage of AI tools that make
-            sense of vast volumes of data — and subsequently act as advisors to the C-suite.
-          </p>
+        </section>
 
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "20px",
-          }}>
-            {[
-              "What do we want our company to be famous for?",
-              "What are the key drivers of trust in our brand?",
-              "What threats and issues are emerging in my supply chain?",
-              "How do we measure the impact of our comms work and relate it back to business performance?",
-              "Which narrative is gaining momentum this week?",
-              "Where does our industry rank us vs competitors?",
-            ].map((q, i) => (
-              <div key={i} style={{
-                padding: "24px", background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "12px",
-              }}>
-                <div style={{
-                  fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-                  color: C.sageBright, letterSpacing: "0.1em",
-                  marginBottom: "12px", fontWeight: 700,
-                }}>
-                  Q{i + 1}
+        {/* ─── HOW IT WORKS ──────────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Comment ça marche</div>
+            <h2 style={headingStyle}>Connect → Analyze → Alert → Act</h2>
+            <p
+              style={{
+                ...bodyStyle,
+                maxWidth: "640px",
+                margin: "0 auto",
+              }}
+            >
+              Quatre étapes, du paramétrage à la décision.
+            </p>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+              gap: "20px",
+              position: "relative",
+            }}
+          >
+            {STEPS.map((s) => (
+              <div
+                key={s.num}
+                style={{
+                  padding: "28px",
+                  background: C.bg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "12px",
+                  borderTop: `3px solid ${C.accent}`,
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "32px",
+                    fontWeight: 700,
+                    color: C.accent,
+                    fontFamily: C.fontMono,
+                    letterSpacing: "-0.02em",
+                    marginBottom: "12px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {s.num}
                 </div>
-                <div style={{
-                  fontSize: "16px", color: "#FFFFFF",
-                  lineHeight: 1.5, fontWeight: 500,
-                }}>
-                  {q}
-                </div>
+                <h3
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: C.text,
+                    fontFamily: C.fontSans,
+                    marginBottom: "10px",
+                  }}
+                >
+                  {s.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: C.textBody,
+                    fontFamily: C.fontSans,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {s.desc}
+                </p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA */}
-      <section style={{
-        background: C.bg, padding: "48px 16px", textAlign: "center",
-      }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
-          <div style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "16px",
-          }}>
-            Get started
-          </div>
-          <h2 style={{
-            fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 700,
-            color: C.text, letterSpacing: "-0.03em", margin: "0 0 20px",
-          }}>
-            Ready to put reputation first?
-          </h2>
-          <p style={{ fontSize: "17px", color: C.textSec, marginBottom: "32px", lineHeight: 1.6 }}>
-            Request a personalized demo and see how Harch AI can transform your comms team
-            from tactical delivery to strategic influence.
-          </p>
-          <a href="/atelier/audit" style={{
-            display: "inline-block", padding: "16px 32px",
-            background: C.sage, color: "#FFFFFF",
-            fontSize: "15px", fontWeight: 600, textDecoration: "none",
-            borderRadius: "8px", fontFamily: "'Inter', sans-serif",
-          }}>
-            Request a demo →
-          </a>
-        </div>
-      </section>
-
-      <AtelierFooter />
-      <BackToTop />
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `}</style>
-    </>
-  );
-}
-
-// ─── Sub-components ─────────────────────────────────────────────
-
-function SolutionSection({ solution, index }: { solution: Solution; index: number }) {
-  const isReverse = index % 2 === 0;
-  return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
-      gap: "64px", alignItems: "center",
-      padding: "60px 0", borderBottom: `1px solid ${C.border}`,
-      direction: isReverse ? "rtl" : "ltr",
-    }}>
-      {/* Left: copy */}
-      <div style={{ direction: "ltr" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: "12px",
-          marginBottom: "16px",
-        }}>
-          <div style={{
-            width: "44px", height: "44px", borderRadius: "10px",
-            background: `${solution.color}15`,
-            color: solution.color,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "16px", fontWeight: 700,
-            fontFamily: "'JetBrains Mono', monospace",
-          }}>
-            {solution.icon}
-          </div>
-          <span style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: solution.color, letterSpacing: "0.14em",
-            textTransform: "uppercase", fontWeight: 700,
-          }}>
-            Solution {String(index).padStart(2, "0")}
-          </span>
-        </div>
-
-        <h2 style={{
-          fontSize: "32px", fontWeight: 700, color: C.text,
-          letterSpacing: "-0.03em", margin: "0 0 16px",
-        }}>
-          {solution.title}
-        </h2>
-
-        <p style={{
-          fontSize: "16px", color: solution.color, fontWeight: 600,
-          lineHeight: 1.5, marginBottom: "20px",
-        }}>
-          {solution.tagline}
-        </p>
-
-        <p style={{
-          fontSize: "15px", color: C.textSec, lineHeight: 1.65,
-          marginBottom: "32px",
-        }}>
-          {solution.description}
-        </p>
-
-        {/* Big metric */}
-        <div style={{
-          padding: "20px 24px", background: C.surface,
-          border: `1px solid ${C.border}`, borderRadius: "10px",
-          borderLeft: `4px solid ${solution.color}`,
-          display: "flex", alignItems: "center", gap: "20px",
-        }}>
-          <div>
-            <div style={{
-              fontSize: "32px", fontWeight: 800, color: solution.color,
-              fontFamily: "'JetBrains Mono', monospace",
-              lineHeight: 1, letterSpacing: "-0.04em",
-            }}>
-              {solution.metric.value}
+        {/* ─── CASE STUDIES ──────────────────────────────────────── */}
+        <section
+          style={{
+            background: C.bgSubtle,
+            borderTop: `1px solid ${C.border}`,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div style={sectionStyle}>
+            <div style={{ marginBottom: "40px" }}>
+              <div style={eyebrowStyle}>Cas d'usage</div>
+              <h2 style={headingStyle}>Trois situations réelles (anonymisées)</h2>
+              <p style={{ ...bodyStyle, maxWidth: "640px" }}>
+                Les noms et secteurs exacts sont masqués. Les mécanismes et les
+                résultats sont réels.
+              </p>
             </div>
-            <div style={{
-              fontSize: "11px", color: C.textMuted,
-              fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: "0.08em", textTransform: "uppercase",
-              marginTop: "4px",
-            }}>
-              {solution.metric.label}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {CASES.map((c) => (
+                <div
+                  key={c.title}
+                  style={{
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    padding: "28px",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "4px 12px",
+                      background: C.bgSubtle,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: "999px",
+                      fontSize: "11px",
+                      fontFamily: C.fontMono,
+                      color: C.accent,
+                      letterSpacing: "0.1em",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      marginBottom: "16px",
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    {c.sector}
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: 700,
+                      color: C.text,
+                      fontFamily: C.fontSans,
+                      marginBottom: "10px",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {c.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: C.textBody,
+                      fontFamily: C.fontSans,
+                      lineHeight: 1.6,
+                      marginBottom: "20px",
+                    }}
+                  >
+                    {c.desc}
+                  </p>
+                  <div
+                    style={{
+                      marginTop: "auto",
+                      paddingTop: "16px",
+                      borderTop: `1px solid ${C.border}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "32px",
+                        fontWeight: 700,
+                        color: C.cta,
+                        fontFamily: C.fontSans,
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1,
+                        marginBottom: "6px",
+                      }}
+                    >
+                      {c.metric}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: C.textMuted,
+                        fontFamily: C.fontSans,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {c.metricLabel}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={{
-            fontSize: "12px", color: C.textSec, lineHeight: 1.5,
-            flex: 1, borderLeft: `1px solid ${C.borderLight}`, paddingLeft: "20px",
-          }}>
-            <strong style={{ color: C.text, display: "block", marginBottom: "4px" }}>
-              Deliverable:
-            </strong>
-            {solution.deliverable}
-          </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Right: capabilities + questions */}
-      <div style={{ direction: "ltr" }}>
-        {/* Capabilities */}
-        <div style={{
-          fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-          color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
-          marginBottom: "16px", fontWeight: 600,
-        }}>
-          Capabilities
-        </div>
-        <div style={{
-          background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: "12px", padding: "20px", marginBottom: "24px",
-          boxShadow: C.shadow,
-        }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {solution.capabilities.map((cap, i) => (
-              <div key={i} style={{
-                display: "flex", gap: "10px",
-                fontSize: "13px", color: C.textSec, lineHeight: 1.5,
-              }}>
-                <span style={{
-                  color: solution.color, fontWeight: 700, flexShrink: 0,
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}>
-                  ▸
-                </span>
-                <span>{cap}</span>
-              </div>
-            ))}
+        {/* ─── VS TRADITIONAL PR ─────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div style={{ marginBottom: "32px" }}>
+            <div style={eyebrowStyle}>Harch vs RP traditionnel</div>
+            <h2 style={headingStyle}>Pourquoi changer maintenant</h2>
+            <p style={{ ...bodyStyle, maxWidth: "640px" }}>
+              Le RP traditionnel reste nécessaire. Mais il ne suffit plus face
+              à un paysage médiatique continu, multicanal et IA-médié.
+            </p>
           </div>
-        </div>
+          <div
+            style={{
+              overflowX: "auto",
+              border: `1px solid ${C.border}`,
+              borderRadius: "12px",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontFamily: C.fontSans,
+                minWidth: "560px",
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    background: C.bgSubtle,
+                    borderBottom: `1px solid ${C.border}`,
+                  }}
+                >
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "16px",
+                      fontSize: "12px",
+                      fontFamily: C.fontMono,
+                      color: C.textMuted,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Critère
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "16px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: C.cta,
+                      fontFamily: C.fontSans,
+                    }}
+                  >
+                    Harch Atelier
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "16px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: C.textMuted,
+                      fontFamily: C.fontSans,
+                    }}
+                  >
+                    RP traditionnel
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON_VS_PR.map((row) => (
+                  <tr
+                    key={row.feature}
+                    style={{
+                      borderBottom: `1px solid ${C.border}`,
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "14px 16px",
+                        fontSize: "13px",
+                        color: C.text,
+                        fontFamily: C.fontSans,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {row.feature}
+                    </td>
+                    <td
+                      style={{
+                        padding: "14px 16px",
+                        fontSize: "13px",
+                        color: C.text,
+                        fontFamily: C.fontSans,
+                        background: "rgba(16,185,129,0.04)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {row.harch}
+                    </td>
+                    <td
+                      style={{
+                        padding: "14px 16px",
+                        fontSize: "13px",
+                        color: C.textMuted,
+                        fontFamily: C.fontSans,
+                      }}
+                    >
+                      {row.pr}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        {/* Big PR questions */}
-        <div style={{
-          fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-          color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
-          marginBottom: "16px", fontWeight: 600,
-        }}>
-          Big PR questions answered
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {solution.questions.map((q, i) => (
-            <div key={i} style={{
-              padding: "12px 16px", background: C.surface,
-              border: `1px solid ${C.borderLight}`, borderRadius: "8px",
-              fontSize: "13px", color: C.text, lineHeight: 1.5,
-              display: "flex", gap: "12px", alignItems: "flex-start",
-            }}>
-              <span style={{
-                fontSize: "10px", fontFamily: "'JetBrains Mono', monospace",
-                color: solution.color, fontWeight: 700, flexShrink: 0,
-                padding: "2px 6px", borderRadius: "3px",
-                background: `${solution.color}10`,
-                marginTop: "2px",
-              }}>
-                Q{i + 1}
-              </span>
-              <span>{q}</span>
-            </div>
-          ))}
-        </div>
+        {/* ─── CTA ───────────────────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div
+            style={{
+              background: C.bgDarkest,
+              borderRadius: "16px",
+              padding: "56px 32px",
+              textAlign: "center",
+              color: C.textOnDark,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "clamp(26px, 3.5vw, 36px)",
+                fontWeight: 700,
+                fontFamily: C.fontSans,
+                letterSpacing: "-0.02em",
+                marginBottom: "14px",
+                color: C.textOnDark,
+              }}
+            >
+              Identifiez vos quatre problèmes.
+            </h2>
+            <p
+              style={{
+                fontSize: "16px",
+                color: C.textOnDarkBody,
+                fontFamily: C.fontSans,
+                maxWidth: "520px",
+                margin: "0 auto 28px",
+                lineHeight: 1.6,
+              }}
+            >
+              30 minutes de démo pour cartographier votre exposition et prioriser
+              les actions.
+            </p>
+            <a
+              href="/atelier/audit"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "14px 28px",
+                background: C.cta,
+                color: "#FFFFFF",
+                fontFamily: C.fontSans,
+                fontSize: "15px",
+                fontWeight: 600,
+                textDecoration: "none",
+                borderRadius: "8px",
+                transition: "background 0.2s, transform 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.ctaHover;
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.cta;
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Demander une démo →
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <div style={{ marginTop: "auto" }}>
+        <AtelierFooter />
       </div>
     </div>
   );

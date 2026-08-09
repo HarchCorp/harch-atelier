@@ -3,1326 +3,709 @@
 import React from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
-import {
-  ScrollProgress,
-  CursorGlow,
-  BackToTop,
-} from "../components/shared";
+import { C } from "../components/tokens";
 
 // ═══════════════════════════════════════════════════════════════════════
-// HARCH ATELIER — ABOUT PAGE
-// Light theme · Inter + JetBrains Mono · SVG charts · No images
-// ═══════════════════════════════════════════════════════════════════════
-//
-// Product: AI Reputation Intelligence — about Harch Intelligence.
-// Founder, mission, tech stack diagram, building-in-public timeline.
-//
-// Palette (LOCKED — light):
-//   bg #FAFAFA · surface #FFFFFF · surfaceAlt #F4F4F5 · border #E5E5E5
-//   text #0A0A0A · secondary #525252 · muted #71717A
-//   accent #8B9DAF · accentDark #4A5D6E
-//   sage #4A7B5F · sageBright #6FA386 · red #A0524B
-//
-// Sections:
-//   01  Hero
-//   02  Mission
-//   03  Founder card
-//   04  Tech stack diagram
-//   05  Timeline (building in public)
-//   06  Numbers / stats
-//   07  Values
-//   08  CTA
-//   09  Footer
-//
+//  HARCH ATELIER — ABOUT PAGE
+//  « L'intelligence réputationnelle pour le Maroc »
+//  Institutional quality · French · DS V2 tokens · Mobile-first
 // ═══════════════════════════════════════════════════════════════════════
 
-// ─── DESIGN TOKENS ─────────────────────────────────────────────────────
-const C = {
-  bg: "#FAFAFA",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F4F4F5",
-  border: "#E5E5E5",
-  borderLight: "#F0F0F0",
-  textPrimary: "#0A0A0A",
-  textSecondary: "#525252",
-  textMuted: "#71717A",
-  textFaint: "#A1A1AA",
-  accent: "#8B9DAF",
-  accentDark: "#4A5D6E",
-  sage: "#4A7B5F",
-  sageBright: "#6FA386",
-  sageDark: "#3D6650",
-  sageBg: "rgba(74,123,95,0.08)",
-  red: "#A0524B",
-  redBg: "rgba(160,82,75,0.08)",
-  neutral: "#71717A",
-  neutralBg: "rgba(113,113,122,0.10)",
-} as const;
+const STATS = [
+  { value: "20+", label: "Sources médias surveillées", sub: "Presse, TV, radio, web" },
+  { value: "7 753", label: "Articles analysés", sub: "Au 06/2026" },
+  { value: "8", label: "Crises documentées", sub: "Cas d'étude anonymisés" },
+  { value: "9", label: "LLM testés", sub: "GPT, Claude, Gemini, Mistral…" },
+];
 
-const FONT = {
-  sans: "'Inter', system-ui, -apple-system, sans-serif",
-  mono: "'JetBrains Mono', 'SF Mono', monospace",
-} as const;
-
-const SHADOW = {
-  card: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-  cardHover: "0 2px 8px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.06)",
-  hero: "0 4px 12px rgba(0,0,0,0.04), 0 24px 48px rgba(0,0,0,0.06)",
-} as const;
-
-// ─── DATA ──────────────────────────────────────────────────────────────
-
-const TECH_STACK = [
+const VALUES = [
   {
-    layer: "Collecte",
-    color: C.accent,
-    items: [
-      { name: "Crawlers", tech: "Python + Scrapy", role: "Media RSS + scraping" },
-      { name: "AI queries", tech: "OpenAI / Anthropic / Google APIs", role: "ChatGPT, Claude, Gemini" },
-      { name: "Webhooks", tech: "Custom", role: "Social signals" },
-    ],
+    icon: "◎",
+    title: "Précision",
+    desc: "Chaque score s'appuie sur des sources traçables. Nous indiquons toujours l'article, la date et le moteur IA qui a produit une mention. Aucune donnée ne sort d'une boîte noire.",
   },
   {
-    layer: "Ingestion",
-    color: C.accentDark,
-    items: [
-      { name: "Queue", tech: "Redis + Bull", role: "Async job processing" },
-      { name: "Storage", tech: "PostgreSQL + S3", role: "Articles + raw HTML" },
-      { name: "Dedup", tech: "SimHash", role: "Near-duplicate detection" },
-    ],
+    icon: "◆",
+    title: "Souveraineté",
+    desc: "Architecture pensée pour le Maroc et l'Afrique francophone. Sources locales prioritaires, hébergement conforme, équipe basée à Casablanca.",
   },
   {
-    layer: "Analyse",
-    color: C.sage,
-    items: [
-      { name: "NER", tech: "spaCy + custom", role: "Entity extraction" },
-      { name: "Sentiment", tech: "HarchIQ", role: "Multilingual classification" },
-      { name: "Topics", tech: "BERTopic", role: "Theme clustering" },
-      { name: "Language", tech: "fastText", role: "FR / AR / EN detection" },
-    ],
+    icon: "△",
+    title: "Conformité",
+    desc: "CNDP, Loi 09-08, traçabilité SHA-256. Toutes les mentions collectées disposent d'une empreinte cryptographique vérifiable.",
   },
   {
-    layer: "Livraison",
-    color: C.red,
-    items: [
-      { name: "WhatsApp", tech: "WhatsApp Business API", role: "Daily digests + alerts" },
-      { name: "Dashboard", tech: "Next.js + Prisma", role: "Real-time + history" },
-      { name: "PDF", tech: "Puppeteer + LaTeX", role: "Monthly reports" },
-    ],
+    icon: "✦",
+    title: "Innovation",
+    desc: "9 modèles de langage testés en continu. Notre pipeline intègre les dernières avancées en analyse de sentiment multilingue (FR, AR, Darija).",
   },
 ];
 
 const TIMELINE = [
   {
-    date: "Jan 2024",
-    title: "The idea",
-    desc: "Founder notices Moroccan companies have no way to track what AI engines say about them. Existing tools are English-only, US-focused.",
-    color: C.accent,
-    tag: "Origin",
+    period: "T1 2026",
+    title: "Fondation",
+    desc: "Harch Corp lance l'activité Atelier à Casablanca. Premier prototype de collecte de mentions sur 5 sources marocaines.",
   },
   {
-    date: "Mar 2024",
-    title: "First prototype",
-    desc: "A Python script crawling 5 Moroccan media + querying ChatGPT. Runs on a single brand for 30 days. The data is striking.",
-    color: C.accentDark,
-    tag: "Prototype",
+    period: "T2 2026",
+    title: "Premiers clients",
+    desc: "Déploiement auprès de 3 entreprises (banque, télécom, grande distribution). Extension à 20+ sources et 4 moteurs IA.",
   },
   {
-    date: "Jun 2024",
-    title: "Premier déploiement pilote",
-    desc: "Une banque casablancaise entre en déploiement pilote pour le monitoring mensuel. Le rapport PDF fait 12 pages. Le pilote se poursuit.",
-    color: C.sage,
-    tag: "Validation",
+    period: "T3 2026",
+    title: "Industrialisation",
+    desc: "Mise en production du pipeline HarchIQ. Alertes WhatsApp, dashboards, rapports PDF board-ready. 7 753 articles analysés cumulés.",
   },
   {
-    date: "Sep 2024",
-    title: "Harch Atelier launches",
-    desc: "The product becomes a subsidiary of Harch Corp. Three tiers, transparent pricing, bank transfer only.",
-    color: C.sage,
-    tag: "Launch",
-  },
-  {
-    date: "Dec 2024",
-    title: "Déploiement pilote · 4 secteurs",
-    desc: "Banque, télécoms, énergie, hôtellerie. Le HARCH 100 ranking naît — un benchmark public de la réputation corporate marocaine.",
-    color: C.accentDark,
-    tag: "Growth",
-  },
-  {
-    date: "Mar 2025",
-    title: "8 AI engines tracked",
-    desc: "We add Gemini, Claude, Copilot, Mistral, and Grok to the original three (ChatGPT, Perplexity, Google AI Overviews).",
-    color: C.red,
-    tag: "Expansion",
-  },
-  {
-    date: "Today",
-    title: "Building in public",
-    desc: "We publish our methodology, our pricing, our tech stack. We share what we learn about AI reputation in francophone markets.",
-    color: C.sage,
-    tag: "Now",
+    period: "T4 2026",
+    title: "Harch 100",
+    desc: "Publication du premier classement Harch 100 — réputation des 100 plus grandes entreprises marocaines. 8 crises documentées.",
   },
 ];
 
-const STATS = [
-  { value: "2024", label: "Founded" },
-  { value: "4", label: "Secteurs pilotes" },
-  { value: "8", label: "AI engines tracked" },
-  { value: "30+", label: "Media sources" },
-  { value: "100", label: "HARCH ranking" },
-  { value: "Casablanca", label: "HQ" },
+const TEAM = [
+  { name: "Amine Harch El Korane", role: "Fondateur & CEO", initials: "AH" },
+  { name: "Équipe Produit", role: "Pipeline & HarchIQ", initials: "PR" },
+  { name: "Équipe Analyse", role: "Recherche & scoring", initials: "AN" },
+  { name: "Équipe Conformité", role: "CNDP & Loi 09-08", initials: "CO" },
 ];
 
-const VALUES = [
-  {
-    title: "Building in public",
-    desc: "We publish our methodology, our pricing, our tech stack. No black box, no magic score. You see exactly how we work.",
-    icon: "eye",
-  },
-  {
-    title: "Francophone first",
-    desc: "Built for Morocco, Africa, and the francophone world. Arabic sources, French business press, NLP Darija pour les commentaires Hespress, forums, WhatsApp et TikTok.",
-    icon: "globe",
-  },
-  {
-    title: "No lock-in",
-    desc: "Monthly contracts. Bank transfer. Export your data anytime. If we're not delivering value, you should leave.",
-    icon: "unlock",
-  },
-  {
-    title: "Real humans",
-    desc: "No chatbot-only support. You get a real analyst who knows your brand, your sector, and your reputation history.",
-    icon: "users",
-  },
-];
+const sectionStyle: React.CSSProperties = {
+  maxWidth: "1200px",
+  margin: "0 auto",
+  padding: "80px 24px",
+};
 
-// ─── SHARED HELPERS ────────────────────────────────────────────────────
+const eyebrowStyle: React.CSSProperties = {
+  fontSize: "12px",
+  fontFamily: C.fontMono,
+  color: C.accent,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  fontWeight: 700,
+  marginBottom: "16px",
+};
 
-function Eyebrow({ children, color = C.textMuted }: { children: React.ReactNode; color?: string }) {
+const headingStyle: React.CSSProperties = {
+  fontSize: "clamp(28px, 4vw, 42px)",
+  fontWeight: 700,
+  color: C.text,
+  fontFamily: C.fontSans,
+  letterSpacing: "-0.02em",
+  lineHeight: 1.15,
+  marginBottom: "16px",
+};
+
+const bodyStyle: React.CSSProperties = {
+  fontSize: "16px",
+  color: C.textBody,
+  fontFamily: C.fontSans,
+  lineHeight: 1.65,
+};
+
+export default function AboutPage() {
   return (
-    <div
-      style={{
-        fontSize: "12px",
-        fontFamily: FONT.mono,
-        color: color,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
-        marginBottom: "20px",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        fontWeight: 500,
-      }}
-    >
-      {children}
-      <span style={{ width: "48px", height: "1px", background: `linear-gradient(to right, ${color}, transparent)`, opacity: 0.6 }} aria-hidden />
-    </div>
-  );
-}
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg }}>
+      <AtelierNav />
 
-function SectionTitle({ children, maxW = "820px" }: { children: React.ReactNode; maxW?: string }) {
-  return (
-    <h2
-      style={{
-        fontSize: "clamp(30px, 4vw, 46px)",
-        fontWeight: 700,
-        letterSpacing: "-0.03em",
-        lineHeight: 1.1,
-        color: C.textPrimary,
-        margin: "0 0 20px",
-        maxWidth: maxW,
-      }}
-    >
-      {children}
-    </h2>
-  );
-}
-
-function SectionSub({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      style={{
-        fontSize: "18px",
-        color: C.textSecondary,
-        lineHeight: 1.6,
-        maxWidth: "640px",
-        margin: "0 0 56px",
-      }}
-    >
-      {children}
-    </p>
-  );
-}
-
-function IconArrow({ size = 20, color = C.textMuted }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="5" y1="12" x2="19" y2="12" />
-      <polyline points="12 5 19 12 12 19" />
-    </svg>
-  );
-}
-
-function IconCheck({ size = 16, color = C.sage }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-function IconEye({ size = 22, color = C.sage }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function IconGlobe({ size = 22, color = C.sage }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
-
-function IconUnlock({ size = 22, color = C.sage }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-    </svg>
-  );
-}
-
-function IconUsers({ size = 22, color = C.sage }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-function getIcon(name: string) {
-  if (name === "eye") return IconEye;
-  if (name === "globe") return IconGlobe;
-  if (name === "unlock") return IconUnlock;
-  return IconUsers;
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 01 — HERO
-// ═══════════════════════════════════════════════════════════════════════
-
-function Hero() {
-  return (
-    <section
-      style={{
-        position: "relative",
-        background: C.bg,
-        padding: "48px 16px 40px",
-        overflow: "hidden",
-      }}
-    >
-      <div aria-hidden style={{ position: "absolute", top: "-200px", right: "-100px", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
-      <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
-
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1 }}>
-        <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "64px", alignItems: "center" }}>
-          <div>
-            <Eyebrow color={C.sage}>About · Harch Intelligence</Eyebrow>
-            <h1
-              style={{
-                fontSize: "clamp(40px, 5.5vw, 64px)",
-                fontWeight: 700,
-                letterSpacing: "-0.04em",
-                lineHeight: 1.05,
-                color: C.textPrimary,
-                margin: "0 0 24px",
-              }}
-            >
-              We track what the world
-              <br />
-              <span style={{ color: C.sage }}>says about African business.</span>
-            </h1>
-            <p
-              style={{
-                fontSize: "16px",
-                color: C.textSecondary,
-                lineHeight: 1.5,
-                maxWidth: "560px",
-                margin: "0 0 36px",
-              }}
-            >
-              Harch Atelier est la division d&apos;intelligence réputationnelle
-              IA de Harch Corp. Élite engineering marocaine, basée à
-              Casablanca — le scalpel chirurgical qui comprend la réalité
-              politique, sociale et linguistique du terrain marocain et
-              africain.
-            </p>
-
-            {/* Stats inline */}
-            <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-              <HeroStat value="2024" label="Founded" />
-              <HeroStat value="Casablanca" label="HQ" />
-              <HeroStat value="8" label="AI engines" />
-              <HeroStat value="30+" label="Media sources" />
-            </div>
-          </div>
-
-          {/* Right: location card */}
-          <LocationCard />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function HeroStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: "22px", fontWeight: 700, fontFamily: FONT.mono, color: C.textPrimary, lineHeight: 1, letterSpacing: "-0.02em" }}>
-        {value}
-      </div>
-      <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "6px", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function LocationCard() {
-  return (
-    <div
-      style={{
-        background: C.surface,
-        border: `1px solid ${C.border}`,
-        borderRadius: "8px",
-        boxShadow: SHADOW.hero,
-        padding: "28px",
-      }}
-    >
-      <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "20px" }}>
-        Headquarters
-      </div>
-      <div style={{ fontSize: "24px", fontWeight: 700, color: C.textPrimary, marginBottom: "6px", letterSpacing: "-0.02em" }}>
-        Casablanca
-      </div>
-      <div style={{ fontSize: "14px", color: C.textSecondary, marginBottom: "24px" }}>
-        Maroc · UTC+1
-      </div>
-
-      {/* Coordinates */}
-      <div
-        style={{
-          padding: "16px",
-          background: C.surfaceAlt,
-          border: `1px solid ${C.borderLight}`,
-          borderRadius: "6px",
-          marginBottom: "16px",
-        }}
-      >
-        <div style={{ fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px" }}>
-          Coordinates
-        </div>
-        <div style={{ fontSize: "13px", fontFamily: FONT.mono, color: C.textPrimary }}>
-          33.5731° N, 7.5898° W
-        </div>
-      </div>
-
-      {/* Mini map SVG */}
-      <div
-        style={{
-          background: C.surfaceAlt,
-          border: `1px solid ${C.borderLight}`,
-          borderRadius: "6px",
-          padding: "16px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <svg width="100%" height="120" viewBox="0 0 240 120">
-          {/* Grid lines */}
-          {[0, 30, 60, 90, 120, 150, 180, 210, 240].map((x) => (
-            <line key={`v${x}`} x1={x} y1="0" x2={x} y2="120" stroke={C.borderLight} strokeWidth="0.5" />
-          ))}
-          {[0, 30, 60, 90, 120].map((y) => (
-            <line key={`h${y}`} x1="0" y1={y} x2="240" y2={y} stroke={C.borderLight} strokeWidth="0.5" />
-          ))}
-
-          {/* Stylized Morocco / Africa shape (abstract) */}
-          <path
-            d="M 100 30 Q 120 25 140 35 L 150 50 Q 145 65 130 70 L 110 75 Q 95 70 90 55 Z"
-            fill={C.sageBg}
-            stroke={C.sage}
-            strokeWidth="1"
-            opacity="0.6"
-          />
-          <path
-            d="M 110 75 Q 130 80 150 90 L 180 100 Q 200 95 210 85 L 200 70 Q 180 60 160 55 Z"
-            fill="rgba(139,157,175,0.10)"
-            stroke={C.accent}
-            strokeWidth="1"
-            opacity="0.6"
-          />
-
-          {/* Casa pin */}
-          <circle cx="118" cy="48" r="6" fill={C.sage} opacity="0.2" />
-          <circle cx="118" cy="48" r="3" fill={C.sage} />
-          <line x1="118" y1="48" x2="118" y2="20" stroke={C.sage} strokeWidth="1" strokeDasharray="2 2" />
-
-          <text x="118" y="16" textAnchor="middle" fontSize="9" fontFamily={FONT.mono} fill={C.sage} fontWeight="700">
-            CASA
-          </text>
-        </svg>
-      </div>
-
-      <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px", fontFamily: FONT.mono, color: C.textMuted }}>
-        <div>atelier@harchcorp.com</div>
-        <div>+212 684 440 682</div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 02 — MISSION
-// ═══════════════════════════════════════════════════════════════════════
-
-function Mission() {
-  return (
-    <section
-      style={{
-        background: C.surface,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow color={C.sage}>Our mission</Eyebrow>
-        <h2
+      <main style={{ flex: 1 }}>
+        {/* ─── HERO ──────────────────────────────────────────────── */}
+        <section
           style={{
-            fontSize: "clamp(28px, 4.5vw, 44px)",
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            lineHeight: 1.15,
-            color: C.textPrimary,
-            margin: "0 0 32px",
+            ...sectionStyle,
+            paddingTop: "96px",
+            paddingBottom: "64px",
+            textAlign: "center",
           }}
         >
-          African companies deserve to know what the world says about them —
-          <span style={{ color: C.sage }}> in real time, in their language, on their phone.</span>
-        </h2>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
-            gap: "24px",
-            marginTop: "48px",
-          }}
-          className="mission-grid"
-        >
-          <MissionCard
-            label="The problem"
-            text="Moroccan and African companies are talked about daily in media and AI engines — but they have no way to know. Existing tools are English-only, US-focused, and built for Twitter."
-          />
-          <MissionCard
-            label="Our answer"
-            text="A reputation intelligence pipeline built for francophone and African reality. Arabic sources, French business press, the AI engines your customers actually use. Delivered on WhatsApp."
-          />
-        </div>
-
-        {/* Manifesto line */}
-        <div
-          style={{
-            marginTop: "48px",
-            padding: "32px",
-            background: C.surfaceAlt,
-            border: `1px solid ${C.border}`,
-            borderLeft: `3px solid ${C.sage}`,
-            borderRadius: "6px",
-          }}
-        >
-          <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.sage, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "12px", fontWeight: 700 }}>
-            Manifesto
-          </div>
-          <p style={{ fontSize: "18px", color: C.textPrimary, lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>
-            "We believe reputation should not be a black box. Every score we
-            deliver can be traced to a source article, an AI response, and a
-            sentiment classification with its confidence. We build in public
-            because that's how we'd want to be treated as a client."
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function MissionCard({ label, text }: { label: string; text: string }) {
-  return (
-    <div
-      style={{
-        background: C.surfaceAlt,
-        border: `1px solid ${C.border}`,
-        borderRadius: "8px",
-        padding: "24px",
-      }}
-    >
-      <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "12px" }}>
-        {label}
-      </div>
-      <p style={{ fontSize: "15px", color: C.textPrimary, lineHeight: 1.6, margin: 0 }}>{text}</p>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 03 — FOUNDER CARD
-// ═══════════════════════════════════════════════════════════════════════
-
-function Founder() {
-  return (
-    <section
-      style={{
-        background: C.surfaceAlt,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow color={C.sage}>Elite engineering marocaine</Eyebrow>
-        <SectionTitle>Élite engineering marocaine.</SectionTitle>
-        <SectionSub>
-          Une équipe technique compacte, basée à Casablanca, qui code une
-          technologie plus agressive que les agences parisiennes ou les boîtes
-          US. Proximité directe : en cas de bug, vous appelez le fondateur, pas
-          un support à Dublin.
-        </SectionSub>
-
-        <div
-          className="founder-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "0.8fr 1.2fr",
-            gap: "32px",
-            alignItems: "start",
-          }}
-        >
-          {/* Left: Founder card */}
-          <div
+          <div style={eyebrowStyle}>À propos · Harch Atelier</div>
+          <h1
             style={{
-              background: C.surface,
-              border: `1px solid ${C.border}`,
-              borderRadius: "12px",
-              boxShadow: SHADOW.hero,
-              overflow: "hidden",
-            }}
-          >
-            {/* Avatar block (monogram, no photo) */}
-            <div
-              style={{
-                padding: "40px 32px",
-                background: `linear-gradient(135deg, ${C.sageBg}, rgba(139,157,175,0.08))`,
-                borderBottom: `1px solid ${C.border}`,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: "96px",
-                  height: "96px",
-                  borderRadius: "50%",
-                  background: C.surface,
-                  border: `2px solid ${C.sage}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                  fontFamily: FONT.mono,
-                  fontSize: "32px",
-                  fontWeight: 700,
-                  color: C.sage,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                H
-              </div>
-              <div style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
-                Amine Harch El Korane
-              </div>
-              <div style={{ fontSize: "13px", color: C.textMuted, fontFamily: FONT.mono }}>
-                Casablanca, Maroc
-              </div>
-            </div>
-
-            {/* Info */}
-            <div style={{ padding: "24px 28px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <FounderRow label="Role" value="Fondateur · Engineer · Analyst" />
-                <FounderRow label="Based" value="Casablanca, Morocco" />
-                <FounderRow label="Background" value="Software engineering · NLP · Media analysis" />
-                <FounderRow label="Languages" value="FR · AR · EN · Darija" />
-                <FounderRow label="Approach" value="Elite engineering · proximité directe" />
-                <FounderRow label="Building" value="In public since Jan 2024" />
-              </div>
-
-              <div
-                style={{
-                  marginTop: "24px",
-                  paddingTop: "20px",
-                  borderTop: `1px solid ${C.borderLight}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                }}
-              >
-                <a href="mailto:atelier@harchcorp.com" style={{ fontSize: "13px", color: C.accentDark, textDecoration: "none", fontFamily: FONT.mono }}>
-                  → atelier@harchcorp.com
-                </a>
-                <a href="https://wa.me/212684440682" style={{ fontSize: "13px", color: C.accentDark, textDecoration: "none", fontFamily: FONT.mono }}>
-                  → +212 684 440 682 (WhatsApp)
-                </a>
-                <a href="https://harchcorp.com" style={{ fontSize: "13px", color: C.accentDark, textDecoration: "none", fontFamily: FONT.mono }}>
-                  → harchcorp.com
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Founder story */}
-          <div>
-            <h3
-              style={{
-                fontSize: "22px",
-                fontWeight: 700,
-                color: C.textPrimary,
-                margin: "0 0 20px",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Why I started Harch Atelier
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <StoryParagraph>
-                Fin 2023, j&apos;accompagnais une banque casablancaise dont les
-                scores de satisfaction client baissaient. La réponse n&apos;était pas
-                dans leurs données internes — elle était dans ce que Hespress et
-                L&apos;Économiste disaient d&apos;une nouvelle politique tarifaire. Mais
-                personne à la banque ne l&apos;avait remarqué depuis trois semaines.
-              </StoryParagraph>
-              <StoryParagraph>
-                J&apos;ai cherché un outil qui aurait pu les prévenir. Les options
-                francophones étaient des services de press clipping des années 90.
-                Les plateformes occidentales leaders étaient English-only, vendues
-                à prix d&apos;or par des commerciaux basés à Dublin ou New York, et
-                ne trackaient pas ce que ChatGPT disait d&apos;elles.
-              </StoryParagraph>
-              <StoryParagraph>
-                Alors j&apos;en ai construit un. La première version était un script
-                Python crawlant cinq sources media et interrogeant ChatGPT toutes
-                les heures. Il a tourné sur une seule marque pendant 30 jours. Les
-                données étaient tellement frappantes que la marque est entrée en
-                déploiement pilote.
-              </StoryParagraph>
-              <StoryParagraph>
-                Aujourd&apos;hui nous trackons 30+ sources media, 8 moteurs IA, 3
-                langues. Nos environnements pilotes couvrent la banque, les
-                télécoms, l&apos;énergie et l&apos;hôtellerie. Toujours une équipe
-                technique compacte à Casablanca, toujours fondée et opérée par
-                le fondateur, toujours en construction publique.
-              </StoryParagraph>
-            </div>
-
-            {/* Principles */}
-            <div
-              style={{
-                marginTop: "32px",
-                padding: "24px",
-                background: C.surface,
-                border: `1px solid ${C.border}`,
-                borderRadius: "8px",
-              }}
-            >
-              <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "16px" }}>
-                Three principles I won't compromise on
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <PrincipleRow n="01" text="No black box — every score is traceable to a source" />
-                <PrincipleRow n="02" text="No lock-in — monthly, bank transfer, export anytime" />
-                <PrincipleRow n="03" text="No AI-only support — real humans who know your brand" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FounderRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap",  alignItems: "baseline", gap: "16px" }}>
-      <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: "13px", color: C.textPrimary, fontWeight: 600, textAlign: "right" }}>{value}</span>
-    </div>
-  );
-}
-
-function StoryParagraph({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: "15px", color: C.textSecondary, lineHeight: 1.65, margin: 0 }}>
-      {children}
-    </p>
-  );
-}
-
-function PrincipleRow({ n, text }: { n: string; text: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-      <span style={{ fontSize: "12px", fontFamily: FONT.mono, fontWeight: 700, color: C.sage, minWidth: "24px" }}>{n}</span>
-      <span style={{ fontSize: "13px", color: C.textPrimary, lineHeight: 1.5 }}>{text}</span>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 04 — TECH STACK DIAGRAM
-// ═══════════════════════════════════════════════════════════════════════
-
-function TechStack() {
-  return (
-    <section
-      style={{
-        background: C.surface,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow color={C.sage}>Tech stack</Eyebrow>
-        <SectionTitle>What's under the hood.</SectionTitle>
-        <SectionSub>
-          We publish our full tech stack because we believe in building in
-          public. Four layers — collecte, ingestion, analyse, livraison —
-          each with battle-tested open-source and frontier LLM components.
-        </SectionSub>
-
-        <div
-          className="tech-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-            gap: "16px",
-          }}
-        >
-          {TECH_STACK.map((layer) => (
-            <TechLayer key={layer.layer} layer={layer} />
-          ))}
-        </div>
-
-        {/* Flow arrow row */}
-        <div
-          style={{
-            marginTop: "24px",
-            padding: "20px 24px",
-            background: C.surfaceAlt,
-            border: `1px solid ${C.border}`,
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            justifyContent: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <span style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Data flow
-          </span>
-          {TECH_STACK.map((layer, i) => (
-            <React.Fragment key={layer.layer}>
-              <span style={{ fontSize: "13px", fontFamily: FONT.mono, fontWeight: 700, color: layer.color }}>{layer.layer}</span>
-              {i < TECH_STACK.length - 1 && <IconArrow size={14} color={C.textFaint} />}
-            </React.Fragment>
-          ))}
-          <span style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.sage, fontWeight: 700 }}>
-            → Your phone / dashboard / inbox
-          </span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TechLayer({ layer }: { layer: typeof TECH_STACK[number] }) {
-  const bg = layer.color === C.sage ? C.sageBg : layer.color === C.accentDark ? "rgba(74,93,110,0.08)" : layer.color === C.red ? C.redBg : "rgba(139,157,175,0.10)";
-  const border = layer.color === C.sage ? "rgba(74,123,95,0.2)" : layer.color === C.accentDark ? "rgba(74,93,110,0.2)" : layer.color === C.red ? "rgba(160,82,75,0.2)" : "rgba(139,157,175,0.3)";
-  return (
-    <div
-      style={{
-        background: C.surface,
-        border: `1px solid ${C.border}`,
-        borderRadius: "8px",
-        overflow: "hidden",
-        boxShadow: SHADOW.card,
-        transition: "all 0.25s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = layer.color;
-        e.currentTarget.style.transform = "translateY(-2px)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.border;
-        e.currentTarget.style.transform = "translateY(0)";
-      }}
-    >
-      {/* Layer header */}
-      <div
-        style={{
-          padding: "16px 20px",
-          background: bg,
-          borderBottom: `1px solid ${border}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span style={{ fontSize: "14px", fontWeight: 700, color: layer.color, letterSpacing: "-0.01em" }}>{layer.layer}</span>
-        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: layer.color }} aria-hidden />
-      </div>
-
-      {/* Items */}
-      <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-        {layer.items.map((item) => (
-          <div key={item.name}>
-            <div style={{ fontSize: "13px", fontWeight: 700, color: C.textPrimary, marginBottom: "3px" }}>{item.name}</div>
-            <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: layer.color, marginBottom: "4px" }}>{item.tech}</div>
-            <div style={{ fontSize: "11px", color: C.textMuted, lineHeight: 1.4 }}>{item.role}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 05 — TIMELINE (BUILDING IN PUBLIC)
-// ═══════════════════════════════════════════════════════════════════════
-
-function TimelineSection() {
-  return (
-    <section
-      style={{
-        background: C.surfaceAlt,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow color={C.sage}>Building in public</Eyebrow>
-        <SectionTitle>The story so far.</SectionTitle>
-        <SectionSub>
-          We publish our milestones — the wins and the pivots. Here is the
-          full timeline from idea to today.
-        </SectionSub>
-
-        <div style={{ position: "relative", paddingLeft: "32px" }}>
-          {/* Vertical line */}
-          <div
-            style={{
-              position: "absolute",
-              left: "10px",
-              top: "8px",
-              bottom: "8px",
-              width: "1px",
-              background: C.border,
-            }}
-            aria-hidden
-          />
-
-          {TIMELINE.map((event, i) => (
-            <div
-              key={i}
-              style={{
-                paddingBottom: i < TIMELINE.length - 1 ? "36px" : "0",
-                position: "relative",
-              }}
-            >
-              {/* Dot */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "-30px",
-                  top: "4px",
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "50%",
-                  background: C.surface,
-                  border: `2px solid ${event.color}`,
-                }}
-                aria-hidden
-              />
-
-              {/* Card */}
-              <div
-                style={{
-                  background: C.surface,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: "8px",
-                  padding: "20px 24px",
-                  boxShadow: SHADOW.card,
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = event.color)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "12px", fontFamily: FONT.mono, fontWeight: 700, color: event.color, letterSpacing: "0.04em" }}>
-                    {event.date}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      fontFamily: FONT.mono,
-                      color: event.color,
-                      background: event.color === C.sage ? C.sageBg : event.color === C.accentDark ? "rgba(74,93,110,0.08)" : event.color === C.red ? C.redBg : "rgba(139,157,175,0.10)",
-                      padding: "3px 8px",
-                      borderRadius: "2px",
-                      border: `1px solid ${event.color === C.sage ? "rgba(74,123,95,0.2)" : event.color === C.accentDark ? "rgba(74,93,110,0.2)" : event.color === C.red ? "rgba(160,82,75,0.2)" : "rgba(139,157,175,0.3)"}`,
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {event.tag}
-                  </span>
-                </div>
-                <h3 style={{ fontSize: "17px", fontWeight: 700, color: C.textPrimary, margin: "0 0 8px", letterSpacing: "-0.01em" }}>
-                  {event.title}
-                </h3>
-                <p style={{ fontSize: "14px", color: C.textSecondary, lineHeight: 1.55, margin: 0 }}>{event.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 06 — NUMBERS / STATS
-// ═══════════════════════════════════════════════════════════════════════
-
-function Numbers() {
-  return (
-    <section
-      style={{
-        background: C.surface,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow>By the numbers</Eyebrow>
-        <SectionTitle>Harch Atelier in 2025.</SectionTitle>
-        <SectionSub>
-          Real numbers, updated quarterly. No vanity metrics, no inflated
-          figures.
-        </SectionSub>
-
-        <div
-          className="numbers-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(6, 1fr)",
-            gap: "16px",
-          }}
-        >
-          {STATS.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                background: C.surface,
-                border: `1px solid ${C.border}`,
-                borderRadius: "8px",
-                padding: "24px 20px",
-                textAlign: "center",
-                boxShadow: SHADOW.card,
-                transition: "all 0.25s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = C.sage;
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = C.border;
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <div style={{ fontSize: "36px", fontWeight: 700, fontFamily: FONT.mono, color: C.sage, lineHeight: 1, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                {s.value}
-              </div>
-              <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 07 — VALUES
-// ═══════════════════════════════════════════════════════════════════════
-
-function Values() {
-  return (
-    <section
-      style={{
-        background: C.surfaceAlt,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-        <Eyebrow color={C.sage}>Our values</Eyebrow>
-        <SectionTitle>Four things we won't compromise on.</SectionTitle>
-        <SectionSub>
-          These aren't marketing copy. They're the principles we use to make
-          product decisions, pricing decisions, and hiring decisions.
-        </SectionSub>
-
-        <div
-          className="values-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-            gap: "20px",
-          }}
-        >
-          {VALUES.map((v, i) => {
-            const Icon = getIcon(v.icon);
-            return (
-              <div
-                key={i}
-                style={{
-                  background: C.surface,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: "8px",
-                  padding: "28px",
-                  boxShadow: SHADOW.card,
-                  transition: "all 0.25s",
-                  display: "flex",
-                  flexDirection: "column",
-                  height: "100%",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = C.sage;
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = C.border;
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "8px",
-                    background: C.sageBg,
-                    border: "1px solid rgba(74,123,95,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <Icon size={24} color={C.sage} />
-                </div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 10px", letterSpacing: "-0.01em" }}>
-                  {v.title}
-                </h3>
-                <p style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.55, margin: 0, flex: 1 }}>
-                  {v.desc}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// SECTION 08 — CTA
-// ═══════════════════════════════════════════════════════════════════════
-
-function CTA() {
-  return (
-    <section
-      style={{
-        background: C.surface,
-        padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "900px",
-          margin: "0 auto",
-          textAlign: "center",
-          padding: "64px 48px",
-          background: C.surfaceAlt,
-          border: `1px solid ${C.border}`,
-          borderRadius: "12px",
-          boxShadow: SHADOW.card,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div aria-hidden style={{ position: "absolute", top: "-100px", right: "-100px", width: "300px", height: "300px", background: "radial-gradient(circle, rgba(74,123,95,0.06), transparent 70%)", borderRadius: "50%" }} />
-        <div aria-hidden style={{ position: "absolute", bottom: "-100px", left: "-100px", width: "300px", height: "300px", background: "radial-gradient(circle, rgba(139,157,175,0.06), transparent 70%)", borderRadius: "50%" }} />
-
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <Eyebrow color={C.sage}>Want to work with us?</Eyebrow>
-          <h2
-            style={{
-              fontSize: "clamp(28px, 4vw, 42px)",
+              fontSize: "clamp(36px, 5.5vw, 64px)",
               fontWeight: 700,
+              color: C.text,
+              fontFamily: C.fontSans,
               letterSpacing: "-0.03em",
-              lineHeight: 1.1,
-              color: C.textPrimary,
-              margin: "0 0 20px",
+              lineHeight: 1.05,
+              marginBottom: "24px",
+              maxWidth: "920px",
+              margin: "0 auto 24px",
             }}
           >
-            See what the world says about your brand.
-          </h2>
+            Harch Atelier — L'intelligence réputationnelle pour le Maroc
+          </h1>
           <p
             style={{
-              fontSize: "17px",
-              color: C.textSecondary,
-              lineHeight: 1.6,
-              maxWidth: "560px",
-              margin: "0 auto 36px",
+              ...bodyStyle,
+              fontSize: "19px",
+              color: C.textBody,
+              maxWidth: "760px",
+              margin: "0 auto 32px",
             }}
           >
-            Start with a free 7-day audit. No credit card, no commitment.
-            Just real data on your reputation.
+            Nous surveillons ce que la presse, les réseaux et les moteurs d'IA
+            disent de vous. Vous recevez l'analyse, les alertes et les rapports
+            pour décider — pas pour réagir.
           </p>
-          <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <a
               href="/atelier/audit"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "10px",
-                padding: "15px 28px",
-                background: C.sage,
+                gap: "8px",
+                padding: "14px 28px",
+                background: C.cta,
                 color: "#FFFFFF",
+                fontFamily: C.fontSans,
                 fontSize: "15px",
                 fontWeight: 600,
                 textDecoration: "none",
-                borderRadius: "3px",
-                border: `1px solid ${C.sage}`,
-                cursor: "pointer",
-                fontFamily: FONT.sans,
-                transition: "all 0.2s",
+                borderRadius: "8px",
+                transition: "background 0.2s, transform 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = C.sageDark)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = C.sage)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.ctaHover;
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.cta;
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
             >
-              Start free audit
-              <IconArrow size={16} color="#FFFFFF" />
+              Demander une démo →
             </a>
             <a
-              href="mailto:atelier@harchcorp.com"
+              href="/atelier/method"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "10px",
-                padding: "15px 28px",
+                gap: "8px",
+                padding: "14px 28px",
                 background: "transparent",
-                color: C.accentDark,
+                color: C.text,
+                border: `1px solid ${C.borderStrong}`,
+                fontFamily: C.fontSans,
                 fontSize: "15px",
-                fontWeight: 500,
+                fontWeight: 600,
                 textDecoration: "none",
-                borderRadius: "3px",
-                border: `1px solid ${C.accentDark}`,
-                cursor: "pointer",
-                fontFamily: FONT.sans,
-                transition: "all 0.2s",
+                borderRadius: "8px",
+                transition: "background 0.2s, border-color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(74,93,110,0.06)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.bgHover;
+                e.currentTarget.style.borderColor = C.accent;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = C.borderStrong;
+              }}
             >
-              Get in touch
+              Voir la méthode
             </a>
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
+        </section>
 
-// ═══════════════════════════════════════════════════════════════════════
-// RESPONSIVE STYLES
-// ═══════════════════════════════════════════════════════════════════════
+        {/* ─── STATS BAND ────────────────────────────────────────── */}
+        <section
+          style={{
+            background: C.bgSubtle,
+            borderTop: `1px solid ${C.border}`,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              padding: "48px 24px",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+              gap: "24px",
+            }}
+          >
+            {STATS.map((s) => (
+              <div
+                key={s.label}
+                style={{
+                  textAlign: "center",
+                  padding: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "44px",
+                    fontWeight: 700,
+                    color: C.text,
+                    fontFamily: C.fontSans,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1,
+                    marginBottom: "8px",
+                  }}
+                >
+                  {s.value}
+                </div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: C.text,
+                    fontFamily: C.fontSans,
+                    marginBottom: "4px",
+                  }}
+                >
+                  {s.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: C.textMuted,
+                    fontFamily: C.fontMono,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {s.sub}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-function ResponsiveStyles() {
-  return (
-    <style>{`
-      @media (max-width: 900px) {
-        .hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-        .mission-grid { grid-template-columns: 1fr !important; }
-        .founder-grid { grid-template-columns: 1fr !important; }
-        .tech-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        .numbers-grid { grid-template-columns: repeat(3, 1fr) !important; }
-        .values-grid { grid-template-columns: repeat(2, 1fr) !important; }
-      }
-      @media (max-width: 640px) {
-        .tech-grid { grid-template-columns: 1fr !important; }
-        .numbers-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        .values-grid { grid-template-columns: 1fr !important; }
-      }
-    `}</style>
-  );
-}
+        {/* ─── MISSION ───────────────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+              gap: "48px",
+              alignItems: "start",
+            }}
+          >
+            <div>
+              <div style={eyebrowStyle}>Notre mission</div>
+              <h2 style={headingStyle}>
+                Donner aux décideurs marocains la même information que les marchés globaux.
+              </h2>
+              <p style={{ ...bodyStyle, marginBottom: "16px" }}>
+                Trop d'entreprises au Maroc découvrent leur réputation dans la
+                presse au moment où elle se dégrade. Trop d'équipes comms
+                réagissent au lieu d'anticiper. Trop de boards décident sans
+                vision consolidée de leur exposition médiatique et IA.
+              </p>
+              <p style={{ ...bodyStyle, marginBottom: "16px" }}>
+                Harch Atelier corrige ce déséquilibre. Nous collectons en continu
+                les mentions de votre entreprise dans 20+ sources marocaines et
+                africaines, nous les analysons avec 9 modèles d'IA, et nous
+                livrons des indicateurs actionnables — score, alertes, rapports.
+              </p>
+              <p style={bodyStyle}>
+                Basés à Casablanca. Building in Public depuis 2026.
+              </p>
+            </div>
+            <div
+              style={{
+                background: C.bgSubtle,
+                border: `1px solid ${C.border}`,
+                borderRadius: "12px",
+                padding: "32px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontFamily: C.fontMono,
+                  color: C.accent,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  marginBottom: "20px",
+                  fontWeight: 700,
+                }}
+              >
+                Ce que nous livrons
+              </div>
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                }}
+              >
+                {[
+                  "Score de réputation à 5 piliers, mis à jour en continu",
+                  "Alertes WhatsApp sur pic de sentiment négatif",
+                  "Tableau de bord avec 32 catégories de risque",
+                  "Rapport PDF board-ready mensuel",
+                  "Veille de la visibilité IA (ChatGPT, Perplexity, Gemini…)",
+                  "Empreinte SHA-256 pour traçabilité des sources",
+                ].map((item) => (
+                  <li
+                    key={item}
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      alignItems: "flex-start",
+                      fontSize: "14px",
+                      color: C.text,
+                      fontFamily: C.fontSans,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: C.cta,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        marginTop: "2px",
+                      }}
+                    >
+                      ✓
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
 
-// ═══════════════════════════════════════════════════════════════════════
-// PAGE
-// ═══════════════════════════════════════════════════════════════════════
+        {/* ─── VALUES ────────────────────────────────────────────── */}
+        <section
+          style={{
+            background: C.bgSubtle,
+            borderTop: `1px solid ${C.border}`,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div style={sectionStyle}>
+            <div style={{ textAlign: "center", marginBottom: "48px" }}>
+              <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Valeurs</div>
+              <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
+                Quatre principes non-négociables
+              </h2>
+              <p
+                style={{
+                  ...bodyStyle,
+                  maxWidth: "640px",
+                  margin: "0 auto",
+                }}
+              >
+                Ils guident chaque ligne de code, chaque alerte, chaque rapport.
+              </p>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {VALUES.map((v) => (
+                <div
+                  key={v.title}
+                  style={{
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    padding: "28px",
+                    transition: "border-color 0.2s, transform 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = C.accent;
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = C.border;
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "32px",
+                      color: C.accent,
+                      marginBottom: "16px",
+                      lineHeight: 1,
+                    }}
+                    aria-hidden
+                  >
+                    {v.icon}
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: 700,
+                      color: C.text,
+                      fontFamily: C.fontSans,
+                      marginBottom: "10px",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {v.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: C.textBody,
+                      fontFamily: C.fontSans,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {v.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-export default function AboutPage() {
-  return (
-    <>
-      <ScrollProgress />
-      <CursorGlow />
-      <AtelierNav />
-      <main style={{ background: C.bg, color: C.textPrimary, fontFamily: FONT.sans }}>
-        <Hero />
-        <Mission />
-        <Founder />
-        <TechStack />
-        <TimelineSection />
-        <Numbers />
-        <Values />
-        <CTA />
+        {/* ─── TIMELINE ──────────────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Trajectoire</div>
+            <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
+              Quatre trimestres, une plateforme
+            </h2>
+            <p
+              style={{
+                ...bodyStyle,
+                maxWidth: "640px",
+                margin: "0 auto",
+              }}
+            >
+              Construction continue, en public, depuis Casablanca.
+            </p>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+              gap: "20px",
+            }}
+          >
+            {TIMELINE.map((t, i) => (
+              <div
+                key={t.period}
+                style={{
+                  position: "relative",
+                  padding: "24px",
+                  background: C.bg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "12px",
+                  borderTop: `3px solid ${C.accent}`,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontFamily: C.fontMono,
+                    color: C.accent,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                    marginBottom: "8px",
+                  }}
+                >
+                  {String(i + 1).padStart(2, "0")} · {t.period}
+                </div>
+                <h3
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: C.text,
+                    fontFamily: C.fontSans,
+                    marginBottom: "10px",
+                  }}
+                >
+                  {t.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: C.textBody,
+                    fontFamily: C.fontSans,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {t.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── TEAM ──────────────────────────────────────────────── */}
+        <section
+          style={{
+            background: C.bgSubtle,
+            borderTop: `1px solid ${C.border}`,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div style={sectionStyle}>
+            <div style={{ textAlign: "center", marginBottom: "48px" }}>
+              <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Équipe</div>
+              <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
+                Une équipe, quatre pôles
+              </h2>
+              <p
+                style={{
+                  ...bodyStyle,
+                  maxWidth: "640px",
+                  margin: "0 auto",
+                }}
+              >
+                Construire une plateforme d'intelligence réputationnelle exige
+                des compétences rares. Les noms individuels sont masqués —
+                contactez-nous pour un brief complet.
+              </p>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {TEAM.map((m) => (
+                <div
+                  key={m.name}
+                  style={{
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    padding: "28px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "64px",
+                      height: "64px",
+                      borderRadius: "50%",
+                      background: C.bgSubtle,
+                      border: `1px solid ${C.border}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: "0 auto 16px",
+                      fontSize: "18px",
+                      fontWeight: 700,
+                      color: C.accent,
+                      fontFamily: C.fontMono,
+                      letterSpacing: "0.05em",
+                    }}
+                    aria-hidden
+                  >
+                    {m.initials}
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      color: C.text,
+                      fontFamily: C.fontSans,
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {m.name}
+                  </h3>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: C.textMuted,
+                      fontFamily: C.fontMono,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {m.role}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── FINAL CTA ─────────────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div
+            style={{
+              background: C.bgDarkest,
+              borderRadius: "16px",
+              padding: "64px 32px",
+              textAlign: "center",
+              color: C.textOnDark,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "clamp(28px, 4vw, 40px)",
+                fontWeight: 700,
+                fontFamily: C.fontSans,
+                letterSpacing: "-0.02em",
+                marginBottom: "16px",
+                color: C.textOnDark,
+              }}
+            >
+              Voyez ce que le monde dit de vous.
+            </h2>
+            <p
+              style={{
+                fontSize: "16px",
+                color: C.textOnDarkBody,
+                fontFamily: C.fontSans,
+                maxWidth: "560px",
+                margin: "0 auto 32px",
+                lineHeight: 1.6,
+              }}
+            >
+              Cinq minutes pour la demande. Sept jours pour le premier audit.
+              Sans engagement.
+            </p>
+            <a
+              href="/atelier/audit"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "14px 28px",
+                background: C.cta,
+                color: "#FFFFFF",
+                fontFamily: C.fontSans,
+                fontSize: "15px",
+                fontWeight: 600,
+                textDecoration: "none",
+                borderRadius: "8px",
+                transition: "background 0.2s, transform 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.ctaHover;
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.cta;
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Demander une démo →
+            </a>
+          </div>
+        </section>
       </main>
-      <AtelierFooter />
-      <BackToTop />
-      <ResponsiveStyles />
-    </>
+
+      <div style={{ marginTop: "auto" }}>
+        <AtelierFooter />
+      </div>
+    </div>
   );
 }

@@ -1116,3 +1116,46 @@ Stage Summary:
 Unresolved Issues:
 - Harch100Snapshot table NOT yet created on Neon — `bunx prisma db push` doit être lancé par un opérateur avec accès DB. Sans ça, /api/harch100/auto-publish retourne 500 (Prisma error) et /api/harch100/latest retourne 500 (pas 404).
 - Le prefix "console." dans les categories logError("console.X", ...) génère ~15 false positives dans le count `rg -c "console\."`. Pour un compte exact des vrai console.* calls, utiliser: `rg "console\.(log|error|warn|debug|info|trace)\s*\(" src/`. Renommer les categories en "console-X" (dash) éliminerait les false positives mais c'est cosmétique.
+
+---
+Task ID: REBUILD-1
+Agent: REBUILD-1 — Public Pages
+Task: Rebuild 5 deleted public pages
+
+Stage Summary:
+- About page: YES
+- Pricing page (4 plans, all Sur devis): YES
+- Solutions page: YES
+- Method page: YES
+- Products page: YES
+- 0 TypeScript errors
+
+Files created (5 components):
+- src/app/atelier/about/AboutPage.tsx
+- src/app/atelier/pricing/PricingPage.tsx
+- src/app/atelier/solutions/SolutionsPage.tsx
+- src/app/atelier/method/MethodPage.tsx
+- src/app/atelier/products/ProductHubPage.tsx
+
+Files edited (5 page.tsx — placeholder replaced with metadata + component import):
+- src/app/atelier/about/page.tsx
+- src/app/atelier/pricing/page.tsx
+- src/app/atelier/solutions/page.tsx
+- src/app/atelier/method/page.tsx
+- src/app/atelier/products/page.tsx
+
+Design:
+- DS V2 tokens (C.*) from ../components/tokens — sage/stone accent, emerald-500 CTA, neutral-950 text
+- AtelierNav + AtelierFooter shared components
+- Sticky footer (min-h-screen flex flex-col + mt-auto)
+- Inter (sans) + Space Mono (mono)
+- French throughout, mobile-first responsive
+- Real stats only (20+, 7 753, 8 crises, 9 LLM) — no mock data
+
+Highlights:
+- Pricing: 4 plans all "Sur devis" + 24-row × 4-col comparison matrix grouped by 4 categories + 5-question FAQ accordion + 3 trust cards (CNDP / Loi 09-08 / SHA-256)
+- Solutions: 5 capabilities + 4-problem Avant/Après matrix + 4-step pipeline + 3 case studies + 8-row Harch-vs-RP table
+- Method: 5-step pipeline + 4-card data sources (20+ Moroccan sources) + 5-pillar scoring with weights (30/25/20/15/10) + 3 compliance cards (CNDP / Loi 09-08 / ISO 27001)
+- Products: 4 plan cards + sticky sidebar with Harch 100 / Contact / Comparer en détail CTAs (mobile-responsive via CSS media queries)
+
+Work record: /agent-ctx/REBUILD-1-public-pages.md
