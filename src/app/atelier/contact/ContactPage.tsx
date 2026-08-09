@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
@@ -82,6 +83,341 @@ const OFFICES = [
   },
 ];
 
+type ContactStatus = "idle" | "submitting" | "success" | "error";
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  background: "#FAFAFA",
+  border: `1px solid #E5E5E5`,
+  borderRadius: "8px",
+  fontSize: "14px",
+  fontFamily: "'Inter', sans-serif",
+  color: "#0A0A0A",
+  outline: "none",
+  boxSizing: "border-box",
+  transition: "border 0.15s ease",
+};
+
+function ContactForm() {
+  const [status, setStatus] = useState<ContactStatus>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setStatus("submitting");
+    setErrorMsg("");
+
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      name: String(fd.get("name") || ""),
+      email: String(fd.get("email") || ""),
+      company: String(fd.get("company") || "") || undefined,
+      message: String(fd.get("message") || ""),
+      accountType: "brand-monitor" as const,
+      source: "contact-page",
+      referralSource: "contact-page",
+    };
+
+    try {
+      const res = await fetch("/api/access-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data?.error || "Échec de l'envoi du message. Réessayez."
+        );
+      }
+
+      setStatus("success");
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : "Échec de l'envoi du message. Réessayez."
+      );
+      setStatus("error");
+    }
+  }
+
+  if (status === "success") {
+    return (
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "500px",
+          margin: "0 auto",
+          padding: "40px 32px",
+          background: "#FFFFFF",
+          border: `1px solid #E5E5E5`,
+          borderRadius: "12px",
+          boxShadow:
+            "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+          borderTop: `3px solid #4A7B5F`,
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "50%",
+            background: `#4A7B5F15`,
+            color: "#4A7B5F",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+            fontWeight: 700,
+            margin: "0 auto 20px",
+          }}
+        >
+          ✓
+        </div>
+        <h3
+          style={{
+            fontSize: "20px",
+            fontWeight: 700,
+            color: "#0A0A0A",
+            letterSpacing: "-0.02em",
+            margin: "0 0 10px",
+          }}
+        >
+          Message envoyé. Nous vous répondrons sous 4h.
+        </h3>
+        <p
+          style={{
+            fontSize: "14px",
+            color: "#525252",
+            lineHeight: 1.6,
+            margin: 0,
+          }}
+        >
+          Merci de votre message. Un membre de l'équipe Harch Atelier vous
+          recontactera très vite.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        width: "100%",
+        maxWidth: "500px",
+        margin: "0 auto",
+        padding: "32px",
+        background: "#FFFFFF",
+        border: `1px solid #E5E5E5`,
+        borderRadius: "12px",
+        boxShadow:
+          "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+        borderTop: `3px solid #4A7B5F`,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "18px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "11px",
+            fontFamily: "'JetBrains Mono', monospace",
+            color: "#4A7B5F",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            marginBottom: "4px",
+          }}
+        >
+          Formulaire de contact
+        </div>
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: 700,
+            color: "#0A0A0A",
+            letterSpacing: "-0.02em",
+            margin: "0 0 4px",
+          }}
+        >
+          Écrivez-nous
+        </h2>
+        <p
+          style={{
+            fontSize: "13px",
+            color: "#525252",
+            lineHeight: 1.55,
+            margin: "0 0 4px",
+          }}
+        >
+          Réponse garantie sous 4 heures ouvrées.
+        </p>
+
+        {/* Name */}
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#525252",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Nom <span style={{ color: "#A0524B" }}>*</span>
+          </span>
+          <input
+            name="name"
+            type="text"
+            required
+            maxLength={100}
+            placeholder="Sara Benani"
+            style={inputStyle}
+          />
+        </label>
+
+        {/* Email */}
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#525252",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Email <span style={{ color: "#A0524B" }}>*</span>
+          </span>
+          <input
+            name="email"
+            type="email"
+            required
+            maxLength={200}
+            placeholder="sara@entreprise.com"
+            style={inputStyle}
+          />
+        </label>
+
+        {/* Company (optional) */}
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#525252",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Société <span style={{ color: "#71717A" }}>(optionnel)</span>
+          </span>
+          <input
+            name="company"
+            type="text"
+            maxLength={200}
+            placeholder="Acme Communications"
+            style={inputStyle}
+          />
+        </label>
+
+        {/* Message */}
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#525252",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Message <span style={{ color: "#A0524B" }}>*</span>
+          </span>
+          <textarea
+            name="message"
+            required
+            maxLength={2000}
+            rows={5}
+            placeholder="Comment pouvons-nous vous aider ?"
+            style={{ ...inputStyle, resize: "vertical", minHeight: "120px" }}
+          />
+        </label>
+
+        {status === "error" && errorMsg && (
+          <div
+            style={{
+              padding: "12px 14px",
+              background: `#A0524B10`,
+              border: `1px solid #A0524B40`,
+              borderRadius: "8px",
+              color: "#A0524B",
+              fontSize: "13px",
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            ⚠ {errorMsg}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={status === "submitting"}
+          style={{
+            padding: "14px 24px",
+            background: status === "submitting" ? "#71717A" : "#4A7B5F",
+            color: "#FFFFFF",
+            fontSize: "14px",
+            fontWeight: 600,
+            border: "none",
+            borderRadius: "8px",
+            cursor: status === "submitting" ? "wait" : "pointer",
+            fontFamily: "'Inter', sans-serif",
+            transition: "background 0.15s ease",
+          }}
+        >
+          {status === "submitting"
+            ? "Envoi en cours…"
+            : "Envoyer le message →"}
+        </button>
+
+        <p
+          style={{
+            fontSize: "11px",
+            color: "#71717A",
+            lineHeight: 1.5,
+            margin: 0,
+            textAlign: "center",
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          Réponse sous 4h · Vos données restent confidentielles
+        </p>
+      </div>
+    </form>
+  );
+}
+
 export default function ContactPage() {
   return (
     <>
@@ -122,6 +458,17 @@ export default function ContactPage() {
             we respond fast. Pick the right inbox below to reach the right team.
           </p>
         </div>
+      </section>
+
+      {/* CONTACT FORM */}
+      <section
+        style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          padding: "48px 16px",
+        }}
+      >
+        <ContactForm />
       </section>
 
       {/* CONTACT METHODS GRID */}
