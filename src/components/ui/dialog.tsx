@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
 import { useTranslations } from 'next-intl';
-"use client"
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
