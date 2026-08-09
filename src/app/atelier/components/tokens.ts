@@ -102,9 +102,9 @@ export interface NavItem {
 
 export const ATELIER_NAV_LINKS: NavItem[] = [
   {
-    label: "Expertise",
+    label: "Plateforme",
     dropdown: {
-      title: "Expertise",
+      title: "Plateforme",
       sections: [
         {
           heading: "What we know",
@@ -155,9 +155,9 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
     },
   },
   {
-    label: "Approach",
+    label: "Expertise",
     dropdown: {
-      title: "Approach",
+      title: "Expertise",
       sections: [
         {
           heading: "How we work",
@@ -172,9 +172,9 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
     },
   },
   {
-    label: "Insights",
+    label: "Ressources",
     dropdown: {
-      title: "Insights",
+      title: "Ressources",
       sections: [
         {
           heading: "Content hub",
@@ -211,9 +211,9 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
     },
   },
   {
-    label: "Company",
+    label: "Entreprise",
     dropdown: {
-      title: "Company",
+      title: "Entreprise",
       sections: [
         {
           heading: "About Harch",
