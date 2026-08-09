@@ -39,12 +39,5 @@ export default async function EssentialConsolePage() {
     redirect("/atelier/onboarding");
   }
 
-  return (
-    <EssentialDashboard
-      userName={user.name}
-      userEmail={user.email}
-      userPlan={user.accountType}
-      userRole={user.role}
-    />
-  );
+  return <EssentialDashboard />;
 }
