@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { authOptions, getConsolePath } from "@/lib/auth/auth.config";
+import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import EssentialDashboard from "./EssentialDashboard";
