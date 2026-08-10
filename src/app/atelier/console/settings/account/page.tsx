@@ -1,14 +1,20 @@
-"use client";
-
-// Account Settings page — thin wrapper around AccountSettings component.
-// Route: /atelier/console/settings/account
-//
-// The AccountSettings component owns all the UX (tabs, forms, API calls).
-// This wrapper only exists because Next.js App Router requires a `page.tsx`
-// for a route to be reachable.
-
+import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+import { redirect } from "next/navigation";
 import AccountSettings from "./AccountSettings";
 
-export default function AccountSettingsPage() {
+export const metadata: Metadata = {
+  title: "Paramètres du compte | Harch Atelier",
+  robots: { index: false, follow: false },
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function AccountSettingsPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    redirect("/atelier/login?callbackUrl=/atelier/console/settings/account");
+  }
   return <AccountSettings />;
 }
