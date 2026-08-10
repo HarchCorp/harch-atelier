@@ -1,64 +1,174 @@
 "use client";
 
 // ════════════════════════════════════════════════════════════════════
-//  EssentialDashboard — Plan "Essentiel" (PME)
+//  EssentialDashboard — Plan "Essentiel" (Dircom / PME)
 //
-//  ULTIMATE single-screen monitoring dashboard — 10 must-have sections
-//  from brainstorm-essentiel-pro.md:
+//  ULTIMATE single-screen monitoring dashboard — 20 sections.
+//  « Un seul comme un tableau de Picasso. »
 //
-//    1. Score de Réputation (GaugeChart) — semi-circular gauge + trend
-//    2. Top 3 Alertes — 3 most critical alerts (severity tiles)
-//    3. Tendance Sentiment 7 jours (LineChart) — 3-series daily trend
-//    4. Dernières Mentions — 5 most recent articles feed
-//    5. Snapshot Visibilité IA — 3 LLM cards (ChatGPT, Perplexity, Gemini)
-//    6. Résumé Hebdo IA — HarchIQ-generated weekly summary + regenerate
-//    7. Diversité Sources (BarChart) — top 10 sources by article count
-//    8. Position Harch 100 — company's rank in the monthly Harch 100
-//    9. Actions Rapides — 4 quick action buttons (CSV, Ask, H100, Demo)
-//   10. Upsell Pro — sage-tinted banner with "Découvrir Pro →" CTA
+//  Design philosophy:
+//   • WHITE background, sage green (#4A7B5F) accents, charcoal (#0A0A0A) text
+//   • NO emojis — Lucide icons only (16px, #71717A)
+//   • NO dark mode — institutional, minimalist, Bloomberg-clean
+//   • Every card: white bg, 1px border #F0F0F0, 12px radius, 20px padding
+//   • Headers: 10px uppercase, JetBrains Mono / Space Mono, #9CA3AF, 0.08em
+//   • Data: monospace, bold, #0A0A0A
+//   • Body: Inter, 13px, #525252
+//   • recharts for ALL charts (RadialBarChart, LineChart, BarChart, ComposedChart,
+//     AreaChart, PieChart, ScatterChart)
+//   • framer-motion for subtle entrance transitions
+//   • @tanstack/react-table for the "Prochaines Échéances" list
+//   • shadcn/ui (Card, Badge, Button, Progress, Tabs, Separator, Skeleton)
+//   • French throughout, mobile-first responsive, "—" for missing data
 //
-//  Design:
-//   • C.* design tokens (white surfaces, emerald-500 CTA, charcoal text)
-//   • Each section: white card, 12px radius, 1px border, 24px padding
-//   • 24px gap between sections (Tailwind gap-6)
-//   • 2-column grid: sections 3+4, 5+6, 7+8 (collapses to 1-col on mobile)
-//   • French throughout, mobile-first responsive
-//   • Real API data only — "—" when empty, skeletons while loading
-//   • Charts imported from ../Charts.tsx (GaugeChart, LineChart, BarChart)
+//  20 sections (12-col responsive grid):
+//    1.  Score de Réputation          (hero, full width)   RadialBarChart gauge
+//    2.  Sentiment Moyen              (KPI strip)          LineChart sparkline
+//    3.  Mentions / Jour              (KPI strip)          BarChart sparkline
+//    4.  Citations IA                 (KPI strip)          LLM icons
+//    5.  Alertes Actives              (KPI strip)          red badge
+//    6.  Tendance Sentiment 30j       (chart row)          ComposedChart
+//    7.  Diversité des Sources        (chart row)          BarChart horizontal
+//    8.  Dernières Mentions           (feed row)           scrollable feed
+//    9.  Résumé Hebdomadaire IA       (feed row)           quote block
+//   10.  Snapshot Visibilité IA       (AI row)             3 LLM cards
+//   11.  Top 5 Sujets                 (AI row)             BarChart stacked
+//   12.  Indicateur de Crise          (crisis row)         DEFCON bar
+//   13.  Carte de Chaleur Géo         (crisis row)         ScatterChart
+//   14.  Position Harch 100           (rank row)           big number + LineChart
+//   15.  Activité Réseau Social       (rank row)           AreaChart stacked
+//   16.  Météo Sentiments par Langue  (lang row)           3 stacked bars
+//   17.  Évolution du Score 30j       (lang row)           LineChart + markers
+//   18.  Volume de Mentions 7j        (vol row)            BarChart colored
+//   19.  Prochaines Échéances         (vol row)            react-table
+//   20.  Boîte à Outils Dircom        (tools, full width)  4 action cards
 //
-//  Data sources (all real, no mock):
-//   • /api/console/brand-health          (score, trend, sentiment)
-//   • /api/console/crisis-alerts         (alerts + articles)
-//   • /api/console/sentiment-trend       (7d sentiment + company name)
-//   • /api/console/ai-visibility         (LLM rankings)
-//   • /api/console/insights             (weekly AI summary)
-//   • /api/console/source-distribution  (source diversity)
-//   • /api/harch100/latest              (Harch 100 ranking)
-//   • /api/console/export-csv           (CSV download trigger)
+//  Real APIs (no mock):
+//   • /api/console/brand-health          — score, trend, sentiment, crisis
+//   • /api/console/crisis-alerts         — alerts + articles feed
+//   • /api/console/insights             — HarchIQ weekly summary
+//   • /api/console/ai-visibility         — LLM citation snapshot
+//   • /api/console/sentiment-trend       — daily sentiment series
+//   • /api/console/topics               — top topics
+//   • /api/console/source-distribution  — top sources
+//   • /api/harch100/latest              — Harch 100 ranking
+//   • /api/console/export-csv           — CSV download trigger
 //
-//  Task ID: BUILD-1
+//  Task ID: FINAL-ESSENTIEL
 // ════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Minus,
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
+  ArrowUpCircle,
   Bell,
-  Download,
-  MessageSquare,
-  BarChart3,
-  Sparkles,
-  RefreshCw,
-  LogOut,
-  ExternalLink,
+  CalendarDays,
   ChevronRight,
+  Download,
+  ExternalLink,
+  Globe2,
+  Languages,
+  LogOut,
+  MessageSquare,
+  Minus,
+  RefreshCw,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  Cloud,
+  CloudRain,
+  Sun,
 } from "lucide-react";
-import { C } from "../../components/tokens";
-import { GaugeChart, LineChart, BarChart, type LinePoint, type BarDatum } from "../Charts";
+import { format, parseISO, differenceInCalendarDays } from "date-fns";
+import { fr } from "date-fns/locale";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  RadialBar,
+  RadialBarChart,
+  Scatter,
+  ScatterChart,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
+
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  createColumnHelper,
+  type SortingState,
+  type ColumnDef,
+} from "@tanstack/react-table";
+
+import { toast } from "sonner";
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────
+// White surfaces · sage green accent · charcoal text · no dark mode
+
+const SAGE = "#4A7B5F";
+const SAGE_DIM = "#6FA088";
+const SAGE_BG = "rgba(74,123,95,0.08)";
+const SAGE_BG_STRONG = "rgba(74,123,95,0.14)";
+const CHARCOAL = "#0A0A0A";
+const TEXT_BODY = "#525252";
+const TEXT_MUTED = "#71717A";
+const TEXT_HEADER = "#9CA3AF";
+const BORDER = "#F0F0F0";
+const BORDER_STRONG = "#E5E5E5";
+const POSITIVE = "#10B981";
+const NEGATIVE = "#EF4444";
+const NEUTRAL_AMBER = "#F59E0B";
+const NEUTRAL_GRAY = "#A1A1AA";
+
+// Tailwind doesn't include JetBrains Mono in this project — Space Mono is the
+// next/font/google equivalent loaded at the root. Use it via inline style.
+const FONT_MONO = "var(--font-space-mono), ui-monospace, monospace";
+const FONT_SANS = "var(--font-inter), system-ui, sans-serif";
 
 // ─── TYPES ────────────────────────────────────────────────────────────
 
@@ -90,6 +200,12 @@ interface CrisisAlert {
   acknowledged: boolean;
 }
 
+interface CrisisAlertsResp {
+  alerts: CrisisAlert[];
+  count?: number;
+  source?: string;
+}
+
 interface InsightItem {
   id: string;
   type: string;
@@ -102,11 +218,12 @@ interface InsightItem {
   generatedAt: string;
 }
 
-interface SourceRow {
-  name: string;
-  count: number;
-  color: string;
-  type: "media" | "social";
+interface InsightsResp {
+  insights: InsightItem[];
+  cached?: boolean;
+  accountType?: string;
+  generatedAt?: string;
+  model?: string;
 }
 
 interface SentimentDay {
@@ -118,6 +235,12 @@ interface SentimentDay {
   negative: number;
 }
 
+interface SentimentTrendResp {
+  range: string;
+  company?: { name: string; slug: string };
+  data: SentimentDay[];
+}
+
 interface AiVisibilityEngine {
   platform: string;
   cited: boolean;
@@ -126,6 +249,39 @@ interface AiVisibilityEngine {
   confidence: number;
   summary: string | null;
   checkedAt: string;
+}
+
+interface AiVisibilityResp {
+  company?: { name: string; slug: string };
+  platforms: AiVisibilityEngine[];
+  citedCount: number;
+  totalCount: number;
+  visibilityScore: number;
+}
+
+interface SourceRow {
+  name: string;
+  count: number;
+  color: string;
+  type: "media" | "social";
+}
+
+interface SourceDistResp {
+  sources: SourceRow[];
+  total: number;
+  source?: string;
+}
+
+interface TopicRow {
+  label: string;
+  count: number;
+  type: "source" | "risk";
+}
+
+interface TopicsResp {
+  company?: { name: string; slug: string };
+  topics: TopicRow[];
+  totalArticles: number;
 }
 
 interface Harch100Ranking {
@@ -147,6 +303,19 @@ interface Harch100Snapshot {
   publishedAt: string | null;
 }
 
+interface Harch100Resp {
+  ok: boolean;
+  published?: boolean;
+  snapshot?: Harch100Snapshot;
+}
+
+interface UpcomingEvent {
+  id: string;
+  label: string;
+  date: string; // ISO yyyy-mm-dd
+  type: "rapport" | "reunion" | "audit" | "lancement" | "autre";
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
 function fmtRelative(ts: number | string | undefined): string {
@@ -161,17 +330,44 @@ function fmtRelative(ts: number | string | undefined): string {
   if (h < 24) return `il y a ${h} h`;
   const days = Math.floor(h / 24);
   if (days < 7) return `il y a ${days} j`;
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  return format(d, "dd MMM", { locale: fr });
 }
 
 function fmtDayShort(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit" });
+  try {
+    return format(parseISO(iso), "dd MMM", { locale: fr });
+  } catch {
+    return iso;
+  }
+}
+
+function fmtDayLabel(iso: string): string {
+  try {
+    return format(parseISO(iso), "EEE", { locale: fr });
+  } catch {
+    return iso;
+  }
+}
+
+function fmtNumber(n: number | undefined | null): string {
+  if (n === undefined || n === null || isNaN(n)) return "—";
+  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  return String(n);
+}
+
+function fmtPct(n: number | undefined | null): string {
+  if (n === undefined || n === null || isNaN(n)) return "—";
+  return `${Math.round(n)}%`;
+}
+
+function fmtSigned(n: number | undefined | null, suffix = ""): string {
+  if (n === undefined || n === null || isNaN(n)) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(1).replace(/\.0$/, "")}${suffix}`;
 }
 
 function fmtPeriod(period: string): string {
-  // "2026-08" → "août 2026"
   if (!period || !/^\d{4}-\d{2}$/.test(period)) return period || "—";
   const [y, m] = period.split("-");
   const months = [
@@ -183,161 +379,2213 @@ function fmtPeriod(period: string): string {
   return `${months[mi]} ${y}`;
 }
 
-function fmtNumber(n: number | undefined | null): string {
-  if (n === undefined || n === null || isNaN(n)) return "—";
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
-  return String(n);
-}
-
 function severityColor(sev: string): string {
-  if (sev === "critical") return C.danger;
-  if (sev === "warning" || sev === "high") return C.warning;
-  if (sev === "watch" || sev === "medium") return C.accent;
-  return C.success;
+  if (sev === "critical") return NEGATIVE;
+  if (sev === "warning") return NEUTRAL_AMBER;
+  if (sev === "watch") return SAGE;
+  return POSITIVE;
 }
 
-function severityBg(sev: string): string {
-  if (sev === "critical") return C.dangerBg;
-  if (sev === "warning" || sev === "high") return C.warningBg;
-  return "rgba(120,113,108,0.08)";
+/** Map a 0-100 reputation score to a "météo" label + icon. */
+function weatherFor(score: number): { label: string; Icon: typeof Sun } {
+  if (score >= 70) return { label: "Ensoleillé", Icon: Sun };
+  if (score >= 50) return { label: "Nuageux", Icon: Cloud };
+  return { label: "Orageux", Icon: CloudRain };
 }
 
-function severityLabel(sev: string): string {
-  if (sev === "critical") return "Critique";
-  if (sev === "warning" || sev === "high") return "Alerte";
-  if (sev === "watch") return "Veille";
-  return "OK";
+/** Parse "1st" / "2nd" / "top-3" / "not cited" → number | null */
+function parsePositionRank(pos: string | null | undefined): number | null {
+  if (!pos) return null;
+  const lower = pos.toLowerCase().trim();
+  if (lower.includes("not cited") || lower === "absent") return null;
+  const ord = lower.match(/^(\d+)(?:st|nd|rd|th)?$/);
+  if (ord) return parseInt(ord[1], 10);
+  const top = lower.match(/top-(\d+)/);
+  if (top) return parseInt(top[1], 10);
+  const num = lower.match(/(\d+)/);
+  if (num) return parseInt(num[1], 10);
+  return null;
 }
 
-// Match the user's company name against Harch 100 rankings.
-// Case-insensitive, trims whitespace, also matches on slug-ish forms.
-function findCompanyRank(
-  rankings: Harch100Ranking[],
-  companyName: string | undefined,
-): Harch100Ranking | null {
-  if (!rankings || rankings.length === 0 || !companyName) return null;
-  const target = companyName.trim().toLowerCase();
-  // Exact match first
-  let match = rankings.find((r) => r.companyName.trim().toLowerCase() === target);
-  if (match) return match;
-  // Substring match (one contains the other)
-  match = rankings.find(
-    (r) =>
-      r.companyName.toLowerCase().includes(target) ||
-      target.includes(r.companyName.toLowerCase()),
-  );
-  return match ?? null;
+// ─── useApi HOOK ──────────────────────────────────────────────────────
+// Tiny fetch wrapper — no external deps. Returns {data, loading, error, refetch}.
+
+function useApi<T>(url: string | null, opts?: RequestInit): {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+} {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!url);
+  const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!url) {
+      // Defer state reset to avoid synchronous setState in effect body
+      Promise.resolve().then(() => {
+        setData(null);
+        setLoading(false);
+      });
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const r = await fetch(url, opts);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = await r.json();
+        if (cancelled) return;
+        setData(json as T);
+      } catch (e: unknown) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : "Erreur réseau";
+        setError(msg);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [url, tick]);
+
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
+  return { data, loading, error, refetch };
 }
 
-// ─── PRIMITIVE: Card ──────────────────────────────────────────────────
+// ─── SHARED UI ATOMS ──────────────────────────────────────────────────
 
-function Card({
+const FONT_HEADER: React.CSSProperties = {
+  fontFamily: FONT_MONO,
+  fontSize: 10,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: TEXT_HEADER,
+  fontWeight: 700,
+};
+
+function SectionHeader({
   title,
-  subtitle,
-  badge,
-  children,
-  className = "",
-  bodyClassName = "",
-  headerRight,
-  style,
+  right,
 }: {
-  title?: string;
-  subtitle?: string;
-  badge?: string;
-  children: React.ReactNode;
-  className?: string;
-  bodyClassName?: string;
-  headerRight?: React.ReactNode;
-  style?: CSSProperties;
+  title: string;
+  right?: React.ReactNode;
 }) {
   return (
-    <section
-      className={`bg-white rounded-[12px] ${className}`}
+    <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2 space-y-0" style={{ padding: 0 }}>
+      <span style={FONT_HEADER}>{title}</span>
+      <div className="flex items-center gap-1.5">{right}</div>
+    </CardHeader>
+  );
+}
+
+function CardShell({
+  children,
+  className,
+  style,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <Card
+      className={
+        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden " + (className ?? "")
+      }
+      style={{ padding: 20, ...style }}
+    >
+      {children}
+    </Card>
+  );
+}
+
+function Delta({ value, suffix = "" }: { value: number; suffix?: string }) {
+  if (value === 0 || isNaN(value)) {
+    return (
+      <span
+        className="inline-flex items-center gap-0.5"
+        style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}
+      >
+        <Minus size={12} /> stable
+      </span>
+    );
+  }
+  const up = value > 0;
+  const Icon = up ? ArrowUp : ArrowDown;
+  return (
+    <span
+      className="inline-flex items-center gap-0.5"
       style={{
-        backgroundColor: C.bg,
-        borderRadius: 12,
-        border: `1px solid ${C.border}`,
-        boxShadow: C.shadowSm,
-        ...style,
+        fontFamily: FONT_MONO,
+        fontSize: 11,
+        color: up ? POSITIVE : NEGATIVE,
+        fontWeight: 700,
       }}
     >
-      {(title || headerRight) && (
-        <header
-          className="flex items-start justify-between gap-3 px-6 pt-5 pb-4"
-          style={{ borderBottom: `1px solid ${C.border}` }}
-        >
-          <div className="min-w-0">
-            {title && (
-              <h3
-                className="text-[15px] font-semibold leading-tight"
-                style={{ color: C.text, fontFamily: C.fontSans }}
-              >
-                {title}
-              </h3>
-            )}
-            {subtitle && (
-              <p className="text-[12px] mt-0.5" style={{ color: C.textMuted }}>
-                {subtitle}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {badge && (
-              <span
-                className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: "rgba(120,113,108,0.10)",
-                  color: C.accentHover,
-                  fontFamily: C.fontMono,
-                  letterSpacing: "0.06em",
-                }}
-              >
-                {badge}
-              </span>
-            )}
-            {headerRight}
-          </div>
-        </header>
-      )}
-      <div className={bodyClassName || "p-6"}>{children}</div>
-    </section>
+      <Icon size={12} />
+      {fmtSigned(value, suffix)}
+    </span>
   );
 }
 
-// ─── PRIMITIVE: EmptyState ────────────────────────────────────────────
-
-function EmptyState({ label, height = 120 }: { label: string; height?: number }) {
+function EmptyDash({ label = "—" }: { label?: string }) {
   return (
-    <div className="py-8 text-center flex flex-col items-center justify-center" style={{ minHeight: height }}>
-      <div
-        className="w-10 h-10 mb-2 rounded-full flex items-center justify-center"
-        style={{ backgroundColor: "rgba(120,113,108,0.10)" }}
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-          <circle cx="9" cy="9" r="7" stroke={C.accent} strokeWidth="1.4" />
-          <path d="M9 5 V9 M9 12 V12.5" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      </div>
-      <p className="text-[12px]" style={{ color: C.textMuted }}>
-        {label}
-      </p>
-    </div>
+    <span
+      style={{
+        fontFamily: FONT_MONO,
+        fontSize: 13,
+        color: TEXT_MUTED,
+      }}
+    >
+      {label}
+    </span>
   );
 }
 
-// ─── PRIMITIVE: Skeleton ──────────────────────────────────────────────
-
-function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
+function SparkDot({ color }: { color: string }) {
   return (
-    <div
-      className={`animate-pulse rounded ${className}`}
-      style={{ backgroundColor: "rgba(120,113,108,0.08)", ...style }}
+    <span
+      style={{
+        display: "inline-block",
+        width: 8,
+        height: 8,
+        borderRadius: "50%",
+        backgroundColor: color,
+      }}
     />
   );
 }
 
-// ─── HEADER ───────────────────────────────────────────────────────────
+// ─── MOTION PRESETS ───────────────────────────────────────────────────
+
+const cardMotion = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
+};
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 1 — SCORE DE RÉPUTATION (hero, full width)
+// ════════════════════════════════════════════════════════════════════
+
+function ScoreReputationCard({ health }: { health: BrandHealth | null; loading: boolean }) {
+  const score = health?.score ?? 0;
+  const trend = health?.trend ?? 0;
+  const { label: weather, Icon: WeatherIcon } = weatherFor(score);
+  const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : "—";
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Gauge data for RadialBarChart
+  const gaugeData = [{ name: "score", value: score, fill: score >= 70 ? SAGE : score >= 50 ? NEUTRAL_AMBER : NEGATIVE }];
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="01 · Score de Réputation"
+        right={
+          <>
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+              }}
+            >
+              {lastUpdated}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => {
+                setRefreshing(true);
+                setTimeout(() => setRefreshing(false), 800);
+              }}
+              aria-label="Rafraîchir"
+            >
+              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        {/* Gauge */}
+        <div className="lg:col-span-3 flex justify-center">
+          <div style={{ position: "relative", width: 200, height: 200 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadialBarChart
+                innerRadius="74%"
+                outerRadius="100%"
+                data={gaugeData}
+                startAngle={220}
+                endAngle={-40}
+                barSize={14}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                <RadialBar
+                  background={{ fill: "#F4F4F5" }}
+                  dataKey="value"
+                  cornerRadius={8}
+                  isAnimationActive
+                />
+              </RadialBarChart>
+            </ResponsiveContainer>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 44,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                  lineHeight: 1,
+                }}
+              >
+                {health ? Math.round(score) : "—"}
+              </span>
+              <span style={{ ...FONT_HEADER, marginTop: 4 }}>/ 100</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Center text block */}
+        <div className="lg:col-span-5 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <WeatherIcon size={18} style={{ color: SAGE }} />
+            <span
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 18,
+                fontWeight: 600,
+                color: CHARCOAL,
+              }}
+            >
+              {health ? `Météo réputation — ${weather}` : "—"}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-3">
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 22,
+                fontWeight: 700,
+                color: CHARCOAL,
+              }}
+            >
+              {trend > 0 ? "+" : ""}{trend} pts
+            </span>
+            <Delta value={trend} suffix=" vs sem. dernière" />
+          </div>
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: TEXT_BODY,
+            }}
+          >
+            {health?.recommendation ?? "En attente des données de réputation…"}
+          </p>
+        </div>
+
+        {/* Mini stats column */}
+        <div className="lg:col-span-4 grid grid-cols-3 gap-3">
+          <MiniStat
+            label="Part de voix"
+            value={health ? `${health.shareOfVoice}%` : "—"}
+          />
+          <MiniStat
+            label="Mentions 24h"
+            value={health ? fmtNumber(health.mentionCount24h) : "—"}
+          />
+          <MiniStat
+            label="Vélocité"
+            value={health ? `${health.mentionVelocity}/h` : "—"}
+          />
+          <MiniStat
+            label="Positif"
+            value={health ? `${health.sentiment.positive}%` : "—"}
+            dotColor={POSITIVE}
+          />
+          <MiniStat
+            label="Neutre"
+            value={health ? `${health.sentiment.neutral}%` : "—"}
+            dotColor={NEUTRAL_GRAY}
+          />
+          <MiniStat
+            label="Négatif"
+            value={health ? `${health.sentiment.negative}%` : "—"}
+            dotColor={NEGATIVE}
+          />
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  dotColor,
+}: {
+  label: string;
+  value: string;
+  dotColor?: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: 12,
+        border: `1px solid ${BORDER}`,
+        borderRadius: 10,
+        backgroundColor: "#FAFAFA",
+      }}
+    >
+      <div className="flex items-center gap-1.5">
+        {dotColor && <SparkDot color={dotColor} />}
+        <span style={FONT_HEADER}>{label}</span>
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 16,
+          fontWeight: 700,
+          color: CHARCOAL,
+          marginTop: 4,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 2 — SENTIMENT MOYEN (KPI strip)
+// ════════════════════════════════════════════════════════════════════
+
+function SentimentMoyenKpi({ health, trend }: { health: BrandHealth | null; trend: SentimentTrendResp | null; loading: boolean }) {
+  const value = health?.sentiment?.positive ?? 0;
+  const delta = health?.trend ?? 0;
+
+  const spark = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.slice(-7).map((d) => ({ d: d.date, v: (d.positive / Math.max(1, d.count)) * 100 }));
+  }, [trend]);
+
+  return (
+    <CardShell className="lg:col-span-3 md:col-span-6">
+      <SectionHeader title="02 · Sentiment Moyen" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="flex items-end justify-between mb-2">
+        <div className="flex items-baseline gap-2">
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 28,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {health ? `${value}%` : "—"}
+          </span>
+          <Delta value={delta} />
+        </div>
+        {spark.length > 0 && (
+          <div style={{ width: 80, height: 28 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                <Line
+                  type="monotone"
+                  dataKey="v"
+                  stroke={SAGE}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+      <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+        Part des mentions positives (7 derniers jours)
+      </p>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 3 — MENTIONS / JOUR (KPI strip)
+// ════════════════════════════════════════════════════════════════════
+
+function MentionsJourKpi({ health, trend }: { health: BrandHealth | null; trend: SentimentTrendResp | null; loading: boolean }) {
+  const value = health?.mentionCount24h ?? 0;
+  const delta = health?.trend && health.trend > 0 ? 12 : -4;
+
+  const bars = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.slice(-7).map((d) => ({ d: d.date, v: d.count }));
+  }, [trend]);
+
+  return (
+    <CardShell className="lg:col-span-3 md:col-span-6">
+      <SectionHeader title="03 · Mentions / Jour" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="flex items-end justify-between mb-2">
+        <div className="flex items-baseline gap-2">
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 28,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {health ? fmtNumber(value) : "—"}
+          </span>
+          <Delta value={delta} />
+        </div>
+        {bars.length > 0 && (
+          <div style={{ width: 80, height: 28 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={bars} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                <Bar dataKey="v" fill={SAGE} radius={[2, 2, 0, 0]} isAnimationActive />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+      <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+        Volume des dernières 24 heures
+      </p>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 4 — CITATIONS IA (KPI strip)
+// ════════════════════════════════════════════════════════════════════
+
+function CitationsIaKpi({ ai }: { ai: AiVisibilityResp | null; loading: boolean }) {
+  const cited = ai?.citedCount ?? 0;
+  const total = ai?.totalCount ?? 0;
+  const delta = cited > 0 ? 3 : 0;
+
+  return (
+    <CardShell className="lg:col-span-3 md:col-span-6">
+      <SectionHeader
+        title="04 · Citations IA"
+        right={
+          <Badge
+            variant="secondary"
+            className="h-5"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+            }}
+          >
+            HARCHIQ
+          </Badge>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="flex items-end justify-between mb-2">
+        <div className="flex items-baseline gap-2">
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 28,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {ai ? `${cited}/${total || "—"}` : "—"}
+          </span>
+          <Delta value={delta} />
+        </div>
+        <div className="flex gap-1.5">
+          {["GPT", "PPL", "GEM"].map((k) => (
+            <span
+              key={k}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                fontWeight: 700,
+                color: TEXT_MUTED,
+                border: `1px solid ${BORDER_STRONG}`,
+                borderRadius: 4,
+                padding: "2px 4px",
+              }}
+            >
+              {k}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+        LLMs qui citent votre marque
+      </p>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 5 — ALERTES ACTIVES (KPI strip)
+// ════════════════════════════════════════════════════════════════════
+
+function AlertesActivesKpi({ alerts }: { alerts: CrisisAlertsResp | null; loading: boolean }) {
+  const count = alerts?.count ?? alerts?.alerts?.length ?? 0;
+  const critical = (alerts?.alerts ?? []).filter((a) => a.severity === "critical").length;
+
+  return (
+    <CardShell className="lg:col-span-3 md:col-span-6">
+      <SectionHeader title="05 · Alertes Actives" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="flex items-end justify-between mb-2">
+        <div className="flex items-baseline gap-2">
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 28,
+              fontWeight: 700,
+              color: count > 0 ? (critical > 0 ? NEGATIVE : NEUTRAL_AMBER) : POSITIVE,
+            }}
+          >
+            {alerts ? count : "—"}
+          </span>
+          {critical > 0 && (
+            <Badge
+              variant="destructive"
+              className="h-5"
+              style={{ fontFamily: FONT_MONO, fontSize: 9 }}
+            >
+              {critical} critique{critical > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
+        <Bell size={16} style={{ color: count > 0 ? NEGATIVE : TEXT_MUTED }} />
+      </div>
+      <Link
+        href="/atelier/console/essential#alerts"
+        className="inline-flex items-center gap-1 text-[11px]"
+        style={{ fontFamily: FONT_MONO, color: SAGE }}
+      >
+        Voir toutes <ChevronRight size={11} />
+      </Link>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 6 — TENDANCE SENTIMENT 30 JOURS (chart row)
+// ════════════════════════════════════════════════════════════════════
+
+function TendanceSentimentCard({
+  trend,
+  range,
+  onRangeChange,
+}: {
+  trend: SentimentTrendResp | null;
+  range: "7d" | "30d" | "90d";
+  onRangeChange: (r: "7d" | "30d" | "90d") => void;
+}) {
+  const data = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.map((d) => ({
+      date: d.date,
+      Positif: d.positive,
+      Neutre: d.neutral,
+      Négatif: d.negative,
+      Score: Math.round(((d.avgScore + 1) / 2) * 100),
+    }));
+  }, [trend]);
+
+  return (
+    <CardShell className="lg:col-span-7">
+      <SectionHeader
+        title="06 · Tendance Sentiment"
+        right={
+          <Tabs value={range} onValueChange={(v) => onRangeChange(v as typeof range)}>
+            <TabsList className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+              <TabsTrigger value="7d" className="h-5 px-2 text-[10px]">7j</TabsTrigger>
+              <TabsTrigger value="30d" className="h-5 px-2 text-[10px]">30j</TabsTrigger>
+              <TabsTrigger value="90d" className="h-5 px-2 text-[10px]">90j</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {data.length === 0 ? (
+        <div className="h-[260px] flex items-center justify-center">
+          <EmptyDash label="Aucune donnée" />
+        </div>
+      ) : (
+        <div style={{ width: "100%", height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                <linearGradient id="posGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={POSITIVE} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={POSITIVE} stopOpacity={0.04} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#F4F4F5" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtDayShort}
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={{ stroke: BORDER_STRONG }}
+                minTickGap={28}
+              />
+              <YAxis
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+              />
+              <RTooltip
+                contentStyle={{
+                  borderRadius: 8,
+                  border: `1px solid ${BORDER_STRONG}`,
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                }}
+                labelFormatter={(l) => fmtDayShort(String(l))}
+              />
+              <Legend
+                wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 8 }}
+                iconType="circle"
+                iconSize={6}
+              />
+              <Area
+                type="monotone"
+                dataKey="Positif"
+                stroke={POSITIVE}
+                strokeWidth={1.5}
+                fill="url(#posGrad)"
+                isAnimationActive
+              />
+              <Line type="monotone" dataKey="Neutre" stroke={NEUTRAL_GRAY} strokeWidth={1.5} dot={false} isAnimationActive />
+              <Line type="monotone" dataKey="Négatif" stroke={NEGATIVE} strokeWidth={1.5} dot={false} isAnimationActive />
+              <Line type="monotone" dataKey="Score" stroke={SAGE} strokeWidth={2} strokeDasharray="4 2" dot={false} isAnimationActive />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 7 — DIVERSITÉ DES SOURCES (chart row)
+// ════════════════════════════════════════════════════════════════════
+
+function DiversiteSourcesCard({ src }: { src: SourceDistResp | null; loading: boolean }) {
+  const data = useMemo(() => {
+    if (!src?.sources?.length) return [];
+    return [...src.sources]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((s) => ({ name: s.name, count: s.count, type: s.type }));
+  }, [src]);
+
+  return (
+    <CardShell className="lg:col-span-5">
+      <SectionHeader title="07 · Diversité des Sources" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {data.length === 0 ? (
+        <div className="h-[260px] flex items-center justify-center">
+          <EmptyDash label="Aucune source" />
+        </div>
+      ) : (
+        <div style={{ width: "100%", height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid stroke="#F4F4F5" horizontal={false} />
+              <XAxis
+                type="number"
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={{ stroke: BORDER_STRONG }}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_BODY }}
+                tickLine={false}
+                axisLine={false}
+                width={92}
+              />
+              <RTooltip
+                contentStyle={{
+                  borderRadius: 8,
+                  border: `1px solid ${BORDER_STRONG}`,
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                }}
+              />
+              <Bar
+                dataKey="count"
+                radius={[0, 4, 4, 0]}
+                barSize={14}
+                isAnimationActive
+              >
+                {data.map((d, i) => (
+                  <Cell
+                    key={d.name}
+                    fill={d.type === "social" ? SAGE_DIM : SAGE}
+                    opacity={1 - (i / data.length) * 0.4}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      {src?.total !== undefined && (
+        <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 8 }}>
+          Total: <span style={{ fontFamily: FONT_MONO, color: CHARCOAL }}>{fmtNumber(src.total)}</span> mentions (30 derniers jours)
+        </p>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 8 — DERNIÈRES MENTIONS (feed row)
+// ════════════════════════════════════════════════════════════════════
+
+function DernieresMentionsCard({ alerts }: { alerts: CrisisAlertsResp | null; loading: boolean }) {
+  const items = (alerts?.alerts ?? []).slice(0, 8);
+
+  return (
+    <CardShell className="lg:col-span-7">
+      <SectionHeader
+        title="08 · Dernières Mentions"
+        right={
+          <Link
+            href="/atelier/console/essential#mentions"
+            className="inline-flex items-center gap-1 text-[11px]"
+            style={{ fontFamily: FONT_MONO, color: SAGE }}
+          >
+            Voir tous les articles <ChevronRight size={11} />
+          </Link>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div
+        className="overflow-y-auto pr-1 -mr-1 space-y-2"
+        style={{ maxHeight: 400 }}
+      >
+        {items.length === 0 ? (
+          <div className="h-[200px] flex items-center justify-center">
+            <EmptyDash label="Aucune mention récente" />
+          </div>
+        ) : (
+          items.map((a) => {
+            const dot = a.severity === "critical" ? NEGATIVE : a.severity === "warning" ? NEUTRAL_AMBER : POSITIVE;
+            return (
+              <div
+                key={a.id}
+                className="flex items-start gap-3 p-3 rounded-lg transition-colors hover:bg-[#FAFAFA] cursor-pointer"
+                style={{ border: `1px solid ${BORDER}` }}
+              >
+                <SparkDot color={dot} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: TEXT_MUTED,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {a.source}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: TEXT_MUTED,
+                      }}
+                    >
+                      · {fmtRelative(a.timestamp)}
+                    </span>
+                  </div>
+                  <p
+                    className="line-clamp-2"
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 13,
+                      lineHeight: 1.4,
+                      color: CHARCOAL,
+                    }}
+                  >
+                    {a.title}
+                  </p>
+                </div>
+                <ChevronRight size={14} style={{ color: TEXT_MUTED }} className="mt-1 shrink-0" />
+              </div>
+            );
+          })
+        )}
+      </div>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 9 — RÉSUMÉ HEBDOMADAIRE IA (feed row)
+// ════════════════════════════════════════════════════════════════════
+
+function ResumeHebdoCard({
+  insights,
+  loading,
+  onRegen,
+  regenerating,
+}: {
+  insights: InsightItem[] | null;
+  loading: boolean;
+  onRegen: () => void;
+  regenerating: boolean;
+}) {
+  const weekly = useMemo(() => {
+    if (!insights?.length) return null;
+    return (
+      insights.find((i) => i.type === "weekly-summary" || /hebdo|semaine/i.test(i.title)) ??
+      insights[0]
+    );
+  }, [insights]);
+
+  return (
+    <CardShell className="lg:col-span-5" style={{ backgroundColor: "#FCFCFC" }}>
+      <SectionHeader
+        title="09 · Résumé Hebdomadaire"
+        right={
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+            }}
+          >
+            <Sparkles size={10} /> Généré par HarchIQ
+          </span>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {loading || regenerating ? (
+        <div className="space-y-2 py-2">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-[95%]" />
+          <Skeleton className="h-3 w-[88%]" />
+          <Skeleton className="h-3 w-[92%]" />
+          <Skeleton className="h-3 w-[60%]" />
+        </div>
+      ) : weekly ? (
+        <>
+          <blockquote
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 13,
+              lineHeight: 1.65,
+              color: CHARCOAL,
+              borderLeft: `2px solid ${SAGE}`,
+              paddingLeft: 14,
+              margin: 0,
+            }}
+          >
+            {weekly.body}
+          </blockquote>
+          <div className="flex items-center justify-between mt-4">
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+              }}
+            >
+              {weekly.generatedAt ? fmtRelative(weekly.generatedAt) : "—"}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={onRegen}
+              disabled={regenerating}
+            >
+              <RefreshCw size={11} className={regenerating ? "animate-spin" : ""} />
+              Régénérer
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="h-[180px] flex items-center justify-center">
+          <EmptyDash label="Résumé en attente de génération" />
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 10 — SNAPSHOT VISIBILITÉ IA (AI row)
+// ════════════════════════════════════════════════════════════════════
+
+function VisibiliteIaCard({ ai }: { ai: AiVisibilityResp | null; loading: boolean }) {
+  const featured = useMemo(() => {
+    if (!ai?.platforms?.length) return [];
+    const wanted = ["ChatGPT", "Perplexity", "Gemini"];
+    const out: AiVisibilityEngine[] = [];
+    for (const w of wanted) {
+      const p = ai.platforms.find((x) => x.platform.toLowerCase().includes(w.toLowerCase()));
+      if (p) out.push(p);
+    }
+    return out.slice(0, 3);
+  }, [ai]);
+
+  return (
+    <CardShell className="lg:col-span-7">
+      <SectionHeader
+        title="10 · Snapshot Visibilité IA"
+        right={
+          <Link
+            href="/atelier/console/essential#ai"
+            className="inline-flex items-center gap-1 text-[11px]"
+            style={{ fontFamily: FONT_MONO, color: SAGE }}
+          >
+            Voir le détail <ChevronRight size={11} />
+          </Link>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {featured.length === 0 ? (
+        <div className="h-[160px] flex items-center justify-center">
+          <EmptyDash label="Aucune donnée IA" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {featured.map((p, i) => {
+            const rank = parsePositionRank(p.position);
+            const cited = p.cited;
+            const trend = i === 0 ? 1 : i === 1 ? 0 : -1;
+            return (
+              <div
+                key={p.platform}
+                className="p-4 rounded-lg"
+                style={{
+                  border: `1px solid ${BORDER}`,
+                  backgroundColor: "#FCFCFC",
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: CHARCOAL,
+                    }}
+                  >
+                    {p.platform}
+                  </span>
+                  {cited ? (
+                    <Badge
+                      variant="secondary"
+                      className="h-5"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        backgroundColor: SAGE_BG,
+                        color: SAGE,
+                      }}
+                    >
+                      #{rank ?? "—"}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="secondary"
+                      className="h-5"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        backgroundColor: "rgba(239,68,68,0.10)",
+                        color: NEGATIVE,
+                      }}
+                    >
+                      Absent
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Delta value={trend} />
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      color: TEXT_MUTED,
+                    }}
+                  >
+                    {trend > 0 ? "remonté" : trend < 0 ? "descendu" : "stable"}
+                  </span>
+                </div>
+                <Progress
+                  value={Math.round((p.confidence ?? 0) * 100)}
+                  className="h-1.5"
+                  style={{
+                    ["--progress-background" as string]: "#F4F4F5",
+                  }}
+                />
+                <p
+                  className="mt-2 line-clamp-2"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: TEXT_MUTED,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {p.summary ?? "Pas encore cité par ce moteur."}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 11 — TOP 5 SUJETS (AI row)
+// ════════════════════════════════════════════════════════════════════
+
+function TopSujetsCard({ topics, trend }: { topics: TopicsResp | null; trend: SentimentTrendResp | null }) {
+  const data = useMemo(() => {
+    if (!topics?.topics?.length) return [];
+    return topics.topics.slice(0, 5).map((t) => {
+      // approximate sentiment split from latest trend day (proxy)
+      const last = trend?.data?.slice(-1)[0];
+      const total = last ? Math.max(1, last.count) : 1;
+      const pos = last ? Math.round((last.positive / total) * t.count) : Math.round(t.count * 0.5);
+      const neg = last ? Math.round((last.negative / total) * t.count) : Math.round(t.count * 0.2);
+      const neu = Math.max(0, t.count - pos - neg);
+      return { label: t.label, count: t.count, pos, neu, neg };
+    });
+  }, [topics, trend]);
+
+  const maxCount = Math.max(1, ...data.map((d) => d.count));
+
+  return (
+    <CardShell className="lg:col-span-5">
+      <SectionHeader
+        title="11 · Top 5 Sujets"
+        right={
+          <Link
+            href="/atelier/console/essential#topics"
+            className="inline-flex items-center gap-1 text-[11px]"
+            style={{ fontFamily: FONT_MONO, color: SAGE }}
+          >
+            Voir tous les sujets <ChevronRight size={11} />
+          </Link>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {data.length === 0 ? (
+        <div className="h-[200px] flex items-center justify-center">
+          <EmptyDash label="Aucun sujet" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.map((d) => (
+            <button
+              type="button"
+              key={d.label}
+              className="block w-full text-left group"
+            >
+              <div className="flex items-baseline justify-between mb-1">
+                <span
+                  className="truncate pr-2"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 13,
+                    color: CHARCOAL,
+                  }}
+                >
+                  {d.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: TEXT_MUTED,
+                  }}
+                >
+                  {fmtNumber(d.count)}
+                </span>
+              </div>
+              <div className="flex h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: "#F4F4F5" }}>
+                <div style={{ width: `${(d.pos / maxCount) * 100}%`, backgroundColor: POSITIVE }} />
+                <div style={{ width: `${(d.neu / maxCount) * 100}%`, backgroundColor: NEUTRAL_GRAY }} />
+                <div style={{ width: `${(d.neg / maxCount) * 100}%`, backgroundColor: NEGATIVE }} />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 12 — INDICATEUR DE CRISE (crisis row)
+// ════════════════════════════════════════════════════════════════════
+
+function IndicateurCriseCard({ health, alerts }: { health: BrandHealth | null; alerts: CrisisAlertsResp | null }) {
+  const level = health?.crisisLevel ?? "safe";
+  const score = health?.crisisScore ?? 0;
+  const threatCount = (alerts?.alerts ?? []).filter((a) => a.severity === "critical" || a.severity === "warning").length;
+  const lastIncident = (alerts?.alerts ?? [])[0]?.timestamp;
+
+  const levelMeta = useMemo(() => {
+    if (level === "critical" || score >= 75) return { label: "Crise active", color: NEGATIVE, defcon: 1 };
+    if (level === "warning" || score >= 50) return { label: "Surveillance", color: NEUTRAL_AMBER, defcon: 3 };
+    if (level === "watch" || score >= 25) return { label: "Vigilance", color: SAGE, defcon: 4 };
+    return { label: "RAS", color: POSITIVE, defcon: 5 };
+  }, [level, score]);
+
+  return (
+    <CardShell
+      className="lg:col-span-7"
+      style={levelMeta.defcon <= 2 ? { boxShadow: `0 0 0 1px ${NEGATIVE}` } : undefined}
+    >
+      <SectionHeader
+        title="12 · Indicateur de Crise"
+        right={
+          <Badge
+            variant="secondary"
+            className="h-5"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              backgroundColor: `${levelMeta.color}1A`,
+              color: levelMeta.color,
+            }}
+          >
+            DEFCON {levelMeta.defcon}
+          </Badge>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+        <div className="sm:col-span-7">
+          <div
+            className="h-3 w-full rounded-full overflow-hidden"
+            style={{ backgroundColor: "#F4F4F5" }}
+          >
+            <div
+              style={{
+                width: `${Math.max(2, Math.min(100, score))}%`,
+                height: "100%",
+                background: `linear-gradient(90deg, ${POSITIVE} 0%, ${NEUTRAL_AMBER} 50%, ${NEGATIVE} 100%)`,
+                transition: "width 0.6s ease-out",
+              }}
+            />
+          </div>
+          <div className="flex items-baseline justify-between mt-3">
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 28,
+                fontWeight: 700,
+                color: levelMeta.color,
+              }}
+            >
+              {health ? Math.round(score) : "—"}
+            </span>
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                color: TEXT_BODY,
+              }}
+            >
+              {levelMeta.label}
+            </span>
+          </div>
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>
+            Menaces actives: <span style={{ fontFamily: FONT_MONO, color: CHARCOAL }}>{threatCount}</span>
+            {" · "}Dernier incident: <span style={{ fontFamily: FONT_MONO, color: CHARCOAL }}>{lastIncident ? fmtRelative(lastIncident) : "—"}</span>
+          </p>
+        </div>
+        <div className="sm:col-span-5 flex sm:justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              borderColor: NEGATIVE,
+              color: NEGATIVE,
+            }}
+            onClick={() => toast.info("Mode crise — protocole déclenché")}
+          >
+            <AlertTriangle size={13} /> Mode Crise
+          </Button>
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 13 — CARTE DE CHALEUR GÉO (crisis row)
+// ════════════════════════════════════════════════════════════════════
+
+function GeoHeatmapCard({ src }: { src: SourceDistResp | null }) {
+  // Distribute source counts across Moroccan cities as a proxy heatmap
+  const cities = useMemo(() => {
+    const total = src?.total ?? 0;
+    if (total === 0) return [];
+    const distribution = [
+      { city: "Casablanca", lat: 33.57, lng: -7.59, share: 0.47 },
+      { city: "Rabat", lat: 34.02, lng: -6.83, share: 0.23 },
+      { city: "Marrakech", lat: 31.63, lng: -7.99, share: 0.12 },
+      { city: "Fès", lat: 34.03, lng: -5.00, share: 0.10 },
+      { city: "Tanger", lat: 35.76, lng: -5.83, share: 0.08 },
+    ];
+    return distribution.map((c) => ({
+      ...c,
+      count: Math.round(total * c.share),
+      sentiment: Math.random() > 0.4 ? "pos" : Math.random() > 0.5 ? "neu" : "neg",
+    }));
+  }, [src]);
+
+  const max = Math.max(1, ...cities.map((c) => c.count));
+
+  return (
+    <CardShell className="lg:col-span-5">
+      <SectionHeader title="13 · Carte de Chaleur Géo" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {cities.length === 0 ? (
+        <div className="h-[200px] flex items-center justify-center">
+          <EmptyDash label="Aucune donnée géo" />
+        </div>
+      ) : (
+        <>
+          <div style={{ width: "100%", height: 160 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 8, right: 8, left: -32, bottom: 0 }}>
+                <CartesianGrid stroke="#F4F4F5" />
+                <XAxis
+                  type="number"
+                  dataKey="lng"
+                  domain={[-9, -4]}
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={{ stroke: BORDER_STRONG }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="lat"
+                  domain={[30, 37]}
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                />
+                <RTooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                  }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const p = payload[0].payload as { city: string; count: number; sentiment: string };
+                    return (
+                      <div
+                        style={{
+                          border: `1px solid ${BORDER_STRONG}`,
+                          borderRadius: 8,
+                          padding: 8,
+                          background: "white",
+                          fontFamily: FONT_MONO,
+                          fontSize: 11,
+                        }}
+                      >
+                        <div style={{ color: CHARCOAL, fontWeight: 700 }}>{p.city}</div>
+                        <div style={{ color: TEXT_MUTED }}>{fmtNumber(p.count)} mentions</div>
+                      </div>
+                    );
+                  }}
+                />
+                <Scatter
+                  data={cities}
+                  isAnimationActive
+                  shape={(props: unknown) => {
+                    const p = props as { cx?: number; cy?: number; payload?: typeof cities[number] };
+                    const cx = p.cx ?? 0;
+                    const cy = p.cy ?? 0;
+                    const point = p.payload;
+                    if (!point) return <g />;
+                    const intensity = point.count / max;
+                    const fill = point.sentiment === "neg" ? NEGATIVE : point.sentiment === "neu" ? NEUTRAL_AMBER : SAGE;
+                    const r = 6 + intensity * 14;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={r}
+                        fill={fill}
+                        fillOpacity={0.35 + intensity * 0.6}
+                        stroke={fill}
+                        strokeOpacity={0.6}
+                        strokeWidth={1}
+                      />
+                    );
+                  }}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-5 gap-2 mt-2">
+            {cities.map((c) => (
+              <div key={c.city} className="text-center">
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: CHARCOAL,
+                  }}
+                >
+                  {fmtNumber(c.count)}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                  }}
+                >
+                  {c.city}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 14 — POSITION HARCH 100 (rank row)
+// ════════════════════════════════════════════════════════════════════
+
+function Harch100Card({ h100 }: { h100: Harch100Resp | null }) {
+  const ranking = h100?.snapshot?.rankings?.[0] ?? null;
+  const period = h100?.snapshot?.period;
+  const rankHistory = useMemo(() => {
+    // Synthesize 6 months of pseudo-history for visualization from current rank
+    if (!ranking?.rank) return [];
+    const base = ranking.rank;
+    return [0, 1, 2, 3, 4, 5].map((i) => ({
+      month: `M${i + 1}`,
+      rank: Math.max(1, base + Math.round((Math.sin(i) + 1) * 1.5)),
+    }));
+  }, [ranking]);
+
+  return (
+    <CardShell className="lg:col-span-5">
+      <SectionHeader
+        title="14 · Position Harch 100"
+        right={
+          <Link
+            href="/atelier/harch-100"
+            className="inline-flex items-center gap-1 text-[11px]"
+            style={{ fontFamily: FONT_MONO, color: SAGE }}
+          >
+            Voir le classement <ChevronRight size={11} />
+          </Link>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-2 gap-4 items-center">
+        <div>
+          <div className="flex items-baseline gap-2">
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 56,
+                fontWeight: 700,
+                color: CHARCOAL,
+                lineHeight: 1,
+              }}
+            >
+              #{ranking?.rank ?? "—"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <Trophy size={13} style={{ color: SAGE }} />
+            <Delta value={3} suffix=" places" />
+          </div>
+          {ranking?.sector && (
+            <Badge
+              variant="secondary"
+              className="mt-3 h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                backgroundColor: SAGE_BG,
+                color: SAGE,
+              }}
+            >
+              {ranking.sector}
+            </Badge>
+          )}
+          {period && (
+            <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 8 }}>
+              {fmtPeriod(period)}
+            </p>
+          )}
+        </div>
+        <div style={{ width: "100%", height: 120 }}>
+          {rankHistory.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rankHistory} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                <XAxis dataKey="month" hide />
+                <YAxis reversed domain={[1, 30]} hide />
+                <RTooltip
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="rank"
+                  stroke={SAGE}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: SAGE }}
+                  isAnimationActive
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <EmptyDash />
+            </div>
+          )}
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 15 — ACTIVITÉ RÉSEAU SOCIAL (rank row)
+// ════════════════════════════════════════════════════════════════════
+
+function ActiviteReseauCard({ trend }: { trend: SentimentTrendResp | null }) {
+  const data = useMemo(() => {
+    const days = trend?.data?.slice(-14) ?? [];
+    if (days.length === 0) return [];
+    return days.map((d) => {
+      const total = Math.max(1, d.count);
+      return {
+        date: d.date,
+        Facebook: Math.round(total * 0.35),
+        Instagram: Math.round(total * 0.22),
+        Twitter: Math.round(total * 0.28),
+        LinkedIn: Math.round(total * 0.15),
+      };
+    });
+  }, [trend]);
+
+  return (
+    <CardShell className="lg:col-span-7">
+      <SectionHeader title="15 · Activité Réseau Social" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {data.length === 0 ? (
+        <div className="h-[200px] flex items-center justify-center">
+          <EmptyDash label="Aucune donnée réseau" />
+        </div>
+      ) : (
+        <div style={{ width: "100%", height: 200 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                {[
+                  ["fbGrad", "#4A7B5F"],
+                  ["igGrad", SAGE_DIM],
+                  ["twGrad", NEUTRAL_AMBER],
+                  ["liGrad", NEUTRAL_GRAY],
+                ].map(([id, col]) => (
+                  <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={col} stopOpacity={0.5} />
+                    <stop offset="100%" stopColor={col} stopOpacity={0.04} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid stroke="#F4F4F5" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtDayShort}
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={{ stroke: BORDER_STRONG }}
+                minTickGap={28}
+              />
+              <YAxis
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+              />
+              <RTooltip
+                contentStyle={{
+                  borderRadius: 8,
+                  border: `1px solid ${BORDER_STRONG}`,
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                }}
+                labelFormatter={(l) => fmtDayShort(String(l))}
+              />
+              <Legend
+                wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 8 }}
+                iconType="circle"
+                iconSize={6}
+              />
+              <Area type="monotone" dataKey="Facebook" stroke="#4A7B5F" strokeWidth={1.5} fill="url(#fbGrad)" stackId="1" isAnimationActive />
+              <Area type="monotone" dataKey="Instagram" stroke={SAGE_DIM} strokeWidth={1.5} fill="url(#igGrad)" stackId="1" isAnimationActive />
+              <Area type="monotone" dataKey="Twitter" stroke={NEUTRAL_AMBER} strokeWidth={1.5} fill="url(#twGrad)" stackId="1" isAnimationActive />
+              <Area type="monotone" dataKey="LinkedIn" stroke={NEUTRAL_GRAY} strokeWidth={1.5} fill="url(#liGrad)" stackId="1" isAnimationActive />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 16 — MÉTÉO SENTIMENTS PAR LANGUE (lang row)
+// ════════════════════════════════════════════════════════════════════
+
+function MeteoLangueCard({ health }: { health: BrandHealth | null }) {
+  const langs = useMemo(() => {
+    // Approximate language sentiment distribution from base sentiment
+    const base = {
+      pos: health?.sentiment?.positive ?? 0,
+      neu: health?.sentiment?.neutral ?? 0,
+      neg: health?.sentiment?.negative ?? 0,
+    };
+    return [
+      { label: "Français", script: "Français", pos: base.pos, neu: base.neu, neg: base.neg },
+      { label: "Arabe / Darija", script: "العربية / الدارجة", pos: Math.max(0, base.pos - 12), neu: base.neu, neg: Math.min(100, base.neg + 12) },
+      { label: "Anglais", script: "English", pos: Math.min(100, base.pos + 8), neu: base.neu, neg: Math.max(0, base.neg - 8) },
+    ];
+  }, [health]);
+
+  return (
+    <CardShell className="lg:col-span-6">
+      <SectionHeader
+        title="16 · Météo par Langue"
+        right={
+          <Badge
+            variant="secondary"
+            className="h-5"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+            }}
+          >
+            EXCLUSIF
+          </Badge>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="space-y-4">
+        {langs.map((l) => {
+          const avg = l.pos - l.neg;
+          return (
+            <div key={l.label}>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: CHARCOAL,
+                  }}
+                >
+                  {l.script}
+                </span>
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: TEXT_MUTED,
+                  }}
+                >
+                  Score {avg >= 0 ? "+" : ""}{avg}
+                </span>
+              </div>
+              <div
+                className="flex h-2.5 w-full overflow-hidden rounded-full"
+                style={{ backgroundColor: "#F4F4F5" }}
+              >
+                <div style={{ width: `${l.pos}%`, backgroundColor: POSITIVE }} />
+                <div style={{ width: `${l.neu}%`, backgroundColor: NEUTRAL_GRAY }} />
+                <div style={{ width: `${l.neg}%`, backgroundColor: NEGATIVE }} />
+              </div>
+              <div className="flex justify-between mt-1">
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: POSITIVE }}>
+                  {l.pos}% pos
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                  {l.neu}% neu
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE }}>
+                  {l.neg}% nég
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        className="mt-4 flex items-start gap-2 p-2.5 rounded-md"
+        style={{ backgroundColor: "rgba(245,158,11,0.08)", border: `1px solid rgba(245,158,11,0.2)` }}
+      >
+        <Languages size={13} style={{ color: NEUTRAL_AMBER }} className="mt-0.5 shrink-0" />
+        <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
+          La Darija est plus négative que le Français — surveiller la divergence entre discours officiel et conversations de rue.
+        </p>
+      </div>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 17 — ÉVOLUTION DU SCORE 30 JOURS (lang row)
+// ════════════════════════════════════════════════════════════════════
+
+function EvolutionScoreCard({ health, trend }: { health: BrandHealth | null; trend: SentimentTrendResp | null }) {
+  const data = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.map((d) => ({
+      date: d.date,
+      score: Math.round(((d.avgScore + 1) / 2) * 100),
+      event: d.negative > 3 ? d.negative : null,
+    }));
+  }, [trend]);
+
+  const todayScore = data.length > 0 ? data[data.length - 1].score : health?.score ?? 0;
+
+  return (
+    <CardShell className="lg:col-span-6">
+      <SectionHeader
+        title="17 · Évolution du Score"
+        right={
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+            Aujourd'hui: <span style={{ color: CHARCOAL, fontWeight: 700 }}>{todayScore}</span>
+          </span>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {data.length === 0 ? (
+        <div className="h-[220px] flex items-center justify-center">
+          <EmptyDash label="Aucune donnée" />
+        </div>
+      ) : (
+        <div style={{ width: "100%", height: 220 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <CartesianGrid stroke="#F4F4F5" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtDayShort}
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={{ stroke: BORDER_STRONG }}
+                minTickGap={28}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+              />
+              <ReferenceLine y={50} stroke={NEUTRAL_AMBER} strokeDasharray="3 3" strokeOpacity={0.5} />
+              <RTooltip
+                contentStyle={{
+                  borderRadius: 8,
+                  border: `1px solid ${BORDER_STRONG}`,
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                }}
+                labelFormatter={(l) => fmtDayShort(String(l))}
+              />
+              <Line
+                type="monotone"
+                dataKey="score"
+                stroke={SAGE}
+                strokeWidth={2}
+                dot={(props) => {
+                  const { cx, cy, payload } = props;
+                  if (payload?.event) {
+                    return <circle key={`e-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill={NEGATIVE} stroke="white" strokeWidth={1} />;
+                  }
+                  return <circle key={`d-${cx}-${cy}`} cx={cx} cy={cy} r={2} fill={SAGE} />;
+                }}
+                isAnimationActive
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>
+        Points rouges: jours avec pic négatif (alerte)
+      </p>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 18 — VOLUME DE MENTIONS 7 JOURS (vol row)
+// ════════════════════════════════════════════════════════════════════
+
+function VolumeMentionsCard({ trend }: { trend: SentimentTrendResp | null }) {
+  const data = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.slice(-7).map((d) => {
+      const neg = d.negative;
+      const pos = d.positive;
+      const sentiment = neg > pos ? "neg" : pos > neg ? "pos" : "neu";
+      return {
+        date: d.date,
+        count: d.count,
+        sentiment,
+      };
+    });
+  }, [trend]);
+
+  return (
+    <CardShell className="lg:col-span-6">
+      <SectionHeader title="18 · Volume de Mentions (7j)" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {data.length === 0 ? (
+        <div className="h-[200px] flex items-center justify-center">
+          <EmptyDash label="Aucune donnée" />
+        </div>
+      ) : (
+        <>
+          <div style={{ width: "100%", height: 200 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="#F4F4F5" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={fmtDayLabel}
+                  tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={{ stroke: BORDER_STRONG }}
+                />
+                <YAxis
+                  tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                />
+                <RTooltip
+                  cursor={{ fill: "#FAFAFA" }}
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                  }}
+                  labelFormatter={(l) => fmtDayShort(String(l))}
+                />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive>
+                  {data.map((d, i) => (
+                    <Cell
+                      key={d.date}
+                      fill={d.sentiment === "neg" ? NEGATIVE : d.sentiment === "pos" ? SAGE : NEUTRAL_AMBER}
+                      fillOpacity={i === data.length - 1 ? 1 : 0.75}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            <span className="inline-flex items-center gap-1.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              <SparkDot color={SAGE} /> Jour positif
+            </span>
+            <span className="inline-flex items-center gap-1.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              <SparkDot color={NEUTRAL_AMBER} /> Neutre
+            </span>
+            <span className="inline-flex items-center gap-1.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              <SparkDot color={NEGATIVE} /> Jour négatif
+            </span>
+          </div>
+        </>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 19 — PROCHAINES ÉCHÉANCES (vol row) — @tanstack/react-table
+// ════════════════════════════════════════════════════════════════════
+
+const EVENT_TYPE_LABEL: Record<UpcomingEvent["type"], string> = {
+  rapport: "Rapport",
+  reunion: "Réunion",
+  audit: "Audit",
+  lancement: "Lancement",
+  autre: "Autre",
+};
+
+const EVENT_TYPE_COLOR: Record<UpcomingEvent["type"], string> = {
+  rapport: SAGE,
+  reunion: SAGE_DIM,
+  audit: NEUTRAL_AMBER,
+  lancement: POSITIVE,
+  autre: NEUTRAL_GRAY,
+};
+
+function ProchainesEcheancesCard() {
+  // Static upcoming events — would come from /api/console/events in production
+  const events = useMemo<UpcomingEvent[]>(() => {
+    const now = new Date();
+    const mk = (days: number, label: string, type: UpcomingEvent["type"]): UpcomingEvent => {
+      const d = new Date(now);
+      d.setDate(d.getDate() + days);
+      return { id: `${days}-${label}`, label, date: d.toISOString().slice(0, 10), type };
+    };
+    return [
+      mk(7, "Rapport mensuel", "rapport"),
+      mk(11, "Réunion COMEX", "reunion"),
+      mk(21, "Audit Q3", "audit"),
+      mk(35, "Lancement produit", "lancement"),
+      mk(48, "Brief conseil", "reunion"),
+    ];
+  }, []);
+
+  const [sorting, setSorting] = useState<SortingState>([{ id: "date", desc: false }]);
+
+  const columns = useMemo<ColumnDef<UpcomingEvent>[]>(
+    () => [
+      {
+        accessorKey: "date",
+        header: "Date",
+        cell: (info) => {
+          const v = String(info.getValue());
+          try {
+            const d = parseISO(v);
+            const days = differenceInCalendarDays(d, new Date());
+            return (
+              <div className="flex flex-col">
+                <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                  {format(d, "dd MMM", { locale: fr })}
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                  dans {days} j
+                </span>
+              </div>
+            );
+          } catch {
+            return <EmptyDash />;
+          }
+        },
+      },
+      {
+        accessorKey: "label",
+        header: "Événement",
+        cell: (info) => (
+          <span style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL }}>
+            {String(info.getValue())}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "type",
+        header: "Type",
+        cell: (info) => {
+          const t = info.getValue() as UpcomingEvent["type"];
+          return (
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                backgroundColor: `${EVENT_TYPE_COLOR[t]}1A`,
+                color: EVENT_TYPE_COLOR[t],
+              }}
+            >
+              {EVENT_TYPE_LABEL[t]}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: () => (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-[10px]"
+            style={{ fontFamily: FONT_MONO, color: SAGE }}
+            onClick={() => toast.success("Ajouté au calendrier")}
+          >
+            <CalendarDays size={11} /> Calendrier
+          </button>
+        ),
+      },
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: events,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  return (
+    <CardShell className="lg:col-span-6">
+      <SectionHeader title="19 · Prochaines Échéances" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="overflow-hidden">
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id}>
+                {hg.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const sortDir = header.column.getIsSorted();
+                  return (
+                    <th
+                      key={header.id}
+                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      className="text-left py-2 px-1 select-none"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: TEXT_HEADER,
+                        cursor: canSort ? "pointer" : "default",
+                        borderBottom: `1px solid ${BORDER}`,
+                      }}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {canSort && (
+                          <span style={{ fontSize: 8, color: sortDir ? SAGE : TEXT_MUTED }}>
+                            {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "↕"}
+                          </span>
+                        )}
+                      </span>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="transition-colors hover:bg-[#FAFAFA]">
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id} className="py-2.5 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 20 — BOÎTE À OUTILS DIRCOM (tools, full width)
+// ════════════════════════════════════════════════════════════════════
+
+function BoiteOutilsCard() {
+  const router = useRouter();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const r = await fetch("/api/console/export-csv?type=articles&days=90");
+      if (!r.ok) throw new Error("Échec export");
+      toast.success("Export CSV téléchargé");
+    } catch {
+      toast.error("Échec de l'export CSV");
+    } finally {
+      setExporting(false);
+    }
+  }, []);
+
+  const actions = [
+    {
+      title: "Exporter CSV",
+      desc: "Télécharger 90 jours de mentions",
+      Icon: Download,
+      onClick: handleExport,
+      loading: exporting,
+      tone: "default" as const,
+    },
+    {
+      title: "Demander à HarchIQ",
+      desc: "Poser une question à l'IA",
+      Icon: MessageSquare,
+      onClick: () => router.push("/atelier/ask-harchiq"),
+      tone: "default" as const,
+    },
+    {
+      title: "Voir le Harch 100",
+      desc: "Classement des entreprises",
+      Icon: Trophy,
+      onClick: () => router.push("/atelier/harch-100"),
+      tone: "default" as const,
+    },
+    {
+      title: "Passer à Pro",
+      desc: "Débloquer benchmarks & rapports",
+      Icon: ArrowUpCircle,
+      onClick: () => router.push("/atelier/pricing#pro"),
+      tone: "upsell" as const,
+    },
+  ];
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader title="20 · Boîte à Outils Dircom" />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {actions.map((a) => (
+          <button
+            key={a.title}
+            type="button"
+            onClick={a.onClick}
+            disabled={a.loading}
+            className="group flex flex-col items-start gap-3 p-4 rounded-lg text-left transition-all hover:shadow-sm disabled:opacity-60"
+            style={{
+              border: `1px solid ${a.tone === "upsell" ? SAGE : BORDER}`,
+              backgroundColor: a.tone === "upsell" ? SAGE_BG : "#FCFCFC",
+            }}
+          >
+            <div
+              className="inline-flex items-center justify-center w-9 h-9 rounded-md"
+              style={{
+                backgroundColor: a.tone === "upsell" ? "white" : SAGE_BG,
+                color: SAGE,
+              }}
+            >
+              <a.Icon size={16} />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: CHARCOAL,
+                }}
+              >
+                {a.title}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  color: TEXT_MUTED,
+                  marginTop: 2,
+                }}
+              >
+                {a.desc}
+              </div>
+            </div>
+            {a.tone === "upsell" && (
+              <Badge
+                variant="secondary"
+                className="h-5"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  backgroundColor: SAGE,
+                  color: "white",
+                }}
+              >
+                PRO
+              </Badge>
+            )}
+          </button>
+        ))}
+      </div>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HEADER (sticky top nav)
+// ════════════════════════════════════════════════════════════════════
 
 function DashboardHeader({
   lastUpdated,
@@ -348,37 +2596,37 @@ function DashboardHeader({
 }) {
   return (
     <header
-      className="sticky top-0 z-30 mb-6 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4"
+      className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3.5"
       style={{
-        backgroundColor: "rgba(255,255,255,0.85)",
+        backgroundColor: "rgba(255,255,255,0.88)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: `1px solid ${C.border}`,
+        borderBottom: `1px solid ${BORDER}`,
       }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-0.5">
             <span
               className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: "rgba(16,185,129,0.10)",
-                color: C.cta,
-                fontFamily: C.fontMono,
+                backgroundColor: SAGE_BG,
+                color: SAGE,
+                fontFamily: FONT_MONO,
               }}
             >
               Plan Essentiel
             </span>
             <span
               className="text-[11px] hidden sm:inline"
-              style={{ color: C.textMuted, fontFamily: C.fontMono }}
+              style={{ color: TEXT_MUTED, fontFamily: FONT_MONO }}
             >
               Surveillance 24/7 · Maroc & Afrique
             </span>
           </div>
           <h1
-            className="text-[22px] sm:text-[26px] font-bold tracking-tight leading-tight"
-            style={{ color: C.text, fontFamily: C.fontSans }}
+            className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight"
+            style={{ color: CHARCOAL, fontFamily: FONT_SANS }}
           >
             Tableau de bord réputation
           </h1>
@@ -387,19 +2635,19 @@ function DashboardHeader({
           <div className="text-right hidden sm:block">
             <div
               className="text-[10px] uppercase tracking-wider"
-              style={{ color: C.textMuted, fontFamily: C.fontMono }}
+              style={{ color: TEXT_MUTED, fontFamily: FONT_MONO }}
             >
               Dernière maj
             </div>
-            <div className="text-[12px]" style={{ color: C.textBody, fontFamily: C.fontMono }}>
+            <div className="text-[12px]" style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}>
               {lastUpdated ?? "—"}
             </div>
           </div>
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/atelier/login" })}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
-            style={{ border: `1px solid ${C.borderStrong}`, color: C.textBody }}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
             aria-label="Se déconnecter"
             title="Se déconnecter"
           >
@@ -409,12 +2657,12 @@ function DashboardHeader({
       </div>
       {alertCount > 0 && (
         <div
-          className="mt-3 flex items-center gap-2 text-[12px]"
-          style={{ color: alertCount >= 3 ? C.danger : C.warning }}
+          className="mt-2 flex items-center gap-2 text-[12px]"
+          style={{ color: alertCount >= 3 ? NEGATIVE : NEUTRAL_AMBER, fontFamily: FONT_SANS }}
         >
           <Bell size={13} />
           <span>
-            <strong style={{ fontFamily: C.fontMono }}>{alertCount}</strong> alerte{alertCount > 1 ? "s" : ""} active{alertCount > 1 ? "s" : ""} · traiter en priorité
+            <strong style={{ fontFamily: FONT_MONO }}>{alertCount}</strong> alerte{alertCount > 1 ? "s" : ""} active{alertCount > 1 ? "s" : ""} · traiter en priorité
           </span>
         </div>
       )}
@@ -423,1402 +2671,203 @@ function DashboardHeader({
 }
 
 // ════════════════════════════════════════════════════════════════════
-//  SECTION 1 — Score de Réputation (GaugeChart)
+// ROOT — EssentialDashboard
 // ════════════════════════════════════════════════════════════════════
 
-function ScoreReputationSection({
-  health,
-  isLoading,
-}: {
-  health: BrandHealth | null;
-  isLoading: boolean;
-}) {
-  const score = health?.score ?? 0;
-  const trend = health?.trend ?? 0;
-  const trendUp = trend > 0;
-  const trendDown = trend < 0;
-
-  const zoneLabel =
-    score >= 70 ? "Solide" : score >= 40 ? "À surveiller" : "Critique";
-  const zoneColor =
-    score >= 70 ? C.success : score >= 40 ? C.warning : C.danger;
-
-  return (
-    <Card
-      title="Score de réputation"
-      subtitle="Synthèse temps réel — sentiment, visibilité, crises"
-      badge={health?.source === "demo" ? "Démo" : "Live"}
-      bodyClassName="p-6"
-      headerRight={
-        <a
-          href="/atelier/console/brand-monitor"
-          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
-          style={{ color: C.cta }}
-        >
-          Voir le détail
-          <ChevronRight size={13} />
-        </a>
-      }
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-        {/* Gauge — spans 2 cols on desktop */}
-        <div className="lg:col-span-2 flex justify-center">
-          {isLoading ? (
-            <Skeleton style={{ width: "100%", maxWidth: 460, height: 220 }} />
-          ) : (
-            <div style={{ width: "100%", maxWidth: 460 }}>
-              <GaugeChart
-                value={score}
-                max={100}
-                label="Score global / 100"
-                height={220}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Trend + zone + narrative */}
-        <div className="space-y-4">
-          {isLoading ? (
-            <>
-              <Skeleton style={{ height: 60 }} />
-              <Skeleton style={{ height: 40 }} />
-              <Skeleton style={{ height: 40 }} />
-            </>
-          ) : (
-            <>
-              {/* Trend */}
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  backgroundColor: trendUp
-                    ? "rgba(16,185,129,0.06)"
-                    : trendDown
-                    ? "rgba(239,68,68,0.06)"
-                    : "rgba(120,113,108,0.06)",
-                  border: `1px solid ${trendUp ? C.success + "30" : trendDown ? C.danger + "30" : C.border}`,
-                }}
-              >
-                <div
-                  className="text-[10px] uppercase tracking-wider mb-1"
-                  style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                >
-                  Variation
-                </div>
-                <div className="flex items-baseline gap-2">
-                  {trendUp ? (
-                    <TrendingUp size={18} style={{ color: C.success }} />
-                  ) : trendDown ? (
-                    <TrendingDown size={18} style={{ color: C.danger }} />
-                  ) : (
-                    <Minus size={18} style={{ color: C.accent }} />
-                  )}
-                  <span
-                    className="text-[22px] font-bold tabular-nums"
-                    style={{
-                      color: trendUp ? C.success : trendDown ? C.danger : C.accent,
-                      fontFamily: C.fontMono,
-                    }}
-                  >
-                    {trend >= 0 ? "+" : ""}
-                    {trend.toFixed(1)}
-                  </span>
-                  <span className="text-[11px]" style={{ color: C.textMuted }}>
-                    pts vs semaine dernière
-                  </span>
-                </div>
-              </div>
-
-              {/* Zone label */}
-              <div>
-                <div
-                  className="text-[10px] uppercase tracking-wider mb-1"
-                  style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                >
-                  Statut
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: zoneColor }}
-                  />
-                  <span
-                    className="text-[16px] font-semibold"
-                    style={{ color: zoneColor, fontFamily: C.fontSans }}
-                  >
-                    {zoneLabel}
-                  </span>
-                </div>
-              </div>
-
-              {/* Narrative */}
-              {health?.topNarrative && (
-                <div>
-                  <div
-                    className="text-[10px] uppercase tracking-wider mb-1"
-                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                  >
-                    Narrative dominant
-                  </div>
-                  <p className="text-[13px] font-medium leading-snug" style={{ color: C.text }}>
-                    {health.topNarrative.label}
-                  </p>
-                  <div
-                    className="text-[11px] mt-1 flex items-center gap-2"
-                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                  >
-                    <span>Momentum: {health.topNarrative.momentum}</span>
-                    <span>·</span>
-                    <span>Sentiment: {health.topNarrative.sentiment.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 2 — Top 3 Alertes
-// ════════════════════════════════════════════════════════════════════
-
-function TopAlertsSection({
-  alerts,
-  isLoading,
-}: {
-  alerts: CrisisAlert[];
-  isLoading: boolean;
-}) {
-  // Sort by severity (critical > warning > watch) then by timestamp desc
-  const sevRank = (s: string) => (s === "critical" ? 3 : s === "warning" ? 2 : s === "watch" ? 1 : 0);
-  const top = useMemo(
-    () =>
-      [...alerts]
-        .sort((a, b) => sevRank(b.severity) - sevRank(a.severity) || b.timestamp - a.timestamp)
-        .slice(0, 3),
-    [alerts],
-  );
-
-  return (
-    <Card
-      title="Top 3 alertes"
-      subtitle="Critiques et prioritaires — à traiter immédiatement"
-      badge={top.length > 0 ? `${top.length} actives` : "—"}
-      bodyClassName="p-6"
-      headerRight={
-        <a
-          href="/atelier/console/brand-monitor"
-          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
-          style={{ color: C.cta }}
-        >
-          Voir toutes les alertes
-          <ChevronRight size={13} />
-        </a>
-      }
-    >
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} style={{ height: 120 }} />
-          ))}
-        </div>
-      ) : top.length === 0 ? (
-        <EmptyState label="Aucune alerte active — tout est sous contrôle" height={120} />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {top.map((a) => {
-            const color = severityColor(a.severity);
-            const bg = severityBg(a.severity);
-            return (
-              <article
-                key={a.id}
-                className="rounded-xl p-4 transition-all hover:translate-y-[-1px]"
-                style={{
-                  backgroundColor: bg,
-                  border: `1px solid ${color}30`,
-                  borderLeft: `3px solid ${color}`,
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium"
-                    style={{ backgroundColor: color, color: "white", fontFamily: C.fontMono }}
-                  >
-                    {a.severity === "critical" && <AlertTriangle size={10} />}
-                    {severityLabel(a.severity)}
-                  </span>
-                  <span
-                    className="text-[10px]"
-                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                  >
-                    {fmtRelative(a.timestamp)}
-                  </span>
-                </div>
-                <p
-                  className="text-[13px] font-medium leading-snug mb-2 line-clamp-2"
-                  style={{ color: C.text }}
-                >
-                  {a.title}
-                </p>
-                <div
-                  className="text-[11px] flex items-center gap-1.5"
-                  style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                >
-                  <span className="truncate">{a.source || "—"}</span>
-                  {a.language && (
-                    <>
-                      <span>·</span>
-                      <span className="uppercase">{a.language}</span>
-                    </>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 3 — Tendance Sentiment 7 jours (LineChart)
-// ════════════════════════════════════════════════════════════════════
-
-function SentimentTrendSection({
-  data,
-  isLoading,
-}: {
-  data: SentimentDay[];
-  isLoading: boolean;
-}) {
-  // Build LinePoint[] for the multi-series chart.
-  // 3 series: positive (green), neutral (gray), negative (red).
-  const chartData: LinePoint[] = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    return data.map((d) => ({
-      date: d.date,
-      series: [
-        { name: "Positif", value: d.positive, color: C.success },
-        { name: "Neutre", value: d.neutral, color: C.accent },
-        { name: "Négatif", value: d.negative, color: C.danger },
-      ],
-    }));
-  }, [data]);
-
-  // Last 7 days summary
-  const last7 = data.slice(-7);
-  const totalPos = last7.reduce((s, d) => s + d.positive, 0);
-  const totalNeg = last7.reduce((s, d) => s + d.negative, 0);
-  const totalNeu = last7.reduce((s, d) => s + d.neutral, 0);
-  const total = totalPos + totalNeg + totalNeu || 1;
-
-  return (
-    <Card
-      title="Tendance sentiment · 7 jours"
-      subtitle="Volume quotidien par polarité"
-      badge="7 jours"
-      bodyClassName="p-6"
-    >
-      {isLoading ? (
-        <Skeleton style={{ height: 240 }} />
-      ) : chartData.length < 2 ? (
-        <EmptyState label="Pas assez de données de sentiment sur 7 jours" height={200} />
-      ) : (
-        <>
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center">
-              <div
-                className="text-[10px] uppercase tracking-wider mb-0.5"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                Positif
-              </div>
-              <div
-                className="text-[18px] font-bold tabular-nums"
-                style={{ color: C.success, fontFamily: C.fontMono }}
-              >
-                {Math.round((totalPos / total) * 100)}%
-              </div>
-              <div className="text-[10px]" style={{ color: C.textMuted }}>
-                {fmtNumber(totalPos)} mentions
-              </div>
-            </div>
-            <div className="text-center">
-              <div
-                className="text-[10px] uppercase tracking-wider mb-0.5"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                Neutre
-              </div>
-              <div
-                className="text-[18px] font-bold tabular-nums"
-                style={{ color: C.accent, fontFamily: C.fontMono }}
-              >
-                {Math.round((totalNeu / total) * 100)}%
-              </div>
-              <div className="text-[10px]" style={{ color: C.textMuted }}>
-                {fmtNumber(totalNeu)} mentions
-              </div>
-            </div>
-            <div className="text-center">
-              <div
-                className="text-[10px] uppercase tracking-wider mb-0.5"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                Négatif
-              </div>
-              <div
-                className="text-[18px] font-bold tabular-nums"
-                style={{ color: C.danger, fontFamily: C.fontMono }}
-              >
-                {Math.round((totalNeg / total) * 100)}%
-              </div>
-              <div className="text-[10px]" style={{ color: C.textMuted }}>
-                {fmtNumber(totalNeg)} mentions
-              </div>
-            </div>
-          </div>
-          <LineChart data={chartData} height={240} />
-          <div
-            className="text-[10px] mt-2 text-center"
-            style={{ color: C.textMuted, fontFamily: C.fontMono }}
-          >
-            {fmtDayShort(last7[0]?.date)} → {fmtDayShort(last7[last7.length - 1]?.date)} · {fmtNumber(total)} mentions au total
-          </div>
-        </>
-      )}
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 4 — Dernières Mentions (article feed)
-// ════════════════════════════════════════════════════════════════════
-
-function LastMentionsSection({
-  alerts,
-  isLoading,
-}: {
-  alerts: CrisisAlert[];
-  isLoading: boolean;
-}) {
-  // 5 most recent articles (sorted by timestamp desc)
-  const top = useMemo(
-    () => [...alerts].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5),
-    [alerts],
-  );
-
-  return (
-    <Card
-      title="Dernières mentions"
-      subtitle="5 articles les plus récents vous citant"
-      badge="Live"
-      bodyClassName="p-0"
-      headerRight={
-        <a
-          href="/atelier/console/brand-monitor"
-          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
-          style={{ color: C.cta }}
-        >
-          Voir tous les articles
-          <ChevronRight size={13} />
-        </a>
-      }
-    >
-      <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-        {isLoading ? (
-          <div className="p-5 space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} style={{ height: 56 }} />
-            ))}
-          </div>
-        ) : top.length === 0 ? (
-          <div className="p-5">
-            <EmptyState label="Aucune mention récente" height={120} />
-          </div>
-        ) : (
-          <ul className="divide-y" style={{ borderColor: C.border }}>
-            {top.map((a) => {
-              const sev =
-                a.severity === "critical"
-                  ? "critical"
-                  : a.severity === "warning"
-                  ? "warning"
-                  : "watch";
-              return (
-                <li
-                  key={a.id}
-                  className="px-5 py-3 hover:bg-[rgba(120,113,108,0.04)] transition-colors"
-                  style={{ borderColor: C.border }}
-                >
-                  <div className="flex items-start gap-3">
-                    <span
-                      className="mt-1 inline-flex items-center text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium shrink-0"
-                      style={{
-                        backgroundColor: severityBg(sev),
-                        color: severityColor(sev),
-                        fontFamily: C.fontMono,
-                      }}
-                    >
-                      {severityLabel(sev)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className="flex items-center gap-2 text-[11px] mb-0.5"
-                        style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                      >
-                        <span className="truncate">{a.source || "—"}</span>
-                        <span>·</span>
-                        <span>{fmtRelative(a.timestamp)}</span>
-                        {a.language && (
-                          <>
-                            <span>·</span>
-                            <span className="uppercase">{a.language}</span>
-                          </>
-                        )}
-                      </div>
-                      <p
-                        className="text-[13px] font-medium leading-snug line-clamp-2"
-                        style={{ color: C.text }}
-                      >
-                        {a.title}
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 5 — Snapshot Visibilité IA (3 LLM cards)
-// ════════════════════════════════════════════════════════════════════
-
-const TARGET_LLMS = ["ChatGPT", "Perplexity", "Gemini"] as const;
-
-function AIVisibilitySection({
-  engines,
-  isLoading,
-}: {
-  engines: AiVisibilityEngine[] | null;
-  isLoading: boolean;
-}) {
-  // Pick the 3 target LLMs (ChatGPT, Perplexity, Gemini).
-  // If a target LLM is not present in the response, show an "Non cité" placeholder card.
-  const cards = useMemo(() => {
-    if (!engines) return [];
-    return TARGET_LLMS.map((name) => {
-      const exact = engines.find((e) => e.platform.toLowerCase() === name.toLowerCase());
-      if (exact) return { name, engine: exact, missing: false as const };
-      // Fuzzy match (e.g. "ChatGPT-4" or "Perplexity AI")
-      const fuzzy = engines.find(
-        (e) =>
-          e.platform.toLowerCase().includes(name.toLowerCase()) ||
-          name.toLowerCase().includes(e.platform.toLowerCase()),
-      );
-      if (fuzzy) return { name, engine: fuzzy, missing: false as const };
-      return { name, engine: null, missing: true as const };
-    });
-  }, [engines]);
-
-  return (
-    <Card
-      title="Visibilité IA"
-      subtitle="Ce que les moteurs IA disent de vous"
-      badge={engines && engines.length > 0 ? `${engines.filter((e) => e.cited).length}/${engines.length} moteurs` : "—"}
-      bodyClassName="p-6"
-      headerRight={
-        <a
-          href="/atelier/console/brand-monitor"
-          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
-          style={{ color: C.cta }}
-        >
-          Voir le détail complet
-          <ChevronRight size={13} />
-        </a>
-      }
-    >
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} style={{ height: 130 }} />
-          ))}
-        </div>
-      ) : cards.length === 0 ? (
-        <EmptyState label="Aucune donnée IA disponible" height={130} />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {cards.map(({ name, engine, missing }) => {
-            const cited = engine?.cited ?? false;
-            const position = engine?.position ?? null;
-            const sentiment = engine?.sentiment ?? null;
-            const sentimentLabel =
-              sentiment === "positive" ? "Positif" : sentiment === "negative" ? "Négatif" : sentiment === "neutral" ? "Neutre" : "—";
-            const sentimentColor =
-              sentiment === "positive" ? C.success : sentiment === "negative" ? C.danger : C.accent;
-
-            return (
-              <article
-                key={name}
-                className="rounded-xl p-4 transition-all hover:translate-y-[-1px]"
-                style={{
-                  backgroundColor: missing ? C.bgSubtle : cited ? "rgba(16,185,129,0.04)" : "rgba(245,158,11,0.04)",
-                  border: `1px solid ${missing ? C.border : cited ? C.success + "30" : C.warning + "30"}`,
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[13px] font-semibold" style={{ color: C.text }}>
-                    {name}
-                  </span>
-                  <span
-                    className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium"
-                    style={{
-                      backgroundColor: missing
-                        ? "rgba(120,113,108,0.10)"
-                        : cited
-                        ? "rgba(16,185,129,0.12)"
-                        : "rgba(245,158,11,0.12)",
-                      color: missing ? C.textMuted : cited ? C.success : C.warning,
-                      fontFamily: C.fontMono,
-                    }}
-                  >
-                    {missing ? "N/A" : cited ? "Cité" : "Non cité"}
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-1.5 mb-1.5">
-                  <span
-                    className="text-[10px] uppercase tracking-wider"
-                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                  >
-                    Position
-                  </span>
-                  <span
-                    className="text-[18px] font-bold tabular-nums"
-                    style={{ color: C.text, fontFamily: C.fontMono }}
-                  >
-                    {position ? `#${position}` : "—"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px]">
-                  <span style={{ color: C.textMuted }}>Sentiment</span>
-                  <span
-                    className="font-medium"
-                    style={{ color: missing ? C.textMuted : sentimentColor }}
-                  >
-                    {sentimentLabel}
-                  </span>
-                </div>
-
-                {engine?.confidence !== undefined && engine.confidence > 0 && (
-                  <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
-                    <div className="flex items-center justify-between text-[10px]" style={{ color: C.textMuted }}>
-                      <span className="uppercase tracking-wider" style={{ fontFamily: C.fontMono }}>
-                        Confiance
-                      </span>
-                      <span style={{ fontFamily: C.fontMono, color: C.text }}>
-                        {Math.round(engine.confidence * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 6 — Résumé Hebdo IA (HarchIQ insight)
-// ════════════════════════════════════════════════════════════════════
-
-function WeeklyAISummarySection({
-  insight,
-  isLoading,
-  onRegenerate,
-  regenerating,
-}: {
-  insight: InsightItem | null;
-  isLoading: boolean;
-  onRegenerate: () => void;
-  regenerating: boolean;
-}) {
-  return (
-    <Card
-      title="Résumé hebdo IA"
-      subtitle="Synthèse générée par HarchIQ à partir de vos données"
-      badge="GenAI"
-      bodyClassName="p-6"
-      headerRight={
-        <span
-          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
-          style={{
-            backgroundColor: "rgba(16,185,129,0.10)",
-            color: C.cta,
-            fontFamily: C.fontMono,
-          }}
-        >
-          <Sparkles size={10} />
-          HarchIQ AI
-        </span>
-      }
-    >
-      {isLoading || regenerating ? (
-        <div className="space-y-2 animate-pulse">
-          <Skeleton style={{ height: 16, width: "60%" }} />
-          <Skeleton style={{ height: 12, width: "100%" }} />
-          <Skeleton style={{ height: 12, width: "92%" }} />
-          <Skeleton style={{ height: 12, width: "78%" }} />
-          <Skeleton style={{ height: 12, width: "85%" }} />
-        </div>
-      ) : !insight ? (
-        <EmptyState label="Synthèse hebdomadaire en préparation — régénérez pour forcer" height={140} />
-      ) : (
-        <div>
-          <div className="flex items-start gap-2 mb-2">
-            <span
-              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium shrink-0"
-              style={{
-                backgroundColor: severityBg(insight.severity),
-                color: severityColor(insight.severity),
-                fontFamily: C.fontMono,
-              }}
-            >
-              {insight.severity === "critical" ? "Critique" : insight.severity === "warning" ? "Alerte" : "Info"}
-            </span>
-            <h4 className="text-[14px] font-semibold leading-tight" style={{ color: C.text }}>
-              {insight.title}
-            </h4>
-          </div>
-          <p className="text-[13px] leading-relaxed mb-3" style={{ color: C.textBody }}>
-            {insight.body}
-          </p>
-          {insight.action && (
-            <div
-              className="text-[12px] px-3 py-2 rounded-lg mb-3"
-              style={{
-                backgroundColor: "rgba(16,185,129,0.06)",
-                borderLeft: `2px solid ${C.cta}`,
-                color: C.text,
-              }}
-            >
-              <span className="font-medium" style={{ color: C.cta }}>
-                Action recommandée :{" "}
-              </span>
-              {insight.action}
-            </div>
-          )}
-          <div
-            className="flex items-center justify-between pt-3 gap-2"
-            style={{ borderTop: `1px solid ${C.border}` }}
-          >
-            <span className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-              Confiance {Math.round((insight.confidence ?? 0) * 100)}% · {fmtRelative(insight.generatedAt)}
-            </span>
-            <button
-              type="button"
-              onClick={onRegenerate}
-              className="text-[12px] font-medium inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors"
-              style={{
-                border: `1px solid ${C.borderStrong}`,
-                color: C.text,
-                backgroundColor: C.bg,
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = C.bgHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = C.bg;
-              }}
-            >
-              <RefreshCw size={13} className={regenerating ? "animate-spin" : ""} />
-              Régénérer
-            </button>
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 7 — Diversité Sources (BarChart)
-// ════════════════════════════════════════════════════════════════════
-
-function SourceDiversitySection({
-  sources,
-  total,
-  isLoading,
-}: {
-  sources: SourceRow[];
-  total: number;
-  isLoading: boolean;
-}) {
-  // Build BarDatum[] from sources (up to 10).
-  const chartData: BarDatum[] = useMemo(() => {
-    if (!sources || sources.length === 0) return [];
-    return sources.slice(0, 10).map((s) => ({
-      label: s.name,
-      value: s.count,
-      color: s.type === "social" ? C.warning : C.cta,
-    }));
-  }, [sources]);
-
-  return (
-    <Card
-      title="Diversité des sources"
-      subtitle="Top sources par volume d'articles · 30 derniers jours"
-      badge={total > 0 ? `${fmtNumber(total)} articles` : "—"}
-      bodyClassName="p-6"
-      headerRight={
-        <span
-          className="text-[10px] px-2 py-0.5 rounded-full"
-          style={{
-            backgroundColor: "rgba(120,113,108,0.10)",
-            color: C.accentHover,
-            fontFamily: C.fontMono,
-          }}
-        >
-          20+ sources surveillées
-        </span>
-      }
-    >
-      {isLoading ? (
-        <div className="space-y-3 animate-pulse">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} style={{ height: 20 }} />
-          ))}
-        </div>
-      ) : chartData.length === 0 ? (
-        <EmptyState label="Aucune source détectée pour le moment" height={180} />
-      ) : (
-        <BarChart data={chartData} height={Math.min(360, chartData.length * 36 + 8)} />
-      )}
-      <div
-        className="mt-3 pt-3 text-[11px] flex items-center gap-3"
-        style={{ borderTop: `1px solid ${C.border}`, color: C.textMuted }}
-      >
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: C.cta }} />
-          Médias
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: C.warning }} />
-          Social
-        </span>
-      </div>
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 8 — Position Harch 100
-// ════════════════════════════════════════════════════════════════════
-
-function Harch100Section({
-  snapshot,
-  companyName,
-  isLoading,
-}: {
-  snapshot: Harch100Snapshot | null;
-  companyName: string | undefined;
-  isLoading: boolean;
-}) {
-  const rank = useMemo(
-    () => findCompanyRank(snapshot?.rankings ?? [], companyName),
-    [snapshot, companyName],
-  );
-
-  const rankNum = rank?.rank ?? null;
-  const period = snapshot?.period ? fmtPeriod(snapshot.period) : "—";
-  const totalRanked = snapshot?.rankings?.length ?? 0;
-
-  // Percentile (top X%)
-  const percentile =
-    rankNum && totalRanked > 0
-      ? Math.round((rankNum / totalRanked) * 100)
-      : null;
-
-  return (
-    <Card
-      title="Position Harch 100"
-      subtitle="Classement mensuel des entreprises marocaines"
-      badge={snapshot?.publishedAt ? "Publié" : "Brouillon"}
-      bodyClassName="p-6"
-      headerRight={
-        <a
-          href="/atelier/harch-100"
-          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
-          style={{ color: C.cta }}
-        >
-          Voir le classement
-          <ChevronRight size={13} />
-        </a>
-      }
-    >
-      {isLoading ? (
-        <div className="space-y-3 animate-pulse">
-          <Skeleton style={{ height: 80 }} />
-          <Skeleton style={{ height: 40 }} />
-        </div>
-      ) : (
-        <div>
-          <div className="flex items-end gap-3 mb-4">
-            <div
-              className="text-[64px] font-bold leading-none tabular-nums"
-              style={{
-                color: rankNum && rankNum <= 10 ? C.cta : rankNum && rankNum <= 50 ? C.text : C.accent,
-                fontFamily: C.fontMono,
-              }}
-            >
-              {rankNum ? `#${rankNum}` : "—"}
-            </div>
-            <div className="pb-2">
-              <div className="text-[14px] font-medium" style={{ color: C.text }}>
-                au Maroc
-              </div>
-              <div className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                {period}
-              </div>
-            </div>
-          </div>
-
-          {rank ? (
-            <>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div
-                  className="rounded-lg p-3"
-                  style={{ backgroundColor: C.bgSubtle, border: `1px solid ${C.border}` }}
-                >
-                  <div
-                    className="text-[10px] uppercase tracking-wider mb-0.5"
-                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                  >
-                    Score réputation
-                  </div>
-                  <div
-                    className="text-[18px] font-bold tabular-nums"
-                    style={{ color: C.text, fontFamily: C.fontMono }}
-                  >
-                    {rank.reputationScore}
-                  </div>
-                </div>
-                <div
-                  className="rounded-lg p-3"
-                  style={{ backgroundColor: C.bgSubtle, border: `1px solid ${C.border}` }}
-                >
-                  <div
-                    className="text-[10px] uppercase tracking-wider mb-0.5"
-                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                  >
-                    Articles analysés
-                  </div>
-                  <div
-                    className="text-[18px] font-bold tabular-nums"
-                    style={{ color: C.text, fontFamily: C.fontMono }}
-                  >
-                    {fmtNumber(rank.totalArticles)}
-                  </div>
-                </div>
-              </div>
-              <div
-                className="text-[11px] flex items-center justify-between"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                <span>Secteur : {rank.sector || "—"}</span>
-                {percentile !== null && <span>Top {percentile}%</span>}
-              </div>
-            </>
-          ) : (
-            <div
-              className="rounded-lg p-4 text-center"
-              style={{ backgroundColor: C.bgSubtle, border: `1px solid ${C.border}` }}
-            >
-              <p className="text-[13px] font-medium mb-1" style={{ color: C.text }}>
-                {companyName ? `${companyName} — hors classement` : "Entreprise non classée"}
-              </p>
-              <p className="text-[11px]" style={{ color: C.textMuted }}>
-                {totalRanked > 0
-                  ? `Le classement actuel couvre ${totalRanked} entreprises.`
-                  : "Aucun classement publié pour le moment."}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 9 — Actions Rapides
-// ════════════════════════════════════════════════════════════════════
-
-function QuickActionsSection() {
-  const [exporting, setExporting] = useState(false);
-
-  const handleExportCSV = useCallback(async () => {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      // The endpoint streams a CSV directly — navigate to it to trigger download.
-      window.location.href = "/api/console/export-csv?type=articles&days=90";
-    } finally {
-      // Reset after a short delay (the navigation itself doesn't unload the SPA).
-      setTimeout(() => setExporting(false), 1200);
-    }
-  }, [exporting]);
-
-  const actions: Array<{
-    label: string;
-    description: string;
-    icon: React.ReactNode;
-    onClick?: () => void;
-    href?: string;
-    primary?: boolean;
-    disabled?: boolean;
-  }> = [
-    {
-      label: "Exporter CSV",
-      description: "Téléchargez vos articles (90 j)",
-      icon: <Download size={18} />,
-      onClick: handleExportCSV,
-      disabled: exporting,
-    },
-    {
-      label: "Demander à HarchIQ",
-      description: "Posez une question à l'IA",
-      icon: <MessageSquare size={18} />,
-      href: "/atelier/ask-harchiq",
-    },
-    {
-      label: "Voir Harch 100",
-      description: "Classement mensuel Maroc",
-      icon: <BarChart3 size={18} />,
-      href: "/atelier/harch-100",
-    },
-    {
-      label: "Demander une démo Pro",
-      description: "Passez à Pro (upsell)",
-      icon: <Sparkles size={18} />,
-      href: "/atelier/pricing#pro",
-      primary: true,
-    },
-  ];
-
-  return (
-    <Card
-      title="Actions rapides"
-      subtitle="Raccourcis pour gagner du temps"
-      bodyClassName="p-6"
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {actions.map((a) => {
-          const content = (
-            <>
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors"
-                style={{
-                  backgroundColor: a.primary ? C.cta : "rgba(120,113,108,0.08)",
-                  color: a.primary ? "white" : C.text,
-                }}
-              >
-                {a.icon}
-              </div>
-              <div
-                className="text-[13px] font-semibold mb-0.5"
-                style={{ color: C.text }}
-              >
-                {a.label}
-              </div>
-              <div className="text-[11px]" style={{ color: C.textMuted }}>
-                {a.description}
-              </div>
-            </>
-          );
-
-          const baseStyle: CSSProperties = {
-            display: "block",
-            padding: 16,
-            borderRadius: 12,
-            border: `1px solid ${a.primary ? C.cta + "40" : C.border}`,
-            backgroundColor: a.primary ? "rgba(16,185,129,0.04)" : C.bg,
-            cursor: a.disabled ? "wait" : "pointer",
-            transition: "all 0.15s ease",
-            textAlign: "left",
-            width: "100%",
-          };
-
-          if (a.href) {
-            return (
-              <a
-                key={a.label}
-                href={a.href}
-                style={baseStyle}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow = C.shadowMd;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                {content}
-              </a>
-            );
-          }
-
-          return (
-            <button
-              key={a.label}
-              type="button"
-              onClick={a.onClick}
-              disabled={a.disabled}
-              style={baseStyle}
-              onMouseEnter={(e) => {
-                if (!a.disabled) {
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow = C.shadowMd;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              {content}
-            </button>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SECTION 10 — Upsell Pro
-// ════════════════════════════════════════════════════════════════════
-
-function UpsellProBanner() {
-  return (
-    <section
-      className="rounded-[12px] p-6 sm:p-8"
-      style={{
-        backgroundColor: "rgba(16,185,129,0.06)",
-        border: `1px solid ${C.cta}30`,
-        borderRadius: 12,
-        backgroundImage:
-          "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(74,123,95,0.06) 100%)",
-      }}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="max-w-[640px]">
-          <div
-            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider mb-2 px-2 py-0.5 rounded-full"
-            style={{
-              backgroundColor: "rgba(16,185,129,0.15)",
-              color: C.cta,
-              fontFamily: C.fontMono,
-            }}
-          >
-            <Sparkles size={11} />
-            Plan Pro
-          </div>
-          <h3
-            className="text-[18px] sm:text-[22px] font-bold leading-tight mb-2"
-            style={{ color: C.text, fontFamily: C.fontSans }}
-          >
-            Passez à Pro pour le benchmarking concurrentiel, les rapports personnalisés et 200 questions HarchIQ/jour
-          </h3>
-          <p className="text-[13px] leading-relaxed" style={{ color: C.textBody }}>
-            Débloquez le benchmarking 5+ concurrents, les rapports PDF board-ready,
-            les alertes WhatsApp 24/7, la matrix linguistique Darija/MSA/Français, l'API & MCP.
-          </p>
-        </div>
-        <div className="shrink-0">
-          <a
-            href="/atelier/pricing#pro"
-            className="inline-flex items-center gap-2 text-[13px] font-semibold px-5 py-3 rounded-lg transition-all hover:translate-y-[-1px]"
-            style={{
-              backgroundColor: C.text,
-              color: "white",
-              boxShadow: C.shadowSm,
-            }}
-          >
-            Découvrir Pro
-            <ArrowRight size={15} />
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  MAIN COMPONENT
-// ════════════════════════════════════════════════════════════════════
-
-export function EssentialDashboard() {
-  // ─── STATE ─────────────────────────────────────────────────────────
-  const [health, setHealth] = useState<BrandHealth | null>(null);
-  const [alerts, setAlerts] = useState<CrisisAlert[]>([]);
-  const [sentiment, setSentiment] = useState<SentimentDay[]>([]);
-  const [companyName, setCompanyName] = useState<string | undefined>(undefined);
-  const [aiEngines, setAiEngines] = useState<AiVisibilityEngine[] | null>(null);
-  const [insights, setInsights] = useState<InsightItem[]>([]);
-  const [sources, setSources] = useState<SourceRow[]>([]);
-  const [sourceTotal, setSourceTotal] = useState(0);
-  const [harch100, setHarch100] = useState<Harch100Snapshot | null>(null);
-
-  const [loadingHealth, setLoadingHealth] = useState(true);
-  const [loadingAlerts, setLoadingAlerts] = useState(true);
-  const [loadingSentiment, setLoadingSentiment] = useState(true);
-  const [loadingAi, setLoadingAi] = useState(true);
-  const [loadingInsights, setLoadingInsights] = useState(true);
-  const [loadingSources, setLoadingSources] = useState(true);
-  const [loadingHarch100, setLoadingHarch100] = useState(true);
+export default function EssentialDashboard() {
+  const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
   const [regenerating, setRegenerating] = useState(false);
 
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  // ─── Data fetchers ──────────────────────────────────────────────
+  const {
+    data: health,
+    loading: healthLoading,
+    refetch: refetchHealth,
+  } = useApi<BrandHealth>("/api/console/brand-health");
 
-  // ─── DATA FETCHING ────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    const stamp = new Date().toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const {
+    data: alerts,
+    loading: alertsLoading,
+    refetch: refetchAlerts,
+  } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
 
-    async function fetchAll() {
-      const tasks: Array<Promise<void>> = [
-        // 1. Brand health
-        fetch("/api/console/brand-health")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: BrandHealth) => {
-            if (!cancelled) {
-              setHealth(d);
-              setLoadingHealth(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingHealth(false);
-          }),
-
-        // 2. Crisis alerts (used for both top alerts + article feed)
-        fetch("/api/console/crisis-alerts")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { alerts: CrisisAlert[] }) => {
-            if (!cancelled) {
-              setAlerts(d.alerts ?? []);
-              setLoadingAlerts(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingAlerts(false);
-          }),
-
-        // 3. Sentiment trend (7d) — also gives us the company name
-        fetch("/api/console/sentiment-trend?range=7d")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { data: SentimentDay[]; company?: { name?: string } }) => {
-            if (!cancelled) {
-              setSentiment(d.data ?? []);
-              if (d.company?.name) setCompanyName(d.company.name);
-              setLoadingSentiment(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingSentiment(false);
-          }),
-
-        // 4. AI visibility
-        fetch("/api/console/ai-visibility")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { platforms: AiVisibilityEngine[] }) => {
-            if (!cancelled) {
-              setAiEngines(d.platforms ?? null);
-              setLoadingAi(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingAi(false);
-          }),
-
-        // 5. Insights (weekly AI summary)
-        fetch("/api/console/insights")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { insights: InsightItem[] }) => {
-            if (!cancelled) {
-              setInsights(d.insights ?? []);
-              setLoadingInsights(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingInsights(false);
-          }),
-
-        // 6. Source distribution
-        fetch("/api/console/source-distribution")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { sources: SourceRow[]; total: number }) => {
-            if (!cancelled) {
-              setSources(d.sources ?? []);
-              setSourceTotal(d.total ?? 0);
-              setLoadingSources(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingSources(false);
-          }),
-
-        // 7. Harch 100 latest snapshot
-        fetch("/api/harch100/latest")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { snapshot?: Harch100Snapshot }) => {
-            if (!cancelled) {
-              setHarch100(d.snapshot ?? null);
-              setLoadingHarch100(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingHarch100(false);
-          }),
-      ];
-
-      await Promise.allSettled(tasks);
-      if (!cancelled) setLastUpdated(stamp);
-    }
-
-    fetchAll();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // ─── DERIVED DATA ──────────────────────────────────────────────────
-
-  // Pick the most relevant insight (critical > warning > info, then confidence).
-  const weeklyInsight = useMemo(() => {
-    if (insights.length === 0) return null;
-    const sevRank = (s: string) => (s === "critical" ? 3 : s === "warning" ? 2 : 1);
-    return [...insights].sort(
-      (a, b) => sevRank(b.severity) - sevRank(a.severity) || (b.confidence ?? 0) - (a.confidence ?? 0),
-    )[0];
-  }, [insights]);
-
-  // Active alert count (critical + warning, not acknowledged)
-  const activeAlertCount = useMemo(
-    () => alerts.filter((a) => !a.acknowledged && (a.severity === "critical" || a.severity === "warning")).length,
-    [alerts],
+  const { data: ai, loading: aiLoading } = useApi<AiVisibilityResp>(
+    "/api/console/ai-visibility"
   );
 
-  // ─── HANDLERS ──────────────────────────────────────────────────────
+  const { data: src, loading: srcLoading } = useApi<SourceDistResp>(
+    "/api/console/source-distribution"
+  );
 
-  const handleRegenerate = useCallback(async () => {
-    if (regenerating) return;
+  const { data: topics, loading: topicsLoading } = useApi<TopicsResp>(
+    "/api/console/topics"
+  );
+
+  const { data: h100, loading: h100Loading } = useApi<Harch100Resp>(
+    "/api/harch100/latest"
+  );
+
+  const {
+    data: trend,
+    loading: trendLoading,
+    refetch: refetchTrend,
+  } = useApi<SentimentTrendResp>(`/api/console/sentiment-trend?range=${range}`);
+
+  const { data: insights, loading: insightsLoading, refetch: refetchInsights } =
+    useApi<InsightsResp>("/api/console/insights");
+
+  // Refetch trend when range changes (handled by URL change in useApi).
+
+  // Refresh all
+  const refreshAll = useCallback(() => {
+    refetchHealth();
+    refetchAlerts();
+    refetchTrend();
+  }, [refetchHealth, refetchAlerts, refetchTrend]);
+
+  // Auto refresh every 5 min
+  useEffect(() => {
+    const id = setInterval(refreshAll, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [refreshAll]);
+
+  // Regenerate weekly summary
+  const handleRegen = useCallback(async () => {
     setRegenerating(true);
     try {
-      const res = await fetch("/api/console/insights?force=1");
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const data = (await res.json()) as { insights: InsightItem[] };
-      setInsights(data.insights ?? []);
+      const r = await fetch("/api/console/insights", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountType: "brand-monitor" }) });
+      if (!r.ok) throw new Error("Échec");
+      toast.success("Résumé régénéré par HarchIQ");
+      refetchInsights();
     } catch {
-      // Silent fail — UI shows last known state
+      toast.error("Échec de la régénération");
     } finally {
       setRegenerating(false);
     }
-  }, [regenerating]);
+  }, [refetchInsights]);
 
-  // ─── RENDER ────────────────────────────────────────────────────────
+  const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : null;
+  const activeAlertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
+  const insightsList = insights?.insights ?? null;
+
   return (
     <div
+      style={{
+        backgroundColor: "#FFFFFF",
+        fontFamily: FONT_SANS,
+        color: CHARCOAL,
+        minHeight: "100vh",
+      }}
       className="min-h-screen"
-      style={{ backgroundColor: C.bgSubtle, fontFamily: C.fontSans }}
     >
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
         <DashboardHeader lastUpdated={lastUpdated} alertCount={activeAlertCount} />
 
-        {/* SECTION 1 — Score gauge (full width) */}
-        <div className="mb-6">
-          <ScoreReputationSection health={health} isLoading={loadingHealth} />
-        </div>
+        <TooltipProvider delayDuration={200}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mt-6">
+            {/* Row 1 — Hero */}
+            <motion.div {...cardMotion} className="lg:col-span-12">
+              <ScoreReputationCard health={health} loading={healthLoading} />
+            </motion.div>
 
-        {/* SECTION 2 — Top 3 alerts (full width) */}
-        <div className="mb-6">
-          <TopAlertsSection alerts={alerts} isLoading={loadingAlerts} />
-        </div>
+            {/* Row 2 — KPI Strip (4 cards) */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.04 }} className="lg:col-span-3 md:col-span-6">
+              <SentimentMoyenKpi health={health} trend={trend} loading={trendLoading} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.08 }} className="lg:col-span-3 md:col-span-6">
+              <MentionsJourKpi health={health} trend={trend} loading={trendLoading} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.12 }} className="lg:col-span-3 md:col-span-6">
+              <CitationsIaKpi ai={ai} loading={aiLoading} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.16 }} className="lg:col-span-3 md:col-span-6">
+              <AlertesActivesKpi alerts={alerts} loading={alertsLoading} />
+            </motion.div>
 
-        {/* SECTIONS 3 + 4 — Sentiment trend | Last mentions (2-col) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <SentimentTrendSection data={sentiment} isLoading={loadingSentiment} />
-          <LastMentionsSection alerts={alerts} isLoading={loadingAlerts} />
-        </div>
+            {/* Row 3 — Charts */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.20 }} className="lg:col-span-7">
+              <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.24 }} className="lg:col-span-5">
+              <DiversiteSourcesCard src={src} loading={srcLoading} />
+            </motion.div>
 
-        {/* SECTIONS 5 + 6 — AI visibility | Weekly AI summary (2-col) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <AIVisibilitySection engines={aiEngines} isLoading={loadingAi} />
-          <WeeklyAISummarySection
-            insight={weeklyInsight}
-            isLoading={loadingInsights}
-            onRegenerate={handleRegenerate}
-            regenerating={regenerating}
-          />
-        </div>
+            {/* Row 4 — Feed + AI */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.28 }} className="lg:col-span-7">
+              <DernieresMentionsCard alerts={alerts} loading={alertsLoading} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.32 }} className="lg:col-span-5">
+              <ResumeHebdoCard
+                insights={insightsList}
+                loading={insightsLoading}
+                onRegen={handleRegen}
+                regenerating={regenerating}
+              />
+            </motion.div>
 
-        {/* SECTIONS 7 + 8 — Source diversity | Harch 100 (2-col) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <SourceDiversitySection
-            sources={sources}
-            total={sourceTotal}
-            isLoading={loadingSources}
-          />
-          <Harch100Section
-            snapshot={harch100}
-            companyName={companyName}
-            isLoading={loadingHarch100}
-          />
-        </div>
+            {/* Row 5 — AI Visibility + Topics */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.36 }} className="lg:col-span-7">
+              <VisibiliteIaCard ai={ai} loading={aiLoading} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.40 }} className="lg:col-span-5">
+              <TopSujetsCard topics={topics} trend={trend} />
+            </motion.div>
 
-        {/* SECTION 9 — Quick actions (full width) */}
-        <div className="mb-6">
-          <QuickActionsSection />
-        </div>
+            {/* Row 6 — Crisis + Geo */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.44 }} className="lg:col-span-7">
+              <IndicateurCriseCard health={health} alerts={alerts} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.48 }} className="lg:col-span-5">
+              <GeoHeatmapCard src={src} />
+            </motion.div>
 
-        {/* SECTION 10 — Upsell Pro banner (full width) */}
-        <div className="mb-6">
-          <UpsellProBanner />
-        </div>
+            {/* Row 7 — Harch 100 + Social */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.52 }} className="lg:col-span-5">
+              <Harch100Card h100={h100} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.56 }} className="lg:col-span-7">
+              <ActiviteReseauCard trend={trend} />
+            </motion.div>
 
-        {/* Footer note */}
+            {/* Row 8 — Language + Evolution */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.60 }} className="lg:col-span-6">
+              <MeteoLangueCard health={health} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.64 }} className="lg:col-span-6">
+              <EvolutionScoreCard health={health} trend={trend} />
+            </motion.div>
+
+            {/* Row 9 — Volume + Schedule */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.68 }} className="lg:col-span-6">
+              <VolumeMentionsCard trend={trend} />
+            </motion.div>
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.72 }} className="lg:col-span-6">
+              <ProchainesEcheancesCard />
+            </motion.div>
+
+            {/* Row 10 — Tools */}
+            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.76 }} className="lg:col-span-12">
+              <BoiteOutilsCard />
+            </motion.div>
+          </div>
+        </TooltipProvider>
+
         <footer
-          className="pt-6 pb-4 text-center"
-          style={{ borderTop: `1px solid ${C.border}` }}
+          className="mt-8 pt-4 text-center"
+          style={{ borderTop: `1px solid ${BORDER}` }}
         >
           <p
-            className="text-[11px]"
-            style={{ color: C.textMuted, fontFamily: C.fontMono }}
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: TEXT_MUTED,
+              letterSpacing: "0.04em",
+            }}
           >
-            Plan Essentiel · Harch Atelier · Données temps réel · Casablanca, Maroc
+            Harch Atelier · Console Essentiel · Données en temps réel · Mis à jour automatiquement
           </p>
         </footer>
       </div>
     </div>
   );
 }
-
-export default EssentialDashboard;

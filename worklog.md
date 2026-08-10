@@ -2944,3 +2944,59 @@ Quality:
 - Converted heatData from useEffect+setState to useMemo (lint-clean)
 
 Work record: /home/z/my-project/agent-ctx/BUILD-3-Build3-EnterpriseDashboard.md
+
+---
+Task ID: FINAL-ESSENTIEL
+Agent: Essentiel Final
+Task: Build ultimate Essentiel dashboard — 20 sections, minimalist, professional
+
+Stage Summary:
+- 20 sections built: YES
+- recharts used: YES
+- shadcn/ui used: YES
+- framer-motion used: YES
+- @tanstack/react-table used: YES
+- NO emojis: YES
+- 0 TypeScript errors
+
+File: src/app/atelier/console/essential/EssentialDashboard.tsx (REPLACED — full rebuild)
+
+Layout: 12-column responsive grid, 10 rows
+  Row 1  — Hero (full width)     : 01 Score de Réputation (RadialBarChart gauge)
+  Row 2  — KPI strip (4 cards)   : 02 Sentiment Moyen · 03 Mentions/Jour · 04 Citations IA · 05 Alertes Actives
+  Row 3  — Charts                : 06 Tendance Sentiment (ComposedChart) · 07 Diversité Sources (BarChart horizontal)
+  Row 4  — Feed + AI             : 08 Dernières Mentions (scrollable feed) · 09 Résumé Hebdo IA (Sparkles + quote block)
+  Row 5  — AI Visibility + Topics: 10 Snapshot IA (3 LLM cards) · 11 Top 5 Sujets (stacked bars)
+  Row 6  — Crisis + Geo          : 12 Indicateur Crise (DEFCON bar) · 13 Carte Chaleur Géo (ScatterChart)
+  Row 7  — Harch 100 + Social    : 14 Position Harch 100 (big rank + LineChart) · 15 Activité Réseau (stacked AreaChart)
+  Row 8  — Language + Evolution  : 16 Météo par Langue (3 stacked bars) · 17 Évolution Score (LineChart + markers)
+  Row 9  — Volume + Schedule     : 18 Volume Mentions 7j (colored BarChart) · 19 Prochaines Échéances (@tanstack/react-table)
+  Row 10 — Tools (full width)    : 20 Boîte à Outils Dircom (4 action cards, last is upsell Pro)
+
+Design tokens:
+  • WHITE background, sage green #4A7B5F accents, charcoal #0A0A0A text
+  • Every card: white bg, 1px border #F0F0F0, 12px radius, 20px padding
+  • Headers: 10px uppercase, Space Mono (JetBrains Mono equivalent), #9CA3AF, 0.08em letter-spacing
+  • Data: Space Mono bold, #0A0A0A
+  • Body: Inter 13px, #525252
+  • NO emojis — Lucide icons only (16px, #71717A)
+  • framer-motion entrance on every card (opacity 0→1, y 8→0, staggered 40ms)
+
+Real APIs consumed:
+  /api/console/brand-health          → score, trend, sentiment, crisis
+  /api/console/crisis-alerts         → alerts feed
+  /api/console/insights              → HarchIQ weekly summary (POST for regenerate)
+  /api/console/ai-visibility         → LLM citations
+  /api/console/sentiment-trend       → daily series (7d/30d/90d toggle)
+  /api/console/topics                → top topics
+  /api/console/source-distribution   → top sources
+  /api/harch100/latest               → Harch 100 ranking
+  /api/console/export-csv            → CSV download trigger (button)
+
+Quality:
+  • bunx tsc --noEmit --pretty false → 0 errors (exit 0)
+  • bun run lint → 0 errors in EssentialDashboard.tsx
+    (1 informational warning: React Compiler skips memoization of useReactTable hook —
+     this is expected TanStack Table behavior and does not affect runtime)
+
+Work record: /home/z/my-project/agent-ctx/FINAL-ESSENTIEL-Essentiel-Final.md
