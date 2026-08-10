@@ -203,7 +203,7 @@ export default async function middleware(req: NextRequest) {
         );
       }
       return buildSignInUrl(req);
-    } else if ((path === "/admin" || path.startsWith("/admin/")) && token.role !== "admin") {
+    } else if ((path === "/admin" || path.startsWith("/admin/") || path === "/atelier/admin" || path.startsWith("/atelier/admin/")) && token.role !== "admin" && token.role !== "super_admin") {
       // Authenticated but not an admin.
       if (path.startsWith("/api/")) {
         return withSecurityHeaders(
@@ -214,7 +214,7 @@ export default async function middleware(req: NextRequest) {
         );
       }
       const url = req.nextUrl.clone();
-      url.pathname = "/atelier/dashboard";
+      url.pathname = "/atelier/console";
       url.search = "";
       return withSecurityHeaders(NextResponse.redirect(url));
     }

@@ -387,65 +387,26 @@ export function AtelierNav() {
               Tarifs
             </a>
 
-            {/* Language toggle: FR | EN */}
+            {/* Language indicator — FR (site is French-only, EN coming soon) */}
             <div
-              role="group"
-              aria-label="Selection de la langue"
               className="atelier-nav-desktop"
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "4px",
-                fontFamily: C.fontMono,
                 height: "36px",
+                fontFamily: C.fontMono,
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#4A7B5F",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                backgroundColor: "rgba(74, 123, 95, 0.06)",
               }}
+              title="Le site est en francais. La version anglaise arrive bientot."
             >
-              {(["fr", "en"] as Lang[]).map((code, idx) => {
-                const active = code === locale;
-                return (
-                  <span
-                    key={code}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-                  >
-                    {idx === 1 && (
-                      <span
-                        aria-hidden
-                        style={{ color: C.border, fontSize: "12px" }}
-                      >
-                        |
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => switchLang(code)}
-                      aria-pressed={active}
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: active ? 700 : 400,
-                        fontFamily: C.fontMono,
-                        color: active ? C.text : C.textFaint,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: "4px 6px",
-                        borderRadius: "4px",
-                        transition: "all 0.15s ease",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        lineHeight: 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!active) e.currentTarget.style.color = C.textSec;
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!active) e.currentTarget.style.color = C.textFaint;
-                      }}
-                    >
-                      {code.toUpperCase()}
-                    </button>
-                  </span>
-                );
-              })}
+              FR
             </div>
 
             {/* Demander une démo — charcoal solid button */}
@@ -701,45 +662,17 @@ export function AtelierNav() {
                     gap: "6px",
                     fontFamily: C.fontMono,
                     marginLeft: "auto",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#4A7B5F",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    backgroundColor: "rgba(74, 123, 95, 0.1)",
                   }}
                 >
-                  {(["fr", "en"] as Lang[]).map((code, idx) => {
-                    const active = code === locale;
-                    return (
-                      <span
-                        key={code}
-                        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-                      >
-                        {idx === 1 && (
-                          <span
-                            aria-hidden
-                            style={{ color: C.border, fontSize: "12px" }}
-                          >
-                            |
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => switchLang(code)}
-                          aria-pressed={active}
-                          style={{
-                            fontSize: "12px",
-                            fontWeight: active ? 700 : 400,
-                            fontFamily: C.fontMono,
-                            color: active ? C.text : C.textFaint,
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: 0,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          {code.toUpperCase()}
-                        </button>
-                      </span>
-                    );
-                  })}
+                  FR
                 </div>
               </div>
 
