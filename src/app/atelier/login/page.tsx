@@ -5,8 +5,8 @@ import { authOptions } from "@/lib/auth/auth.config";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Sign in — HarchIQ Console",
-  description: "Access your HarchIQ Console. Accounts are provided directly by the Harch Atelier team.",
+  title: "Connexion | Harch Atelier",
+  description: "Accedez a votre tableau de bord d'intelligence reputationnelle.",
   robots: { index: false, follow: false },
 };
 

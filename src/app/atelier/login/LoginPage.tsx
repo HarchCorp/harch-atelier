@@ -3,16 +3,18 @@
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { PasskeyButton } from "@/components/auth/PasskeyButton";
+import { ArrowRight, Eye, EyeOff, Fingerprint, AlertCircle } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
-//  LOGIN PAGE — Modern institutional UX
+//  LOGIN PAGE — Minimalist institutional entry point
+//
+//  Stripe / Linear / Vercel-grade login: one centered card on a
+//  subtle neutral gradient. White surface, sage green accents,
+//  charcoal primary action. French language. No emojis, no clutter.
 //
 //  Sign-in form for users who have already activated their account
 //  via an invitation link. New users must request access first at
 //  /atelier/request-access.
-//
-//  Design: white card on warm neutral background, charcoal primary
-//  action, sage green accents. NO dark mode. French language.
 // ═══════════════════════════════════════════════════════════════
 
 export function LoginPage() {
@@ -61,7 +63,7 @@ export function LoginPage() {
     submittingRef.current = false;
 
     if (result?.error) {
-      setError("Identifiants invalides. Veuillez réessayer.");
+      setError("Identifiants invalides. Veuillez reessayer.");
       return;
     }
 
@@ -98,71 +100,69 @@ export function LoginPage() {
         <h1 style={titleStyle}>Connexion</h1>
 
         {/* 3. Subtitle */}
-        <p style={subtitleStyle}>Accédez à votre tableau de bord</p>
+        <p style={subtitleStyle}>Accedez a votre tableau de bord</p>
 
         {/* 8. Error message (if login fails) — shown above form */}
         {error && (
           <div role="alert" style={errorStyle}>
-            {error}
+            <AlertCircle size={14} strokeWidth={2} style={errorIconStyle} />
+            <span>{error}</span>
           </div>
         )}
 
         {/* 4. Form */}
         <form onSubmit={handleSubmit}>
-          {/* Email */}
-          <div style={{ marginBottom: "16px" }}>
-            <label htmlFor="email" style={labelStyle}>
-              Email
-            </label>
+          {/* Email — label hidden, placeholder only */}
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email professionnel"
+            autoComplete="email"
+            required
+            className="harch-login-input"
+            style={{ marginBottom: "12px" }}
+            aria-label="Email professionnel"
+          />
+
+          {/* Password — label hidden, with show/hide toggle */}
+          <div style={{ position: "relative", marginBottom: "8px" }}>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="vous@entreprise.com"
-              autoComplete="email"
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mot de passe"
+              autoComplete="current-password"
               required
               className="harch-login-input"
+              style={{ paddingRight: "44px" }}
+              aria-label="Mot de passe"
             />
-          </div>
-
-          {/* Password */}
-          <div style={{ marginBottom: "8px" }}>
-            <label htmlFor="password" style={labelStyle}>
-              Mot de passe
-            </label>
-            <div style={{ position: "relative" }}>
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                autoComplete="current-password"
-                required
-                className="harch-login-input"
-                style={{ paddingRight: "44px" }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                aria-label={
-                  showPassword
-                    ? "Masquer le mot de passe"
-                    : "Afficher le mot de passe"
-                }
-                style={eyeButtonStyle}
-                tabIndex={0}
-              >
-                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={
+                showPassword
+                  ? "Masquer le mot de passe"
+                  : "Afficher le mot de passe"
+              }
+              style={eyeButtonStyle}
+              tabIndex={0}
+            >
+              {showPassword ? (
+                <EyeOff size={16} strokeWidth={2} />
+              ) : (
+                <Eye size={16} strokeWidth={2} />
+              )}
+            </button>
           </div>
 
           {/* Forgot password link */}
           <div style={forgotWrapperStyle}>
-            <a href="/atelier/contact" style={forgotLinkStyle}>
-              Mot de passe oublié?
+            <a href="/atelier/contact" style={forgotLinkStyle} className="harch-forgot-link">
+              Mot de passe oublie?
             </a>
           </div>
 
@@ -170,52 +170,44 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
+            className="harch-submit-btn"
             style={{
               ...submitButtonStyle,
-              opacity: loading ? 0.7 : 1,
+              opacity: loading ? 0.6 : 1,
               cursor: loading ? "not-allowed" : "pointer",
             }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.background = "#1A1A1A";
-                e.currentTarget.style.boxShadow =
-                  "0 4px 12px rgba(0,0,0,0.15)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#0A0A0A";
-              e.currentTarget.style.boxShadow = "none";
-            }}
           >
-            {loading ? "Connexion…" : "Se connecter →"}
+            <span>{loading ? "Connexion..." : "Se connecter"}</span>
+            {!loading && (
+              <ArrowRight size={14} strokeWidth={2} style={{ marginLeft: "6px" }} />
+            )}
           </button>
         </form>
 
-        {/* 5. Divider */}
-        <div style={dividerStyle} />
+        {/* 5. Divider with "ou" overlay */}
+        <div style={dividerWrapperStyle}>
+          <div style={dividerLineStyle} />
+          <span style={dividerTextStyle}>ou</span>
+        </div>
 
         {/* 6. Passkey button */}
         <PasskeyButton mode="login" email={email} />
 
         {/* 7. Bottom links */}
         <div style={bottomLinksStyle}>
-          Pas encore de compte?{" "}
+          Pas encore de compte?
           <a href="/atelier/request-access" style={bottomLinkStyle}>
-            Demander l&apos;accès →
+            Demander l&rsquo;acces
           </a>
         </div>
       </div>
 
-      {/* Trust badges (outside card) */}
+      {/* 9. Trust badges (below card) */}
       <div style={trustBadgesStyle}>
         <span style={trustBadgeStyle}>Conforme CNDP</span>
-        <span style={dotStyle} aria-hidden="true">
-          •
-        </span>
+        <span style={dotStyle} aria-hidden="true" />
         <span style={trustBadgeStyle}>Loi 09-08</span>
-        <span style={dotStyle} aria-hidden="true">
-          •
-        </span>
+        <span style={dotStyle} aria-hidden="true" />
         <span style={trustBadgeStyle}>Audit SHA-256</span>
       </div>
     </div>
@@ -227,7 +219,7 @@ export function LoginPage() {
 const loginInputCss = `
   .harch-login-input {
     width: 100%;
-    height: 44px;
+    height: 42px;
     border: 1px solid #E5E5E5;
     border-radius: 10px;
     padding: 0 14px;
@@ -237,7 +229,7 @@ const loginInputCss = `
     box-sizing: border-box;
     outline: none;
     font-family: inherit;
-    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
   }
   .harch-login-input::placeholder {
     color: #9CA3AF;
@@ -245,7 +237,21 @@ const loginInputCss = `
   .harch-login-input:focus {
     border-color: #4A7B5F;
     background: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(74,123,95,0.1);
+    box-shadow: 0 0 0 3px rgba(74,123,95,0.08);
+  }
+  .harch-forgot-link {
+    text-decoration: none;
+    transition: text-decoration 150ms ease;
+  }
+  .harch-forgot-link:hover {
+    text-decoration: underline;
+  }
+  .harch-submit-btn {
+    transition: background 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+  }
+  .harch-submit-btn:not(:disabled):hover {
+    background: #1A1A1A !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
   }
   @media (max-width: 480px) {
     .harch-login-card {
@@ -270,10 +276,10 @@ const pageWrapperStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: "440px",
+  maxWidth: "400px",
   background: "#FFFFFF",
   borderRadius: "16px",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+  boxShadow: "0 4px 24px rgba(0, 0, 0, 0.04)",
   border: "1px solid #F0F0F0",
   padding: "40px",
   boxSizing: "border-box",
@@ -283,14 +289,14 @@ const logoWrapperStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  marginBottom: "24px",
+  marginBottom: "32px",
 };
 
 const logoHarchStyle: React.CSSProperties = {
   fontSize: "18px",
   fontWeight: 700,
   color: "#0A0A0A",
-  letterSpacing: "-0.01em",
+  letterSpacing: "-0.02em",
 };
 
 const logoPipeStyle: React.CSSProperties = {
@@ -302,32 +308,33 @@ const logoPipeStyle: React.CSSProperties = {
 
 const logoAtelierStyle: React.CSSProperties = {
   fontSize: "14px",
+  fontWeight: 400,
   color: "#71717A",
   textTransform: "uppercase",
-  letterSpacing: "0.1em",
-  fontWeight: 500,
+  letterSpacing: "0.05em",
 };
 
 const titleStyle: React.CSSProperties = {
-  fontSize: "24px",
+  fontSize: "22px",
   fontWeight: 700,
   color: "#0A0A0A",
   textAlign: "center",
-  margin: "0 0 8px",
+  margin: "0 0 4px",
   letterSpacing: "-0.02em",
 };
 
 const subtitleStyle: React.CSSProperties = {
-  fontSize: "14px",
+  fontSize: "13px",
   color: "#71717A",
   textAlign: "center",
-  margin: "0 0 32px",
+  margin: "0 0 28px",
 };
 
-// Error banner shown above the form when signIn fails.
-// Mirrors the design of success/info banners elsewhere in the app.
+// Error banner — shown above the form when signIn fails.
 const errorStyle: React.CSSProperties = {
-  padding: "12px 16px",
+  display: "flex",
+  alignItems: "center",
+  padding: "10px 14px",
   background: "#FEF2F2",
   border: "1px solid #FECACA",
   borderRadius: "8px",
@@ -337,22 +344,19 @@ const errorStyle: React.CSSProperties = {
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "12px",
-  fontWeight: 600,
-  color: "#0A0A0A",
-  marginBottom: "4px",
+const errorIconStyle: React.CSSProperties = {
+  marginRight: "6px",
+  flexShrink: 0,
 };
 
 const eyeButtonStyle: React.CSSProperties = {
   position: "absolute",
-  right: "10px",
+  right: "12px",
   top: "50%",
   transform: "translateY(-50%)",
   background: "none",
   border: "none",
-  padding: "6px",
+  padding: "4px",
   cursor: "pointer",
   color: "#71717A",
   display: "flex",
@@ -363,19 +367,21 @@ const eyeButtonStyle: React.CSSProperties = {
 
 const forgotWrapperStyle: React.CSSProperties = {
   textAlign: "right",
-  marginBottom: "24px",
+  marginBottom: "20px",
 };
 
 const forgotLinkStyle: React.CSSProperties = {
   fontSize: "12px",
   color: "#4A7B5F",
-  textDecoration: "none",
   fontWeight: 500,
 };
 
 const submitButtonStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   width: "100%",
-  height: "44px",
+  height: "42px",
   background: "#0A0A0A",
   color: "#FFFFFF",
   border: "none",
@@ -384,24 +390,44 @@ const submitButtonStyle: React.CSSProperties = {
   fontWeight: 600,
   fontFamily: "inherit",
   cursor: "pointer",
-  transition: "background 0.15s, box-shadow 0.15s, opacity 0.15s",
 };
 
-const dividerStyle: React.CSSProperties = {
-  borderTop: "1px solid #F0F0F0",
+const dividerWrapperStyle: React.CSSProperties = {
+  position: "relative",
   margin: "24px 0",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const dividerLineStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "50%",
+  left: 0,
+  right: 0,
+  height: "1px",
+  background: "#F0F0F0",
+};
+
+const dividerTextStyle: React.CSSProperties = {
+  position: "relative",
+  background: "#FFFFFF",
+  color: "#9CA3AF",
+  fontSize: "12px",
+  padding: "0 12px",
 };
 
 const bottomLinksStyle: React.CSSProperties = {
-  marginTop: "24px",
+  marginTop: "28px",
   textAlign: "center",
-  fontSize: "14px",
+  fontSize: "13px",
   color: "#71717A",
 };
 
 const bottomLinkStyle: React.CSSProperties = {
   color: "#4A7B5F",
   fontWeight: 500,
+  marginLeft: "4px",
   textDecoration: "none",
 };
 
@@ -410,7 +436,7 @@ const trustBadgesStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   gap: "8px",
-  marginTop: "24px",
+  marginTop: "32px",
   flexWrap: "wrap",
 };
 
@@ -421,48 +447,9 @@ const trustBadgeStyle: React.CSSProperties = {
 };
 
 const dotStyle: React.CSSProperties = {
-  fontSize: "11px",
-  color: "#D1D5DB",
+  width: "4px",
+  height: "4px",
+  borderRadius: "50%",
+  background: "#D4D4D4",
+  display: "inline-block",
 };
-
-// ─── Icons ─────────────────────────────────────────────────────────
-
-function EyeIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-      <line x1="2" y1="2" x2="22" y2="22" />
-    </svg>
-  );
-}
