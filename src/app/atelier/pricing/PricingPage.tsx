@@ -298,12 +298,12 @@ export default function PricingPage() {
           <div
             style={{
               display: "inline-flex",
-              gap: "20px",
+              gap: "10px",
               flexWrap: "wrap",
               justifyContent: "center",
-              padding: "12px 20px",
+              padding: "10px 18px",
               background: C.bgSubtle,
-              border: `1px solid ${C.border}`,
+              border: `1px solid ${C.borderStrong}`,
               borderRadius: "999px",
             }}
           >
@@ -313,10 +313,14 @@ export default function PricingPage() {
                 style={{
                   fontSize: "12px",
                   fontFamily: C.fontMono,
-                  color: C.accent,
+                  color: C.text,
                   letterSpacing: "0.1em",
                   fontWeight: 700,
                   textTransform: "uppercase",
+                  padding: "2px 8px",
+                  background: "#ffffff",
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "4px",
                 }}
               >
                 {t.label}
@@ -900,9 +904,9 @@ export default function PricingPage() {
                     style={{
                       display: "inline-block",
                       padding: "6px 12px",
-                      background: C.bgSubtle,
-                      border: `1px solid ${C.accent}`,
-                      color: C.accent,
+                      background: "#ffffff",
+                      border: `1px solid ${C.borderStrong}`,
+                      color: C.text,
                       fontSize: "12px",
                       fontFamily: C.fontMono,
                       letterSpacing: "0.1em",

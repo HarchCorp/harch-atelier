@@ -429,7 +429,7 @@ export default function ContactPage() {
       <section style={{
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "48px 16px 40px",
+        padding: "48px 16px 16px",
       }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           <div style={{
@@ -438,7 +438,7 @@ export default function ContactPage() {
             border: `1px solid ${C.border}`, borderRadius: "100px",
             fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
             color: C.sage, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "24px",
+            marginBottom: "20px",
           }}>
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.sage, animation: "pulse 2s infinite" }} />
             Contact us
@@ -446,13 +446,13 @@ export default function ContactPage() {
           <h1 style={{
             fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
-            margin: "0 0 28px", maxWidth: "900px",
+            margin: "0 0 16px", maxWidth: "900px",
           }}>
             Let&apos;s talk reputation.
           </h1>
           <p style={{
             fontSize: "16px", color: C.textSec, lineHeight: 1.55,
-            maxWidth: "760px", marginBottom: "40px",
+            maxWidth: "760px", marginBottom: "0",
           }}>
             Whether you want a demo, have a security question, or are interested in partnering —
             we respond fast. Pick the right inbox below to reach the right team.
@@ -465,7 +465,7 @@ export default function ContactPage() {
         style={{
           maxWidth: "1100px",
           margin: "0 auto",
-          padding: "48px 16px",
+          padding: "24px 16px",
         }}
       >
         <ContactForm />

@@ -124,19 +124,19 @@ export function LoginPage() {
         {branding?.logoUrl ? (
           <img src={branding.logoUrl} alt={branding.displayName || "Logo"} height={28} style={{ height: "28px", width: "auto", objectFit: "contain" }} />
         ) : (
-          <span style={{ fontFamily: C.fontMono, fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", color: C.text, textTransform: "uppercase" }}>
-            {loginTitle}<span style={{ color: branding?.accentColor || C.accent, marginLeft: "8px" }}>{loginSubtitle}</span>
+          <span style={{ fontFamily: C.fontSans, fontSize: "16px", fontWeight: 700, letterSpacing: "-0.01em", color: C.text }}>
+            {loginTitle}<span style={{ color: branding?.accentColor || C.accent, marginLeft: "6px", fontWeight: 500 }}>{loginSubtitle}</span>
           </span>
         )}
         {isWhiteLabel && branding?.displayName && (
-          <span style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", borderLeft: `1px solid ${C.border}`, paddingLeft: "12px" }}>
+          <span style={{ fontFamily: C.fontSans, fontSize: "13px", color: C.textMuted, letterSpacing: "0", borderLeft: `1px solid ${C.border}`, paddingLeft: "12px" }}>
             {branding.displayName}
           </span>
         )}
       </header>
 
-      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
-        <div style={{ maxWidth: "400px", width: "100%" }}>
+      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
+        <div style={{ maxWidth: "440px", width: "100%", background: "#ffffff", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "40px 32px", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)" }}>
           <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
             Sign in
           </div>
@@ -177,20 +177,20 @@ export function LoginPage() {
 
           {/* Demo access — one-click sign-in with a demo account that
               bypasses the database entirely. Safe for evaluation. */}
-          <div style={{ marginTop: "20px", padding: "24px", background: "#fafaf9", border: `1px solid ${C.border}`, borderRadius: "8px" }}>
-            <div style={{ fontFamily: C.fontMono, fontSize: "11px", color: C.textBody, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px" }}>
+          <div style={{ marginTop: "20px", padding: "16px 0 0", borderTop: `1px solid ${C.border}` }}>
+            <div style={{ fontFamily: C.fontMono, fontSize: "11px", color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "10px" }}>
               Evaluate without an account
             </div>
             <button
               type="button"
               onClick={() => { setEmail("demo-brand@harch.atelier"); setPassword("demo"); }}
-              style={{ width: "100%", padding: "12px 16px", background: "#ffffff", border: `1px solid ${C.borderStrong}`, borderRadius: "6px", fontFamily: C.fontMono, fontSize: "12px", color: C.text, cursor: "pointer", marginBottom: "10px", transition: "border-color 0.15s" }}
+              style={{ width: "100%", padding: "12px 16px", background: C.bgSubtle, border: `1px solid ${C.border}`, borderRadius: "6px", fontFamily: C.fontSans, fontSize: "13px", color: C.text, cursor: "pointer", marginBottom: "10px", transition: "border-color 0.15s" }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.borderStrong; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; }}
             >
               Fill demo credentials →  demo-brand@harch.atelier
             </button>
-            <p style={{ margin: 0, fontSize: "12px", color: C.textBody, fontFamily: C.fontMono, lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: "12px", color: C.textBody, fontFamily: C.fontSans, lineHeight: 1.6 }}>
               Demo account runs on in-memory data. The console, dashboard, and account flows are fully interactive. Trader and investor desks are on standby.
             </p>
           </div>
@@ -223,11 +223,11 @@ export function LoginPage() {
           </div>
 
           {/* ZKP Auth link — the server never knows your password */}
-          <div style={{ marginTop: "20px", padding: "12px 16px", background: C.bgSubtle, borderRadius: "8px", textAlign: "center" }}>
+          <div style={{ marginTop: "16px", padding: "12px 0 0", borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
             <div style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
               🔐 Zero-Knowledge Proof Auth
             </div>
-            <a href="/atelier/lab/zkp" style={{ fontSize: "12px", color: C.accent, fontFamily: C.fontMono, textDecoration: "none", fontWeight: 600 }}>
+            <a href="/atelier/lab/zkp" style={{ fontSize: "12px", color: C.accent, fontFamily: C.fontSans, textDecoration: "none", fontWeight: 600 }}>
               Try passwordless authentication →
             </a>
           </div>

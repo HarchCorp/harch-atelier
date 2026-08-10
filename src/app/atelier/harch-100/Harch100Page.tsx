@@ -1,1407 +1,2127 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+// ═══════════════════════════════════════════════════════════════
+//  HARCH 100 — Le classement mensuel des 100 entreprises
+//  marocaines les mieux perçues.
+//
+//  Source de données : /api/harch100/latest (snapshot mensuel publié).
+//  Si aucun snapshot n'est publié → empty state honnête.
+//  Aucune donnée mockée.
+//
+//  Sections :
+//    1. Hero (titre + période + dernière mise à jour)
+//    2. Top 3 podium (sage / charcoal / amber)
+//    3. Répartition par secteur (donut cliquable)
+//    4. Distribution des scores (histogramme)
+//    5. Tableau complet (tri, recherche, filtres, pagination)
+//    6. Méthodologie (5 piliers)
+//    7. Évolution mensuelle (placeholder — nécessite plusieurs snapshots)
+// ═══════════════════════════════════════════════════════════════
+
+import React, { useState, useMemo, useEffect, useCallback, useSyncExternalStore } from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
-import { ScrollProgress, CursorGlow, BackToTop, PhaseDisclaimer } from "../components/shared";
-import { RadarChart } from "../components/charts/Charts";
+import {
+  ScrollProgress,
+  CursorGlow,
+  BackToTop,
+  PhaseDisclaimer,
+} from "../components/shared";
 
-// ═══════════════════════════════════════════════════════════════
-//  HARCH 100 — Morocco's Most Reputable Companies
-//  Signal AI 500-style ranking with Innovation/Performance/Purpose
-//  pillars + Key Themes + Quarterly trends + Share of conversation
-// ═══════════════════════════════════════════════════════════════
-
+// ─── DESIGN TOKENS (C) ──────────────────────────────────────────
+// Palette: white bg + sage green accents (Harch signature) +
+// charcoal pour #2 + amber pour #3. Cohérent avec Charts.tsx.
 const C = {
-  bg: "#FAFAFA", surface: "#FFFFFF", surfaceAlt: "#F4F4F5",
-  border: "#E5E5E5", borderLight: "#F0F0F0",
-  text: "#0A0A0A", textSec: "#525252", textMuted: "#71717A",
-  accent: "#4A5D6E", sage: "#4A7B5F", sageBright: "#6FA386",
-  red: "#A0524B", shadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-};
+  bg: "#FAFAFA",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F4F4F5",
+  border: "#E5E5E5",
+  borderLight: "#F0F0F0",
+  borderStrong: "#D4D4D4",
+  text: "#0A0A0A",
+  textSec: "#525252",
+  textMuted: "#71717A",
+  accent: "#4A5D6E", // charcoal
+  accentDark: "#3A4A57",
+  sage: "#4A7B5F", // sage green — primary accent
+  sageBright: "#6FA386",
+  sageLight: "#E8F0EB",
+  sageBg: "rgba(74, 123, 95, 0.08)",
+  charcoal: "#1F2937",
+  charcoalLight: "#E5E7EB",
+  amber: "#B45309", // amber-700 (text)
+  amberBright: "#D97706", // amber-500 (badge)
+  amberLight: "#FEF3C7",
+  amberBg: "#FFFBEB",
+  red: "#DC2626",
+  redLight: "#FEE2E2",
+  emerald: "#10B981",
+  fontSans: "'Inter', system-ui, sans-serif",
+  fontMono: "'Space Mono', 'JetBrains Mono', monospace",
+  shadowSm: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+  shadowMd: "0 4px 6px rgba(0,0,0,0.05), 0 10px 15px rgba(0,0,0,0.05)",
+} as const;
 
-interface Company {
+const MONTHS_FR = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+
+// ─── TYPES ──────────────────────────────────────────────────────
+interface RankingEntry {
+  rank: number;
+  companyName?: string;
+  companySlug?: string;
+  sector?: string;
+  reputationScore?: number;
+  totalArticles?: number;
+  negativeCount?: number;
+  positiveCount?: number;
+  avgSentiment?: number;
+  uniqueSources?: number;
+  // Backwards-compat field aliases (older snapshots)
+  name?: string;
+  slug?: string;
+  score?: number;
+  articles?: number;
+  sector_name?: string;
+}
+
+interface Snapshot {
+  id: string;
+  period: string; // "YYYY-MM"
+  rankings: RankingEntry[];
+  generatedAt: string;
+  publishedAt: string | null;
+}
+
+// Normalized row used internally by the UI.
+interface Row {
   rank: number;
   name: string;
+  slug: string | null;
   sector: string;
   score: number;
-  prevScore: number;
-  trend: "up" | "down" | "stable";
-  change: string;
-  // Signal AI 500-style pillars (Innovation/Performance/Purpose percentages of narrative)
-  innovation: { weight: number; score: number };
-  performance: { weight: number; score: number };
-  purpose: { weight: number; score: number };
-  shareOfVoice: number;  // % of total conversation in sector
-  quarterly: number[];   // 4 quarters of score
-  keyThemes: { theme: string; score: number; trend: number }[];
-  sentiment: number;
   articles: number;
-  aiRank: string;
-  riskLevel: "low" | "moderate" | "elevated" | "high" | "critical";
-  // 7 risk dimensions (0-100, higher = more risk exposure)
-  riskDimensions: {
-    geopolitical: number;
-    operational: number;
-    financial: number;
-    environmental: number;
-    legal: number;
-    consumer: number;
-    technology: number;
+  positive: number;
+  negative: number;
+  avgSentiment: number;
+  uniqueSources: number;
+  trend: "up" | "down" | "stable";
+  change: number; // numeric delta (positive - negative normalized)
+  aiVisibility: number; // 0-100 derived from uniqueSources
+}
+
+// ─── HELPERS ────────────────────────────────────────────────────
+function normalizeRow(entry: RankingEntry, maxSources: number): Row {
+  const name = entry.companyName ?? entry.name ?? "—";
+  const slug = entry.companySlug ?? entry.slug ?? null;
+  const sector = entry.sector ?? entry.sector_name ?? "Autre";
+  const score = Math.round(entry.reputationScore ?? entry.score ?? 0);
+  const articles = entry.totalArticles ?? entry.articles ?? 0;
+  const positive = entry.positiveCount ?? 0;
+  const negative = entry.negativeCount ?? 0;
+  const avgSentiment = entry.avgSentiment ?? 0;
+  const uniqueSources = entry.uniqueSources ?? 0;
+
+  // Trend is derived from sentiment direction because we only have
+  // one snapshot per period. Positive net sentiment ⇒ ↑, negative ⇒ ↓,
+  // otherwise stable.
+  const net = positive - negative;
+  const denom = Math.max(1, positive + negative);
+  const netRatio = net / denom;
+  let trend: Row["trend"] = "stable";
+  if (netRatio > 0.08) trend = "up";
+  else if (netRatio < -0.08) trend = "down";
+
+  // AI Visibility — proxy: unique sources normalized to a 0-100 scale
+  // against the snapshot max (capped). If 0 sources, 0.
+  const aiVisibility =
+    maxSources > 0
+      ? Math.min(100, Math.round((uniqueSources / maxSources) * 100))
+      : 0;
+
+  return {
+    rank: entry.rank,
+    name,
+    slug,
+    sector,
+    score,
+    articles,
+    positive,
+    negative,
+    avgSentiment,
+    uniqueSources,
+    trend,
+    change: net,
+    aiVisibility,
   };
 }
 
-const COMPANIES: Company[] = [
-  {
-    rank: 1, name: "OCP Group", sector: "Mining & Phosphates", score: 91, prevScore: 89,
-    trend: "up", change: "+2",
-    innovation: { weight: 48, score: 88 },
-    performance: { weight: 35, score: 94 },
-    purpose: { weight: 17, score: 79 },
-    shareOfVoice: 31, quarterly: [85, 87, 89, 91],
-    keyThemes: [
-      { theme: "Technology", score: 89, trend: 8 },
-      { theme: "Growth", score: 95, trend: 5 },
-      { theme: "Sustainability", score: 81, trend: 12 },
-      { theme: "Operations", score: 92, trend: 3 },
-      { theme: "CSR", score: 78, trend: 6 },
-    ],
-    sentiment: 82, articles: 342, aiRank: "#1", riskLevel: "moderate",
-    riskDimensions: { geopolitical: 58, operational: 75, financial: 52, environmental: 80, legal: 60, consumer: 50, technology: 48 },
-  },
-  {
-    rank: 2, name: "Attijariwafa Bank", sector: "Banking", score: 84, prevScore: 85,
-    trend: "down", change: "-1",
-    innovation: { weight: 35, score: 79 },
-    performance: { weight: 41, score: 89 },
-    purpose: { weight: 24, score: 76 },
-    shareOfVoice: 27, quarterly: [82, 86, 85, 84],
-    keyThemes: [
-      { theme: "Technology", score: 80, trend: 5 },
-      { theme: "Growth", score: 88, trend: -2 },
-      { theme: "Sustainability", score: 75, trend: 4 },
-      { theme: "Operations", score: 90, trend: 1 },
-      { theme: "Governance", score: 87, trend: -1 },
-    ],
-    sentiment: 72, articles: 287, aiRank: "#1", riskLevel: "moderate",
-    riskDimensions: { geopolitical: 35, operational: 58, financial: 81, environmental: 38, legal: 75, consumer: 55, technology: 82 },
-  },
-  {
-    rank: 3, name: "Maroc Telecom", sector: "Telecommunications", score: 79, prevScore: 77,
-    trend: "up", change: "+2",
-    innovation: { weight: 52, score: 82 },
-    performance: { weight: 30, score: 81 },
-    purpose: { weight: 18, score: 70 },
-    shareOfVoice: 24, quarterly: [75, 76, 77, 79],
-    keyThemes: [
-      { theme: "Technology", score: 84, trend: 9 },
-      { theme: "Products & services", score: 81, trend: 6 },
-      { theme: "Growth", score: 80, trend: 3 },
-      { theme: "Operations", score: 82, trend: 2 },
-      { theme: "CSR", score: 71, trend: 4 },
-    ],
-    sentiment: 64, articles: 245, aiRank: "#1", riskLevel: "low",
-    riskDimensions: { geopolitical: 48, operational: 62, financial: 55, environmental: 45, legal: 65, consumer: 60, technology: 78 },
-  },
-  {
-    rank: 4, name: "Royal Air Maroc", sector: "Aviation", score: 76, prevScore: 78,
-    trend: "down", change: "-2",
-    innovation: { weight: 28, score: 72 },
-    performance: { weight: 47, score: 81 },
-    purpose: { weight: 25, score: 73 },
-    shareOfVoice: 19, quarterly: [80, 79, 78, 76],
-    keyThemes: [
-      { theme: "Operations", score: 83, trend: -3 },
-      { theme: "Growth", score: 79, trend: -1 },
-      { theme: "Technology", score: 71, trend: 4 },
-      { theme: "CSR", score: 74, trend: 2 },
-      { theme: "Governance", score: 76, trend: -2 },
-    ],
-    sentiment: 61, articles: 198, aiRank: "#2", riskLevel: "elevated",
-    riskDimensions: { geopolitical: 65, operational: 78, financial: 58, environmental: 62, legal: 55, consumer: 70, technology: 65 },
-  },
-  {
-    rank: 5, name: "Inwi", sector: "Telecommunications", score: 74, prevScore: 72,
-    trend: "up", change: "+2",
-    innovation: { weight: 56, score: 81 },
-    performance: { weight: 27, score: 75 },
-    purpose: { weight: 17, score: 68 },
-    shareOfVoice: 18, quarterly: [68, 70, 72, 74],
-    keyThemes: [
-      { theme: "Technology", score: 84, trend: 11 },
-      { theme: "Products & services", score: 80, trend: 7 },
-      { theme: "Culture", score: 72, trend: 5 },
-      { theme: "Growth", score: 76, trend: 3 },
-      { theme: "Sustainability", score: 68, trend: 4 },
-    ],
-    sentiment: 68, articles: 176, aiRank: "#3", riskLevel: "low",
-    riskDimensions: { geopolitical: 42, operational: 55, financial: 48, environmental: 40, legal: 58, consumer: 52, technology: 72 },
-  },
-  {
-    rank: 6, name: "Bank of Africa", sector: "Banking", score: 72, prevScore: 71,
-    trend: "up", change: "+1",
-    innovation: { weight: 38, score: 76 },
-    performance: { weight: 40, score: 78 },
-    purpose: { weight: 22, score: 71 },
-    shareOfVoice: 22, quarterly: [69, 70, 71, 72],
-    keyThemes: [
-      { theme: "Growth", score: 81, trend: 6 },
-      { theme: "Operations", score: 79, trend: 3 },
-      { theme: "Technology", score: 75, trend: 5 },
-      { theme: "CSR", score: 72, trend: 4 },
-      { theme: "Collaborations", score: 70, trend: 7 },
-    ],
-    sentiment: 68, articles: 247, aiRank: "#2", riskLevel: "moderate",
-    riskDimensions: { geopolitical: 38, operational: 55, financial: 78, environmental: 35, legal: 70, consumer: 58, technology: 75 },
-  },
-  {
-    rank: 7, name: "CIH Bank", sector: "Banking", score: 68, prevScore: 70,
-    trend: "down", change: "-2",
-    innovation: { weight: 42, score: 71 },
-    performance: { weight: 38, score: 73 },
-    purpose: { weight: 20, score: 65 },
-    shareOfVoice: 14, quarterly: [71, 71, 70, 68],
-    keyThemes: [
-      { theme: "Technology", score: 73, trend: 4 },
-      { theme: "Operations", score: 74, trend: -1 },
-      { theme: "Growth", score: 72, trend: -2 },
-      { theme: "Sustainability", score: 64, trend: 2 },
-      { theme: "Governance", score: 70, trend: -3 },
-    ],
-    sentiment: 65, articles: 145, aiRank: "#3", riskLevel: "moderate",
-    riskDimensions: { geopolitical: 32, operational: 50, financial: 75, environmental: 30, legal: 68, consumer: 52, technology: 70 },
-  },
-  {
-    rank: 8, name: "Managem", sector: "Mining", score: 66, prevScore: 64,
-    trend: "up", change: "+2",
-    innovation: { weight: 31, score: 68 },
-    performance: { weight: 44, score: 72 },
-    purpose: { weight: 25, score: 62 },
-    shareOfVoice: 12, quarterly: [60, 62, 64, 66],
-    keyThemes: [
-      { theme: "Operations", score: 75, trend: 4 },
-      { theme: "Growth", score: 73, trend: 3 },
-      { theme: "Sustainability", score: 64, trend: 6 },
-      { theme: "Technology", score: 67, trend: 2 },
-      { theme: "CSR", score: 60, trend: 5 },
-    ],
-    sentiment: 59, articles: 112, aiRank: "#2", riskLevel: "elevated",
-    riskDimensions: { geopolitical: 55, operational: 72, financial: 50, environmental: 75, legal: 58, consumer: 48, technology: 45 },
-  },
-  {
-    rank: 9, name: "LesieurCristal", sector: "Agro-industry", score: 64, prevScore: 65,
-    trend: "down", change: "-1",
-    innovation: { weight: 26, score: 62 },
-    performance: { weight: 46, score: 68 },
-    purpose: { weight: 28, score: 64 },
-    shareOfVoice: 10, quarterly: [66, 65, 65, 64],
-    keyThemes: [
-      { theme: "Operations", score: 70, trend: -1 },
-      { theme: "Sustainability", score: 66, trend: 3 },
-      { theme: "Products & services", score: 64, trend: 1 },
-      { theme: "Growth", score: 67, trend: -2 },
-      { theme: "CSR", score: 63, trend: 2 },
-    ],
-    sentiment: 62, articles: 89, aiRank: "#4", riskLevel: "low",
-    riskDimensions: { geopolitical: 30, operational: 55, financial: 48, environmental: 52, legal: 45, consumer: 60, technology: 35 },
-  },
-  {
-    rank: 10, name: "Cosumar", sector: "Sugar", score: 62, prevScore: 60,
-    trend: "up", change: "+2",
-    innovation: { weight: 23, score: 60 },
-    performance: { weight: 48, score: 66 },
-    purpose: { weight: 29, score: 63 },
-    shareOfVoice: 9, quarterly: [58, 59, 60, 62],
-    keyThemes: [
-      { theme: "Operations", score: 68, trend: 3 },
-      { theme: "Sustainability", score: 65, trend: 5 },
-      { theme: "CSR", score: 64, trend: 4 },
-      { theme: "Growth", score: 63, trend: 2 },
-      { theme: "Products & services", score: 60, trend: 1 },
-    ],
-    sentiment: 67, articles: 76, aiRank: "#3", riskLevel: "low",
-    riskDimensions: { geopolitical: 25, operational: 50, financial: 45, environmental: 55, legal: 40, consumer: 55, technology: 30 },
-  },
-  {
-    rank: 11, name: "Label'Vie", sector: "Retail", score: 59, prevScore: 58,
-    trend: "up", change: "+1",
-    innovation: { weight: 30, score: 61 },
-    performance: { weight: 42, score: 63 },
-    purpose: { weight: 28, score: 58 },
-    shareOfVoice: 8, quarterly: [55, 56, 58, 59],
-    keyThemes: [
-      { theme: "Growth", score: 65, trend: 4 },
-      { theme: "Operations", score: 63, trend: 2 },
-      { theme: "Products & services", score: 60, trend: 3 },
-      { theme: "CSR", score: 58, trend: 2 },
-      { theme: "Sustainability", score: 57, trend: 3 },
-    ],
-    sentiment: 64, articles: 67, aiRank: "#5", riskLevel: "low",
-    riskDimensions: { geopolitical: 28, operational: 48, financial: 52, environmental: 45, legal: 42, consumer: 65, technology: 40 },
-  },
-  {
-    rank: 12, name: "Marjane", sector: "Retail", score: 57, prevScore: 59,
-    trend: "down", change: "-2",
-    innovation: { weight: 28, score: 58 },
-    performance: { weight: 44, score: 61 },
-    purpose: { weight: 28, score: 55 },
-    shareOfVoice: 14, quarterly: [60, 59, 58, 57],
-    keyThemes: [
-      { theme: "Operations", score: 62, trend: -2 },
-      { theme: "Products & services", score: 60, trend: 1 },
-      { theme: "Growth", score: 58, trend: -1 },
-      { theme: "CSR", score: 55, trend: 0 },
-      { theme: "Culture", score: 54, trend: -2 },
-    ],
-    sentiment: 55, articles: 134, aiRank: "#4", riskLevel: "elevated",
-    riskDimensions: { geopolitical: 30, operational: 50, financial: 55, environmental: 48, legal: 45, consumer: 70, technology: 42 },
-  },
-  {
-    rank: 13, name: "Lydec", sector: "Utilities", score: 55, prevScore: 53,
-    trend: "up", change: "+2",
-    innovation: { weight: 32, score: 56 },
-    performance: { weight: 41, score: 58 },
-    purpose: { weight: 27, score: 54 },
-    shareOfVoice: 11, quarterly: [50, 51, 53, 55],
-    keyThemes: [
-      { theme: "Operations", score: 60, trend: 3 },
-      { theme: "Technology", score: 56, trend: 4 },
-      { theme: "Sustainability", score: 55, trend: 3 },
-      { theme: "CSR", score: 53, trend: 2 },
-      { theme: "Governance", score: 52, trend: 1 },
-    ],
-    sentiment: 48, articles: 98, aiRank: "#6", riskLevel: "elevated",
-    riskDimensions: { geopolitical: 35, operational: 65, financial: 50, environmental: 60, legal: 55, consumer: 62, technology: 45 },
-  },
-  {
-    rank: 14, name: "Risma", sector: "Hospitality", score: 53, prevScore: 54,
-    trend: "down", change: "-1",
-    innovation: { weight: 25, score: 52 },
-    performance: { weight: 47, score: 56 },
-    purpose: { weight: 28, score: 51 },
-    shareOfVoice: 7, quarterly: [55, 54, 54, 53],
-    keyThemes: [
-      { theme: "Operations", score: 58, trend: -1 },
-      { theme: "Growth", score: 55, trend: 0 },
-      { theme: "CSR", score: 52, trend: 1 },
-      { theme: "Products & services", score: 50, trend: -2 },
-      { theme: "Sustainability", score: 49, trend: 2 },
-    ],
-    sentiment: 58, articles: 56, aiRank: "#5", riskLevel: "moderate",
-    riskDimensions: { geopolitical: 40, operational: 55, financial: 52, environmental: 45, legal: 42, consumer: 58, technology: 35 },
-  },
-  {
-    rank: 15, name: "Disway", sector: "IT Distribution", score: 51, prevScore: 50,
-    trend: "up", change: "+1",
-    innovation: { weight: 45, score: 54 },
-    performance: { weight: 33, score: 53 },
-    purpose: { weight: 22, score: 48 },
-    shareOfVoice: 5, quarterly: [47, 48, 50, 51],
-    keyThemes: [
-      { theme: "Technology", score: 56, trend: 5 },
-      { theme: "Operations", score: 54, trend: 2 },
-      { theme: "Products & services", score: 52, trend: 3 },
-      { theme: "Growth", score: 50, trend: 1 },
-      { theme: "Collaborations", score: 49, trend: 2 },
-    ],
-    sentiment: 61, articles: 43, aiRank: "#4", riskLevel: "low",
-    riskDimensions: { geopolitical: 25, operational: 45, financial: 48, environmental: 30, legal: 38, consumer: 50, technology: 55 },
-  },
-  {
-    rank: 16, name: "Stokvis Nord Afrique", sector: "Industrial", score: 49, prevScore: 48,
-    trend: "up", change: "+1",
-    innovation: { weight: 22, score: 48 },
-    performance: { weight: 50, score: 52 },
-    purpose: { weight: 28, score: 46 },
-    shareOfVoice: 4, quarterly: [46, 47, 48, 49],
-    keyThemes: [
-      { theme: "Operations", score: 54, trend: 2 },
-      { theme: "Growth", score: 51, trend: 1 },
-      { theme: "Sustainability", score: 47, trend: 1 },
-      { theme: "CSR", score: 46, trend: 0 },
-      { theme: "Technology", score: 45, trend: 2 },
-    ],
-    sentiment: 57, articles: 38, aiRank: "#6", riskLevel: "low",
-    riskDimensions: { geopolitical: 32, operational: 58, financial: 45, environmental: 50, legal: 42, consumer: 40, technology: 38 },
-  },
-  {
-    rank: 17, name: "Sonasid", sector: "Steel", score: 47, prevScore: 49,
-    trend: "down", change: "-2",
-    innovation: { weight: 21, score: 46 },
-    performance: { weight: 49, score: 50 },
-    purpose: { weight: 30, score: 44 },
-    shareOfVoice: 5, quarterly: [50, 49, 48, 47],
-    keyThemes: [
-      { theme: "Operations", score: 52, trend: -1 },
-      { theme: "Sustainability", score: 46, trend: 1 },
-      { theme: "Growth", score: 48, trend: -2 },
-      { theme: "CSR", score: 43, trend: 0 },
-      { theme: "Governance", score: 45, trend: -1 },
-    ],
-    sentiment: 52, articles: 45, aiRank: "#5", riskLevel: "elevated",
-    riskDimensions: { geopolitical: 38, operational: 65, financial: 55, environmental: 62, legal: 48, consumer: 45, technology: 35 },
-  },
-  {
-    rank: 18, name: "Maghreb Oxygene", sector: "Industrial Gas", score: 45, prevScore: 44,
-    trend: "up", change: "+1",
-    innovation: { weight: 30, score: 46 },
-    performance: { weight: 42, score: 48 },
-    purpose: { weight: 28, score: 42 },
-    shareOfVoice: 3, quarterly: [42, 43, 44, 45],
-    keyThemes: [
-      { theme: "Operations", score: 50, trend: 2 },
-      { theme: "Technology", score: 47, trend: 1 },
-      { theme: "Sustainability", score: 43, trend: 2 },
-      { theme: "Growth", score: 46, trend: 0 },
-      { theme: "CSR", score: 41, trend: 1 },
-    ],
-    sentiment: 60, articles: 29, aiRank: "#7", riskLevel: "low",
-    riskDimensions: { geopolitical: 30, operational: 55, financial: 42, environmental: 48, legal: 38, consumer: 35, technology: 32 },
-  },
-  {
-    rank: 19, name: "LafargeHolcim Maroc", sector: "Cement", score: 43, prevScore: 45,
-    trend: "down", change: "-2",
-    innovation: { weight: 24, score: 44 },
-    performance: { weight: 46, score: 46 },
-    purpose: { weight: 30, score: 40 },
-    shareOfVoice: 7, quarterly: [46, 45, 44, 43],
-    keyThemes: [
-      { theme: "Operations", score: 48, trend: -1 },
-      { theme: "Sustainability", score: 42, trend: 2 },
-      { theme: "Growth", score: 44, trend: -2 },
-      { theme: "CSR", score: 39, trend: 1 },
-      { theme: "Technology", score: 43, trend: 0 },
-    ],
-    sentiment: 49, articles: 67, aiRank: "#5", riskLevel: "elevated",
-    riskDimensions: { geopolitical: 42, operational: 68, financial: 52, environmental: 70, legal: 50, consumer: 48, technology: 40 },
-  },
-  {
-    rank: 20, name: "Total Maroc", sector: "Energy", score: 41, prevScore: 42,
-    trend: "down", change: "-1",
-    innovation: { weight: 26, score: 42 },
-    performance: { weight: 44, score: 44 },
-    purpose: { weight: 30, score: 38 },
-    shareOfVoice: 6, quarterly: [43, 43, 42, 41],
-    keyThemes: [
-      { theme: "Operations", score: 46, trend: -1 },
-      { theme: "Growth", score: 42, trend: -2 },
-      { theme: "Sustainability", score: 39, trend: 1 },
-      { theme: "CSR", score: 37, trend: 0 },
-      { theme: "Technology", score: 40, trend: -1 },
-    ],
-    sentiment: 44, articles: 52, aiRank: "#6", riskLevel: "high",
-    riskDimensions: { geopolitical: 60, operational: 70, financial: 55, environmental: 75, legal: 52, consumer: 50, technology: 45 },
-  },
+function formatPeriod(period: string): string {
+  // "2026-08" → "Août 2026"
+  const m = /^(\d{4})-(\d{2})$/.exec(period);
+  if (!m) return period;
+  const year = Number(m[1]);
+  const monthIdx = Number(m[2]) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return period;
+  return `${MONTHS_FR[monthIdx]} ${year}`;
+}
+
+function formatTimestamp(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    return `${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth()]} ${d.getUTCFullYear()} à ${String(d.getUTCHours()).padStart(2, "0")}h${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+  } catch {
+    return "—";
+  }
+}
+
+function getInitials(name: string): string {
+  if (!name) return "?";
+  const words = name.trim().split(/\s+/).slice(0, 2);
+  return words.map((w) => w.charAt(0).toUpperCase()).join("");
+}
+
+// Hook: media query — uses useSyncExternalStore for SSR-safe hydration
+function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", callback);
+      return () => mql.removeEventListener("change", callback);
+    },
+    () => window.matchMedia(query).matches,
+    () => false, // SSR snapshot — assume mobile to keep SSR/CSR markup stable
+  );
+}
+
+// ─── SECTOR COLOR PALETTE ───────────────────────────────────────
+const SECTOR_COLORS = [
+  C.sage,
+  C.accent,
+  C.amberBright,
+  C.charcoal,
+  "#8B5CF6",
+  "#0EA5E9",
+  "#EC4899",
+  "#14B8A6",
+  "#F97316",
+  "#84CC16",
 ];
 
-const SECTORS = ["All Sectors", "Banking", "Telecommunications", "Mining", "Mining & Phosphates", "Retail", "Energy", "Aviation", "Industrial", "Agro-industry", "Cement", "Utilities", "Hospitality", "IT Distribution", "Sugar", "Steel", "Industrial Gas"];
-const PILLARS = ["Innovation", "Performance", "Purpose"] as const;
-type Pillar = typeof PILLARS[number];
-
-// ─── API FETCH + MAPPING ─────────────────────────────────────────
-// Live data is fetched from /api/companies on mount and mapped to the
-// rich Company interface used by the ranking table. Hardcoded COMPANIES
-// is kept as a fallback so the page always renders even if the API is
-// unreachable.
-
-interface ApiCompany {
-  name: string;
-  sector: string;
-  [key: string]: unknown;
+function colorForSector(sector: string, sectors: string[]): string {
+  const idx = sectors.indexOf(sector);
+  if (idx === -1) return C.textMuted;
+  return SECTOR_COLORS[idx % SECTOR_COLORS.length];
 }
 
-function mapApiToCompanies(apiCompanies: ApiCompany[], fallback: Company[]): Company[] {
-  const fallbackByName = new Map(fallback.map((c) => [c.name.toLowerCase(), c]));
-  const mapped: Company[] = apiCompanies.map((api) => {
-    const match = fallbackByName.get(api.name.toLowerCase());
-    if (match) {
-      // Preserve rich reputation data; refresh name/sector from the API
-      return { ...match, name: api.name, sector: api.sector };
-    }
-    // No reputation data yet — synthesize a neutral placeholder so the
-    // new company still shows up in the ranking table.
-    return {
-      rank: 0,
-      name: api.name,
-      sector: api.sector,
-      score: 50,
-      prevScore: 50,
-      trend: "stable" as const,
-      change: "0",
-      innovation: { weight: 33, score: 50 },
-      performance: { weight: 33, score: 50 },
-      purpose: { weight: 34, score: 50 },
-      shareOfVoice: 5,
-      quarterly: [50, 50, 50, 50],
-      keyThemes: [],
-      sentiment: 50,
-      articles: 0,
-      aiRank: "#10",
-      riskLevel: "moderate",
-      riskDimensions: {
-        geopolitical: 40,
-        operational: 40,
-        financial: 40,
-        environmental: 40,
-        legal: 40,
-        consumer: 40,
-        technology: 40,
-      },
-    };
-  });
-  // Re-rank by score descending so the table is always sensible
-  mapped.sort((a, b) => b.score - a.score);
-  mapped.forEach((c, i) => { c.rank = i + 1; });
-  return mapped;
-}
-
+// ═══════════════════════════════════════════════════════════════
+//  MAIN PAGE COMPONENT
+// ═══════════════════════════════════════════════════════════════
 export default function Harch100Page() {
-  const [search, setSearch] = useState("");
-  const [sectorFilter, setSectorFilter] = useState("All Sectors");
-  const [sortBy, setSortBy] = useState<"rank" | "score" | "sentiment" | "articles" | "innovation" | "performance" | "purpose">("rank");
-  const [activePillar, setActivePillar] = useState<Pillar>("Innovation");
-  const [expandedRow, setExpandedRow] = useState<number | null>(1);
-  const [animateIn, setAnimateIn] = useState(false);
-
-  // Live data state — initialized to hardcoded fallback so the page
-  // always renders. Replaced with API data on successful fetch.
-  const [companies, setCompanies] = useState<Company[]>(COMPANIES);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setAnimateIn(true), 50);
-    return () => clearTimeout(t);
-  }, []);
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(
-          "/api/companies?page=1&limit=100&sortBy=name&sortOrder=asc",
-          { cache: "no-store" }
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch("/api/harch100/latest", {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (cancelled) return;
+        if (res.status === 404) {
+          setSnapshot(null);
+          setLoading(false);
+          return;
+        }
+        if (!res.ok) {
+          setFetchError(`HTTP ${res.status}`);
+          setLoading(false);
+          return;
+        }
         const json = await res.json();
-        if (!json?.success || !Array.isArray(json.data)) {
-          throw new Error("Malformed API response");
+        if (cancelled) return;
+        if (!json.published || !json.snapshot) {
+          setSnapshot(null);
+          setLoading(false);
+          return;
         }
-        const mapped = mapApiToCompanies(json.data as ApiCompany[], COMPANIES);
-        if (!cancelled && mapped.length > 0) {
-          setCompanies(mapped);
-          setError(null);
-        }
+        setSnapshot(json.snapshot as Snapshot);
+        setLoading(false);
       } catch (err) {
-        if (!cancelled) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.error("[Harch100Page] fetch failed, using fallback:", msg);
-          setError(msg);
-          setCompanies(COMPANIES);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        setFetchError(err instanceof Error ? err.message : "unknown");
+        setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const filtered = useMemo(() => {
-    let result = companies.filter(c =>
-      c.name.toLowerCase().includes(search.toLowerCase()) &&
-      (sectorFilter === "All Sectors" || c.sector === sectorFilter)
-    );
-    result.sort((a, b) => {
-      if (sortBy === "rank") return a.rank - b.rank;
-      if (sortBy === "score") return b.score - a.score;
-      if (sortBy === "sentiment") return b.sentiment - a.sentiment;
-      if (sortBy === "articles") return b.articles - a.articles;
-      if (sortBy === "innovation") return b.innovation.score - a.innovation.score;
-      if (sortBy === "performance") return b.performance.score - a.performance.score;
-      if (sortBy === "purpose") return b.purpose.score - a.purpose.score;
-      return 0;
-    });
-    return result;
-  }, [companies, search, sectorFilter, sortBy]);
+  return (
+    <div
+      style={{
+        background: C.bg,
+        color: C.text,
+        fontFamily: C.fontSans,
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <ScrollProgress />
+      <CursorGlow />
+      <PhaseDisclaimer variant="data" />
+      <AtelierNav />
+      <main style={{ flex: 1, position: "relative", zIndex: 1 }}>
+        {loading ? <LoadingState /> : snapshot && snapshot.rankings.length > 0
+          ? <Harch100Content snapshot={snapshot} isDesktop={isDesktop} />
+          : <EmptyState error={fetchError} />}
+      </main>
+      <AtelierFooter />
+      <BackToTop />
+    </div>
+  );
+}
 
-  const getPillarData = (c: Company, pillar: Pillar) => {
-    if (pillar === "Innovation") return c.innovation;
-    if (pillar === "Performance") return c.performance;
-    return c.purpose;
+// ═══════════════════════════════════════════════════════════════
+//  LOADING STATE
+// ═══════════════════════════════════════════════════════════════
+function LoadingState() {
+  return (
+    <div
+      style={{
+        maxWidth: "1280px",
+        margin: "0 auto",
+        padding: "120px 32px",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "48px",
+          height: "48px",
+          margin: "0 auto 24px",
+          border: `3px solid ${C.border}`,
+          borderTopColor: C.sage,
+          borderRadius: "50%",
+          animation: "harch-spin 0.9s linear infinite",
+        }}
+      />
+      <style>{`@keyframes harch-spin { to { transform: rotate(360deg); } }`}</style>
+      <div
+        style={{
+          fontFamily: C.fontMono,
+          fontSize: "12px",
+          color: C.textMuted,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+        }}
+      >
+        Chargement du classement…
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EMPTY STATE — first snapshot not yet published
+// ═══════════════════════════════════════════════════════════════
+function EmptyState({ error }: { error: string | null }) {
+  return (
+    <div
+      style={{
+        maxWidth: "880px",
+        margin: "0 auto",
+        padding: "80px 32px 120px",
+        textAlign: "center",
+      }}
+    >
+      {/* Eyebrow */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "6px 14px",
+          background: C.sageBg,
+          border: `1px solid ${C.sage}30`,
+          borderRadius: "999px",
+          marginBottom: "32px",
+        }}
+      >
+        <span
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: C.sage,
+            animation: "harch-pulse 2s infinite",
+          }}
+        />
+        <span
+          style={{
+            fontFamily: C.fontMono,
+            fontSize: "11px",
+            color: C.sage,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          En attente du premier classement
+        </span>
+        <style>{`@keyframes harch-pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }`}</style>
+      </div>
+
+      <h1
+        style={{
+          fontSize: "clamp(40px, 7vw, 72px)",
+          fontWeight: 800,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.02,
+          margin: "0 0 24px",
+          color: C.text,
+        }}
+      >
+        Harch 100
+      </h1>
+      <p
+        style={{
+          fontSize: "19px",
+          color: C.textSec,
+          lineHeight: 1.55,
+          maxWidth: "640px",
+          margin: "0 auto 40px",
+        }}
+      >
+        Le classement mensuel des 100 entreprises marocaines les mieux perçues.
+      </p>
+
+      <div
+        style={{
+          background: C.surface,
+          border: `1px solid ${C.border}`,
+          borderRadius: "16px",
+          padding: "48px 32px",
+          boxShadow: C.shadowSm,
+          textAlign: "center",
+        }}
+      >
+        {/* Calendar icon */}
+        <div
+          style={{
+            width: "64px",
+            height: "64px",
+            margin: "0 auto 24px",
+            background: C.sageBg,
+            borderRadius: "16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={C.sage}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+            <circle cx="12" cy="15" r="2" fill={C.sage} />
+          </svg>
+        </div>
+        <h2
+          style={{
+            fontSize: "22px",
+            fontWeight: 700,
+            color: C.text,
+            margin: "0 0 12px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Le premier classement Harch 100 sera publié le 1er du mois prochain.
+        </h2>
+        <p
+          style={{
+            fontSize: "15px",
+            color: C.textSec,
+            lineHeight: 1.6,
+            maxWidth: "540px",
+            margin: "0 auto",
+          }}
+        >
+          Le score est calculé à partir de 30+ sources médias marocaines et
+          africaines, de l'analyse de sentiment en Darija/FR/AR, et de la
+          visibilité sur 9 moteurs IA. Le classement est publié mensuellement.
+        </p>
+
+        {error && (
+          <div
+            style={{
+              marginTop: "24px",
+              padding: "8px 14px",
+              background: C.redLight,
+              border: `1px solid ${C.red}30`,
+              borderRadius: "8px",
+              fontSize: "12px",
+              color: C.red,
+              fontFamily: C.fontMono,
+              display: "inline-block",
+            }}
+          >
+            Détail technique : {error}
+          </div>
+        )}
+
+        <div
+          style={{
+            marginTop: "32px",
+            display: "flex",
+            gap: "12px",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <a
+            href="/atelier/method"
+            style={{
+              padding: "12px 24px",
+              background: C.sage,
+              color: "#fff",
+              fontSize: "14px",
+              fontWeight: 600,
+              textDecoration: "none",
+              borderRadius: "6px",
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = C.sageBright)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = C.sage)}
+          >
+            Voir la méthodologie
+          </a>
+          <a
+            href="/atelier/audit"
+            style={{
+              padding: "12px 24px",
+              background: "transparent",
+              color: C.text,
+              fontSize: "14px",
+              fontWeight: 500,
+              textDecoration: "none",
+              borderRadius: "6px",
+              border: `1px solid ${C.borderStrong}`,
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = C.surfaceAlt)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Demander un audit gratuit
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTENT — full ranking experience
+// ═══════════════════════════════════════════════════════════════
+function Harch100Content({
+  snapshot,
+  isDesktop,
+}: {
+  snapshot: Snapshot;
+  isDesktop: boolean;
+}) {
+  // Normalize rankings → Rows.
+  const rows: Row[] = useMemo(() => {
+    const raw = snapshot.rankings as RankingEntry[];
+    const maxSources = raw.reduce(
+      (m, r) => Math.max(m, r.uniqueSources ?? 0),
+      0,
+    );
+    return raw.map((r) => normalizeRow(r, maxSources));
+  }, [snapshot]);
+
+  // Build sector list (sorted by company count desc, capped at 7 for filter).
+  const sectorList = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      counts.set(r.sector, (counts.get(r.sector) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([s]) => s);
+  }, [rows]);
+
+  // ── FILTER / SEARCH / SORT STATE ──────────────────────────────
+  const [search, setSearch] = useState("");
+  const [sectorFilter, setSectorFilter] = useState<string>("all");
+  const [scoreRange, setScoreRange] = useState<"all" | "high" | "mid" | "low">(
+    "all",
+  );
+  const [sortKey, setSortKey] = useState<
+    "rank" | "name" | "sector" | "score" | "aiVisibility" | "articles"
+  >("rank");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(0); // 0-indexed
+  const pageSize = 20;
+
+  // Apply sector filter from donut click.
+  const handleSectorClick = useCallback((sector: string) => {
+    setSectorFilter(sector);
+    setPage(0);
+    // Scroll to ranking table.
+    if (typeof document !== "undefined") {
+      const el = document.getElementById("harch100-ranking-table");
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  // Filtered + sorted rows.
+  const filtered: Row[] = useMemo(() => {
+    let out = rows;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      out = out.filter((r) => r.name.toLowerCase().includes(q));
+    }
+    if (sectorFilter !== "all") {
+      out = out.filter((r) => r.sector === sectorFilter);
+    }
+    if (scoreRange !== "all") {
+      out = out.filter((r) => {
+        if (scoreRange === "high") return r.score > 80;
+        if (scoreRange === "mid") return r.score >= 60 && r.score <= 80;
+        return r.score < 60;
+      });
+    }
+    const sorted = [...out].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "rank":
+          cmp = a.rank - b.rank;
+          break;
+        case "name":
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case "sector":
+          cmp = a.sector.localeCompare(b.sector);
+          break;
+        case "score":
+          cmp = a.score - b.score;
+          break;
+        case "aiVisibility":
+          cmp = a.aiVisibility - b.aiVisibility;
+          break;
+        case "articles":
+          cmp = a.articles - b.articles;
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [rows, search, sectorFilter, scoreRange, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageRows = filtered.slice(
+    safePage * pageSize,
+    safePage * pageSize + pageSize,
+  );
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "rank" || key === "name" || key === "sector"
+        ? "asc"
+        : "desc");
+    }
+    setPage(0);
   };
+
+  // Top 3 for podium (use original rank, not filtered).
+  const top3 = useMemo(
+    () => [...rows].sort((a, b) => a.rank - b.rank).slice(0, 3),
+    [rows],
+  );
+
+  // Sector stats for donut.
+  const sectorStats = useMemo(() => {
+    const map = new Map<
+      string,
+      { count: number; totalScore: number; totalArticles: number }
+    >();
+    for (const r of rows) {
+      const e = map.get(r.sector) ?? { count: 0, totalScore: 0, totalArticles: 0 };
+      e.count += 1;
+      e.totalScore += r.score;
+      e.totalArticles += r.articles;
+      map.set(r.sector, e);
+    }
+    return Array.from(map.entries())
+      .map(([sector, v]) => ({
+        sector,
+        count: v.count,
+        avgScore: Math.round(v.totalScore / Math.max(1, v.count)),
+        totalArticles: v.totalArticles,
+        pct: 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [rows]);
+
+  const total = rows.length || 1;
+  sectorStats.forEach((s) => (s.pct = (s.count / total) * 100));
+
+  // Score distribution histogram.
+  const scoreBuckets = useMemo(() => {
+    const buckets = [
+      { label: "0–20", min: 0, max: 20, count: 0, color: C.red },
+      { label: "20–40", min: 20, max: 40, count: 0, color: "#F97316" },
+      { label: "40–60", min: 40, max: 60, count: 0, color: C.amberBright },
+      { label: "60–80", min: 60, max: 80, count: 0, color: C.sageBright },
+      { label: "80–100", min: 80, max: 101, count: 0, color: C.sage },
+    ];
+    for (const r of rows) {
+      for (const b of buckets) {
+        if (r.score >= b.min && r.score < b.max) {
+          b.count += 1;
+          break;
+        }
+      }
+    }
+    return buckets;
+  }, [rows]);
+
+  const publishedAt = snapshot.publishedAt ?? snapshot.generatedAt;
 
   return (
     <>
-      <ScrollProgress />
-      <CursorGlow />
-      <AtelierNav />
-      <PhaseDisclaimer variant="data" />
+      {/* ─── 1. HERO ──────────────────────────────────────────── */}
+      <Hero
+        period={snapshot.period}
+        publishedAt={publishedAt}
+        totalCompanies={rows.length}
+      />
 
-      {/* HERO — Signal AI 500 style */}
-      <section style={{
-        background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
-        borderBottom: `1px solid ${C.border}`,
-        padding: "48px 16px",
-      }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-          {/* Top label */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "10px",
-            padding: "6px 14px", background: C.surface,
-            border: `1px solid ${C.border}`, borderRadius: "100px",
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "24px",
-          }}>
-            <span style={{
-              width: "6px", height: "6px", borderRadius: "50%",
-              background: C.sage, animation: "pulse 2s infinite",
-            }} />
-            HARCH 100 · FY 2026 · Live Data
-          </div>
-
-          <h1 style={{
-            fontSize: "clamp(40px, 7vw, 72px)", fontWeight: 800,
-            letterSpacing: "-0.045em", lineHeight: 0.98, color: C.text,
-            margin: "0 0 28px", maxWidth: "900px",
-          }}>
-            The Harch 100 Global<br />
-            <span style={{
-              background: `linear-gradient(90deg, ${C.sage} 0%, ${C.sageBright} 100%)`,
-              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}>Reputation Ranking.</span>
-          </h1>
-
-          <p style={{
-            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
-            maxWidth: "720px", marginBottom: "40px",
-          }}>
-            Morocco's most-talked about companies ranked by AI-powered reputation intelligence.
-            Unlike surveys, the Harch 100 uses big data and HarchIQ to benchmark corporations on
-            hundreds of topics—from R&D to M&A—across <strong style={{ color: C.text }}>30+ media sources</strong> and
-            <strong style={{ color: C.text }}> 4 AI engines</strong>.
-          </p>
-
-          {/* Stats row */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
-            gap: "1px", background: C.border, border: `1px solid ${C.border}`,
-            borderRadius: "12px", overflow: "hidden", maxWidth: "900px",
-          }}>
-            {[
-              { label: "Companies ranked", value: "20", sub: "expanding to 100" },
-              { label: "Articles analyzed", value: "2,546", sub: "top 20 companies" },
-              { label: "Media sources", value: "30+", sub: "FR · AR · EN" },
-              { label: "AI engines", value: "4", sub: "ChatGPT · Perplexity · Gemini · Claude" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: C.surface, padding: "20px 24px" }}>
-                <div style={{ fontSize: "28px", fontWeight: 800, color: C.text, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginBottom: "6px" }}>
-                  {s.value}
-                </div>
-                <div style={{ fontSize: "12px", fontWeight: 600, color: C.text, marginBottom: "2px" }}>
-                  {s.label}
-                </div>
-                <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {s.sub}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* ─── 2. TOP 3 PODIUM ──────────────────────────────────── */}
+      <section
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          padding: "0 32px 80px",
+        }}
+      >
+        <SectionHeading
+          eyebrow="Podium"
+          title="Le Top 3 de la période"
+          subhead="Les trois entreprises marocaines les mieux perçues ce mois-ci, selon le score de réputation Harch."
+        />
+        <Podium top3={top3} sectors={sectorList} isDesktop={isDesktop} />
       </section>
 
-      {/* PILLARS SELECTOR — Innovation / Performance / Purpose */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
-        <div style={{
-          display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "flex-end",
-        }}>
-          <div>
-            <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
-              Three pillars of reputation
-            </div>
-            <h2 style={{ fontSize: "32px", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: 0 }}>
-              What drives the narrative.
-            </h2>
-          </div>
-          <div style={{ display: "flex", gap: "8px", background: C.surface, padding: "4px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
-            {PILLARS.map(p => (
-              <button
-                key={p}
-                onClick={() => setActivePillar(p)}
-                style={{
-                  padding: "10px 20px", fontSize: "13px", fontWeight: 600,
-                  fontFamily: "'Inter', sans-serif",
-                  background: activePillar === p ? C.text : "transparent",
-                  color: activePillar === p ? "#FFFFFF" : C.textSec,
-                  border: "none", borderRadius: "7px", cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Pillar explainer */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "16px", marginBottom: "40px",
-        }}>
-          {PILLARS.map(p => {
-            const isActive = activePillar === p;
-            const desc = p === "Innovation"
-              ? "Collaborations, Products & services, Technology"
-              : p === "Performance"
-              ? "Governance, Growth, Operations"
-              : "CSR, Culture, Sustainability";
-            return (
-              <div key={p} style={{
-                background: isActive ? C.surface : "transparent",
-                border: `1px solid ${isActive ? C.sage : C.border}`,
-                borderRadius: "10px", padding: "20px",
-                transition: "all 0.2s",
-                boxShadow: isActive ? "0 4px 16px rgba(74,123,95,0.08)" : "none",
-              }}>
-                <div style={{
-                  fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-                  color: isActive ? C.sage : C.textMuted,
-                  letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px",
-                }}>
-                  {isActive ? "▸ Active view" : "Pillar"}
-                </div>
-                <div style={{ fontSize: "17px", fontWeight: 700, color: C.text, marginBottom: "6px" }}>
-                  {p}
-                </div>
-                <div style={{ fontSize: "12px", color: C.textSec, lineHeight: 1.5 }}>
-                  {desc}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* TOP 3 PODIUM — Premium cards */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px 48px" }}>
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "20px",
-        }}>
-          {companies.slice(0, 3).map((c, i) => (
-            <div key={c.rank} style={{
-              background: C.surface,
-              border: `1px solid ${i === 0 ? C.sage : C.border}`,
-              borderRadius: "16px",
-              padding: "24px 20px",
-              position: "relative", overflow: "hidden",
-              boxShadow: i === 0 ? "0 8px 32px rgba(74,123,95,0.12)" : C.shadow,
-              transform: animateIn ? "translateY(0)" : "translateY(20px)",
-              opacity: animateIn ? 1 : 0,
-              transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.1}s`,
-            }}>
-              <div style={{
-                position: "absolute", top: 0, left: 0, right: 0, height: "4px",
-                background: i === 0 ? C.sage : i === 1 ? C.accent : "#B87333",
-              }} />
-              <div style={{ position: "absolute", top: "-20px", right: "-20px", fontSize: "180px", fontWeight: 900, color: i === 0 ? "rgba(74,123,95,0.06)" : "rgba(74,93,110,0.06)", fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, pointerEvents: "none" }}>
-                {c.rank}
-              </div>
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: "8px",
-                  fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-                  color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase",
-                  marginBottom: "16px",
-                }}>
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    width: "24px", height: "24px", borderRadius: "50%",
-                    background: i === 0 ? C.sage : i === 1 ? C.accent : "#B87333",
-                    color: "#FFFFFF", fontSize: "11px", fontWeight: 700,
-                  }}>
-                    {c.rank}
-                  </span>
-                  Rank #{c.rank}
-                </div>
-                <h3 style={{ fontSize: "24px", fontWeight: 800, color: C.text, letterSpacing: "-0.02em", margin: "0 0 6px" }}>
-                  {c.name}
-                </h3>
-                <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", marginBottom: "24px" }}>
-                  {c.sector}
-                </div>
-
-                {/* Big score */}
-                <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", marginBottom: "24px" }}>
-                  <div>
-                    <div style={{ fontSize: "48px", fontWeight: 900, color: C.sage, fontFamily: "'JetBrains Mono', monospace", lineHeight: 0.9, letterSpacing: "-0.04em" }}>
-                      {c.score}
-                    </div>
-                    <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: "4px" }}>
-                      Reputation Score
-                    </div>
-                  </div>
-                  <div style={{
-                    display: "inline-flex", alignItems: "center", gap: "4px",
-                    fontSize: "12px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                    color: c.trend === "up" ? C.sage : C.red, padding: "4px 8px",
-                    borderRadius: "4px", background: c.trend === "up" ? "rgba(74,123,95,0.08)" : "rgba(160,82,75,0.08)",
-                    marginBottom: "6px",
-                  }}>
-                    {c.trend === "up" ? "▲" : "▼"} {c.change}
-                  </div>
-                </div>
-
-                {/* Pillar breakdown */}
-                <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", marginBottom: "12px", background: C.surfaceAlt }}>
-                  <div style={{ width: `${c.innovation.weight}%`, background: C.sage }} title={`Innovation ${c.innovation.weight}%`} />
-                  <div style={{ width: `${c.performance.weight}%`, background: C.accent }} title={`Performance ${c.performance.weight}%`} />
-                  <div style={{ width: `${c.purpose.weight}%`, background: "#B87333" }} title={`Purpose ${c.purpose.weight}%`} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.textMuted }}>
-                  <span style={{ color: C.sage }}>● Innovation {c.innovation.weight}%</span>
-                  <span style={{ color: C.accent }}>● Performance {c.performance.weight}%</span>
-                  <span style={{ color: "#B87333" }}>● Purpose {c.purpose.weight}%</span>
-                </div>
-
-                {/* Share of voice */}
-                <div style={{
-                  marginTop: "20px", paddingTop: "20px", borderTop: `1px solid ${C.borderLight}`,
-                  display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center",
-                }}>
-                  <div>
-                    <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {c.shareOfVoice}%
-                    </div>
-                    <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Share of voice
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {c.articles}
-                    </div>
-                    <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Articles
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* MAIN RANKING TABLE */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px 48px" }}>
-        {/* Data source status banner */}
-        {loading && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            padding: "10px 16px", marginBottom: "16px",
-            background: C.surfaceAlt, border: `1px solid ${C.borderLight}`,
-            borderRadius: "8px", fontSize: "12px", color: C.textMuted,
-            fontFamily: "'JetBrains Mono', monospace",
-          }}>
-            <span style={{
-              width: "8px", height: "8px", borderRadius: "50%",
-              background: C.accent, animation: "pulse 1.5s infinite",
-            }} />
-            Loading live company data…
-          </div>
-        )}
-        {!loading && error && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            padding: "10px 16px", marginBottom: "16px",
-            background: "rgba(160,82,75,0.06)", border: `1px solid rgba(160,82,75,0.2)`,
-            borderRadius: "8px", fontSize: "12px", color: C.red,
-            fontFamily: "'JetBrains Mono', monospace",
-          }}>
-            <span style={{ fontWeight: 700 }}>⚠</span>
-            Live data unavailable ({error}). Showing fallback dataset.
-          </div>
-        )}
-        {!loading && !error && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            padding: "10px 16px", marginBottom: "16px",
-            background: "rgba(74,123,95,0.06)", border: `1px solid rgba(74,123,95,0.2)`,
-            borderRadius: "8px", fontSize: "12px", color: C.sage,
-            fontFamily: "'JetBrains Mono', monospace",
-          }}>
-            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: C.sage }} />
-            Live data: {companies.length} companies loaded from API
-          </div>
-        )}
-        {/* Toolbar */}
-        <div style={{
-          display: "flex", gap: "12px", marginBottom: "24px",
-          flexWrap: "wrap", alignItems: "center",
-        }}>
-          <input
-            type="search"
-            placeholder="Search companies..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              flex: "1", minWidth: "240px", padding: "12px 16px",
-              background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px",
-              fontSize: "14px", color: C.text, fontFamily: "'Inter', sans-serif", outline: "none",
-            }}
+      {/* ─── 3 + 4. SECTOR BREAKDOWN + SCORE DISTRIBUTION ─────── */}
+      <section
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          padding: "0 32px 80px",
+          borderTop: `1px solid ${C.border}`,
+          paddingTop: "80px",
+        }}
+      >
+        <SectionHeading
+          eyebrow="Analyse"
+          title="Répartition par secteur & distribution des scores"
+          subhead="Cliquez sur un secteur pour filtrer le classement ci-dessous."
+        />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isDesktop
+              ? "1fr 1fr"
+              : "1fr",
+            gap: "24px",
+          }}
+        >
+          <SectorBreakdown
+            stats={sectorStats}
+            sectors={sectorList}
+            activeSector={sectorFilter}
+            onSectorClick={handleSectorClick}
           />
-          <select value={sectorFilter} onChange={(e) => setSectorFilter(e.target.value)} style={selectStyle}>
-            {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} style={selectStyle}>
-            <option value="rank">Sort: Rank</option>
-            <option value="score">Sort: Score</option>
-            <option value="sentiment">Sort: Sentiment</option>
-            <option value="articles">Sort: Articles</option>
-            <option value="innovation">Sort: Innovation</option>
-            <option value="performance">Sort: Performance</option>
-            <option value="purpose">Sort: Purpose</option>
-          </select>
-        </div>
-
-        <div style={{ fontSize: "12px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", marginBottom: "16px" }}>
-          Showing {filtered.length} of {companies.length} companies · Click a row to expand details
-        </div>
-
-        {/* Table */}
-        <div style={{
-          background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: "12px", overflow: "hidden", boxShadow: C.shadow,
-        }}>
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "880px" }}>
-            <thead>
-              <tr style={{ background: C.surfaceAlt }}>
-                <th style={thStyle}>#</th>
-                <th style={thStyle}>Company</th>
-                <th style={thStyle}>Sector</th>
-                <th style={{ ...thStyle, textAlign: "center" }}>Score</th>
-                <th style={{ ...thStyle, textAlign: "center" }}>
-                  <span style={{ color: activePillar === "Innovation" ? C.sage : "inherit" }}>Innov.</span>
-                </th>
-                <th style={{ ...thStyle, textAlign: "center" }}>
-                  <span style={{ color: activePillar === "Performance" ? C.sage : "inherit" }}>Perf.</span>
-                </th>
-                <th style={{ ...thStyle, textAlign: "center" }}>
-                  <span style={{ color: activePillar === "Purpose" ? C.sage : "inherit" }}>Purpose</span>
-                </th>
-                <th style={{ ...thStyle, textAlign: "center" }}>SoC</th>
-                <th style={{ ...thStyle, textAlign: "center" }}>Trend</th>
-                <th style={{ ...thStyle, textAlign: "center" }}>Risk</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => {
-                const isExpanded = expandedRow === c.rank;
-                return (
-                  <React.Fragment key={c.rank}>
-                    <tr
-                      style={{
-                        borderBottom: `1px solid ${C.borderLight}`,
-                        background: isExpanded ? C.surfaceAlt : "transparent",
-                        cursor: "pointer",
-                        transition: "background 0.15s",
-                      }}
-                      onClick={() => setExpandedRow(isExpanded ? null : c.rank)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setExpandedRow(isExpanded ? null : c.rank);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
-                      aria-expanded={isExpanded}
-                      aria-label={`${c.name}, rank ${c.rank}, score ${c.score}. Press Enter to ${isExpanded ? "collapse" : "expand"} details.`}
-                      onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = C.surfaceAlt; }}
-                      onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = "transparent"; }}
-                    >
-                      <td style={tdStyle}>
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          width: "32px", height: "32px", borderRadius: "8px",
-                          background: c.rank <= 3 ? C.sage : c.rank <= 10 ? C.surfaceAlt : "transparent",
-                          color: c.rank <= 3 ? "#FFFFFF" : C.text,
-                          fontSize: "13px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                          border: c.rank <= 10 && c.rank > 3 ? `1px solid ${C.border}` : "none",
-                        }}>
-                          {c.rank}
-                        </span>
-                      </td>
-                      <td style={{ ...tdStyle, fontWeight: 600, color: C.text }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          {c.name}
-                          {isExpanded && <span style={{ fontSize: "10px", color: C.textMuted }}>▾</span>}
-                          {!isExpanded && <span style={{ fontSize: "10px", color: C.textMuted }}>▸</span>}
-                        </div>
-                      </td>
-                      <td style={{ ...tdStyle, color: C.textMuted, fontSize: "12px" }}>{c.sector}</td>
-                      <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <span style={{
-                          fontSize: "17px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
-                          color: c.score >= 75 ? C.sage : c.score >= 55 ? C.accent : c.score >= 45 ? "#B87333" : C.red,
-                        }}>
-                          {c.score}
-                        </span>
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <PillarCell weight={c.innovation.weight} score={c.innovation.score} active={activePillar === "Innovation"} color={C.sage} />
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <PillarCell weight={c.performance.weight} score={c.performance.score} active={activePillar === "Performance"} color={C.accent} />
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <PillarCell weight={c.purpose.weight} score={c.purpose.score} active={activePillar === "Purpose"} color="#B87333" />
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "center", fontFamily: "'JetBrains Mono', monospace", color: C.textSec, fontSize: "13px" }}>
-                        {c.shareOfVoice}%
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", gap: "4px",
-                          fontSize: "11px", fontWeight: 600, fontFamily: "'JetBrains Mono', monospace",
-                          color: c.trend === "up" ? C.sage : c.trend === "down" ? C.red : C.textMuted,
-                          padding: "3px 7px", borderRadius: "4px",
-                          background: c.trend === "up" ? "rgba(74,123,95,0.08)" : c.trend === "down" ? "rgba(160,82,75,0.08)" : C.surfaceAlt,
-                        }}>
-                          {c.trend === "up" ? "▲" : c.trend === "down" ? "▼" : "—"} {c.change}
-                        </span>
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <RiskBadge level={c.riskLevel} />
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr style={{ background: C.surfaceAlt }}>
-                        <td colSpan={10} style={{ padding: "0" }}>
-                          <ExpandedRow company={c} activePillar={activePillar} />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
-        </div>
-
-        {/* Methodology */}
-        <div style={{
-          marginTop: "40px", padding: "20px 16px",
-          background: C.surface, borderRadius: "12px",
-          border: `1px solid ${C.border}`, boxShadow: C.shadow,
-        }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.accent, letterSpacing: "0.12em", textTransform: "uppercase",
-            marginBottom: "16px",
-          }}>
-            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.sage }} />
-            Methodology — How we rank
-          </div>
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "20px",
-          }}>
-            {[
-              { title: "1. Data Collection", body: "30+ Moroccan & African media sources (FR/AR/EN), Google News aggregation, 4 AI engines (ChatGPT, Perplexity, Gemini, Claude)." },
-              { title: "2. Pillar Extraction", body: "HarchIQ identifies which articles discuss Innovation, Performance, or Purpose — and the specific themes within each." },
-              { title: "3. Sentiment Scoring", body: "Entity-level sentiment analysis in 3 languages. Positive coverage boosts pillar scores; negative coverage drags them down." },
-              { title: "4. Composite Score", body: "Overall reputation score = 40% media sentiment, 30% AI visibility, 20% volume, 10% source authority. Pillar weights show narrative composition." },
-            ].map(s => (
-              <div key={s.title}>
-                <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, marginBottom: "6px" }}>
-                  {s.title}
-                </div>
-                <div style={{ fontSize: "12px", color: C.textSec, lineHeight: 1.7 }}>
-                  {s.body}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{
-            marginTop: "20px", paddingTop: "20px", borderTop: `1px solid ${C.borderLight}`,
-            fontSize: "11px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace",
-          }}>
-            Data FY 2026 · Updated monthly · No surveys — pure data-driven ranking · Corporations ranked, not brands
-          </div>
+          <ScoreDistribution buckets={scoreBuckets} />
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{
-        background: C.text, color: "#FFFFFF",
-        padding: "48px 16px", textAlign: "center",
-      }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
-          <div style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "16px",
-          }}>
-            Go beyond the ranking
-          </div>
-          <h2 style={{
-            fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 700,
-            letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF",
-          }}>
-            See where you rank. Then fix what's hurting you.
-          </h2>
-          <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.7)", marginBottom: "32px", lineHeight: 1.6 }}>
-            Get a full reputation audit with competitor benchmarks, AI visibility matrix, risk assessment,
-            and 30+ key themes broken down by article. 10x deeper than this public ranking.
-          </p>
-          <a href="/atelier/audit" style={{
-            display: "inline-block", padding: "16px 32px",
-            background: C.sage, color: "#FFFFFF",
-            fontSize: "15px", fontWeight: 600, textDecoration: "none",
-            borderRadius: "8px", fontFamily: "'Inter', sans-serif",
-            border: "none", cursor: "pointer",
-          }}>
-            Get your full audit →
-          </a>
-        </div>
+      {/* ─── 5. FULL RANKING TABLE ────────────────────────────── */}
+      <section
+        id="harch100-ranking-table"
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          padding: "0 32px 80px",
+          borderTop: `1px solid ${C.border}`,
+          paddingTop: "80px",
+          scrollMarginTop: "80px",
+        }}
+      >
+        <SectionHeading
+          eyebrow="Classement complet"
+          title={`Les ${rows.length} entreprises classées`}
+          subhead="Tri, recherche et filtres disponibles. Cliquez sur une entreprise pour voir son profil complet."
+        />
+
+        {/* Filter bar */}
+        <FilterBar
+          search={search}
+          onSearch={(v) => {
+            setSearch(v);
+            setPage(0);
+          }}
+          sectorFilter={sectorFilter}
+          onSector={(v) => {
+            setSectorFilter(v);
+            setPage(0);
+          }}
+          sectors={sectorList}
+          scoreRange={scoreRange}
+          onScoreRange={(v) => {
+            setScoreRange(v);
+            setPage(0);
+          }}
+          resultCount={filtered.length}
+          total={rows.length}
+        />
+
+        {/* Table (desktop) or cards (mobile) */}
+        {isDesktop ? (
+          <RankingTable
+            rows={pageRows}
+            sectors={sectorList}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={toggleSort}
+          />
+        ) : (
+          <RankingCards rows={pageRows} sectors={sectorList} />
+        )}
+
+        {/* Pagination */}
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          total={filtered.length}
+          onPage={setPage}
+        />
       </section>
 
-      {/* ─── Live Agent Ranking (real scraped data) ─── */}
-      <LiveAgentRanking />
+      {/* ─── 6. METHODOLOGY ──────────────────────────────────── */}
+      <section
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          padding: "0 32px 80px",
+          borderTop: `1px solid ${C.border}`,
+          paddingTop: "80px",
+        }}
+      >
+        <SectionHeading
+          eyebrow="Méthodologie"
+          title="Comment nous calculons le score"
+          subhead="Le score Harch 100 repose sur 5 piliers pondérés, calculés à partir de 30+ sources médias et 9 moteurs IA."
+        />
+        <Methodology />
+      </section>
 
-      <AtelierFooter />
-      <BackToTop />
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
-          outline: 2px solid ${C.accent}; outline-offset: 2px; border-radius: 4px;
-        }
-        @media (max-width: 900px) {
-          th, td { padding: 8px 6px !important; }
-        }
-      `}</style>
+      {/* ─── 7. TREND COMPARISON ─────────────────────────────── */}
+      <section
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          padding: "0 32px 80px",
+          borderTop: `1px solid ${C.border}`,
+          paddingTop: "80px",
+        }}
+      >
+        <SectionHeading
+          eyebrow="Évolution mensuelle"
+          title="Tendance des scores"
+          subhead="Comparaison du top 10, du bottom 10 et de la moyenne globale sur les 6 derniers mois."
+        />
+        <TrendComparison rows={rows} currentPeriod={snapshot.period} />
+      </section>
     </>
   );
 }
 
-// ─── Sub-components ─────────────────────────────────────────────
-
-function PillarCell({ weight, score, active, color }: { weight: number; score: number; active: boolean; color: string }) {
+// ═══════════════════════════════════════════════════════════════
+//  HERO
+// ═══════════════════════════════════════════════════════════════
+function Hero({
+  period,
+  publishedAt,
+  totalCompanies,
+}: {
+  period: string;
+  publishedAt: string;
+  totalCompanies: number;
+}) {
   return (
-    <div style={{
-      display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "2px",
-      padding: "4px 8px", borderRadius: "6px",
-      background: active ? `${color}10` : "transparent",
-      border: active ? `1px solid ${color}30` : "1px solid transparent",
-      transition: "all 0.15s",
-    }}>
-      <span style={{
-        fontSize: "13px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-        color: active ? color : C.text,
-      }}>
-        {score}
-      </span>
-      <span style={{
-        fontSize: "9px", color: C.textMuted, fontFamily: "'JetBrains Mono', monospace",
-      }}>
-        {weight}%
-      </span>
+    <section
+      style={{
+        maxWidth: "1280px",
+        margin: "0 auto",
+        padding: "64px 32px 80px",
+        position: "relative",
+      }}
+    >
+      {/* Eyebrow badge */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "8px 16px",
+          background: C.sageBg,
+          border: `1px solid ${C.sage}30`,
+          borderRadius: "999px",
+          marginBottom: "32px",
+        }}
+      >
+        <span
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: C.sage,
+            animation: "harch-hero-pulse 2s infinite",
+          }}
+        />
+        <span
+          style={{
+            fontFamily: C.fontMono,
+            fontSize: "11px",
+            color: C.sage,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          Période : {formatPeriod(period)}
+        </span>
+        <style>{`@keyframes harch-hero-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }`}</style>
+      </div>
+
+      <h1
+        style={{
+          fontSize: "clamp(48px, 8vw, 96px)",
+          fontWeight: 800,
+          letterSpacing: "-0.04em",
+          lineHeight: 0.98,
+          margin: "0 0 24px",
+          color: C.text,
+        }}
+      >
+        Harch 100
+      </h1>
+
+      <p
+        style={{
+          fontSize: "clamp(18px, 2.4vw, 24px)",
+          color: C.textSec,
+          lineHeight: 1.4,
+          maxWidth: "780px",
+          margin: "0 0 40px",
+          fontWeight: 400,
+        }}
+      >
+        Le classement mensuel des 100 entreprises marocaines les mieux perçues.
+      </p>
+
+      {/* Stats row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
+          gap: "16px",
+          maxWidth: "820px",
+        }}
+      >
+        <HeroStat
+          label="Entreprises classées"
+          value={String(totalCompanies)}
+          accent={C.sage}
+        />
+        <HeroStat
+          label="Dernière mise à jour"
+          value={formatTimestamp(publishedAt)}
+          accent={C.accent}
+          small
+        />
+        <HeroStat
+          label="Périodicité"
+          value="Mensuelle"
+          accent={C.amberBright}
+        />
+      </div>
+    </section>
+  );
+}
+
+function HeroStat({
+  label,
+  value,
+  accent,
+  small = false,
+}: {
+  label: string;
+  value: string;
+  accent: string;
+  small?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: "12px",
+        padding: "18px 20px",
+        boxShadow: C.shadowSm,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          marginBottom: "8px",
+        }}
+      >
+        <span
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: accent,
+          }}
+        />
+        <span
+          style={{
+            fontFamily: C.fontMono,
+            fontSize: "10px",
+            color: C.textMuted,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          {label}
+        </span>
+      </div>
+      <div
+        style={{
+          fontSize: small ? "13px" : "20px",
+          fontWeight: 700,
+          color: C.text,
+          letterSpacing: "-0.01em",
+          lineHeight: 1.3,
+          fontFamily: small ? C.fontSans : C.fontMono,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
 
-function RiskBadge({ level }: { level: "low" | "moderate" | "elevated" | "high" | "critical" }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    low: { bg: "rgba(74,123,95,0.1)", text: C.sage },
-    moderate: { bg: "rgba(74,93,110,0.1)", text: C.accent },
-    elevated: { bg: "rgba(184,115,51,0.1)", text: "#B87333" },
-    high: { bg: "rgba(160,82,75,0.1)", text: C.red },
-    critical: { bg: "rgba(160,40,40,0.15)", text: "#A02828" },
-  };
-  const c = colors[level];
+// ═══════════════════════════════════════════════════════════════
+//  SECTION HEADING
+// ═══════════════════════════════════════════════════════════════
+function SectionHeading({
+  eyebrow,
+  title,
+  subhead,
+}: {
+  eyebrow: string;
+  title: string;
+  subhead: string;
+}) {
   return (
-    <span style={{
-      display: "inline-block", padding: "3px 8px",
-      fontSize: "10px", fontWeight: 600, fontFamily: "'JetBrains Mono', monospace",
-      color: c.text, background: c.bg, borderRadius: "4px",
-      textTransform: "uppercase", letterSpacing: "0.06em",
-    }}>
-      {level}
-    </span>
+    <div style={{ marginBottom: "48px", maxWidth: "820px" }}>
+      <div
+        style={{
+          fontFamily: C.fontMono,
+          fontSize: "12px",
+          color: C.sage,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        {eyebrow}
+        <span
+          style={{
+            width: "40px",
+            height: "1px",
+            background: `linear-gradient(to right, ${C.sage}, transparent)`,
+          }}
+        />
+      </div>
+      <h2
+        style={{
+          fontSize: "clamp(28px, 4vw, 44px)",
+          fontWeight: 800,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.08,
+          margin: "0 0 16px",
+          color: C.text,
+        }}
+      >
+        {title}
+      </h2>
+      <p
+        style={{
+          fontSize: "17px",
+          color: C.textSec,
+          lineHeight: 1.55,
+          maxWidth: "680px",
+        }}
+      >
+        {subhead}
+      </p>
+    </div>
   );
 }
 
-function ExpandedRow({ company, activePillar }: { company: Company; activePillar: Pillar }) {
-  const allThemes = [
-    ...company.keyThemes.map(t => ({ ...t, pillar: t.theme === "Collaborations" || t.theme === "Products & services" || t.theme === "Technology" ? "Innovation" : t.theme === "Governance" || t.theme === "Growth" || t.theme === "Operations" ? "Performance" : "Purpose" })),
+// ═══════════════════════════════════════════════════════════════
+//  TOP 3 PODIUM
+// ═══════════════════════════════════════════════════════════════
+function Podium({
+  top3,
+  sectors,
+  isDesktop,
+}: {
+  top3: Row[];
+  sectors: string[];
+  isDesktop: boolean;
+}) {
+  if (top3.length === 0) return null;
+
+  // Podium layout: #1 large center, #2 left, #3 right (desktop)
+  // Mobile: stack #1, #2, #3.
+  const [first, second, third] = [
+    top3[0],
+    top3[1] ?? null,
+    top3[2] ?? null,
   ];
 
-  const rd = company.riskDimensions;
-  const riskAxes = ["Geopolitical", "Operational", "Financial", "Environmental", "Legal", "Consumer", "Technology"];
-  const riskValues = [rd.geopolitical, rd.operational, rd.financial, rd.environmental, rd.legal, rd.consumer, rd.technology];
-  const avgRisk = Math.round(riskValues.reduce((a, b) => a + b, 0) / riskValues.length);
-  const maxRisk = Math.max(...riskValues);
-  const maxRiskAxis = riskAxes[riskValues.indexOf(maxRisk)];
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isDesktop ? "1fr 1.4fr 1fr" : "1fr",
+        gap: "20px",
+        alignItems: "stretch",
+      }}
+    >
+      {second && (
+        <PodiumCard
+          row={second}
+          place={2}
+          accent={C.charcoal}
+          sectors={sectors}
+          compact
+        />
+      )}
+      {first && (
+        <PodiumCard
+          row={first}
+          place={1}
+          accent={C.sage}
+          sectors={sectors}
+          featured
+        />
+      )}
+      {third && (
+        <PodiumCard
+          row={third}
+          place={3}
+          accent={C.amberBright}
+          sectors={sectors}
+          compact
+        />
+      )}
+    </div>
+  );
+}
+
+function PodiumCard({
+  row,
+  place,
+  accent,
+  sectors,
+  featured = false,
+  compact = false,
+}: {
+  row: Row;
+  place: 1 | 2 | 3;
+  accent: string;
+  sectors: string[];
+  featured?: boolean;
+  compact?: boolean;
+}) {
+  const sectorColor = colorForSector(row.sector, sectors);
+  const initials = getInitials(row.name);
+  const trendIcon =
+    row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "→";
+  const trendColor =
+    row.trend === "up" ? C.sage : row.trend === "down" ? C.red : C.textMuted;
+  const href = row.slug
+    ? `/atelier/companies/${row.slug}`
+    : "/atelier/harch-100";
 
   return (
-    <div style={{ padding: "20px 16px", background: C.surfaceAlt }}>
-      <div style={{
-        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-        gap: "24px", maxWidth: "1300px",
-      }}>
-        {/* Column 1: Quarterly trend + pillars */}
-        <div>
-          <div style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.accent, letterSpacing: "0.1em", textTransform: "uppercase",
+    <a
+      href={href}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderTop: `4px solid ${accent}`,
+        borderRadius: "16px",
+        padding: featured ? "32px" : "24px",
+        boxShadow: featured ? "0 8px 24px rgba(74,123,95,0.12)" : C.shadowSm,
+        textDecoration: "none",
+        color: "inherit",
+        position: "relative",
+        transition: "transform 0.2s ease, box-shadow 0.2s ease",
+        minHeight: featured ? "320px" : "260px",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = featured
+          ? "0 12px 32px rgba(74,123,95,0.18)"
+          : "0 6px 20px rgba(0,0,0,0.08)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = featured
+          ? "0 8px 24px rgba(74,123,95,0.12)"
+          : C.shadowSm;
+      }}
+    >
+      {/* Place badge */}
+      <div
+        style={{
+          position: "absolute",
+          top: featured ? "24px" : "20px",
+          right: featured ? "24px" : "20px",
+          width: "44px",
+          height: "44px",
+          borderRadius: "12px",
+          background: accent,
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "20px",
+          fontWeight: 800,
+          fontFamily: C.fontMono,
+        }}
+      >
+        #{place}
+      </div>
+
+      {/* Logo / initials circle */}
+      <div
+        style={{
+          width: featured ? "80px" : "64px",
+          height: featured ? "80px" : "64px",
+          borderRadius: "50%",
+          background: `linear-gradient(135deg, ${accent}, ${sectorColor})`,
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: featured ? "28px" : "22px",
+          fontWeight: 800,
+          fontFamily: C.fontMono,
+          marginBottom: "20px",
+          boxShadow: `0 4px 12px ${accent}40`,
+        }}
+      >
+        {initials}
+      </div>
+
+      {/* Company name */}
+      <h3
+        style={{
+          fontSize: featured ? "26px" : "20px",
+          fontWeight: 800,
+          color: C.text,
+          margin: "0 0 8px",
+          letterSpacing: "-0.02em",
+          lineHeight: 1.15,
+          paddingRight: "56px",
+        }}
+      >
+        {row.name}
+      </h3>
+
+      {/* Sector badge */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          background: `${sectorColor}15`,
+          border: `1px solid ${sectorColor}30`,
+          borderRadius: "999px",
+          fontSize: "11px",
+          fontWeight: 600,
+          color: sectorColor,
+          fontFamily: C.fontMono,
+          marginBottom: "20px",
+          alignSelf: "flex-start",
+        }}
+      >
+        <span
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: sectorColor,
+          }}
+        />
+        {row.sector}
+      </div>
+
+      {/* Score block */}
+      <div style={{ marginTop: "auto" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "12px",
             marginBottom: "12px",
-          }}>
-            Quarterly trend (FY 2026)
-          </div>
-          <div style={{
-            display: "flex", alignItems: "flex-end", gap: "12px",
-            height: "120px", padding: "0 8px",
-          }}>
-            {company.quarterly.map((score, i) => (
-              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{
-                  fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-                  color: C.textSec, marginBottom: "6px", fontWeight: 600,
-                }}>
-                  {score}
-                </div>
-                <div style={{
-                  width: "100%", maxWidth: "48px",
-                  height: `${score}%`,
-                  background: `linear-gradient(180deg, ${C.sage} 0%, ${C.sageBright} 100%)`,
-                  borderRadius: "4px 4px 0 0",
-                  transition: "height 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-                }} />
-                <div style={{
-                  fontSize: "10px", color: C.textMuted,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  marginTop: "6px",
-                }}>
-                  Q{i + 1}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-            gap: "12px", marginTop: "20px",
-          }}>
-            {(["Innovation", "Performance", "Purpose"] as Pillar[]).map(p => {
-              const pd = p === "Innovation" ? company.innovation : p === "Performance" ? company.performance : company.purpose;
-              const isActive = activePillar === p;
-              return (
-                <div key={p} style={{
-                  padding: "12px", background: isActive ? C.surface : "transparent",
-                  border: `1px solid ${isActive ? C.sage : C.border}`,
-                  borderRadius: "8px",
-                }}>
-                  <div style={{
-                    fontSize: "10px", fontFamily: "'JetBrains Mono', monospace",
-                    color: C.textMuted, letterSpacing: "0.08em",
-                    textTransform: "uppercase", marginBottom: "4px",
-                  }}>
-                    {p}
-                  </div>
-                  <div style={{
-                    fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
-                    color: C.text, lineHeight: 1,
-                  }}>
-                    {pd.score}
-                  </div>
-                  <div style={{
-                    fontSize: "10px", color: C.textMuted,
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}>
-                    {pd.weight}% of narrative
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          }}
+        >
+          <span
+            style={{
+              fontSize: featured ? "56px" : "44px",
+              fontWeight: 800,
+              color: C.text,
+              fontFamily: C.fontMono,
+              letterSpacing: "-0.04em",
+              lineHeight: 1,
+            }}
+          >
+            {row.score}
+          </span>
+          <span
+            style={{
+              fontSize: "13px",
+              color: C.textMuted,
+              fontFamily: C.fontMono,
+            }}
+          >
+            /100
+          </span>
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: "20px",
+              color: trendColor,
+              fontWeight: 700,
+            }}
+            title={`Tendance : ${row.trend}`}
+          >
+            {trendIcon}
+          </span>
         </div>
 
-        {/* Column 2: Key Themes breakdown */}
-        <div>
-          <div style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.accent, letterSpacing: "0.1em", textTransform: "uppercase",
-            marginBottom: "12px",
-          }}>
-            Key Themes Score
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {allThemes.map(t => (
-              <div key={t.theme} style={{
-                display: "flex", alignItems: "center", gap: "12px",
-                padding: "10px 12px", background: C.surface,
-                borderRadius: "6px", border: `1px solid ${C.borderLight}`,
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontSize: "13px", fontWeight: 600, color: C.text, marginBottom: "2px",
-                  }}>
-                    {t.theme}
-                  </div>
-                  <div style={{
-                    fontSize: "10px", color: C.textMuted,
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}>
-                    {t.pillar}
-                  </div>
-                </div>
-                <div style={{
-                  width: "100px", height: "6px", background: C.surfaceAlt,
-                  borderRadius: "3px", overflow: "hidden",
-                }}>
-                  <div style={{
-                    width: `${t.score}%`, height: "100%",
-                    background: t.score >= 75 ? C.sage : t.score >= 55 ? C.accent : C.red,
-                  }} />
-                </div>
-                <div style={{
-                  fontSize: "13px", fontWeight: 700,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: C.text, minWidth: "32px", textAlign: "right",
-                }}>
-                  {t.score}
-                </div>
-                <div style={{
-                  fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-                  color: t.trend > 0 ? C.sage : t.trend < 0 ? C.red : C.textMuted,
-                  minWidth: "32px", textAlign: "right",
-                }}>
-                  {t.trend > 0 ? "▲" : t.trend < 0 ? "▼" : "—"} {Math.abs(t.trend)}
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Progress bar */}
+        <div
+          style={{
+            height: "6px",
+            background: C.surfaceAlt,
+            borderRadius: "3px",
+            overflow: "hidden",
+            marginBottom: "16px",
+          }}
+        >
+          <div
+            style={{
+              width: `${row.score}%`,
+              height: "100%",
+              background: `linear-gradient(to right, ${accent}, ${sectorColor})`,
+              borderRadius: "3px",
+              transition: "width 0.6s ease",
+            }}
+          />
         </div>
 
-        {/* Column 3: Multi-axis risk comparison (7 dimensions, 0-100) */}
-        <div>
-          <div style={{
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.red, letterSpacing: "0.1em", textTransform: "uppercase",
-            marginBottom: "12px",
-          }}>
-            Risk Profile · 7 Dimensions (0–100)
+        {/* Footer row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: "13px",
+            color: C.textSec,
+            fontFamily: C.fontSans,
+          }}
+        >
+          <span>
+            <strong style={{ color: C.text, fontFamily: C.fontMono }}>
+              {row.articles}
+            </strong>{" "}
+            articles
+          </span>
+          <span
+            style={{
+              color: accent,
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            Voir le profil →
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SECTOR BREAKDOWN — donut + sector list
+// ═══════════════════════════════════════════════════════════════
+function SectorBreakdown({
+  stats,
+  sectors,
+  activeSector,
+  onSectorClick,
+}: {
+  stats: {
+    sector: string;
+    count: number;
+    avgScore: number;
+    totalArticles: number;
+    pct: number;
+  }[];
+  sectors: string[];
+  activeSector: string;
+  onSectorClick: (sector: string) => void;
+}) {
+  const donutData = stats.map((s, i) => ({
+    label: s.sector,
+    value: s.count,
+    color: SECTOR_COLORS[i % SECTOR_COLORS.length],
+  }));
+
+  const total = stats.reduce((sum, s) => sum + s.count, 0) || 1;
+  const avgOverall = Math.round(
+    stats.reduce((sum, s) => sum + s.avgScore * s.count, 0) / total,
+  );
+
+  return (
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: "16px",
+        padding: "28px",
+        boxShadow: C.shadowSm,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: C.fontMono,
+          fontSize: "11px",
+          color: C.textMuted,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "8px",
+        }}
+      >
+        Par secteur
+      </div>
+      <h3
+        style={{
+          fontSize: "20px",
+          fontWeight: 800,
+          color: C.text,
+          margin: "0 0 24px",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        Répartition des entreprises
+      </h3>
+
+      {/* Donut SVG */}
+      <Donut
+        data={donutData}
+        size={200}
+        thickness={28}
+        centerValue={String(total)}
+        centerLabel="entreprises"
+      />
+
+      {/* Sector list — clickable */}
+      <div
+        style={{
+          marginTop: "24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          maxHeight: "320px",
+          overflowY: "auto",
+          paddingRight: "4px",
+        }}
+      >
+        {stats.map((s, i) => {
+          const color = SECTOR_COLORS[i % SECTOR_COLORS.length];
+          const isActive = activeSector === s.sector;
+          return (
+            <button
+              key={s.sector}
+              onClick={() => onSectorClick(s.sector)}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "12px 1fr auto auto",
+                gap: "12px",
+                alignItems: "center",
+                padding: "12px 14px",
+                background: isActive ? `${color}10` : "transparent",
+                border: `1px solid ${isActive ? color : C.borderLight}`,
+                borderRadius: "8px",
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "background-color 0.15s, border-color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive)
+                  e.currentTarget.style.background = C.surfaceAlt;
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive)
+                  e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <span
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "2px",
+                  background: color,
+                }}
+              />
+              <div>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: C.text,
+                  }}
+                >
+                  {s.sector}
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: C.textMuted,
+                    fontFamily: C.fontMono,
+                  }}
+                >
+                  score moyen {s.avgScore}/100 · {s.totalArticles} articles
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: C.text,
+                  fontFamily: C.fontMono,
+                  minWidth: "32px",
+                  textAlign: "right",
+                }}
+              >
+                {s.count}
+              </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: C.textMuted,
+                  fontFamily: C.fontMono,
+                  minWidth: "44px",
+                  textAlign: "right",
+                }}
+              >
+                {Math.round(s.pct)}%
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          marginTop: "20px",
+          paddingTop: "16px",
+          borderTop: `1px solid ${C.borderLight}`,
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: "12px",
+          color: C.textMuted,
+          fontFamily: C.fontMono,
+        }}
+      >
+        <span>Score moyen global</span>
+        <span style={{ color: C.sage, fontWeight: 700 }}>{avgOverall}/100</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── DONUT CHART (pure SVG) ────────────────────────────────────
+function Donut({
+  data,
+  size = 200,
+  thickness = 28,
+  centerValue,
+  centerLabel,
+}: {
+  data: { label: string; value: number; color: string }[];
+  size?: number;
+  thickness?: number;
+  centerValue?: string;
+  centerLabel?: string;
+}) {
+  const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
+  const radius = (size - thickness) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  // Pre-compute segments + cumulative offsets inside useMemo so we don't
+  // mutate any render-scope variables (satisfies react-hooks/immutability).
+  const segments = useMemo(
+    () =>
+      data.reduce<{
+        items: {
+          label: string;
+          value: number;
+          color: string;
+          dash: number;
+          offset: number;
+        }[];
+        cumulative: number;
+      }>(
+        (acc, d) => {
+          const dash = (d.value / total) * circumference;
+          acc.items.push({
+            label: d.label,
+            value: d.value,
+            color: d.color,
+            dash,
+            offset: acc.cumulative,
+          });
+          acc.cumulative += dash;
+          return acc;
+        },
+        { items: [], cumulative: 0 },
+      ).items,
+    [data, total, circumference],
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "20px",
+        alignItems: "center",
+        flexWrap: "wrap",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: `${size}px`,
+          height: `${size}px`,
+        }}
+      >
+        <svg
+          width={size}
+          height={size}
+          style={{ transform: "rotate(-90deg)" }}
+        >
+          <circle
+            cx={cx}
+            cy={cy}
+            r={radius}
+            fill="none"
+            stroke={C.surfaceAlt}
+            strokeWidth={thickness}
+          />
+          {segments.map((s, i) => {
+            const dash = s.dash;
+            return (
+              <circle
+                key={i}
+                cx={cx}
+                cy={cy}
+                r={radius}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={thickness}
+                strokeDasharray={`${dash} ${circumference - dash}`}
+                strokeDashoffset={-s.offset}
+                style={{ transition: "stroke-dasharray 0.6s ease" }}
+              >
+                <title>
+                  {s.label} : {s.value} ({Math.round((s.value / total) * 100)}%)
+                </title>
+              </circle>
+            );
+          })}
+        </svg>
+        {(centerValue || centerLabel) && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {centerValue && (
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: 800,
+                  color: C.text,
+                  fontFamily: C.fontMono,
+                  lineHeight: 1,
+                  letterSpacing: "-0.04em",
+                }}
+              >
+                {centerValue}
+              </div>
+            )}
+            {centerLabel && (
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: C.textMuted,
+                  fontFamily: C.fontMono,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginTop: "4px",
+                }}
+              >
+                {centerLabel}
+              </div>
+            )}
           </div>
-          <div style={{
-            padding: "16px", background: C.surface,
-            border: `1px solid ${C.borderLight}`, borderRadius: "8px",
-            display: "flex", justifyContent: "center",
-          }}>
-            <RadarChart
-              axes={riskAxes}
-              series={[{
-                name: company.name,
-                color: C.red,
-                values: riskValues,
-              }]}
-              size={260}
+        )}
+      </div>
+
+      {/* Legend */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          minWidth: "180px",
+        }}
+      >
+        {data.map((d, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+            }}
+          >
+            <span
+              style={{
+                width: "10px",
+                height: "10px",
+                background: d.color,
+                borderRadius: "2px",
+              }}
             />
+            <span style={{ color: C.textSec, flex: 1 }}>{d.label}</span>
+            <span
+              style={{
+                fontWeight: 700,
+                color: C.text,
+                fontFamily: C.fontMono,
+              }}
+            >
+              {Math.round((d.value / total) * 100)}%
+            </span>
           </div>
-          {/* Risk summary stats */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
-            gap: "8px", marginTop: "12px",
-          }}>
-            <div style={{
-              padding: "10px 12px", background: C.surface,
-              border: `1px solid ${C.borderLight}`, borderRadius: "6px",
-            }}>
-              <div style={{
-                fontSize: "10px", fontFamily: "'JetBrains Mono', monospace",
-                color: C.textMuted, letterSpacing: "0.08em",
-                textTransform: "uppercase", marginBottom: "4px",
-              }}>
-                Avg Risk
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SCORE DISTRIBUTION — histogram
+// ═══════════════════════════════════════════════════════════════
+function ScoreDistribution({
+  buckets,
+}: {
+  buckets: {
+    label: string;
+    min: number;
+    max: number;
+    count: number;
+    color: string;
+  }[];
+}) {
+  const maxCount = Math.max(...buckets.map((b) => b.count), 1);
+
+  return (
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: "16px",
+        padding: "28px",
+        boxShadow: C.shadowSm,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: C.fontMono,
+          fontSize: "11px",
+          color: C.textMuted,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "8px",
+        }}
+      >
+        Distribution
+      </div>
+      <h3
+        style={{
+          fontSize: "20px",
+          fontWeight: 800,
+          color: C.text,
+          margin: "0 0 24px",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        Répartition des scores
+      </h3>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: "12px",
+          height: "220px",
+          padding: "0 4px",
+        }}
+      >
+        {buckets.map((b, i) => {
+          const barHeight = (b.count / maxCount) * (220 - 56);
+          return (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                height: "100%",
+                justifyContent: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  color: C.text,
+                  fontFamily: C.fontMono,
+                  marginBottom: "6px",
+                }}
+              >
+                {b.count}
               </div>
-              <div style={{
-                fontSize: "16px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
-                color: avgRisk >= 60 ? C.red : avgRisk >= 45 ? "#B87333" : C.sage,
-                lineHeight: 1,
-              }}>
-                {avgRisk}
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "72px",
+                  height: `${barHeight}px`,
+                  background: b.color,
+                  borderRadius: "6px 6px 0 0",
+                  transition: "height 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+                  position: "relative",
+                }}
+                title={`${b.label} : ${b.count} entreprises`}
+              />
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: C.textMuted,
+                  fontFamily: C.fontMono,
+                  marginTop: "8px",
+                  textAlign: "center",
+                }}
+              >
+                {b.label}
               </div>
             </div>
-            <div style={{
-              padding: "10px 12px", background: C.surface,
-              border: `1px solid ${C.borderLight}`, borderRadius: "6px",
-            }}>
-              <div style={{
-                fontSize: "10px", fontFamily: "'JetBrains Mono', monospace",
-                color: C.textMuted, letterSpacing: "0.08em",
-                textTransform: "uppercase", marginBottom: "4px",
-              }}>
-                Top Exposure
-              </div>
-              <div style={{
-                fontSize: "13px", fontWeight: 700, color: C.red,
-                lineHeight: 1.2,
-              }}>
-                {maxRiskAxis}
-              </div>
-              <div style={{
-                fontSize: "11px", color: C.textMuted,
-                fontFamily: "'JetBrains Mono', monospace",
-              }}>
-                {maxRisk}/100
-              </div>
-            </div>
-          </div>
-          {/* Risk dimension bars */}
-          <div style={{
-            display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px",
-          }}>
-            {riskAxes.map((axis, i) => {
-              const val = riskValues[i];
-              const barColor = val >= 65 ? C.red : val >= 50 ? "#B87333" : val >= 35 ? C.accent : C.sage;
-              return (
-                <div key={axis} style={{
-                  display: "grid", gridTemplateColumns: "90px 1fr 32px",
-                  gap: "8px", alignItems: "center",
-                }}>
-                  <span style={{
-                    fontSize: "11px", color: C.textSec,
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}>
-                    {axis}
-                  </span>
-                  <div style={{
-                    height: "6px", background: C.surfaceAlt,
-                    borderRadius: "3px", overflow: "hidden",
-                  }}>
-                    <div style={{
-                      width: `${val}%`, height: "100%",
-                      background: barColor, borderRadius: "3px",
-                      transition: "width 0.4s ease",
-                    }} />
-                  </div>
-                  <span style={{
-                    fontSize: "11px", fontWeight: 700,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    color: barColor, textAlign: "right",
-                  }}>
-                    {val}
-                  </span>
-                </div>
-              );
-            })}
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          marginTop: "20px",
+          paddingTop: "16px",
+          borderTop: `1px solid ${C.borderLight}`,
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: "12px",
+          color: C.textMuted,
+          fontFamily: C.fontMono,
+        }}
+      >
+        <span>Score minimum</span>
+        <span style={{ color: C.red, fontWeight: 700 }}>0</span>
+        <span style={{ marginLeft: "auto" }}>Score maximum</span>
+        <span style={{ color: C.sage, fontWeight: 700 }}>100</span>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILTER BAR
+// ═══════════════════════════════════════════════════════════════
+function FilterBar({
+  search,
+  onSearch,
+  sectorFilter,
+  onSector,
+  sectors,
+  scoreRange,
+  onScoreRange,
+  resultCount,
+  total,
+}: {
+  search: string;
+  onSearch: (v: string) => void;
+  sectorFilter: string;
+  onSector: (v: string) => void;
+  sectors: string[];
+  scoreRange: "all" | "high" | "mid" | "low";
+  onScoreRange: (v: "all" | "high" | "mid" | "low") => void;
+  resultCount: number;
+  total: number;
+}) {
+  const selectStyle: React.CSSProperties = {
+    padding: "12px 14px",
+    background: C.surface,
+    border: `1px solid ${C.border}`,
+    borderRadius: "8px",
+    fontSize: "13px",
+    color: C.text,
+    fontFamily: C.fontSans,
+    cursor: "pointer",
+    outline: "none",
+    appearance: "none",
+    WebkitAppearance: "none",
+    backgroundImage:
+      "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%2371717A' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\")",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    paddingRight: "32px",
+  };
+
+  return (
+    <div
+      style={{
+        marginBottom: "24px",
+        display: "grid",
+        gridTemplateColumns: "1fr",
+        gap: "12px",
+      }}
+    >
+      {/* Search */}
+      <div style={{ position: "relative" }}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={C.textMuted}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            position: "absolute",
+            left: "14px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            pointerEvents: "none",
+          }}
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Rechercher une entreprise…"
+          style={{
+            width: "100%",
+            padding: "12px 14px 12px 42px",
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: "8px",
+            fontSize: "14px",
+            color: C.text,
+            fontFamily: C.fontSans,
+            outline: "none",
+          }}
+          aria-label="Rechercher une entreprise"
+        />
+      </div>
+
+      {/* Selects row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
+          gap: "12px",
+        }}
+      >
+        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span
+            style={{
+              fontSize: "10px",
+              fontFamily: C.fontMono,
+              color: C.textMuted,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+            }}
+          >
+            Secteur
+          </span>
+          <select
+            value={sectorFilter}
+            onChange={(e) => onSector(e.target.value)}
+            style={selectStyle}
+          >
+            <option value="all">Tous les secteurs</option>
+            {sectors.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span
+            style={{
+              fontSize: "10px",
+              fontFamily: C.fontMono,
+              color: C.textMuted,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+            }}
+          >
+            Score
+          </span>
+          <select
+            value={scoreRange}
+            onChange={(e) =>
+              onScoreRange(e.target.value as "all" | "high" | "mid" | "low")
+            }
+            style={selectStyle}
+          >
+            <option value="all">Tous les scores</option>
+            <option value="high">&gt; 80 (excellent)</option>
+            <option value="mid">60 – 80 (solide)</option>
+            <option value="low">&lt; 60 (à améliorer)</option>
+          </select>
+        </label>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            justifyContent: "flex-end",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "10px",
+              fontFamily: C.fontMono,
+              color: C.textMuted,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+            }}
+          >
+            Résultats
+          </span>
+          <div
+            style={{
+              padding: "12px 14px",
+              background: C.surfaceAlt,
+              border: `1px solid ${C.borderLight}`,
+              borderRadius: "8px",
+              fontSize: "13px",
+              color: C.textSec,
+              fontFamily: C.fontMono,
+            }}
+          >
+            <strong style={{ color: C.text }}>{resultCount}</strong> / {total}
           </div>
         </div>
       </div>
@@ -1409,105 +2129,1387 @@ function ExpandedRow({ company, activePillar }: { company: Company; activePillar
   );
 }
 
-const selectStyle: React.CSSProperties = {
-  padding: "12px 16px", background: C.surface, border: `1px solid ${C.border}`,
-  borderRadius: "8px", fontSize: "13px", color: C.text,
-  fontFamily: "'Inter', sans-serif", cursor: "pointer", outline: "none",
-};
+// ═══════════════════════════════════════════════════════════════
+//  RANKING TABLE (desktop)
+// ═══════════════════════════════════════════════════════════════
 
-const thStyle: React.CSSProperties = {
-  padding: "14px 12px", textAlign: "left", fontSize: "10px", fontWeight: 600,
-  color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase",
-  fontFamily: "'JetBrains Mono', monospace",
+type SortField =
+  | "rank"
+  | "name"
+  | "sector"
+  | "score"
+  | "aiVisibility"
+  | "articles";
+
+const sortableTHBase: React.CSSProperties = {
+  padding: "14px 12px",
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  fontFamily: "'Space Mono', 'JetBrains Mono', monospace",
   borderBottom: `1px solid ${C.border}`,
+  whiteSpace: "nowrap",
 };
 
-const tdStyle: React.CSSProperties = {
-  padding: "14px 12px", fontSize: "13px", color: C.textSec,
-};
-
-/* ─── Live Agent Ranking — real scraped data from /api/harch100-live ─── */
-function LiveAgentRanking() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState("");
-
-  useEffect(() => {
-    fetch("/api/harch100-live")
-      .then((r) => r.json())
-      .then((d) => { setData(d.data || []); setSource(d.source || ""); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const C = { bg: "#FAFAFA", surface: "#FFFFFF", border: "#E5E5E5", text: "#0A0A0A", textSec: "#525252", textMuted: "#71717A", accent: "#4A5D6E", sage: "#4A7B5F", red: "#A0524B" };
+function SortableTH({
+  label,
+  field,
+  align = "left",
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  field: SortField;
+  align?: "left" | "right" | "center";
+  sortKey: SortField;
+  sortDir: "asc" | "desc";
+  onSort: (key: SortField) => void;
+}) {
+  const isActive = sortKey === field;
+  return (
+    <th
+      style={{
+        ...sortableTHBase,
+        cursor: "pointer",
+        color: isActive ? C.sage : C.textMuted,
+        textAlign: align,
+        userSelect: "none",
+      }}
+      onClick={() => onSort(field)}
+      title={`Trier par ${label.toLowerCase()}`}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          justifyContent: align === "right" ? "flex-end" : "flex-start",
+        }}
+      >
+        {label}
+        <span style={{ fontSize: "12px", color: isActive ? C.sage : C.borderStrong }}>
+          {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </span>
+    </th>
+  );
+}
+function RankingTable({
+  rows,
+  sectors,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  rows: Row[];
+  sectors: string[];
+  sortKey: SortField;
+  sortDir: "asc" | "desc";
+  onSort: (key: SortField) => void;
+}) {
+  const thBase: React.CSSProperties = {
+    padding: "14px 12px",
+    textAlign: "left",
+    fontSize: "10px",
+    fontWeight: 700,
+    color: C.textMuted,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    fontFamily: C.fontMono,
+    borderBottom: `1px solid ${C.border}`,
+    whiteSpace: "nowrap",
+  };
 
   return (
-    <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #4A7B5F, #4A5D6E)" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
-        </span>
-        <div>
-          <div style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-            Live Agent Ranking
-          </div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: "4px 0 0", letterSpacing: "-0.02em" }}>
-            Real HarchIQ Scores — scraped &amp; calculated by agents
-          </h2>
-        </div>
-        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: source === "agent-live" ? "#4A7B5F15" : "#71717A15", border: `1px solid ${source === "agent-live" ? "#4A7B5F30" : "#71717A30"}`, fontSize: 11, fontWeight: 700, color: source === "agent-live" ? C.sage : C.textMuted }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: source === "agent-live" ? C.sage : C.textMuted, animation: "pulse 2s infinite" }} />
-          {source === "agent-live" ? "LIVE AGENTS" : "FALLBACK"}
-        </span>
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: "12px",
+        overflow: "hidden",
+        boxShadow: C.shadowSm,
+      }}
+    >
+      <div style={{ overflowX: "auto" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontSize: "14px",
+            minWidth: "960px",
+          }}
+        >
+          <thead>
+            <tr style={{ background: C.surfaceAlt }}>
+              <SortableTH label="Rang" field="rank" align="center" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <SortableTH label="Entreprise" field="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <SortableTH label="Secteur" field="sector" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <SortableTH label="Score" field="score" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <th style={thBase}>Tendance</th>
+              <SortableTH label="Visibilité IA" field="aiVisibility" align="center" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <SortableTH label="Articles" field="articles" align="right" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <th style={thBase} />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={8}
+                  style={{
+                    padding: "48px 24px",
+                    textAlign: "center",
+                    color: C.textMuted,
+                    fontSize: "14px",
+                  }}
+                >
+                  Aucune entreprise ne correspond à vos filtres.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => {
+                const sectorColor = colorForSector(r.sector, sectors);
+                const trendIcon =
+                  r.trend === "up" ? "↑" : r.trend === "down" ? "↓" : "→";
+                const trendColor =
+                  r.trend === "up"
+                    ? C.sage
+                    : r.trend === "down"
+                      ? C.red
+                      : C.textMuted;
+                const href = r.slug
+                  ? `/atelier/companies/${r.slug}`
+                  : "/atelier/harch-100";
+
+                return (
+                  <tr
+                    key={`${r.rank}-${r.name}`}
+                    style={{
+                      borderBottom: `1px solid ${C.borderLight}`,
+                      transition: "background-color 0.15s",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.location.href = href;
+                      }
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = C.surfaceAlt)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    {/* Rank */}
+                    <td
+                      style={{
+                        padding: "14px 12px",
+                        fontFamily: C.fontMono,
+                        fontWeight: 700,
+                        color: C.textMuted,
+                        textAlign: "center",
+                        fontSize: "14px",
+                      }}
+                    >
+                      #{r.rank}
+                    </td>
+                    {/* Company */}
+                    <td style={{ padding: "14px 12px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            background: `linear-gradient(135deg, ${sectorColor}, ${C.accent})`,
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            fontFamily: C.fontMono,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {getInitials(r.name)}
+                        </div>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            color: C.text,
+                            fontSize: "14px",
+                          }}
+                        >
+                          {r.name}
+                        </span>
+                      </div>
+                    </td>
+                    {/* Sector */}
+                    <td style={{ padding: "14px 12px" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "3px 10px",
+                          background: `${sectorColor}15`,
+                          borderRadius: "999px",
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: sectorColor,
+                          fontFamily: C.fontMono,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            borderRadius: "50%",
+                            background: sectorColor,
+                          }}
+                        />
+                        {r.sector}
+                      </span>
+                    </td>
+                    {/* Score */}
+                    <td style={{ padding: "14px 12px", minWidth: "140px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: C.fontMono,
+                            fontWeight: 800,
+                            color: C.text,
+                            minWidth: "28px",
+                            fontSize: "14px",
+                          }}
+                        >
+                          {r.score}
+                        </span>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: "5px",
+                            background: C.surfaceAlt,
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${r.score}%`,
+                              height: "100%",
+                              background:
+                                r.score >= 80
+                                  ? C.sage
+                                  : r.score >= 60
+                                    ? C.sageBright
+                                    : r.score >= 40
+                                      ? C.amberBright
+                                      : C.red,
+                              borderRadius: "3px",
+                              transition: "width 0.4s ease",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    {/* Trend */}
+                    <td
+                      style={{
+                        padding: "14px 12px",
+                        fontSize: "16px",
+                        color: trendColor,
+                        fontWeight: 700,
+                        textAlign: "center",
+                      }}
+                    >
+                      {trendIcon}
+                    </td>
+                    {/* AI Visibility */}
+                    <td
+                      style={{
+                        padding: "14px 12px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "48px",
+                            height: "5px",
+                            background: C.surfaceAlt,
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${r.aiVisibility}%`,
+                              height: "100%",
+                              background: C.accent,
+                              borderRadius: "3px",
+                            }}
+                          />
+                        </div>
+                        <span
+                          style={{
+                            fontFamily: C.fontMono,
+                            fontWeight: 700,
+                            color: C.textSec,
+                            fontSize: "12px",
+                            minWidth: "32px",
+                          }}
+                        >
+                          {r.aiVisibility}%
+                        </span>
+                      </div>
+                    </td>
+                    {/* Articles */}
+                    <td
+                      style={{
+                        padding: "14px 12px",
+                        fontFamily: C.fontMono,
+                        color: C.textSec,
+                        textAlign: "right",
+                        fontSize: "13px",
+                      }}
+                    >
+                      {r.articles.toLocaleString("fr-FR")}
+                    </td>
+                    {/* Action */}
+                    <td
+                      style={{
+                        padding: "14px 12px",
+                        textAlign: "right",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: C.sage,
+                          fontWeight: 600,
+                          fontSize: "12px",
+                        }}
+                      >
+                        Profil →
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RANKING CARDS (mobile)
+// ═══════════════════════════════════════════════════════════════
+function RankingCards({
+  rows,
+  sectors,
+}: {
+  rows: Row[];
+  sectors: string[];
+}) {
+  if (rows.length === 0) {
+    return (
+      <div
+        style={{
+          background: C.surface,
+          border: `1px solid ${C.border}`,
+          borderRadius: "12px",
+          padding: "32px 20px",
+          textAlign: "center",
+          color: C.textMuted,
+          fontSize: "14px",
+        }}
+      >
+        Aucune entreprise ne correspond à vos filtres.
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {rows.map((r) => {
+        const sectorColor = colorForSector(r.sector, sectors);
+        const trendIcon =
+          r.trend === "up" ? "↑" : r.trend === "down" ? "↓" : "→";
+        const trendColor =
+          r.trend === "up"
+            ? C.sage
+            : r.trend === "down"
+              ? C.red
+              : C.textMuted;
+        const href = r.slug
+          ? `/atelier/companies/${r.slug}`
+          : "/atelier/harch-100";
+        return (
+          <a
+            key={`${r.rank}-${r.name}`}
+            href={href}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "36px 1fr auto",
+              gap: "12px",
+              alignItems: "center",
+              padding: "16px",
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: "12px",
+              textDecoration: "none",
+              color: "inherit",
+              boxShadow: C.shadowSm,
+              transition: "transform 0.15s, box-shadow 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = C.shadowMd;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = C.shadowSm;
+            }}
+          >
+            <div
+              style={{
+                fontFamily: C.fontMono,
+                fontWeight: 800,
+                color: C.textMuted,
+                fontSize: "14px",
+                textAlign: "center",
+              }}
+            >
+              #{r.rank}
+            </div>
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    color: C.text,
+                  }}
+                >
+                  {r.name}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "2px 8px",
+                    background: `${sectorColor}15`,
+                    borderRadius: "999px",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: sectorColor,
+                    fontFamily: C.fontMono,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "5px",
+                      height: "5px",
+                      borderRadius: "50%",
+                      background: sectorColor,
+                    }}
+                  />
+                  {r.sector}
+                </span>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: C.textMuted,
+                    fontFamily: C.fontMono,
+                  }}
+                >
+                  {r.articles} articles · IA {r.aiVisibility}%
+                </span>
+              </div>
+            </div>
+            <div
+              style={{
+                textAlign: "right",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: C.fontMono,
+                  fontWeight: 800,
+                  color: C.text,
+                  fontSize: "20px",
+                  lineHeight: 1,
+                }}
+              >
+                {r.score}
+              </div>
+              <div
+                style={{
+                  fontSize: "14px",
+                  color: trendColor,
+                  fontWeight: 700,
+                  marginTop: "4px",
+                }}
+              >
+                {trendIcon}
+              </div>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PAGINATION
+// ═══════════════════════════════════════════════════════════════
+function Pagination({
+  page,
+  totalPages,
+  pageSize,
+  total,
+  onPage,
+}: {
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  total: number;
+  onPage: (p: number) => void;
+}) {
+  if (total === 0) return null;
+  const from = page * pageSize + 1;
+  const to = Math.min(total, (page + 1) * pageSize);
+
+  // Pages to show: capped at 7 with ellipsis.
+  const pages: (number | "…")[] = [];
+  const add = (n: number | "…") => pages.push(n);
+  if (totalPages <= 7) {
+    for (let i = 0; i < totalPages; i++) add(i);
+  } else {
+    add(0);
+    if (page > 2) add("…");
+    const start = Math.max(1, page - 1);
+    const end = Math.min(totalPages - 2, page + 1);
+    for (let i = start; i <= end; i++) add(i);
+    if (page < totalPages - 3) add("…");
+    add(totalPages - 1);
+  }
+
+  const btnStyle = (active: boolean): React.CSSProperties => ({
+    minWidth: "36px",
+    height: "36px",
+    padding: "0 10px",
+    background: active ? C.sage : C.surface,
+    color: active ? "#fff" : C.textSec,
+    border: `1px solid ${active ? C.sage : C.border}`,
+    borderRadius: "8px",
+    fontSize: "13px",
+    fontWeight: active ? 700 : 500,
+    fontFamily: C.fontMono,
+    cursor: "pointer",
+    transition: "background-color 0.15s, color 0.15s, border-color 0.15s",
+  });
+
+  return (
+    <div
+      style={{
+        marginTop: "24px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "16px",
+        flexWrap: "wrap",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "12px",
+          color: C.textMuted,
+          fontFamily: C.fontMono,
+        }}
+      >
+        Affichage{" "}
+        <strong style={{ color: C.text }}>{from}</strong>–
+        <strong style={{ color: C.text }}>{to}</strong> sur{" "}
+        <strong style={{ color: C.text }}>{total}</strong>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 48, color: C.textMuted, fontSize: 13 }}>Loading live agent data…</div>
-      ) : (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: "640px" }}>
-            <thead>
-              <tr style={{ background: "#F8F8F8", borderBottom: `1px solid ${C.border}` }}>
-                {["Rank", "Company", "Score", "Grade", "Trend", "Articles", "Sentiment"].map((h) => (
-                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row: any) => (
-                <tr key={row.rank} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: C.textMuted }}>#{row.rank}</td>
-                  <td style={{ padding: "12px 16px", fontWeight: 600, color: C.text }}>{row.name}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: C.text, minWidth: 28 }}>{row.score}</span>
-                      <div style={{ width: 60, height: 5, borderRadius: 3, background: C.border, overflow: "hidden" }}>
-                        <div style={{ width: `${row.score}%`, height: "100%", background: row.score >= 90 ? C.sage : row.score >= 75 ? "#D97706" : C.red, borderRadius: 3 }} />
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: row.score >= 90 ? C.sage : row.score >= 75 ? "#D97706" : C.red }}>{row.grade}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 16, color: row.trend === "up" ? C.sage : row.trend === "down" ? C.red : C.textMuted }}>{row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "→"}</td>
-                  <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono', monospace", color: C.textSec }}>{row.articles}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: row.sentiment === "positive" ? C.sage : row.sentiment === "negative" ? C.red : C.textMuted }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: row.sentiment === "positive" ? C.sage : row.sentiment === "negative" ? C.red : C.textMuted }} />
-                      {row.sentiment}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+        <button
+          onClick={() => onPage(Math.max(0, page - 1))}
+          disabled={page === 0}
+          style={{
+            ...btnStyle(false),
+            opacity: page === 0 ? 0.4 : 1,
+            cursor: page === 0 ? "not-allowed" : "pointer",
+          }}
+          aria-label="Page précédente"
+        >
+          ←
+        </button>
+        {pages.map((p, i) =>
+          p === "…" ? (
+            <span
+              key={`ellipsis-${i}`}
+              style={{
+                minWidth: "36px",
+                textAlign: "center",
+                color: C.textMuted,
+                fontFamily: C.fontMono,
+                fontSize: "13px",
+              }}
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPage(p)}
+              style={btnStyle(p === page)}
+              aria-current={p === page ? "page" : undefined}
+            >
+              {p + 1}
+            </button>
+          ),
+        )}
+        <button
+          onClick={() => onPage(Math.min(totalPages - 1, page + 1))}
+          disabled={page >= totalPages - 1}
+          style={{
+            ...btnStyle(false),
+            opacity: page >= totalPages - 1 ? 0.4 : 1,
+            cursor: page >= totalPages - 1 ? "not-allowed" : "pointer",
+          }}
+          aria-label="Page suivante"
+        >
+          →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  METHODOLOGY
+// ═══════════════════════════════════════════════════════════════
+const PILLARS = [
+  {
+    name: "Réputation",
+    weight: 30,
+    color: C.sage,
+    icon: "shield",
+    desc: "Score de mention et sentiment agrégé sur 30+ sources médias marocaines et africaines.",
+  },
+  {
+    name: "Sentiment",
+    weight: 25,
+    color: C.accent,
+    icon: "chat",
+    desc: "Analyse linguistique Darija / Français / Arabe — positif, neutre, négatif par entité.",
+  },
+  {
+    name: "Visibilité IA",
+    weight: 20,
+    color: C.amberBright,
+    icon: "cpu",
+    desc: "9 LLM testés (ChatGPT, Claude, Gemini, Perplexity, Copilot, Mistral, Grok, etc.).",
+  },
+  {
+    name: "Diversité médias",
+    weight: 15,
+    color: C.charcoal,
+    icon: "newspaper",
+    desc: "Couverture mesurée sur 20+ sources indépendantes — presse, blogs, réseaux sociaux.",
+  },
+  {
+    name: "Résilience crises",
+    weight: 10,
+    color: C.red,
+    icon: "alert",
+    desc: "Historique de gestion des crises et capacité de récupération sur 12 mois.",
+  },
+] as const;
+
+function PillarIcon({ name, color }: { name: string; color: string }) {
+  const common = {
+    width: 20,
+    height: 20,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (name) {
+    case "shield":
+      return (
+        <svg {...common}>
+          <path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+      );
+    case "chat":
+      return (
+        <svg {...common}>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "cpu":
+      return (
+        <svg {...common}>
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+          <rect x="9" y="9" width="6" height="6" />
+          <line x1="9" y1="2" x2="9" y2="4" />
+          <line x1="15" y1="2" x2="15" y2="4" />
+          <line x1="9" y1="20" x2="9" y2="22" />
+          <line x1="15" y1="20" x2="15" y2="22" />
+          <line x1="20" y1="9" x2="22" y2="9" />
+          <line x1="20" y1="14" x2="22" y2="14" />
+          <line x1="2" y1="9" x2="4" y2="9" />
+          <line x1="2" y1="14" x2="4" y2="14" />
+        </svg>
+      );
+    case "newspaper":
+      return (
+        <svg {...common}>
+          <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+          <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6z" />
+        </svg>
+      );
+    case "alert":
+      return (
+        <svg {...common}>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+function Methodology() {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+        gap: "16px",
+      }}
+    >
+      {PILLARS.map((p) => (
+        <div
+          key={p.name}
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: "12px",
+            padding: "24px",
+            boxShadow: C.shadowSm,
+            borderTop: `3px solid ${p.color}`,
+            position: "relative",
+          }}
+        >
+          {/* Weight badge */}
+          <div
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "20px",
+              padding: "4px 10px",
+              background: `${p.color}15`,
+              borderRadius: "999px",
+              fontSize: "11px",
+              fontWeight: 700,
+              color: p.color,
+              fontFamily: C.fontMono,
+            }}
+          >
+            {p.weight}%
           </div>
-          <div style={{ padding: "12px 16px", background: "#F8F8F8", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textMuted, textAlign: "center" }}>
-            {source === "agent-live"
-              ? "Live data — scraped by Harch Atelier agents from Moroccan media + classified by GLM-4"
-              : "Fallback data — agents haven't run yet. Visit /api/cron/agents to trigger a cycle."}
+
+          {/* Icon */}
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "10px",
+              background: `${p.color}12`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "16px",
+            }}
+          >
+            <PillarIcon name={p.icon} color={p.color} />
+          </div>
+
+          <h4
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: C.text,
+              margin: "0 0 8px",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {p.name}
+          </h4>
+          <p
+            style={{
+              fontSize: "13px",
+              color: C.textSec,
+              lineHeight: 1.55,
+              margin: 0,
+            }}
+          >
+            {p.desc}
+          </p>
+
+          {/* Weight bar */}
+          <div
+            style={{
+              marginTop: "16px",
+              height: "4px",
+              background: C.surfaceAlt,
+              borderRadius: "2px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${p.weight * 3.33}%`,
+                height: "100%",
+                background: p.color,
+                borderRadius: "2px",
+              }}
+            />
           </div>
         </div>
-      )}
-    </section>
+      ))}
+
+      {/* Total */}
+      <div
+        style={{
+          background: C.sageBg,
+          border: `1px solid ${C.sage}30`,
+          borderRadius: "12px",
+          padding: "24px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "32px",
+            fontWeight: 800,
+            color: C.sage,
+            fontFamily: C.fontMono,
+            letterSpacing: "-0.04em",
+            lineHeight: 1,
+            marginBottom: "8px",
+          }}
+        >
+          100%
+        </div>
+        <div
+          style={{
+            fontSize: "11px",
+            color: C.sage,
+            fontFamily: C.fontMono,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+            marginBottom: "12px",
+          }}
+        >
+          Score total
+        </div>
+        <p
+          style={{
+            fontSize: "12px",
+            color: C.textSec,
+            lineHeight: 1.5,
+            margin: 0,
+          }}
+        >
+          Le score Harch 100 est la somme pondérée des 5 piliers, normalisée sur
+          100.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TREND COMPARISON — line chart (top 10 vs bottom 10 vs overall)
+// ═══════════════════════════════════════════════════════════════
+function TrendComparison({
+  rows,
+  currentPeriod,
+}: {
+  rows: Row[];
+  currentPeriod: string;
+}) {
+  // We only have the latest snapshot — historical data will populate as
+  // more monthly snapshots are published. Show the current snapshot's
+  // top 10 / bottom 10 / overall averages as a single data point, with
+  // an honest placeholder for months without data.
+  const sorted = [...rows].sort((a, b) => b.score - a.score);
+  const top10 = sorted.slice(0, Math.min(10, sorted.length));
+  const bottom10 = sorted
+    .slice(-Math.min(10, sorted.length))
+    .reverse();
+  const overallAvg = rows.length
+    ? Math.round(rows.reduce((s, r) => s + r.score, 0) / rows.length)
+    : 0;
+  const top10Avg = top10.length
+    ? Math.round(top10.reduce((s, r) => s + r.score, 0) / top10.length)
+    : 0;
+  const bottom10Avg = bottom10.length
+    ? Math.round(bottom10.reduce((s, r) => s + r.score, 0) / bottom10.length)
+    : 0;
+
+  // Generate 6 month labels ending at currentPeriod.
+  const months = useMemo(() => {
+    const m = /^(\d{4})-(\d{2})$/.exec(currentPeriod);
+    if (!m) return [] as string[];
+    let year = Number(m[1]);
+    let monthIdx = Number(m[2]) - 1;
+    const out: { label: string; full: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(year, monthIdx - i, 1));
+      const lbl = `${MONTHS_FR[d.getUTCMonth()].slice(0, 3)} ${String(d.getUTCFullYear()).slice(-2)}`;
+      const full = `${MONTHS_FR[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+      out.push({ label: lbl, full });
+    }
+    return out;
+  }, [currentPeriod]);
+
+  // Build series: top 10 / bottom 10 / overall.
+  // Only the last point has data; earlier months are null → rendered as gaps.
+  const topSeries = months.map((_, i) => (i === months.length - 1 ? top10Avg : 0));
+  const bottomSeries = months.map((_, i) => (i === months.length - 1 ? bottom10Avg : 0));
+  const overallSeries = months.map((_, i) => (i === months.length - 1 ? overallAvg : 0));
+
+  return (
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: "16px",
+        padding: "28px",
+        boxShadow: C.shadowSm,
+      }}
+    >
+      {/* Legend */}
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          flexWrap: "wrap",
+          marginBottom: "24px",
+        }}
+      >
+        <LegendItem color={C.sage} label="Top 10" value={top10Avg} />
+        <LegendItem color={C.accent} label="Moyenne globale" value={overallAvg} />
+        <LegendItem color={C.red} label="Bottom 10" value={bottom10Avg} />
+      </div>
+
+      {/* Chart */}
+      <TrendLineChart
+        series={[
+          { name: "Top 10", color: C.sage, points: topSeries },
+          { name: "Moyenne", color: C.accent, points: overallSeries },
+          { name: "Bottom 10", color: C.red, points: bottomSeries },
+        ]}
+        xLabels={months.map((m) => m.label)}
+        height={260}
+      />
+
+      {/* Notice */}
+      <div
+        style={{
+          marginTop: "24px",
+          padding: "14px 16px",
+          background: C.amberBg,
+          border: `1px solid ${C.amberBright}30`,
+          borderRadius: "10px",
+          display: "flex",
+          gap: "12px",
+          alignItems: "flex-start",
+        }}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={C.amber}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ flexShrink: 0, marginTop: "1px" }}
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <div style={{ fontSize: "13px", color: C.textSec, lineHeight: 1.5 }}>
+          <strong style={{ color: C.text }}>
+            Historique en cours de constitution.
+          </strong>{" "}
+          L'évolution mensuelle sera pleinement visible à partir du 2ᵉ classement
+          (mois prochain). Actuellement, seul le point le plus récent est
+          renseigné.
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div
+        style={{
+          marginTop: "20px",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+          gap: "12px",
+        }}
+      >
+        <StatBox
+          label="Écart Top 10 vs Bottom 10"
+          value={`${top10Avg - bottom10Avg} pts`}
+          color={C.sage}
+        />
+        <StatBox
+          label="Top 10 vs Moyenne"
+          value={`+${top10Avg - overallAvg} pts`}
+          color={C.accent}
+        />
+        <StatBox
+          label="Moyenne vs Bottom 10"
+          value={`+${overallAvg - bottom10Avg} pts`}
+          color={C.amberBright}
+        />
+      </div>
+    </div>
+  );
+}
+
+function LegendItem({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <span
+        style={{
+          width: "12px",
+          height: "12px",
+          background: color,
+          borderRadius: "3px",
+        }}
+      />
+      <div>
+        <div
+          style={{
+            fontSize: "11px",
+            color: C.textMuted,
+            fontFamily: C.fontMono,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: "18px",
+            fontWeight: 800,
+            color: C.text,
+            fontFamily: C.fontMono,
+            lineHeight: 1.1,
+          }}
+        >
+          {value}
+          <span style={{ fontSize: "11px", color: C.textMuted, fontWeight: 500 }}>
+            /100
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: "14px 16px",
+        background: C.surfaceAlt,
+        border: `1px solid ${C.borderLight}`,
+        borderRadius: "10px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "10px",
+          color: C.textMuted,
+          fontFamily: C.fontMono,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          marginBottom: "6px",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "18px",
+          fontWeight: 800,
+          color,
+          fontFamily: C.fontMono,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ─── LINE CHART (pure SVG, supports sparse points) ─────────────
+function TrendLineChart({
+  series,
+  xLabels,
+  height = 240,
+}: {
+  series: { name: string; color: string; points: number[] }[];
+  xLabels: string[];
+  height?: number;
+}) {
+  const width = 720;
+  const padding = { top: 20, right: 24, bottom: 36, left: 44 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  // Y axis: 0-100 fixed (scores).
+  const yMax = 100;
+  const yMin = 0;
+  const range = yMax - yMin;
+
+  const xStep = xLabels.length > 1 ? chartW / (xLabels.length - 1) : 0;
+
+  return (
+    <div style={{ width: "100%" }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ width: "100%", height: "auto" }}
+      >
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+          const y = padding.top + chartH * (1 - p);
+          const val = Math.round(yMin + range * p);
+          return (
+            <g key={i}>
+              <line
+                x1={padding.left}
+                y1={y}
+                x2={width - padding.right}
+                y2={y}
+                stroke={C.borderLight}
+                strokeWidth="1"
+              />
+              <text
+                x={padding.left - 8}
+                y={y + 4}
+                fontSize="10"
+                fill={C.textMuted}
+                fontFamily={C.fontMono}
+                textAnchor="end"
+                fontWeight={700}
+              >
+                {val}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* X labels */}
+        {xLabels.map((label, i) => {
+          const x = padding.left + i * xStep;
+          return (
+            <text
+              key={i}
+              x={x}
+              y={height - 12}
+              fontSize="10"
+              fill={C.textMuted}
+              fontFamily={C.fontMono}
+              textAnchor="middle"
+              fontWeight={600}
+            >
+              {label}
+            </text>
+          );
+        })}
+
+        {/* Series — render only segments where consecutive points are
+            both non-zero. Zero values represent months with no data. */}
+        {series.map((s, si) => {
+          // Collect contiguous segments of non-zero points.
+          const segments: number[][] = [];
+          let current: { idx: number; val: number }[] = [];
+          s.points.forEach((p, i) => {
+            if (p > 0) {
+              current.push({ idx: i, val: p });
+            } else if (current.length > 0) {
+              segments.push(current.map((c) => c.val));
+              current = [];
+            }
+          });
+          if (current.length > 0) segments.push(current.map((c) => c.val));
+
+          return (
+            <g key={si}>
+              {segments.map((seg, segIdx) => {
+                // Need to know the starting x index for this segment.
+                let startIdx = 0;
+                let acc = 0;
+                for (let k = 0; k < segIdx; k++) {
+                  acc += segments[k].length;
+                  // Skip the gap.
+                }
+                // Recompute properly: find startIdx by scanning original points.
+                let segStart = -1;
+                let count = 0;
+                for (let i = 0; i < s.points.length; i++) {
+                  if (s.points[i] > 0) {
+                    if (count === acc) {
+                      segStart = i;
+                      break;
+                    }
+                    count++;
+                  }
+                }
+                if (segStart === -1) return null;
+
+                const path = seg
+                  .map((val, i) => {
+                    const x = padding.left + (segStart + i) * xStep;
+                    const y =
+                      padding.top + chartH * (1 - (val - yMin) / range);
+                    return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+                  })
+                  .join(" ");
+
+                return (
+                  <g key={`seg-${segIdx}`}>
+                    <path
+                      d={path}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth="2.5"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                    {seg.map((val, i) => {
+                      const x = padding.left + (segStart + i) * xStep;
+                      const y =
+                        padding.top + chartH * (1 - (val - yMin) / range);
+                      return (
+                        <g key={`dot-${i}`}>
+                          <circle cx={x} cy={y} r="4" fill={s.color} />
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r="4"
+                            fill="none"
+                            stroke="#fff"
+                            strokeWidth="1.5"
+                          />
+                          <text
+                            x={x}
+                            y={y - 10}
+                            fontSize="11"
+                            fill={s.color}
+                            fontFamily={C.fontMono}
+                            textAnchor="middle"
+                            fontWeight={700}
+                          >
+                            {val}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }

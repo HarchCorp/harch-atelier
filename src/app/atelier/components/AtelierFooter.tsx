@@ -151,10 +151,12 @@ export function AtelierFooter() {
         <div
           style={{
             display: "grid",
-            // Wider cards (180px min) so city labels like "Casablanca · Rabat · Marrakech"
+            // Wider cards (220px min) so city labels like "Casablanca · Rabat · Marrakech"
             // are not aggressively truncated. Was 140px → clientWidth was 80px → "Paris - Ly…".
             // Agent 3 fix (Task 10-A3): 140px → 180px + tighter padding/gap.
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
+            // Agent 10 VLM fix (CRAZY-10-VLM): 180px → 220px + allow city text to wrap
+            // so "Paris · Lyon · Marseille" no longer truncates to "Paris · Lyon · Mars...".
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
             gap: "12px",
           }}
         >
@@ -169,7 +171,6 @@ export function AtelierFooter() {
                 background: C.bgSubtle,
                 border: `1px solid ${C.border}`,
                 borderRadius: "4px",
-                overflow: "hidden",
               }}
             >
               <span
@@ -188,15 +189,12 @@ export function AtelierFooter() {
               >
                 {c.code}
               </span>
-              <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div
                   style={{
                     fontSize: "13px",
                     fontWeight: 600,
                     color: C.text,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
                   }}
                 >
                   {c.name}
@@ -206,9 +204,9 @@ export function AtelierFooter() {
                     fontSize: "11px",
                     color: C.textMuted,
                     fontFamily: C.fontMono,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    lineHeight: 1.4,
+                    marginTop: "2px",
+                    wordBreak: "break-word",
                   }}
                 >
                   {c.cities}
