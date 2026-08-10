@@ -333,112 +333,119 @@ export function AtelierNav() {
             ))}
           </nav>
 
-          {/* ─── Right cluster ─── */}
+          {/* ─── Right cluster — all items in ONE flex row, same height ─── */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "20px",
+              gap: "16px",
               flexShrink: 0,
+              height: "100%",
             }}
           >
-            <div
+            {/* Se connecter — text link */}
+            <a
+              href={signInHref}
               className="atelier-nav-desktop"
-              style={{ display: "flex", alignItems: "center", gap: "20px" }}
+              style={{
+                fontSize: "14px",
+                fontWeight: 500,
+                color: C.textSec,
+                textDecoration: "none",
+                fontFamily: C.fontSans,
+                transition: "color 0.15s ease",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                height: "36px",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = C.textSec; }}
             >
-              {/* Se connecter — text link */}
-              <a
-                href={signInHref}
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: C.textSec,
-                  textDecoration: "none",
-                  fontFamily: C.fontSans,
-                  transition: "color 0.15s ease",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = C.textSec; }}
-              >
-                {signInLabel}
-              </a>
+              {signInLabel}
+            </a>
 
-              {/* Tarifs — text link */}
-              <a
-                href="/atelier/pricing"
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  color: C.textSec,
-                  textDecoration: "none",
-                  fontFamily: C.fontSans,
-                  transition: "color 0.15s ease",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = C.textSec; }}
-              >
-                Tarifs
-              </a>
+            {/* Tarifs — text link */}
+            <a
+              href="/atelier/pricing"
+              className="atelier-nav-desktop"
+              style={{
+                fontSize: "14px",
+                fontWeight: 500,
+                color: C.textSec,
+                textDecoration: "none",
+                fontFamily: C.fontSans,
+                transition: "color 0.15s ease",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                height: "36px",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = C.textSec; }}
+            >
+              Tarifs
+            </a>
 
-              {/* Language toggle: FR | EN — minimal mono text */}
-              <div
-                role="group"
-                aria-label="Sélection de la langue"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontFamily: C.fontMono,
-                }}
-              >
-                {(["fr", "en"] as Lang[]).map((code, idx) => {
-                  const active = code === locale;
-                  return (
-                    <span
-                      key={code}
-                      style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-                    >
-                      {idx === 1 && (
-                        <span
-                          aria-hidden
-                          style={{ color: C.border, fontSize: "12px" }}
-                        >
-                          |
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => switchLang(code)}
-                        aria-pressed={active}
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: active ? 700 : 400,
-                          fontFamily: C.fontMono,
-                          color: active ? C.text : C.textFaint,
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 0,
-                          transition: "color 0.15s ease",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.04em",
-                          lineHeight: 1,
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!active) e.currentTarget.style.color = C.textSec;
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!active) e.currentTarget.style.color = C.textFaint;
-                        }}
+            {/* Language toggle: FR | EN */}
+            <div
+              role="group"
+              aria-label="Selection de la langue"
+              className="atelier-nav-desktop"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontFamily: C.fontMono,
+                height: "36px",
+              }}
+            >
+              {(["fr", "en"] as Lang[]).map((code, idx) => {
+                const active = code === locale;
+                return (
+                  <span
+                    key={code}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  >
+                    {idx === 1 && (
+                      <span
+                        aria-hidden
+                        style={{ color: C.border, fontSize: "12px" }}
                       >
-                        {code.toUpperCase()}
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
+                        |
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => switchLang(code)}
+                      aria-pressed={active}
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: active ? 700 : 400,
+                        fontFamily: C.fontMono,
+                        color: active ? C.text : C.textFaint,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px 6px",
+                        borderRadius: "4px",
+                        transition: "all 0.15s ease",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        lineHeight: 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) e.currentTarget.style.color = C.textSec;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) e.currentTarget.style.color = C.textFaint;
+                      }}
+                    >
+                      {code.toUpperCase()}
+                    </button>
+                  </span>
+                );
+              })}
             </div>
 
             {/* Demander une démo — charcoal solid button */}
