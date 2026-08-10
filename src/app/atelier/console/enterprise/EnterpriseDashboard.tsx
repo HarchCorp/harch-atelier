@@ -89,7 +89,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -100,21 +100,26 @@ import {
   ArrowUp,
   Bell,
   Bot,
+  Brain,
   Building2,
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  Code,
   Copy,
   Database,
   Download,
+  ExternalLink,
   Eye,
   FileText,
   GitBranch,
   Globe2,
   Key,
   Layers,
+  LayoutGrid,
   Leaf,
   LogOut,
+  Menu,
   MessageSquare,
   Minus,
   Network,
@@ -127,8 +132,11 @@ import {
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Trophy,
+  UserPlus,
   Users,
   Webhook,
+  X,
   Zap,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -4311,23 +4319,333 @@ function VeilleReglementaireCard({ reg }: { reg: RegulatoryFeedResp | null }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// HEADER (sticky top nav)
+// SIDEBAR NAV (plan-aware — Grandes Entreprises)
+// 10 items: 6 shared with Pro/Essentiel + 3 Enterprise exclusives
+// (Gouvernance, API, Influenceurs) + Harch 100 (external). Each maps
+// to a section `id` attached to the corresponding motion.div wrapper.
+// Clicking scrolls smoothly; an IntersectionObserver highlights the
+// item matching the section currently in view.
+// ════════════════════════════════════════════════════════════════════
+
+const NAV_ITEMS: {
+  id: string;
+  label: string;
+  Icon: typeof LayoutGrid;
+  enterpriseExclusive?: boolean;
+  external?: boolean;
+}[] = [
+  { id: "score", label: "Tableau de bord", Icon: LayoutGrid },
+  { id: "sentiment", label: "Sentiment", Icon: TrendingUp },
+  { id: "concurrents", label: "Concurrents", Icon: Users },
+  { id: "alertes", label: "Alertes", Icon: Bell },
+  { id: "rapports", label: "Rapports", Icon: FileText },
+  {
+    id: "gouvernance",
+    label: "Gouvernance",
+    Icon: ShieldCheck,
+    enterpriseExclusive: true,
+  },
+  { id: "api", label: "API", Icon: Code, enterpriseExclusive: true },
+  {
+    id: "influenceurs",
+    label: "Influenceurs",
+    Icon: UserPlus,
+    enterpriseExclusive: true,
+  },
+  { id: "visibilite-ia", label: "Visibilité IA", Icon: Brain },
+  { id: "harch-100", label: "Harch 100", Icon: Trophy, external: true },
+];
+
+function scrollToSection(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+function userInitials(name?: string | null): string {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  const letters = parts.slice(0, 2).map((p) => p[0] ?? "").filter(Boolean);
+  return (letters.length ? letters.join("") : name[0] ?? "U").toUpperCase();
+}
+
+// SidebarContent — shared by desktop (sticky aside) and mobile overlay.
+// Self-contained: same NAV_ITEMS, same footer, same user block.
+function SidebarContent({
+  activeSection,
+  alertCount,
+  onNavigate,
+  fallbackName,
+  fallbackEmail,
+}: {
+  activeSection: string;
+  alertCount: number;
+  onNavigate?: (id: string) => void;
+  fallbackName?: string | null;
+  fallbackEmail?: string | null;
+}) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? fallbackName ?? "Utilisateur";
+  const userEmail = session?.user?.email ?? fallbackEmail ?? "—";
+  const initials = userInitials(userName);
+
+  const handleClick = (id: string, external?: boolean) => {
+    if (external) return; // external links handled by <Link>
+    scrollToSection(id);
+    onNavigate?.(id);
+  };
+
+  return (
+    <div className="flex flex-col h-full" style={{ fontFamily: FONT_SANS }}>
+      {/* Logo header */}
+      <div
+        className="px-4 py-4 flex items-center gap-2"
+        style={{ borderBottom: `1px solid ${BORDER}` }}
+      >
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 14,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: CHARCOAL,
+          }}
+        >
+          HARCH
+        </span>
+        <span style={{ color: TEXT_HEADER, fontFamily: FONT_MONO, fontSize: 12 }}>
+          |
+        </span>
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            color: TEXT_MUTED,
+            textTransform: "uppercase",
+          }}
+        >
+          Atelier
+        </span>
+      </div>
+
+      {/* Nav items */}
+      <nav
+        className="flex-1 px-2 py-3 space-y-1 overflow-y-auto"
+        aria-label="Navigation principale"
+      >
+        {NAV_ITEMS.map(({ id, label, Icon, external }) => {
+          const isActive = activeSection === id;
+          const inner = (
+            <>
+              <Icon size={18} style={{ flexShrink: 0 }} />
+              <span className="flex-1 truncate">{label}</span>
+              {id === "alertes" && alertCount > 0 && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 18,
+                    height: 18,
+                    padding: "0 5px",
+                    borderRadius: 9,
+                    backgroundColor: NEGATIVE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {alertCount > 9 ? "9+" : alertCount}
+                </span>
+              )}
+              {external && (
+                <ExternalLink size={12} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+              )}
+            </>
+          );
+          const baseStyle: CSSProperties = {
+            padding: "10px 12px",
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: isActive ? 600 : 500,
+            color: isActive ? SAGE : TEXT_BODY,
+            backgroundColor: isActive ? SAGE_BG : "transparent",
+            borderLeft: isActive ? `3px solid ${SAGE}` : "3px solid transparent",
+          };
+          if (external) {
+            return (
+              <Link
+                key={id}
+                href="/atelier/harch-100"
+                className="w-full flex items-center gap-3 text-left transition-colors"
+                style={baseStyle}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => onNavigate?.(id)}
+              >
+                {inner}
+              </Link>
+            );
+          }
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleClick(id, external)}
+              className="w-full flex items-center gap-3 text-left transition-colors"
+              style={baseStyle}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              aria-current={isActive ? "true" : undefined}
+            >
+              {inner}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Plan + user footer */}
+      <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+        <div style={FONT_HEADER}>Plan</div>
+        <div className="mt-1 flex items-center gap-2 flex-wrap">
+          <span
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 14,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            Grandes Entreprises
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+              padding: "2px 6px",
+              borderRadius: 999,
+            }}
+          >
+            Board-ready
+          </span>
+        </div>
+
+        <div
+          className="mt-3"
+          style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{
+                width: 28,
+                height: 28,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+              aria-hidden="true"
+            >
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userName}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  color: TEXT_MUTED,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userEmail}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1">
+            <Link
+              href="/atelier/console/settings/account"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-[#FAFAFA]"
+              style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}
+            >
+              <Settings size={14} />
+              <span>Paramètres</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/atelier/login" })}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-[#FEF2F2]"
+              style={{ fontFamily: FONT_SANS, fontSize: 12, color: NEGATIVE }}
+            >
+              <LogOut size={14} />
+              <span>Déconnexion</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HEADER (sticky top nav — frosted glass, hamburger, bell badge, avatar)
 // ════════════════════════════════════════════════════════════════════
 
 function DashboardHeader({
-  userName,
   lastUpdated,
   alertCount,
+  loading,
   onRefresh,
+  onMenuClick,
+  fallbackName,
 }: {
-  userName: string | null;
   lastUpdated: string | null;
   alertCount: number;
+  loading: boolean;
   onRefresh: () => void;
+  onMenuClick?: () => void;
+  fallbackName?: string | null;
 }) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? fallbackName ?? "Utilisateur";
+  const initials = userInitials(userName);
+
   return (
     <header
-      className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3.5"
+      className="sticky top-0 z-30 px-4 sm:px-6 py-3.5"
       style={{
         backgroundColor: "rgba(255,255,255,0.88)",
         backdropFilter: "blur(12px)",
@@ -4336,33 +4654,65 @@ function DashboardHeader({
       }}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
+        {/* Left: hamburger + HARCH | ATELIER logo + plan badge */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
+            aria-label="Ouvrir le menu"
+          >
+            <Menu size={16} />
+          </button>
+          <div className="flex items-center gap-2">
             <span
-              className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: SAGE_BG,
-                color: SAGE,
                 fontFamily: FONT_MONO,
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                color: CHARCOAL,
               }}
             >
-              Plan Grandes Entreprises
+              HARCH
             </span>
             <span
-              className="text-[11px] hidden sm:inline"
-              style={{ color: TEXT_MUTED, fontFamily: FONT_MONO }}
+              style={{
+                color: TEXT_HEADER,
+                fontFamily: FONT_MONO,
+                fontSize: 13,
+              }}
             >
-              Board-ready · Gouvernance · 9 LLMs · API illimitée
+              |
+            </span>
+            <span
+              className="hidden sm:inline"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                color: TEXT_MUTED,
+                textTransform: "uppercase",
+              }}
+            >
+              Atelier
             </span>
           </div>
-          <h1
-            className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight"
-            style={{ color: CHARCOAL, fontFamily: FONT_SANS }}
+          <span
+            className="hidden md:inline text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+              fontFamily: FONT_MONO,
+            }}
           >
-            Tableau de bord réputation{userName ? ` · ${userName.split(" ")[0]}` : ""}
-          </h1>
+            Grandes Entreprises
+          </span>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+
+        {/* Right: last updated + refresh + bell with badge + avatar */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="text-right hidden sm:block">
             <div
               className="text-[10px] uppercase tracking-wider"
@@ -4370,42 +4720,70 @@ function DashboardHeader({
             >
               Dernière maj
             </div>
-            <div className="text-[12px]" style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}>
+            <div
+              className="text-[12px]"
+              style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}
+            >
               {lastUpdated ?? "—"}
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-9 p-0"
+            className="h-8 w-8 p-0 hidden sm:inline-flex"
+            style={{ fontFamily: FONT_MONO, fontSize: 11 }}
             onClick={onRefresh}
-            aria-label="Rafraîchir le tableau"
+            aria-label="Rafraîchir"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           </Button>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/atelier/login" })}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            onClick={() => scrollToSection("alertes")}
+            className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
             style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
-            aria-label="Se déconnecter"
-            title="Se déconnecter"
+            aria-label={`Alertes${alertCount > 0 ? ` (${alertCount})` : ""}`}
+            title="Alertes"
           >
-            <LogOut size={15} />
+            <Bell size={15} />
+            {alertCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center"
+                style={{
+                  minWidth: 16,
+                  height: 16,
+                  padding: "0 4px",
+                  borderRadius: 8,
+                  backgroundColor: NEGATIVE,
+                  color: "#FFFFFF",
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
+            )}
           </button>
+          <div
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+              fontFamily: FONT_MONO,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+            aria-label="Compte utilisateur"
+            title={userName}
+          >
+            {initials}
+          </div>
         </div>
       </div>
-      {alertCount > 0 && (
-        <div
-          className="mt-2 flex items-center gap-2 text-[12px]"
-          style={{ color: alertCount >= 3 ? NEGATIVE : NEUTRAL_AMBER, fontFamily: FONT_SANS }}
-        >
-          <Bell size={13} />
-          <span>
-            <strong style={{ fontFamily: FONT_MONO }}>{alertCount}</strong> alerte{alertCount > 1 ? "s" : ""} active{alertCount > 1 ? "s" : ""} · traiter en priorité
-          </span>
-        </div>
-      )}
     </header>
   );
 }
@@ -4422,6 +4800,51 @@ export function EnterpriseDashboard({
   userEmail?: string | null;
 }) {
   const [range, setRange] = useState<"7d" | "30d" | "90d">("90d");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("score");
+
+  // Body scroll lock when mobile sidebar is open.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  // Active section tracking via IntersectionObserver.
+  // Highlights the sidebar item matching the section currently in view.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return;
+    const ids = NAV_ITEMS.filter((n) => !n.external).map((n) => n.id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) {
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-100px 0px -70% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleNavigate = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  // Shared scroll-margin so smooth-scroll targets clear the sticky header.
+  const sectionScrollStyle: CSSProperties = { scrollMarginTop: 80 };
 
   // ─── Data fetchers ──────────────────────────────────────────────
   const {
@@ -4501,136 +4924,261 @@ export function EnterpriseDashboard({
 
   return (
     <div
+      className="flex min-h-screen"
       style={{
         backgroundColor: "#FFFFFF",
         fontFamily: FONT_SANS,
         color: CHARCOAL,
-        minHeight: "100vh",
       }}
-      className="min-h-screen"
     >
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
-        <DashboardHeader
-          userName={userName ?? null}
-          lastUpdated={lastUpdated}
+      {/* ─── Desktop sidebar (sticky, 240px) ─────────────────────────── */}
+      <aside
+        className="hidden lg:block shrink-0"
+        style={{
+          width: 240,
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          backgroundColor: "#FFFFFF",
+          borderRight: `1px solid ${BORDER}`,
+          overflow: "hidden",
+        }}
+        aria-label="Navigation latérale"
+      >
+        <SidebarContent
+          activeSection={activeSection}
           alertCount={activeAlertCount}
-          onRefresh={refreshAll}
+          onNavigate={handleNavigate}
+          fallbackName={userName}
+          fallbackEmail={userEmail}
         />
+      </aside>
 
-        <TooltipProvider delayDuration={200}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mt-6">
-            {/* Row 1 — Hero + Executive KPIs */}
-            <motion.div {...cardMotion} className="lg:col-span-12">
-              <ScoreReputationHero health={health} loading={healthLoading} onRefresh={refetchHealth} />
-            </motion.div>
-
-            <motion.div {...cardMotion} transition={d(1)} className="lg:col-span-3 md:col-span-6">
-              <SentimentMarketKpi health={health} trend={trend} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(2)} className="lg:col-span-3 md:col-span-6">
-              <VisibiliteIaKpi ai={ai} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(3)} className="lg:col-span-3 md:col-span-6">
-              <PartsDeVoixKpi health={health} sov={sov} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(4)} className="lg:col-span-3 md:col-span-6">
-              <AlertesCrisisKpi health={health} alerts={alerts} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(5)} className="lg:col-span-3 md:col-span-6">
-              <Articles30JKpi src={src} topics={topics} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(6)} className="lg:col-span-3 md:col-span-6">
-              <InfluenceursKpi inf={inf} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(7)} className="lg:col-span-3 md:col-span-6">
-              <AppelsApiKpi keys={keys} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(8)} className="lg:col-span-3 md:col-span-6">
-              <EngagementTotalKpi trend={trend} inf={inf} />
-            </motion.div>
-
-            {/* Row 2 — Sentiment + Benchmark */}
-            <motion.div {...cardMotion} transition={d(9)} className="lg:col-span-7">
-              <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(10)} className="lg:col-span-5">
-              <BenchmarkConcurrentielCard sov={sov} radar={radar} />
-            </motion.div>
-
-            {/* Row 3 — Radar + Donut */}
-            <motion.div {...cardMotion} transition={d(11)} className="lg:col-span-6">
-              <RadarReputationCard radar={radar} health={health} ai={ai} sov={sov} inf={inf} src={src} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(12)} className="lg:col-span-6">
-              <PartDeVoixCard sov={sov} />
-            </motion.div>
-
-            {/* Row 4 — 9-LLM Grid + HarchIQ */}
-            <motion.div {...cardMotion} transition={d(13)} className="lg:col-span-6">
-              <GrilleVisibiliteIaCard ai={ai} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(14)} className="lg:col-span-6">
-              <HarchIQChatCard weekly={weeklyInsight} />
-            </motion.div>
-
-            {/* Row 5 — Governance + Multi-teams */}
-            <motion.div {...cardMotion} transition={d(15)} className="lg:col-span-6">
-              <GouvernanceCard users={users} webhooks={webhooks} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(16)} className="lg:col-span-6">
-              <TableauMultiEquipesCard users={users} alerts={alerts} />
-            </motion.div>
-
-            {/* Row 6 — API + Influencers */}
-            <motion.div {...cardMotion} transition={d(17)} className="lg:col-span-6">
-              <ApiIntegrationsCard keys={keys} webhooks={webhooks} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(18)} className="lg:col-span-6">
-              <MarketingInfluenceCard inf={inf} />
-            </motion.div>
-
-            {/* Row 7 — Crisis + Heatmap */}
-            <motion.div {...cardMotion} transition={d(19)} className="lg:col-span-6">
-              <DefconCrisisCard health={health} alerts={alerts} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(20)} className="lg:col-span-6">
-              <CarteChaleurGeoCard geo={geo} />
-            </motion.div>
-
-            {/* Row 8 — Briefing + Competitor Deep Dive */}
-            <motion.div {...cardMotion} transition={d(21)} className="lg:col-span-6">
-              <GenerateurBriefingCard briefings={briefings} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(22)} className="lg:col-span-6">
-              <CompetitorDeepDiveCard sov={sov} radar={radar} trend={trend} />
-            </motion.div>
-
-            {/* Row 9 — ESG + Regulatory */}
-            <motion.div {...cardMotion} transition={d(23)} className="lg:col-span-6">
-              <SuiviEsgCard health={health} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={d(24)} className="lg:col-span-6">
-              <VeilleReglementaireCard reg={reg} />
-            </motion.div>
-          </div>
-        </TooltipProvider>
-
-        <footer
-          className="mt-8 pt-4 text-center"
-          style={{ borderTop: `1px solid ${BORDER}` }}
+      {/* ─── Mobile sidebar overlay (full-screen, slide from left) ──── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu de navigation"
         >
-          <p
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            onClick={() => setSidebarOpen(false)}
+          />
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="absolute left-0 top-0 bottom-0"
             style={{
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              color: TEXT_MUTED,
-              letterSpacing: "0.04em",
+              width: 280,
+              backgroundColor: "#FFFFFF",
+              borderRight: `1px solid ${BORDER}`,
+              boxShadow: "4px 0 24px rgba(0,0,0,0.08)",
             }}
           >
-            Harch Atelier · Console Grandes Entreprises · 25 sections · Données en temps réel · Audit SHA-256
-            {userEmail ? ` · ${userEmail}` : ""}
-          </p>
-        </footer>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5] z-10"
+              style={{ color: TEXT_BODY }}
+              aria-label="Fermer le menu"
+            >
+              <X size={16} />
+            </button>
+            <SidebarContent
+              activeSection={activeSection}
+              alertCount={activeAlertCount}
+              onNavigate={handleNavigate}
+              fallbackName={userName}
+              fallbackEmail={userEmail}
+            />
+          </motion.div>
+        </div>
+      )}
+
+      {/* ─── Main content ─────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <DashboardHeader
+          lastUpdated={lastUpdated}
+          alertCount={activeAlertCount}
+          loading={healthLoading || alertsLoading}
+          onRefresh={refreshAll}
+          onMenuClick={() => setSidebarOpen(true)}
+          fallbackName={userName}
+        />
+
+        <main className="mx-auto max-w-[1440px] w-full px-4 sm:px-6 py-6">
+          <TooltipProvider delayDuration={200}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+              {/* Row 1 — Hero + Executive KPIs */}
+              <motion.div
+                id="score"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                className="lg:col-span-12"
+              >
+                <ScoreReputationHero health={health} loading={healthLoading} onRefresh={refetchHealth} />
+              </motion.div>
+
+              <motion.div {...cardMotion} transition={d(1)} className="lg:col-span-3 md:col-span-6">
+                <SentimentMarketKpi health={health} trend={trend} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(2)} className="lg:col-span-3 md:col-span-6">
+                <VisibiliteIaKpi ai={ai} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(3)} className="lg:col-span-3 md:col-span-6">
+                <PartsDeVoixKpi health={health} sov={sov} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(4)} className="lg:col-span-3 md:col-span-6">
+                <AlertesCrisisKpi health={health} alerts={alerts} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(5)} className="lg:col-span-3 md:col-span-6">
+                <Articles30JKpi src={src} topics={topics} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(6)} className="lg:col-span-3 md:col-span-6">
+                <InfluenceursKpi inf={inf} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(7)} className="lg:col-span-3 md:col-span-6">
+                <AppelsApiKpi keys={keys} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(8)} className="lg:col-span-3 md:col-span-6">
+                <EngagementTotalKpi trend={trend} inf={inf} />
+              </motion.div>
+
+              {/* Row 2 — Sentiment + Benchmark */}
+              <motion.div
+                id="sentiment"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(9)}
+                className="lg:col-span-7"
+              >
+                <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
+              </motion.div>
+              <motion.div
+                id="concurrents"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(10)}
+                className="lg:col-span-5"
+              >
+                <BenchmarkConcurrentielCard sov={sov} radar={radar} />
+              </motion.div>
+
+              {/* Row 3 — Radar + Donut */}
+              <motion.div {...cardMotion} transition={d(11)} className="lg:col-span-6">
+                <RadarReputationCard radar={radar} health={health} ai={ai} sov={sov} inf={inf} src={src} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(12)} className="lg:col-span-6">
+                <PartDeVoixCard sov={sov} />
+              </motion.div>
+
+              {/* Row 4 — 9-LLM Grid + HarchIQ */}
+              <motion.div
+                id="visibilite-ia"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(13)}
+                className="lg:col-span-6"
+              >
+                <GrilleVisibiliteIaCard ai={ai} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(14)} className="lg:col-span-6">
+                <HarchIQChatCard weekly={weeklyInsight} />
+              </motion.div>
+
+              {/* Row 5 — Governance + Multi-teams */}
+              <motion.div
+                id="gouvernance"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(15)}
+                className="lg:col-span-6"
+              >
+                <GouvernanceCard users={users} webhooks={webhooks} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(16)} className="lg:col-span-6">
+                <TableauMultiEquipesCard users={users} alerts={alerts} />
+              </motion.div>
+
+              {/* Row 6 — API + Influencers */}
+              <motion.div
+                id="api"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(17)}
+                className="lg:col-span-6"
+              >
+                <ApiIntegrationsCard keys={keys} webhooks={webhooks} />
+              </motion.div>
+              <motion.div
+                id="influenceurs"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(18)}
+                className="lg:col-span-6"
+              >
+                <MarketingInfluenceCard inf={inf} />
+              </motion.div>
+
+              {/* Row 7 — Crisis + Heatmap */}
+              <motion.div
+                id="alertes"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(19)}
+                className="lg:col-span-6"
+              >
+                <DefconCrisisCard health={health} alerts={alerts} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(20)} className="lg:col-span-6">
+                <CarteChaleurGeoCard geo={geo} />
+              </motion.div>
+
+              {/* Row 8 — Briefing + Competitor Deep Dive */}
+              <motion.div
+                id="rapports"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(21)}
+                className="lg:col-span-6"
+              >
+                <GenerateurBriefingCard briefings={briefings} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(22)} className="lg:col-span-6">
+                <CompetitorDeepDiveCard sov={sov} radar={radar} trend={trend} />
+              </motion.div>
+
+              {/* Row 9 — ESG + Regulatory */}
+              <motion.div {...cardMotion} transition={d(23)} className="lg:col-span-6">
+                <SuiviEsgCard health={health} />
+              </motion.div>
+              <motion.div {...cardMotion} transition={d(24)} className="lg:col-span-6">
+                <VeilleReglementaireCard reg={reg} />
+              </motion.div>
+            </div>
+          </TooltipProvider>
+
+          <footer
+            className="mt-8 pt-4 text-center"
+            style={{ borderTop: `1px solid ${BORDER}` }}
+          >
+            <p
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+              }}
+            >
+              Harch Atelier · Console Grandes Entreprises · 25 sections · Données en temps réel · Audit SHA-256
+              {userEmail ? ` · ${userEmail}` : ""}
+            </p>
+          </footer>
+        </main>
       </div>
     </div>
   );
