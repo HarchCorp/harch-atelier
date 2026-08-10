@@ -75,6 +75,8 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -83,6 +85,7 @@ import {
   ArrowUp,
   Bell,
   Bot,
+  Brain,
   CalendarClock,
   ChevronRight,
   Cloud,
@@ -91,20 +94,29 @@ import {
   ExternalLink,
   FileText,
   Globe2,
+  Hash,
+  LayoutGrid,
   LayoutDashboard,
+  LogOut,
+  Menu,
   MessageSquare,
   Minus,
+  Newspaper,
   Plus,
   RefreshCw,
   Save,
   Send,
+  Settings,
   Share2,
   Sparkles,
   Sun,
   TrendingDown,
   TrendingUp,
+  Trophy,
   User,
+  UserPlus,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -563,7 +575,11 @@ function CardShell({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
-      className={className}
+      // `w-full` is redundant for direct grid children (they stretch by
+      // default) but required when a card is wrapped in a flex anchor
+      // wrapper (`<div id="…" className="… flex">`) so the motion.div
+      // fills the wrapper's width. Harmless in both cases.
+      className={`w-full ${className ?? ""}`}
     >
       <Card
         className="border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden bg-white h-full"
@@ -682,6 +698,463 @@ const AXIS_TICK = {
   fontSize: 10,
   fill: TEXT_MUTED,
 };
+
+// ─── SIDEBAR NAV (plan-aware — Pro) ───────────────────────────────────
+// 10 items: 7 shared with Essentiel + 3 Pro exclusives (Concurrents,
+// Rapports, Influenceurs). Each maps to a section `id` attached to the
+// corresponding card wrapper. Harch 100 links out to the public ranking
+// page (no in-page section in Pro). Clicking scrolls smoothly; an
+// IntersectionObserver highlights the item matching the section in view.
+
+const NAV_ITEMS: {
+  id: string;
+  label: string;
+  Icon: typeof LayoutGrid;
+  proExclusive?: boolean;
+  external?: boolean;
+}[] = [
+  { id: "score", label: "Tableau de bord", Icon: LayoutGrid },
+  { id: "sentiment", label: "Sentiment", Icon: TrendingUp },
+  { id: "concurrents", label: "Concurrents", Icon: Users, proExclusive: true },
+  { id: "alertes", label: "Alertes", Icon: Bell },
+  { id: "rapports", label: "Rapports", Icon: FileText, proExclusive: true },
+  { id: "sujets", label: "Sujets", Icon: Hash },
+  { id: "sources", label: "Sources", Icon: Newspaper },
+  { id: "visibilite-ia", label: "Visibilité IA", Icon: Brain },
+  { id: "influenceurs", label: "Influenceurs", Icon: UserPlus, proExclusive: true },
+  { id: "harch-100", label: "Harch 100", Icon: Trophy, external: true },
+];
+
+function scrollToSection(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+function userInitials(name?: string | null): string {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  const letters = parts.slice(0, 2).map((p) => p[0] ?? "").filter(Boolean);
+  return (letters.length ? letters.join("") : name[0] ?? "U").toUpperCase();
+}
+
+// SidebarContent — shared by desktop (sticky aside) and mobile overlay.
+// Self-contained: same NAV_ITEMS, same footer, same user block.
+function SidebarContent({
+  activeSection,
+  alertCount,
+  onNavigate,
+  fallbackName,
+  fallbackEmail,
+}: {
+  activeSection: string;
+  alertCount: number;
+  onNavigate?: (id: string) => void;
+  fallbackName?: string | null;
+  fallbackEmail?: string | null;
+}) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? fallbackName ?? "Utilisateur";
+  const userEmail = session?.user?.email ?? fallbackEmail ?? "—";
+  const initials = userInitials(userName);
+
+  const handleClick = (id: string, external?: boolean) => {
+    if (external) return; // external links handled by <Link>
+    scrollToSection(id);
+    onNavigate?.(id);
+  };
+
+  return (
+    <div className="flex flex-col h-full" style={{ fontFamily: FONT_SANS }}>
+      {/* Logo header */}
+      <div
+        className="px-4 py-4 flex items-center gap-2"
+        style={{ borderBottom: `1px solid ${BORDER}` }}
+      >
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 14,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: CHARCOAL,
+          }}
+        >
+          HARCH
+        </span>
+        <span style={{ color: TEXT_HEADER, fontFamily: FONT_MONO, fontSize: 12 }}>
+          |
+        </span>
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            color: TEXT_MUTED,
+            textTransform: "uppercase",
+          }}
+        >
+          Atelier
+        </span>
+      </div>
+
+      {/* Nav items */}
+      <nav
+        className="flex-1 px-2 py-3 space-y-1 overflow-y-auto"
+        aria-label="Navigation principale"
+      >
+        {NAV_ITEMS.map(({ id, label, Icon, external }) => {
+          const isActive = activeSection === id;
+          const inner = (
+            <>
+              <Icon size={18} style={{ flexShrink: 0 }} />
+              <span className="flex-1 truncate">{label}</span>
+              {id === "alertes" && alertCount > 0 && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 18,
+                    height: 18,
+                    padding: "0 5px",
+                    borderRadius: 9,
+                    backgroundColor: NEGATIVE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {alertCount > 9 ? "9+" : alertCount}
+                </span>
+              )}
+              {external && (
+                <ExternalLink size={12} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+              )}
+            </>
+          );
+          const baseStyle: CSSProperties = {
+            padding: "10px 12px",
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: isActive ? 600 : 500,
+            color: isActive ? SAGE : TEXT_BODY,
+            backgroundColor: isActive ? SAGE_BG : "transparent",
+            borderLeft: isActive ? `3px solid ${SAGE}` : "3px solid transparent",
+          };
+          if (external) {
+            return (
+              <Link
+                key={id}
+                href="/atelier/harch-100"
+                className="w-full flex items-center gap-3 text-left transition-colors"
+                style={baseStyle}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => onNavigate?.(id)}
+              >
+                {inner}
+              </Link>
+            );
+          }
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleClick(id, external)}
+              className="w-full flex items-center gap-3 text-left transition-colors"
+              style={baseStyle}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              aria-current={isActive ? "true" : undefined}
+            >
+              {inner}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Plan + user footer */}
+      <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+        <div style={FONT_HEADER}>Plan</div>
+        <div className="mt-1 flex items-center gap-2 flex-wrap">
+          <span
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 14,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            Pro
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+              padding: "2px 6px",
+              borderRadius: 999,
+            }}
+          >
+            Le plus populaire
+          </span>
+        </div>
+
+        <div
+          className="mt-3"
+          style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{
+                width: 28,
+                height: 28,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+              aria-hidden="true"
+            >
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userName}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  color: TEXT_MUTED,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userEmail}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1">
+            <Link
+              href="/atelier/console/settings/account"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-[#FAFAFA]"
+              style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}
+            >
+              <Settings size={14} />
+              <span>Paramètres</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/atelier/login" })}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-[#FEF2F2]"
+              style={{ fontFamily: FONT_SANS, fontSize: 12, color: NEGATIVE }}
+            >
+              <LogOut size={14} />
+              <span>Déconnexion</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HEADER (sticky top nav — frosted glass, hamburger, bell badge, avatar)
+// ════════════════════════════════════════════════════════════════════
+
+function DashboardHeader({
+  lastUpdated,
+  alertCount,
+  loading,
+  onRefresh,
+  onMenuClick,
+  fallbackName,
+}: {
+  lastUpdated: string | null;
+  alertCount: number;
+  loading: boolean;
+  onRefresh: () => void;
+  onMenuClick?: () => void;
+  fallbackName?: string | null;
+}) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? fallbackName ?? "Utilisateur";
+  const initials = userInitials(userName);
+
+  return (
+    <header
+      className="sticky top-0 z-30 px-4 sm:px-6 py-3.5"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.88)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: `1px solid ${BORDER}`,
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        {/* Left: hamburger + HARCH | ATELIER logo + plan badge */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
+            aria-label="Ouvrir le menu"
+          >
+            <Menu size={16} />
+          </button>
+          <div className="flex items-center gap-2">
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                color: CHARCOAL,
+              }}
+            >
+              HARCH
+            </span>
+            <span
+              style={{
+                color: TEXT_HEADER,
+                fontFamily: FONT_MONO,
+                fontSize: 13,
+              }}
+            >
+              |
+            </span>
+            <span
+              className="hidden sm:inline"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                color: TEXT_MUTED,
+                textTransform: "uppercase",
+              }}
+            >
+              Atelier
+            </span>
+          </div>
+          <span
+            className="hidden md:inline text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+              fontFamily: FONT_MONO,
+            }}
+          >
+            Plan Pro
+          </span>
+        </div>
+
+        {/* Right: last updated + refresh + bell with badge + avatar */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="text-right hidden sm:block">
+            <div
+              className="text-[10px] uppercase tracking-wider"
+              style={{ color: TEXT_MUTED, fontFamily: FONT_MONO }}
+            >
+              Dernière maj
+            </div>
+            <div
+              className="text-[12px]"
+              style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}
+            >
+              {lastUpdated ?? "—"}
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 hidden sm:inline-flex"
+            style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+            onClick={onRefresh}
+            aria-label="Rafraîchir"
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+          </Button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("alertes")}
+            className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
+            aria-label={`Alertes${alertCount > 0 ? ` (${alertCount})` : ""}`}
+            title="Alertes"
+          >
+            <Bell size={15} />
+            {alertCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center"
+                style={{
+                  minWidth: 16,
+                  height: 16,
+                  padding: "0 4px",
+                  borderRadius: 8,
+                  backgroundColor: NEGATIVE,
+                  color: "#FFFFFF",
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
+            )}
+          </button>
+          <div
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+              fontFamily: FONT_MONO,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+            aria-label="Compte utilisateur"
+          >
+            {initials}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 1 — SCORE DE RÉPUTATION (hero, full width)
@@ -3719,6 +4192,8 @@ export default function ProDashboard({
   userEmail?: string | null;
 }) {
   const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("score");
   const trendUrl = `/api/console/sentiment-trend?range=${range}`;
 
   const { data: health, loading: healthLoading, refetch: refetchHealth } = useApi<BrandHealth>(
@@ -3738,156 +4213,232 @@ export default function ProDashboard({
   const { data: alertCfg } = useApi<AlertConfigResp>("/api/console/alert-config");
   const { data: insights } = useApi<InsightsResp>("/api/console/insights");
 
-  const displayName = userName || (userEmail ? userEmail.split("@")[0] : "Équipe");
+  // Body scroll lock when mobile sidebar is open.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  // Active section tracking via IntersectionObserver.
+  // Highlights the sidebar item matching the section currently in view.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return;
+    const ids = NAV_ITEMS.filter((n) => !n.external).map((n) => n.id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) {
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-100px 0px -70% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleNavigate = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  // Shared scroll-margin so smooth-scroll targets clear the sticky header.
+  const sectionScrollStyle: CSSProperties = { scrollMarginTop: 80 };
+
+  const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : null;
+  const activeAlertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
 
   return (
     <div
-      className="min-h-screen w-full"
+      className="flex min-h-screen"
       style={{
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#FAFAFA",
         fontFamily: FONT_SANS,
         color: CHARCOAL,
       }}
     >
-      {/* Sticky header */}
-      <header
-        className="sticky top-0 z-30 border-b"
+      {/* ─── Desktop sidebar (sticky, 240px) ─────────────────────────── */}
+      <aside
+        className="hidden lg:block shrink-0"
         style={{
+          width: 240,
+          position: "sticky",
+          top: 0,
+          height: "100vh",
           backgroundColor: "#FFFFFF",
-          borderColor: BORDER,
-          backdropFilter: "blur(8px)",
+          borderRight: `1px solid ${BORDER}`,
+          overflow: "hidden",
         }}
+        aria-label="Navigation latérale"
       >
-        <div className="mx-auto max-w-[1440px] px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                backgroundColor: SAGE,
-                color: "#FFFFFF",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Sparkles size={16} />
-            </div>
-            <div className="min-w-0">
-              <h1
-                className="truncate"
-                style={{
-                  fontFamily: FONT_SANS,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: CHARCOAL,
-                }}
-              >
-                Console Pro — HarchIQ
-              </h1>
-              <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-                {displayName} · Mission control
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="h-6"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                backgroundColor: SAGE_BG,
-                color: SAGE,
-              }}
-            >
-              PLAN PRO
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8"
-              style={{ fontFamily: FONT_MONO, fontSize: 11 }}
-              onClick={() => refetchHealth()}
-              aria-label="Rafraîchir"
-            >
-              <RefreshCw size={12} className={healthLoading ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">Rafraîchir</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+        <SidebarContent
+          activeSection={activeSection}
+          alertCount={activeAlertCount}
+          onNavigate={handleNavigate}
+          fallbackName={userName}
+          fallbackEmail={userEmail}
+        />
+      </aside>
 
-      {/* Main grid */}
-      <main className="mx-auto max-w-[1440px] px-6 py-6">
-        <div className="grid grid-cols-12 gap-4 lg:gap-5">
-          {/* Row 1: Hero + KPI strip (full width) */}
-          <ScoreReputationCard
-            health={health}
-            loading={healthLoading}
-            onRefresh={refetchHealth}
-          />
-
-          <SentimentMoyenKpi health={health} trend={trend} />
-          <MentionsJourKpi health={health} trend={trend} />
-          <CitationsIaKpi ai={ai} />
-          <PartDeVoixKpi sov={sov} />
-          <SourcesDiversifieesKpi src={src} />
-          <EngagementTotalKpi health={health} />
-
-          {/* Row 2: Main charts */}
-          <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
-          <BenchmarkConcurrentielCard radar={radar} sov={sov} health={health} />
-
-          {/* Row 3: Radar + Donut */}
-          <RadarReputationCard radar={radar} />
-          <PartDeVoixDonutCard sov={sov} />
-
-          {/* Row 4: Topics + Feed */}
-          <TopSujetsCard topics={topics} trend={trend} />
-          <DernieresMentionsCard alerts={alerts} />
-
-          {/* Row 5: AI + Comparison */}
-          <HarchIQAiCard insights={insights} />
-          <ComparaisonSemaineCard weekly={weekly} />
-
-          {/* Row 6: Reports + Saved Searches */}
-          <HistoriqueRapportsCard reports={reports} />
-          <RecherchesSauvegardeesCard alertCfg={alertCfg} />
-
-          {/* Row 7: Influencers + Reach */}
-          <TopInfluenceursCard inf={inf} />
-          <ReachMediaCard exposure={exposure} health={health} />
-
-          {/* Row 8: Crisis + Heatmap */}
-          <CarteCriseCard health={health} alerts={alerts} />
-          <HeatmapCard trend={trend} />
-
-          {/* Row 9: Media Type + Emerging */}
-          <RepartitionMediaTypeCard src={src} />
-          <SujetsEmergentsCard topics={topics} />
-
-          {/* Row 10: Custom + Upsell (full width) */}
-          <TableauxPersonnalisablesCard />
-          <UpsellEnterpriseCard />
-        </div>
-
-        {/* Footer */}
-        <footer
-          className="mt-10 pt-6 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
-          style={{ borderColor: BORDER }}
+      {/* ─── Mobile sidebar overlay (full-screen, slide from left) ──── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu de navigation"
         >
-          <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            HarchIQ Console Pro · Build {new Date().getFullYear()}
-          </p>
-          <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            Données en temps réel · Mise à jour continue
-          </p>
-        </footer>
-      </main>
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            onClick={() => setSidebarOpen(false)}
+          />
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="absolute left-0 top-0 bottom-0"
+            style={{
+              width: 280,
+              backgroundColor: "#FFFFFF",
+              borderRight: `1px solid ${BORDER}`,
+              boxShadow: "4px 0 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5] z-10"
+              style={{ color: TEXT_BODY }}
+              aria-label="Fermer le menu"
+            >
+              <X size={16} />
+            </button>
+            <SidebarContent
+              activeSection={activeSection}
+              alertCount={activeAlertCount}
+              onNavigate={handleNavigate}
+              fallbackName={userName}
+              fallbackEmail={userEmail}
+            />
+          </motion.div>
+        </div>
+      )}
+
+      {/* ─── Main content ─────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <DashboardHeader
+          lastUpdated={lastUpdated}
+          alertCount={activeAlertCount}
+          loading={healthLoading}
+          onRefresh={refetchHealth}
+          onMenuClick={() => setSidebarOpen(true)}
+          fallbackName={userName}
+        />
+
+        {/* Main grid */}
+        <main className="mx-auto max-w-[1440px] w-full px-4 sm:px-6 py-6">
+          <TooltipProvider delayDuration={200}>
+            <div className="grid grid-cols-12 gap-4 lg:gap-5">
+              {/* Row 1: Hero + KPI strip (full width) */}
+              <div id="score" style={sectionScrollStyle} className="lg:col-span-12 flex">
+                <ScoreReputationCard
+                  health={health}
+                  loading={healthLoading}
+                  onRefresh={refetchHealth}
+                />
+              </div>
+
+              <SentimentMoyenKpi health={health} trend={trend} />
+              <MentionsJourKpi health={health} trend={trend} />
+              <CitationsIaKpi ai={ai} />
+              <PartDeVoixKpi sov={sov} />
+              <div
+                id="sources"
+                style={sectionScrollStyle}
+                className="lg:col-span-2 md:col-span-4 flex"
+              >
+                <SourcesDiversifieesKpi src={src} />
+              </div>
+              <EngagementTotalKpi health={health} />
+
+              {/* Row 2: Main charts */}
+              <div id="sentiment" style={sectionScrollStyle} className="lg:col-span-8 flex">
+                <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
+              </div>
+              <div id="concurrents" style={sectionScrollStyle} className="lg:col-span-4 flex">
+                <BenchmarkConcurrentielCard radar={radar} sov={sov} health={health} />
+              </div>
+
+              {/* Row 3: Radar + Donut */}
+              <div id="visibilite-ia" style={sectionScrollStyle} className="lg:col-span-6 flex">
+                <RadarReputationCard radar={radar} />
+              </div>
+              <PartDeVoixDonutCard sov={sov} />
+
+              {/* Row 4: Topics + Feed */}
+              <div id="sujets" style={sectionScrollStyle} className="lg:col-span-6 flex">
+                <TopSujetsCard topics={topics} trend={trend} />
+              </div>
+              <DernieresMentionsCard alerts={alerts} />
+
+              {/* Row 5: AI + Comparison */}
+              <HarchIQAiCard insights={insights} />
+              <ComparaisonSemaineCard weekly={weekly} />
+
+              {/* Row 6: Reports + Saved Searches */}
+              <div id="rapports" style={sectionScrollStyle} className="lg:col-span-6 flex">
+                <HistoriqueRapportsCard reports={reports} />
+              </div>
+              <RecherchesSauvegardeesCard alertCfg={alertCfg} />
+
+              {/* Row 7: Influencers + Reach */}
+              <div id="influenceurs" style={sectionScrollStyle} className="lg:col-span-6 flex">
+                <TopInfluenceursCard inf={inf} />
+              </div>
+              <ReachMediaCard exposure={exposure} health={health} />
+
+              {/* Row 8: Crisis + Heatmap */}
+              <div id="alertes" style={sectionScrollStyle} className="lg:col-span-6 flex">
+                <CarteCriseCard health={health} alerts={alerts} />
+              </div>
+              <HeatmapCard trend={trend} />
+
+              {/* Row 9: Media Type + Emerging */}
+              <RepartitionMediaTypeCard src={src} />
+              <SujetsEmergentsCard topics={topics} />
+
+              {/* Row 10: Custom + Upsell (full width) */}
+              <TableauxPersonnalisablesCard />
+              <UpsellEnterpriseCard />
+            </div>
+          </TooltipProvider>
+
+          {/* Footer */}
+          <footer
+            className="mt-10 pt-6 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
+            style={{ borderColor: BORDER }}
+          >
+            <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              HarchIQ Console Pro · Build {new Date().getFullYear()}
+            </p>
+            <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              Données en temps réel · Mise à jour continue
+            </p>
+          </footer>
+        </main>
+      </div>
     </div>
   );
 }
