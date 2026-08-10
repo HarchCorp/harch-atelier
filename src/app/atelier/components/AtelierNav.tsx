@@ -20,9 +20,11 @@ import {
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
-//  ATELIER NAVBAR — Palantir / Stripe-grade
-//  Charcoal CTA (no sage green), color-only hover on nav items,
-//  mega-menu with icon + title + description, mobile slide-in.
+//  ATELIER NAVBAR — Stripe / Linear-grade
+//  Frosted glass header (rgba 0.85 + blur 12px), charcoal CTA
+//  (no sage green in navbar — reserved for dashboards), color-only
+//  hover on nav items (Linear-style), mega-menu with icon + title +
+//  description, full-screen mobile overlay with blur(20px).
 //
 //  i18n: the FR/EN toggle is wired to `router.replace(pathname,
 //  { locale })` from `@/i18n/navigation`. The active locale is read
@@ -32,23 +34,30 @@ import {
 
 type Lang = "fr" | "en";
 
-// Navbar-local design tokens (Palantir-grade palette)
+// Navbar-local design tokens (Stripe / Linear-grade palette)
 const C = {
   bg: "#FFFFFF",
   bgSubtle: "#FAFAFA",
   surfaceAlt: "#F4F4F5",
   surfaceHover: "#FAFAFA",
   border: "#E5E5E5",
-  borderLight: "#F0F0F0",
+  borderLight: "rgba(0,0,0,0.06)",
+  borderMenu: "rgba(0,0,0,0.04)",
   text: "#0A0A0A",        // charcoal — primary
   textSec: "#525252",     // neutral-600 — body
   textMuted: "#71717A",   // zinc-500 — descriptions
   textFaint: "#9CA3AF",   // gray-400 — chevrons / inactive lang
   iconBg: "#F4F4F5",
-  iconHoverBg: "rgba(120,113,108,0.10)", // stone-500 @ 10%
+  // Charcoal-tinted hover (no sage green in navbar — sage reserved for dashboards)
+  iconHoverBg: "rgba(10,10,10,0.06)",
+  iconHoverColor: "#0A0A0A",
   pipe: "#E5E5E5",
   charcoal: "#0A0A0A",
   charcoalHover: "#1A1A1A",
+  // Mono font stack: prefer JetBrains Mono, fall back to Space Mono
+  // (loaded globally via next/font) then system monospace.
+  fontMono: "'JetBrains Mono', 'Space Mono', ui-monospace, monospace",
+  fontSans: "'Inter', system-ui, -apple-system, sans-serif",
 } as const;
 
 // ─── Icon mapping for mega-menu links ───────────────────────────
@@ -225,10 +234,10 @@ export function AtelierNav() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(255,255,255,0.8)",
-          backdropFilter: "blur(16px) saturate(180%)",
-          WebkitBackdropFilter: "blur(16px) saturate(180%)",
-          borderBottom: `1px solid ${C.borderLight}`,
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
           boxShadow: scrolled ? "0 1px 3px rgba(0,0,0,0.05)" : "none",
           transition: "box-shadow 0.2s ease",
         }}
@@ -253,7 +262,7 @@ export function AtelierNav() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
+              gap: "0",
               textDecoration: "none",
               flexShrink: 0,
             }}
@@ -263,7 +272,7 @@ export function AtelierNav() {
                 fontSize: "18px",
                 fontWeight: 700,
                 color: C.text,
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: C.fontSans,
                 letterSpacing: "-0.02em",
                 lineHeight: 1,
               }}
@@ -277,15 +286,16 @@ export function AtelierNav() {
                 height: "16px",
                 background: C.pipe,
                 display: "inline-block",
+                margin: "0 8px",
               }}
             />
             <span
               style={{
                 fontSize: "14px",
-                fontWeight: 500,
+                fontWeight: 400,
                 color: C.textMuted,
-                fontFamily: "'Inter', sans-serif",
-                letterSpacing: "0.12em",
+                fontFamily: C.fontSans,
+                letterSpacing: "0.05em",
                 textTransform: "uppercase",
                 lineHeight: 1,
               }}
@@ -300,7 +310,7 @@ export function AtelierNav() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "32px",
+              gap: "4px",
               height: "100%",
               flex: 1,
               justifyContent: "center",
@@ -344,8 +354,8 @@ export function AtelierNav() {
                   fontWeight: 500,
                   color: C.textSec,
                   textDecoration: "none",
-                  fontFamily: "'Inter', sans-serif",
-                  transition: "color 0.1s ease",
+                  fontFamily: C.fontSans,
+                  transition: "color 0.15s ease",
                   whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
@@ -362,8 +372,8 @@ export function AtelierNav() {
                   fontWeight: 500,
                   color: C.textSec,
                   textDecoration: "none",
-                  fontFamily: "'Inter', sans-serif",
-                  transition: "color 0.1s ease",
+                  fontFamily: C.fontSans,
+                  transition: "color 0.15s ease",
                   whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
@@ -380,7 +390,7 @@ export function AtelierNav() {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  fontFamily: "'Space Mono', monospace",
+                  fontFamily: C.fontMono,
                 }}
               >
                 {(["fr", "en"] as Lang[]).map((code, idx) => {
@@ -405,13 +415,13 @@ export function AtelierNav() {
                         style={{
                           fontSize: "12px",
                           fontWeight: active ? 700 : 400,
-                          fontFamily: "'Space Mono', monospace",
+                          fontFamily: C.fontMono,
                           color: active ? C.text : C.textFaint,
                           background: "none",
                           border: "none",
                           cursor: "pointer",
                           padding: 0,
-                          transition: "color 0.1s ease",
+                          transition: "color 0.15s ease",
                           textTransform: "uppercase",
                           letterSpacing: "0.04em",
                           lineHeight: 1,
@@ -439,23 +449,27 @@ export function AtelierNav() {
                 fontWeight: 500,
                 color: "#FFFFFF",
                 textDecoration: "none",
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: C.fontSans,
                 letterSpacing: "-0.01em",
                 padding: "10px 20px",
                 background: C.charcoal,
-                borderRadius: "8px",
-                transition: "background 0.15s ease, box-shadow 0.15s ease",
+                borderRadius: "10px",
+                border: "none",
+                cursor: "pointer",
+                transition: "all 150ms ease",
                 display: "inline-flex",
                 alignItems: "center",
                 whiteSpace: "nowrap",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.charcoalHover;
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                e.currentTarget.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = C.charcoal;
                 e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Demander une démo
@@ -501,7 +515,7 @@ export function AtelierNav() {
         </div>
       </header>
 
-      {/* ─── Mobile menu overlay ─── */}
+      {/* ─── Mobile menu overlay (full-screen, frosted white) ─── */}
       {mobileOpen && (
         <>
           <div
@@ -510,7 +524,7 @@ export function AtelierNav() {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0,0,0,0.3)",
+              background: "rgba(0,0,0,0.18)",
               zIndex: 99,
               animation: "atelierFadeIn 200ms ease forwards",
             }}
@@ -525,15 +539,17 @@ export function AtelierNav() {
               top: 0,
               right: 0,
               width: "100%",
-              maxWidth: "400px",
+              maxWidth: "440px",
               height: "100vh",
-              background: C.bg,
+              background: "rgba(255,255,255,0.98)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
               zIndex: 100,
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
               boxShadow: "-8px 0 32px rgba(0,0,0,0.10)",
-              animation: "atelierSlideIn 280ms cubic-bezier(0.32, 0.72, 0, 1) forwards",
+              animation: "atelierSlideIn 300ms cubic-bezier(0.32, 0.72, 0, 1) forwards",
             }}
           >
             {/* Mobile menu header */}
@@ -543,7 +559,7 @@ export function AtelierNav() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "16px 20px",
-                borderBottom: `1px solid ${C.borderLight}`,
+                borderBottom: "1px solid rgba(0,0,0,0.06)",
                 flexShrink: 0,
               }}
             >
@@ -553,7 +569,7 @@ export function AtelierNav() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: "0",
                   textDecoration: "none",
                 }}
               >
@@ -562,7 +578,7 @@ export function AtelierNav() {
                     fontSize: "16px",
                     fontWeight: 700,
                     color: C.text,
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: C.fontSans,
                     letterSpacing: "-0.02em",
                   }}
                 >
@@ -570,15 +586,15 @@ export function AtelierNav() {
                 </span>
                 <span
                   aria-hidden
-                  style={{ width: "1px", height: "12px", background: C.pipe }}
+                  style={{ width: "1px", height: "12px", background: C.pipe, margin: "0 8px" }}
                 />
                 <span
                   style={{
                     fontSize: "12px",
-                    fontWeight: 500,
+                    fontWeight: 400,
                     color: C.textMuted,
-                    fontFamily: "'Inter', sans-serif",
-                    letterSpacing: "0.12em",
+                    fontFamily: C.fontSans,
+                    letterSpacing: "0.05em",
                     textTransform: "uppercase",
                   }}
                 >
@@ -633,7 +649,7 @@ export function AtelierNav() {
             <div
               style={{
                 padding: "20px",
-                borderTop: `1px solid ${C.borderLight}`,
+                borderTop: "1px solid rgba(0,0,0,0.06)",
                 flexShrink: 0,
                 display: "flex",
                 flexDirection: "column",
@@ -649,7 +665,7 @@ export function AtelierNav() {
                     fontWeight: 500,
                     color: C.textSec,
                     textDecoration: "none",
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: C.fontSans,
                   }}
                 >
                   {signInLabel}
@@ -662,7 +678,7 @@ export function AtelierNav() {
                     fontWeight: 500,
                     color: C.textSec,
                     textDecoration: "none",
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: C.fontSans,
                   }}
                 >
                   Tarifs
@@ -676,7 +692,7 @@ export function AtelierNav() {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    fontFamily: "'Space Mono', monospace",
+                    fontFamily: C.fontMono,
                     marginLeft: "auto",
                   }}
                 >
@@ -702,7 +718,7 @@ export function AtelierNav() {
                           style={{
                             fontSize: "12px",
                             fontWeight: active ? 700 : 400,
-                            fontFamily: "'Space Mono', monospace",
+                            fontFamily: C.fontMono,
                             color: active ? C.text : C.textFaint,
                             background: "none",
                             border: "none",
@@ -728,10 +744,10 @@ export function AtelierNav() {
                   fontWeight: 500,
                   color: "#FFFFFF",
                   textDecoration: "none",
-                  fontFamily: "'Inter', sans-serif",
-                  padding: "14px 20px",
+                  fontFamily: C.fontSans,
+                  padding: "16px",
                   background: C.charcoal,
-                  borderRadius: "8px",
+                  borderRadius: "12px",
                   textAlign: "center",
                   display: "block",
                 }}
@@ -749,7 +765,7 @@ export function AtelierNav() {
           .atelier-burger { display: flex !important; }
         }
         @keyframes atelierDropdownIn {
-          from { opacity: 0; transform: translateY(-4px); }
+          from { opacity: 0; transform: translateY(-8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .atelier-megamenu {
@@ -800,11 +816,12 @@ function NavItemDesktop({
           fontWeight: 500,
           color: C.textSec,
           textDecoration: "none",
-          fontFamily: "'Inter', sans-serif",
-          transition: "color 0.1s ease",
+          fontFamily: C.fontSans,
+          transition: "color 0.15s ease",
           whiteSpace: "nowrap",
           display: "inline-flex",
           alignItems: "center",
+          padding: "8px 14px",
           height: "100%",
         }}
         onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
@@ -841,15 +858,15 @@ function NavItemDesktop({
           fontSize: "14px",
           fontWeight: 500,
           color: isOpen ? C.text : C.textSec,
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: C.fontSans,
           background: "none",
           border: "none",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          padding: "0",
-          transition: "color 0.1s ease",
+          padding: "8px 14px",
+          transition: "color 0.15s ease",
           whiteSpace: "nowrap",
           height: "100%",
         }}
@@ -865,7 +882,7 @@ function NavItemDesktop({
           aria-hidden
           style={{
             color: C.textFaint,
-            transition: "transform 0.2s ease",
+            transition: "transform 200ms ease",
             transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
           }}
         >
@@ -887,7 +904,7 @@ function NavItemDesktop({
             top: "100%",
             left: "50%",
             transform: "translateX(-50%)",
-            marginTop: "12px",
+            marginTop: "8px",
             zIndex: 100,
           }}
           onMouseEnter={onDropdownEnter}
@@ -897,12 +914,13 @@ function NavItemDesktop({
             className="atelier-megamenu"
             style={{
               background: C.bg,
-              border: `1px solid ${C.borderLight}`,
-              borderRadius: "12px",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-              padding: "16px",
-              minWidth: multiCol ? "560px" : "360px",
-              maxWidth: "720px",
+              border: "1px solid rgba(0,0,0,0.04)",
+              borderRadius: "16px",
+              boxShadow:
+                "0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
+              padding: "8px",
+              minWidth: "400px",
+              maxWidth: "560px",
             }}
           >
             {/* Section grid */}
@@ -912,7 +930,7 @@ function NavItemDesktop({
                 gridTemplateColumns: multiCol
                   ? `repeat(${sections.length}, minmax(180px, 1fr))`
                   : "1fr",
-                gap: "24px",
+                gap: "16px",
               }}
             >
               {sections.map((section) => (
@@ -921,13 +939,12 @@ function NavItemDesktop({
                   <div
                     style={{
                       fontSize: "10px",
-                      fontFamily: "'Space Mono', monospace",
+                      fontFamily: C.fontMono,
                       color: C.textFaint,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
-                      marginBottom: "8px",
+                      margin: "8px 12px 4px",
                       fontWeight: 500,
-                      padding: "0 12px",
                     }}
                   >
                     {section.heading}
@@ -941,8 +958,8 @@ function NavItemDesktop({
                           key={link.href + link.label}
                           href={link.href}
                           style={{
-                            padding: "8px 12px",
-                            borderRadius: "8px",
+                            padding: "10px 12px",
+                            borderRadius: "10px",
                             textDecoration: "none",
                             transition: "background 0.15s ease",
                             display: "flex",
@@ -954,14 +971,22 @@ function NavItemDesktop({
                             const iconBox = e.currentTarget.querySelector(
                               ".atelier-mega-icon"
                             ) as HTMLElement | null;
-                            if (iconBox) iconBox.style.background = C.iconHoverBg;
+                            if (iconBox) {
+                              iconBox.style.background = C.iconHoverBg;
+                              const svg = iconBox.querySelector("svg") as HTMLElement | null;
+                              if (svg) svg.style.color = C.iconHoverColor;
+                            }
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = "transparent";
                             const iconBox = e.currentTarget.querySelector(
                               ".atelier-mega-icon"
                             ) as HTMLElement | null;
-                            if (iconBox) iconBox.style.background = C.iconBg;
+                            if (iconBox) {
+                              iconBox.style.background = C.iconBg;
+                              const svg = iconBox.querySelector("svg") as HTMLElement | null;
+                              if (svg) svg.style.color = C.textMuted;
+                            }
                           }}
                         >
                           {/* Icon box */}
@@ -996,7 +1021,7 @@ function NavItemDesktop({
                                 fontSize: "14px",
                                 fontWeight: 600,
                                 color: C.text,
-                                fontFamily: "'Inter', sans-serif",
+                                fontFamily: C.fontSans,
                                 lineHeight: 1.3,
                               }}
                             >
@@ -1007,7 +1032,7 @@ function NavItemDesktop({
                                 style={{
                                   fontSize: "12px",
                                   color: C.textMuted,
-                                  fontFamily: "'Inter', sans-serif",
+                                  fontFamily: C.fontSans,
                                   lineHeight: 1.4,
                                 }}
                               >
@@ -1052,12 +1077,12 @@ function MobileNavItem({
           fontWeight: 500,
           color: C.text,
           textDecoration: "none",
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: C.fontSans,
           padding: "0 12px",
-          height: "48px",
+          height: "56px",
           display: "flex",
           alignItems: "center",
-          borderBottom: `1px solid ${C.borderLight}`,
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}
       >
         {item.label}
@@ -1066,7 +1091,7 @@ function MobileNavItem({
   }
 
   return (
-    <div style={{ borderBottom: `1px solid ${C.borderLight}` }}>
+    <div style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
       <button
         onClick={onToggle}
         style={{
@@ -1075,14 +1100,14 @@ function MobileNavItem({
           justifyContent: "space-between",
           alignItems: "center",
           padding: "0 12px",
-          height: "48px",
+          height: "56px",
           background: "none",
           border: "none",
           cursor: "pointer",
           fontSize: "18px",
           fontWeight: 500,
           color: C.text,
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: C.fontSans,
         }}
       >
         {item.label}
@@ -1094,7 +1119,7 @@ function MobileNavItem({
           aria-hidden
           style={{
             color: C.textFaint,
-            transition: "transform 0.2s ease",
+            transition: "transform 200ms ease",
             transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
           }}
         >
@@ -1130,11 +1155,11 @@ function MobileNavItem({
                     fontSize: "14px",
                     color: C.textSec,
                     textDecoration: "none",
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: C.fontSans,
                     display: "flex",
                     alignItems: "center",
                     gap: "12px",
-                    borderRadius: "8px",
+                    borderRadius: "10px",
                   }}
                 >
                   <Icon size={16} strokeWidth={1.5} color={C.textMuted} />

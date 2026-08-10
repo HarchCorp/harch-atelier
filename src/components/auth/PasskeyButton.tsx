@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { C } from "@/app/atelier/components/tokens";
 
 // ═══════════════════════════════════════════════════════════════
 //  PASSKEY BUTTON — Biometric authentication (WebAuthn)
@@ -12,6 +11,9 @@ import { C } from "@/app/atelier/components/tokens";
 //
 //  Uses the browser's native navigator.credentials API.
 //  The private key NEVER leaves the device.
+//
+//  Visual: white outline button, sage green fingerprint icon,
+//  charcoal text. Matches the institutional login card design.
 //
 //  NEMESIS defense: the network payload contains ONLY binary blobs.
 //  No password, no hash, no secret.
@@ -106,10 +108,10 @@ export function PasskeyButton({ mode, email, onSuccess, onError }: PasskeyButton
       const storeData = await storeRes.json();
       if (!storeRes.ok) throw new Error(storeData.error);
 
-      setStatus("✓ Passkey registered — you can now sign in with biometrics");
+      setStatus("✓ Passkey enregistré — vous pouvez vous connecter par biométrie");
       onSuccess?.({ id: "", email: email || "", name: null, role: "" });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Registration failed";
+      const msg = e instanceof Error ? e.message : "Échec de l'enregistrement";
       setStatus(`✕ ${msg}`);
       onError?.(msg);
     } finally {
@@ -145,7 +147,7 @@ export function PasskeyButton({ mode, email, onSuccess, onError }: PasskeyButton
         },
       })) as PublicKeyCredential | null;
 
-      if (!assertion) throw new Error("Authentication cancelled");
+      if (!assertion) throw new Error("Authentification annulée");
 
       const response = assertion.response as AuthenticatorAssertionResponse;
 
@@ -168,13 +170,19 @@ export function PasskeyButton({ mode, email, onSuccess, onError }: PasskeyButton
       setStatus(`✓ ${verifyData.message}`);
       if (verifyData.user) onSuccess?.(verifyData.user);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Login failed";
+      const msg = e instanceof Error ? e.message : "Échec de la connexion";
       setStatus(`✕ ${msg}`);
       onError?.(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  const buttonLabel = loading
+    ? "En attente de la biométrie…"
+    : mode === "register"
+      ? "Enregistrer un passkey"
+      : "Se connecter avec un passkey";
 
   return (
     <div>
@@ -188,37 +196,66 @@ export function PasskeyButton({ mode, email, onSuccess, onError }: PasskeyButton
           justifyContent: "center",
           gap: "8px",
           width: "100%",
-          padding: "14px",
-          background: loading ? C.border : "#0a0a0a",
-          color: "#fff",
-          border: `1px solid ${C.border}`,
-          borderRadius: "8px",
-          fontFamily: C.fontSans,
+          height: "44px",
+          padding: "0 14px",
+          background: "#FFFFFF",
+          color: "#0A0A0A",
+          border: "1px solid #E5E5E5",
+          borderRadius: "10px",
+          fontFamily: "inherit",
           fontSize: "14px",
-          fontWeight: 600,
+          fontWeight: 500,
           cursor: loading ? "not-allowed" : "pointer",
-          transition: "all 0.15s",
+          opacity: loading ? 0.7 : 1,
+          transition: "background 0.15s, opacity 0.15s",
+          boxSizing: "border-box",
+        }}
+        onMouseEnter={(e) => {
+          if (!loading) e.currentTarget.style.background = "#FAFAFA";
+        }}
+        onMouseLeave={(e) => {
+          if (!loading) e.currentTarget.style.background = "#FFFFFF";
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2a5 5 0 0 0-5 5v3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2V7a5 5 0 0 0-5-5z" />
+        {/* Fingerprint icon — sage green (#4A7B5F) */}
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#4A7B5F"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4" />
+          <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+          <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+          <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+          <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+          <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+          <path d="M2 16h.01" />
+          <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+          <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2" />
         </svg>
-        {loading
-          ? "Waiting for biometric…"
-          : mode === "register"
-            ? "Register Passkey (TouchID / FaceID / YubiKey)"
-            : "Sign in with Passkey"}
+        {buttonLabel}
       </button>
       {status && (
-        <div style={{
-          marginTop: "8px",
-          padding: "8px 12px",
-          background: status.startsWith("✓") ? "#ecfdf5" : "#fef2f2",
-          border: `1px solid ${status.startsWith("✓") ? "#a7f3d0" : "#fecaca"}`,
-          borderRadius: "6px",
-          fontSize: "12px",
-          color: status.startsWith("✓") ? "#065f46" : "#991b1b",
-        }}>
+        <div
+          role={status.startsWith("✕") ? "alert" : "status"}
+          style={{
+            marginTop: "12px",
+            padding: "12px",
+            background: status.startsWith("✓") ? "#ECFDF5" : "#FEF2F2",
+            border: `1px solid ${
+              status.startsWith("✓") ? "#A7F3D0" : "#FECACA"
+            }`,
+            borderRadius: "8px",
+            fontSize: "13px",
+            color: status.startsWith("✓") ? "#065F46" : "#991B1B",
+          }}
+        >
           {status}
         </div>
       )}

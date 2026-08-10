@@ -107,13 +107,21 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
       title: "Plateforme",
       sections: [
         {
-          heading: "What we know",
+          heading: "Plans",
           links: [
-            { label: "Enterprise Risk", href: "/atelier/expertise/enterprise-risk", desc: "Identify operational, financial & strategic risks before they materialize" },
-            { label: "Reputation Risk", href: "/atelier/expertise/reputation-risk", desc: "Monitor perception shifts that can damage brand value overnight" },
-            { label: "PR & Comms", href: "/atelier/expertise/pr-comms", desc: "Augment Comms teams with real-time intelligence & measurement" },
-            { label: "ESG", href: "/atelier/expertise/esg", desc: "Track sustainability narratives, greenwashing risks & investor sentiment" },
-            { label: "Regulation", href: "/atelier/expertise/regulation", desc: "Stay ahead of regulatory changes across Moroccan & African jurisdictions" },
+            { label: "Essentiel", href: "/atelier/pricing#essential", desc: "Pour vous lancer dans la veille" },
+            { label: "Pro", href: "/atelier/pricing#pro", desc: "Pour les marques en croissance" },
+            { label: "Grandes Entreprises", href: "/atelier/pricing#enterprise", desc: "Pour les leaders internationaux" },
+            { label: "Agences", href: "/atelier/pricing#agency", desc: "Pour les multi-clients" },
+          ],
+        },
+        {
+          heading: "Outils",
+          links: [
+            { label: "Harch 100", href: "/atelier/harch-100", desc: "Classement des 100 entreprises marocaines" },
+            { label: "Registre des Crises", href: "/atelier/registry", desc: "8 crises réputationnelles marocaines" },
+            { label: "Rétro-audit", href: "/atelier/retro-audit", desc: "48h avant le pic médiatique" },
+            { label: "Comparateur", href: "/atelier/compare", desc: "Comparez les entreprises côte à côte" },
           ],
         },
       ],
@@ -227,31 +235,11 @@ export const ATELIER_NAV_LINKS: NavItem[] = [
       ],
     },
   },
-  {
-    label: "Industry Dashboards",
-    dropdown: {
-      title: "Industry Dashboards",
-      sections: [
-        {
-          heading: "Live trackers",
-          links: [
-            { label: "Harch 100", href: "/atelier/harch-100", desc: "Morocco's reputation ranking — Signal AI 500 style" },
-            { label: "Risk Tracker", href: "/atelier/risk-tracker", desc: "32 risk categories across 6 industries" },
-            { label: "Reputation Tracker", href: "/atelier/reputation-tracker", desc: "Top 100 Moroccan companies ranked by reputation" },
-            { label: "Comparison Tool", href: "/atelier/compare", desc: "Compare 2-3 companies side-by-side" },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    label: "Lab",
-    href: "/atelier/lab",
-  },
-  {
-    label: "Registre",
-    href: "/atelier/registry",
-  },
+  // REMOVED: "Industry Dashboards", "Lab", "Registre" as top-level nav items
+  // These are now accessible via the "Ressources" dropdown and internal links
+  // Harch 100 → moved to Plateforme dropdown
+  // Lab → accessible via footer + direct URL
+  // Registry → accessible via footer + direct URL
 ];
 
 export const ATELIER_FOOTER_LINKS = {

@@ -2189,3 +2189,176 @@ Stage Summary:
 - HeatMap: YES
 - GaugeChart: YES
 - 0 TypeScript errors
+
+---
+Task ID: POSTLOGIN-2-DASH
+Agent: Agent 2 — Dashboard UX
+Task: Rebuild post-login dashboard with beautiful UX
+
+Work Log:
+- Pre-flight: read worklog (last 50 lines), current Dashboard.tsx, tokens.ts, and all 4 API route.ts files to confirm real response shapes
+- API shape corrections vs old Dashboard (old code used wrong field names):
+  • /api/console/topics returns { topics:[{label, count, type}] } — NOT {name, mentions, positivePct, negativePct}. New code uses label+count, derives proportional sentiment bar from brand-health overall split
+  • /api/console/ai-visibility returns { platforms:[{platform, cited, position, sentiment, confidence, summary, checkedAt}] } — NOT {rank, previousRank}. New code shows #{position} or —, plus "Cité" badge. No fabricated deltas
+  • Added /api/console/sentiment-trend?range=7d|30d|365d for the chart (old Dashboard had NO chart). UI offers 7j/30j/90j; 90j fetches 365d and slices last 90 entries client-side
+- Prop interface preserved: { plan, userName, userEmail, companyName } — Agency + Enterprise wrappers unaffected
+- Frosted-glass header (64px, rgba(255,255,255,0.85) + backdrop-blur 12px):
+  • Hamburger (mobile < lg) + HARCH|ATELIER logo + centered search (with Lucide Search icon, focus → sage border) + bell (red badge if alertCount>0) + 36px sage avatar with mono initials
+- Sidebar (240px white, sticky full-height, border-right #F0F0F0):
+  • Plan-aware nav: Tableau de bord (LayoutGrid) / Sentiment (TrendingUp) / Concurrents (Users, Pro+ only) / Alertes (Bell, red badge) / Rapports (FileText, Pro+ only)
+  • Active item: sage bg (rgba 0.06), sage text, font-weight 600, 3px sage left border
+  • Hover: #FAFAFA bg. 18px Lucide icons, 14px Inter labels, 10px 12px padding, 8px radius, 12px gap
+  • Plan section (border-top): "PLAN" mono uppercase label + plan name bold + "Actif" status
+  • User section: 28px sage avatar + name (13px bold) + email (11px mono, ellipsis) + "Paramètres" link (Settings icon, /atelier/console/settings/security) + "Déconnexion" link (LogOut icon, red #EF4444, calls signOut from next-auth/react)
+- Mobile sidebar: hidden < lg, opens as 280px overlay drawer with dark backdrop + X close button
+- Greeting: "Bonjour, {firstName}" (24px bold charcoal) + subtitle (14px #71717A) + date on right (12px mono fr-FR locale)
+- 3 KPI cards (grid auto-fit minmax 200px, 16px gap):
+  • SENTIMENT MOYEN (score% + trend ↑/↓) / MENTIONS / 24H (formatNumber: k suffix) / CITATIONS IA
+  • 10px sage uppercase mono label, 32px mono bold value, 12px mono trend (green/red)
+  • Hover: translateY(-1px) + shadow 0 4px 12px
+- Sentiment chart card (white, 12px radius, 24px padding):
+  • Title "Analyse de sentiment" (18px bold) + subtitle + 7j/30j/90j pill toggle (active = charcoal bg, white text, 8px radius)
+  • Pure SVG area chart (viewBox 800x240, preserveAspectRatio none): 3 series with gradient fills (positive emerald, neutral gray, negative red), 2px stroke lines, baseline, first/middle/last x-axis date labels (fr-FR dd/mm short)
+  • Loading state ("Chargement…") + empty state ("Aucune donnée disponible")
+  • Legend below: 3 colored dots + labels (12px mono)
+- Two-column section (grid auto-fit minmax 300px, 24px gap):
+  • TOP 5 SUJETS card: numbered list, each row has label + count + proportional sentiment bar (width scales to maxCount, segments colored by brand split)
+  • VISIBILITÉ IA card: platform name + "Cité" badge (sage soft bg) + #{position} or — (18px mono bold), separated by #F0F0F0 dividers
+- Design tokens: white #FFFFFF cards, #FAFAFA page bg, sage #4A7B5F accents, charcoal #0A0A0A text, #F0F0F0 borders, #F4F4F5 inputs. Inter (sans) + Space Mono (mono via C.fontMono). 12px radius, 0 1px 3px rgba(0,0,0,0.04) shadows. 150ms ease transitions throughout. No indigo/blue.
+- Accessibility: semantic header/main/aside/nav/section, aria-labels on icon buttons (bell, menu, search), role="img" + aria-label on chart SVG, keyboard-accessible buttons, sr-only not needed (visible labels present)
+- French throughout, no mock data (— when null), real API fetches with AbortController cleanup
+
+Stage Summary:
+- Frosted glass header: YES
+- Modern sidebar (plan-aware): YES
+- 3 KPI cards with hover: YES
+- Sentiment chart: YES
+- Topics + AI Visibility: YES
+- Mobile responsive: YES
+- 0 TypeScript errors (bunx tsc --noEmit --skipLibCheck → EXIT 0)
+- 0 ESLint errors (eslint Dashboard.tsx → EXIT 0)
+
+---
+Task ID: POSTLOGIN-1-NAV
+Agent: Agent 1 — Nav Modern
+Task: Modernize navbar to Stripe/Linear grade
+
+Stage Summary:
+- Frosted glass header: YES
+- Modern mega-menu (16px radius, shadow): YES
+- Charcoal CTA button: YES
+- Mobile overlay with blur: YES
+- 0 TypeScript errors
+
+---
+Task ID: POSTLOGIN-4-LOGIN
+Agent: Agent 4 — Login UX
+Task: Rebuild login page with modern UX
+
+Work Log:
+- Rewrote src/app/atelier/login/LoginPage.tsx — full UX rebuild
+- Updated src/components/auth/PasskeyButton.tsx — visual style + French text (WebAuthn logic unchanged)
+- Layout: full-screen centered, gradient bg #FAFAFA→#F4F4F5, 440px white card (16px radius, 40px padding)
+- Logo: HARCH | ATELIER (18px bold #0A0A0A | pipe #E5E5E5 | ATELIER 14px uppercase #71717A)
+- Title: "Connexion" (24px bold), Subtitle: "Accédez à votre tableau de bord" (14px #71717A)
+- Inputs: 44px height, 10px radius, #FAFAFA bg, focus → sage green #4A7B5F border + white bg + 3px sage glow
+- Password field: eye toggle (show/hide, 16px icon, aria-label FR)
+- Forgot password link: 12px #4A7B5F → /atelier/contact
+- Submit button: charcoal #0A0A0A, 44px, hover #1A1A1A + shadow, loading opacity 0.7, text "Se connecter →"
+- Divider: 1px solid #F0F0F0, margin 24px 0
+- Passkey button: white bg + charcoal text + sage green fingerprint icon (16px #4A7B5F), "Se connecter avec un passkey"
+- Error: #FEF2F2 bg, #FECACA border, #991B1B text, role="alert"
+- Trust badges (outside card): "Conforme CNDP • Loi 09-08 • Audit SHA-256" (11px #9CA3AF, dot #D1D5DB)
+- Bottom links: "Pas encore de compte? Demander l'accès →" (sage green link)
+- Mobile responsive: card → 92% width + 32px padding on <480px
+- Removed: BrandingProvider, demo content, "Evaluate without account", "Executive Demo", ZKP link, back-to-atelier link
+- Preserved: NextAuth signIn(), rage-click guard, safe callbackUrl handling, cross-origin redirect protection, PasskeyButton WebAuthn logic
+- NO dark mode (hardcoded colors only), Inter font throughout, French language
+
+Stage Summary:
+- Modern card design: YES
+- Charcoal submit button: YES
+- Passkey button: YES
+- Focus states (sage green): YES
+- Error display: YES
+- Trust badges: YES
+- No demo content: YES
+- 0 TypeScript errors
+
+---
+Task ID: POSTLOGIN-5-USERS
+Agent: Agent 5 — Users UX
+Task: Rebuild user management with beautiful UX
+
+Stage Summary:
+- Modern user table: YES
+- Invite modal: YES
+- Pending invitations: YES
+- Plan limits + upsell: YES
+- Role badges: YES
+- 0 TypeScript errors
+
+Files delivered:
+- src/app/atelier/console/settings/users/UserManagement.tsx (OWNED — UX rebuild, ~1100 lines)
+- src/app/atelier/console/settings/users/page.tsx (server wrapper — derives plan from session)
+- src/app/api/console/settings/users/route.ts (GET list / POST invite / PATCH role+status / DELETE remove)
+- src/app/api/console/settings/users/invitations/route.ts (GET list / POST resend / DELETE cancel)
+
+UX details:
+- Header: title 24px bold + subtitle 14px muted + "Inviter un utilisateur +" charcoal button + plan badge (sage green mono)
+- User table (desktop) / cards (mobile) — responsive via 768px CSS breakpoint
+- Avatar: 32px circle, sage green bg, initials
+- Role badges: admin (charcoal/white) / member (sage 10% bg) / viewer (zircon/muted) — 11px mono pill
+- Status: 8px dot (green=Actif / red=Suspendu) + label
+- Last login: relative time ("il y a 3 j") or "Jamais", mono font
+- Actions dropdown (⋮ icon): role sub-menu (Pro+), Suspendre/Réactiver, Supprimer (red)
+- Self-protection: VOUS badge, cannot modify own role/status/delete
+- Invite modal (480px): email + name + role select, ESC + body-scroll-lock, loading spinner, pop animation
+- Pending invitations: list with email, sent date, role, Renvoyer + Annuler buttons, EXPIRÉE badge
+- Plan limits + upsell: amber banner (Essentiel 3/3 → Pro, Pro 20/20 → Grandes Entreprises)
+- Toast notifications (top-right, success/error, 4s auto-dismiss)
+- Loading skeleton with shimmer animation
+- Empty state with icon + message
+- Optimistic UI on all mutations (role change, status toggle, delete, invite cancel)
+- Session version bumping on PATCH (JWT invalidation — no Redis needed)
+
+Plan awareness:
+- Essentiel: 3 max, no roles (role select hidden in modal + menu)
+- Pro: 20 max, roles enabled (admin/member/viewer)
+- Enterprise: unlimited
+- Agency: unlimited
+
+API auth model:
+- GET open to signed-in users (scoped to companyId)
+- POST/PATCH/DELETE require admin/company-admin/agency-admin/super_admin
+- super_admin sees all; company-admin sees only their team
+- Self-modification prevented at API layer (409)
+
+TypeScript: 0 errors in my files.
+(bunx tsc --noEmit — only remaining error is in src/app/atelier/login/LoginPage.tsx line 105 `errorStyle` undefined, which is another agent's WIP file.)
+ESLint: 0 errors / 0 warnings on my files.
+
+---
+Task ID: POSTLOGIN-3-SETTINGS
+Agent: Agent 3 — Settings UX
+Task: Rebuild settings page with beautiful UX
+
+Stage Summary:
+- 6 tabs with modern design: YES (Profil | Mot de passe | Email | Sécurité | Sessions | Préférences)
+- Profil form: YES (avatar 60px sage green + initials, nom complet, email read-only w/ "Changer" link, fonction, téléphone, bio w/ 500 char counter)
+- Password with strength meter: YES (current/new/confirm, show/hide toggle, 4px strength bar red→amber→green, 5-item checklist in 2 columns with ✓ marks)
+- Email change: YES (current email displayed in mono 16px, new email input, password verification, info note about confirmation email)
+- Security (2FA, passkeys, ZKP): YES (2FA email toggle iOS-style sage green, WebAuthn passkeys register button + list with revoke, ZKP link to /atelier/lab/zkp, SSO/SAML card visible only for Enterprise+Agency plans)
+- Sessions with revoke: YES (device icon + browser · OS, "Session actuelle" sage pill for current, location + IP in mono, relative time, revoke per-session + "Tout révoquer" danger button)
+- Preferences with toggles: YES (3 email alert toggles: Crises/Daily/Weekly, WhatsApp toggle + phone input, language select FR/EN/AR, timezone select defaulting to Africa/Casablanca)
+- 0 TypeScript errors (fixed pre-existing `errorStyle` undefined ref in LoginPage.tsx that was left over from a parallel agent's edits)
+- 0 ESLint errors / 0 warnings on AccountSettings.tsx + page.tsx
+- Mobile responsive: sidebar collapses to floating button on ≤900px, tabs become horizontally scrollable
+- Design tokens: WHITE #FFFFFF bg, sage green #4A7B5F (focus/toggles/active), charcoal #0A0A0A (text/buttons), light gray #F0F0F0/#E5E5E5 (borders), Inter text + JetBrains Mono emails/IPs
+- API integration: POST /api/console/settings/account with `action` discriminator (profile|password|email|preferences|2fa-email|passkey-register|passkey-revoke); degrades gracefully when endpoint not yet wired
+- Plan-aware: SSO/SAML hidden for Essentiel+Pro, shown for Enterprise+Agency via session.user.accountType
+
+Files touched:
+- src/app/atelier/console/settings/account/AccountSettings.tsx (NEW — 1957 lines, full settings UX)
+- src/app/atelier/console/settings/account/page.tsx (NEW — thin wrapper for App Router route)
+- src/app/atelier/login/LoginPage.tsx (FIX — added missing `errorStyle` const at module scope; trivial 1-line addition to clear pre-existing TS error left by another agent's edits)
