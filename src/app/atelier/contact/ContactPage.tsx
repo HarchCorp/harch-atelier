@@ -1,110 +1,153 @@
 "use client";
 
-import { useState } from "react";
+// ════════════════════════════════════════════════════════════════════
+//  ContactPage — Minimalist institutional contact page
+//
+//  Same design language as /atelier/login and /atelier/request-access:
+//   • WHITE / #FAFAFA background, sage green (#4A7B5F) accents,
+//     charcoal (#0A0A0A) text and primary action.
+//   • NO emojis — Lucide icons only (Mail, Headphones, ShieldCheck,
+//     Newspaper, Handshake, Briefcase, ArrowRight, CheckCircle,
+//     AlertCircle).
+//   • NO dark mode — institutional, minimalist, Bloomberg-clean.
+//   • shadcn Card (12px radius), Tailwind CSS classes,
+//     framer-motion for subtle entrance.
+//   • Headers: 10px uppercase, JetBrains Mono, #9CA3AF.
+//   • French throughout, mobile-first responsive.
+//
+//  Submits to POST /api/access-request with source: "contact-page".
+//   - 200 → success state (CheckCircle, sage green)
+//   - 409 → "Un compte existe déjà avec cet email. Connectez-vous."
+//   - other → red banner (AlertCircle, role=alert)
+//
+//  Task ID: FINAL-CONTACT
+// ════════════════════════════════════════════════════════════════════
+
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
+import {
+  Mail,
+  Headphones,
+  ShieldCheck,
+  Newspaper,
+  Handshake,
+  Briefcase,
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  type LucideIcon,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
 
-const C = {
-  bg: "#FAFAFA", surface: "#FFFFFF", surfaceAlt: "#F4F4F5",
-  border: "#E5E5E5", borderLight: "#F0F0F0",
-  text: "#0A0A0A", textSec: "#525252", textMuted: "#71717A",
-  accent: "#4A5D6E", sage: "#4A7B5F", sageBright: "#6FA386",
-  red: "#A0524B", amber: "#B87333",
-  shadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+// ─── Design tokens (local — same as login & request-access) ─────────
+const SAGE = "#4A7B5F";
+const CHARCOAL = "#0A0A0A";
+const TEXT_BODY = "#525252";
+const TEXT_MUTED = "#71717A";
+const TEXT_HEADER = "#9CA3AF";
+const BORDER = "#E5E5E5";
+const BORDER_LIGHT = "#F0F0F0";
+const BG_SUBTLE = "#FAFAFA";
+
+const FONT_SANS =
+  "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+const FONT_MONO = "'JetBrains Mono', 'Space Mono', monospace";
+
+// ─── Contact methods data ───────────────────────────────────────────
+type ContactMethod = {
+  icon: LucideIcon;
+  title: string;
+  email: string;
+  response: string;
 };
 
-const CONTACT_METHODS = [
+const CONTACT_METHODS: ContactMethod[] = [
   {
-    title: "Sales & demos",
+    icon: Mail,
+    title: "Ventes",
     email: "sales@harchcorp.com",
-    desc: "Talk to our team about platform demos, pricing, and enterprise plans.",
-    response: "Within 4 business hours",
-    icon: "◆",
+    response: "Réponse sous 4 heures ouvrées",
   },
   {
-    title: "Customer support",
+    icon: Headphones,
+    title: "Support",
     email: "support@harchcorp.com",
-    desc: "Existing customers with technical questions or feature requests.",
-    response: "Within 2 business hours (Corporate) / 30 min (Sovereign)",
-    icon: "▲",
+    response: "Réponse sous 2 heures (Corporate)",
   },
   {
-    title: "Security & vulnerability disclosure",
+    icon: ShieldCheck,
+    title: "Sécurité",
     email: "security@harchcorp.com",
-    desc: "Report security vulnerabilities or request security documentation.",
-    response: "Within 24 hours",
-    icon: "🔒",
+    response: "Réponse sous 24 heures",
   },
   {
-    title: "Press & media",
+    icon: Newspaper,
+    title: "Presse",
     email: "press@harchcorp.com",
-    desc: "Journalists and analysts requesting interviews or data.",
-    response: "Within 1 business day",
-    icon: "✉",
+    response: "Réponse sous 1 jour ouvré",
   },
   {
-    title: "Partnerships",
+    icon: Handshake,
+    title: "Partenariats",
     email: "partners@harchcorp.com",
-    desc: "PR agencies, consultancies, and technology partners.",
-    response: "Within 2 business days",
-    icon: "🤝",
+    response: "Réponse sous 2 jours ouvrés",
   },
   {
-    title: "Careers",
+    icon: Briefcase,
+    title: "Carrières",
     email: "careers@harchcorp.com",
-    desc: "Open positions, internships, and speculative applications.",
-    response: "Within 5 business days",
-    icon: "★",
+    response: "Réponse sous 5 jours ouvrés",
   },
 ];
 
-const OFFICES = [
+// ─── Offices data ───────────────────────────────────────────────────
+type Office = {
+  city: string;
+  address: string;
+  type: string;
+};
+
+const OFFICES: Office[] = [
   {
     city: "Casablanca",
-    country: "Morocco",
     address: "Casablanca Finance City, Casa-Anfa",
-    desc: "Headquarters — Product, Engineering, Sales",
-    employees: 14,
+    type: "Siège social",
   },
   {
     city: "Rabat",
-    country: "Morocco",
     address: "Hay Riad Business District",
-    desc: "Public Sector & Government Relations",
-    employees: 3,
+    type: "Secteur public",
   },
   {
     city: "Paris",
-    country: "France",
     address: "Station F (remote-first)",
-    desc: "European Business Development",
-    employees: 2,
+    type: "Développement Europe",
   },
 ];
 
-type ContactStatus = "idle" | "submitting" | "success" | "error";
+// ─── Shared card className (shadcn Card with overrides) ─────────────
+// Override shadcn Card defaults: kill gap-6 and py-6 so we control
+// internal spacing via padding + inner flex.
+const CARD_CLASS =
+  "bg-white rounded-xl border border-[#F0F0F0] shadow-sm gap-0 py-0";
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "11px 14px",
-  background: "#FAFAFA",
-  border: `1px solid #E5E5E5`,
-  borderRadius: "8px",
-  fontSize: "14px",
-  fontFamily: "'Inter', sans-serif",
-  color: "#0A0A0A",
-  outline: "none",
-  boxSizing: "border-box",
-  transition: "border 0.15s ease",
-};
+// ════════════════════════════════════════════════════════════════════
+//  ContactForm
+// ════════════════════════════════════════════════════════════════════
+type FormStatus = "idle" | "submitting" | "success" | "error";
 
 function ContactForm() {
-  const [status, setStatus] = useState<ContactStatus>("idle");
+  const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const submittingRef = useRef(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setStatus("submitting");
     setErrorMsg("");
 
@@ -126,492 +169,563 @@ function ContactForm() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          data?.error || "Échec de l'envoi du message. Réessayez."
-        );
+      if (res.ok) {
+        setStatus("success");
+        return;
       }
 
-      setStatus("success");
-    } catch (err) {
+      if (res.status === 409) {
+        setErrorMsg(
+          "Un compte existe déjà avec cet email. Connectez-vous."
+        );
+        setStatus("error");
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
       setErrorMsg(
-        err instanceof Error
-          ? err.message
-          : "Échec de l'envoi du message. Réessayez."
+        (data?.error as string) ||
+          "Échec de l'envoi du message. Veuillez réessayer."
       );
       setStatus("error");
+    } catch {
+      setErrorMsg("Erreur réseau. Vérifiez votre connexion.");
+      setStatus("error");
+    } finally {
+      submittingRef.current = false;
     }
   }
 
+  // ─── Success state ─────────────────────────────────────────────
   if (status === "success") {
     return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "500px",
-          margin: "0 auto",
-          padding: "40px 32px",
-          background: "#FFFFFF",
-          border: `1px solid #E5E5E5`,
-          borderRadius: "12px",
-          boxShadow:
-            "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-          borderTop: `3px solid #4A7B5F`,
-          textAlign: "center",
-        }}
+      <Card
+        className={CARD_CLASS}
+        style={{ padding: 32, textAlign: "center" }}
       >
         <div
           style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "50%",
-            background: `#4A7B5F15`,
-            color: "#4A7B5F",
             display: "flex",
-            alignItems: "center",
             justifyContent: "center",
-            fontSize: "28px",
-            fontWeight: 700,
-            margin: "0 auto 20px",
+            marginBottom: 16,
           }}
         >
-          ✓
+          <CheckCircle
+            size={24}
+            strokeWidth={2}
+            style={{ color: SAGE }}
+          />
         </div>
-        <h3
+        <p
           style={{
-            fontSize: "20px",
-            fontWeight: 700,
-            color: "#0A0A0A",
-            letterSpacing: "-0.02em",
-            margin: "0 0 10px",
+            fontSize: 14,
+            fontWeight: 600,
+            color: CHARCOAL,
+            margin: 0,
+            lineHeight: 1.5,
           }}
         >
           Message envoyé. Nous vous répondrons sous 4h.
-        </h3>
+        </p>
         <p
           style={{
-            fontSize: "14px",
-            color: "#525252",
-            lineHeight: 1.6,
-            margin: 0,
+            fontSize: 13,
+            color: TEXT_MUTED,
+            margin: "8px 0 0",
+            lineHeight: 1.55,
           }}
         >
-          Merci de votre message. Un membre de l'équipe Harch Atelier vous
-          recontactera très vite.
+          Merci de votre message. Un membre de l&rsquo;équipe Harch Atelier
+          vous recontactera très vite.
         </p>
-      </div>
+      </Card>
     );
   }
 
+  // ─── Form ──────────────────────────────────────────────────────
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        width: "100%",
-        maxWidth: "500px",
-        margin: "0 auto",
-        padding: "32px",
-        background: "#FFFFFF",
-        border: `1px solid #E5E5E5`,
-        borderRadius: "12px",
-        boxShadow:
-          "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-        borderTop: `3px solid #4A7B5F`,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "18px",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "11px",
-            fontFamily: "'JetBrains Mono', monospace",
-            color: "#4A7B5F",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            marginBottom: "4px",
-          }}
-        >
-          Formulaire de contact
-        </div>
-        <h2
-          style={{
-            fontSize: "24px",
-            fontWeight: 700,
-            color: "#0A0A0A",
-            letterSpacing: "-0.02em",
-            margin: "0 0 4px",
-          }}
-        >
-          Écrivez-nous
-        </h2>
-        <p
-          style={{
-            fontSize: "13px",
-            color: "#525252",
-            lineHeight: 1.55,
-            margin: "0 0 4px",
-          }}
-        >
-          Réponse garantie sous 4 heures ouvrées.
-        </p>
+    <Card className={CARD_CLASS} style={{ padding: 24 }}>
+      <form onSubmit={handleSubmit}>
+        {/* Error banner */}
+        {status === "error" && errorMsg && (
+          <div role="alert" className="harch-contact-error">
+            <AlertCircle
+              size={14}
+              strokeWidth={2}
+              style={{ marginRight: 6, flexShrink: 0 }}
+            />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
-        {/* Name */}
-        <label
-          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-        >
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "#525252",
-              fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Nom <span style={{ color: "#A0524B" }}>*</span>
-          </span>
+        {/* Nom complet */}
+        <div className="harch-contact-field">
+          <label className="harch-contact-label" htmlFor="contact-name">
+            Nom complet <span style={{ color: SAGE }}>*</span>
+          </label>
           <input
+            id="contact-name"
             name="name"
             type="text"
             required
             maxLength={100}
             placeholder="Sara Benani"
-            style={inputStyle}
+            autoComplete="name"
+            className="harch-contact-input"
           />
-        </label>
+        </div>
 
-        {/* Email */}
-        <label
-          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-        >
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "#525252",
-              fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Email <span style={{ color: "#A0524B" }}>*</span>
-          </span>
+        {/* Email professionnel */}
+        <div className="harch-contact-field">
+          <label className="harch-contact-label" htmlFor="contact-email">
+            Email professionnel <span style={{ color: SAGE }}>*</span>
+          </label>
           <input
+            id="contact-email"
             name="email"
             type="email"
             required
             maxLength={200}
             placeholder="sara@entreprise.com"
-            style={inputStyle}
+            autoComplete="email"
+            className="harch-contact-input"
           />
-        </label>
+        </div>
 
-        {/* Company (optional) */}
-        <label
-          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-        >
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "#525252",
-              fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Société <span style={{ color: "#71717A" }}>(optionnel)</span>
-          </span>
+        {/* Entreprise (optional) */}
+        <div className="harch-contact-field">
+          <label className="harch-contact-label" htmlFor="contact-company">
+            Entreprise{" "}
+            <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>
+              (optionnel)
+            </span>
+          </label>
           <input
+            id="contact-company"
             name="company"
             type="text"
             maxLength={200}
             placeholder="Acme Communications"
-            style={inputStyle}
+            autoComplete="organization"
+            className="harch-contact-input"
           />
-        </label>
+        </div>
 
         {/* Message */}
-        <label
-          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-        >
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "#525252",
-              fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Message <span style={{ color: "#A0524B" }}>*</span>
-          </span>
+        <div className="harch-contact-field">
+          <label className="harch-contact-label" htmlFor="contact-message">
+            Message <span style={{ color: SAGE }}>*</span>
+          </label>
           <textarea
+            id="contact-message"
             name="message"
             required
             maxLength={2000}
             rows={5}
             placeholder="Comment pouvons-nous vous aider ?"
-            style={{ ...inputStyle, resize: "vertical", minHeight: "120px" }}
+            className="harch-contact-input harch-contact-textarea"
           />
-        </label>
+        </div>
 
-        {status === "error" && errorMsg && (
-          <div
-            style={{
-              padding: "12px 14px",
-              background: `#A0524B10`,
-              border: `1px solid #A0524B40`,
-              borderRadius: "8px",
-              color: "#A0524B",
-              fontSize: "13px",
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            ⚠ {errorMsg}
-          </div>
-        )}
-
+        {/* Submit */}
         <button
           type="submit"
           disabled={status === "submitting"}
-          style={{
-            padding: "14px 24px",
-            background: status === "submitting" ? "#71717A" : "#4A7B5F",
-            color: "#FFFFFF",
-            fontSize: "14px",
-            fontWeight: 600,
-            border: "none",
-            borderRadius: "8px",
-            cursor: status === "submitting" ? "wait" : "pointer",
-            fontFamily: "'Inter', sans-serif",
-            transition: "background 0.15s ease",
-          }}
+          className="harch-contact-submit"
+          style={{ opacity: status === "submitting" ? 0.6 : 1 }}
         >
-          {status === "submitting"
-            ? "Envoi en cours…"
-            : "Envoyer le message →"}
+          <span>
+            {status === "submitting" ? "Envoi…" : "Envoyer le message"}
+          </span>
+          {status !== "submitting" && (
+            <ArrowRight size={14} strokeWidth={2} style={{ marginLeft: 6 }} />
+          )}
         </button>
-
-        <p
-          style={{
-            fontSize: "11px",
-            color: "#71717A",
-            lineHeight: 1.5,
-            margin: 0,
-            textAlign: "center",
-            fontFamily: "'JetBrains Mono', monospace",
-          }}
-        >
-          Réponse sous 4h · Vos données restent confidentielles
-        </p>
-      </div>
-    </form>
+      </form>
+    </Card>
   );
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  ContactMethodCard
+// ════════════════════════════════════════════════════════════════════
+function ContactMethodCard({ method }: { method: ContactMethod }) {
+  const Icon = method.icon;
+  return (
+    <Card className={CARD_CLASS} style={{ padding: 16 }}>
+      <div className="flex items-start gap-3">
+        <div
+          style={{
+            flexShrink: 0,
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "rgba(74,123,95,0.10)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon size={20} strokeWidth={2} style={{ color: SAGE }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: CHARCOAL,
+              marginBottom: 2,
+            }}
+          >
+            {method.title}
+          </div>
+          <a
+            href={`mailto:${method.email}`}
+            style={{
+              display: "block",
+              fontSize: 13,
+              color: SAGE,
+              textDecoration: "none",
+              fontWeight: 500,
+              fontFamily: FONT_MONO,
+            }}
+            className="harch-contact-mailto"
+          >
+            {method.email}
+          </a>
+          <div
+            style={{
+              fontSize: 11,
+              color: TEXT_HEADER,
+              marginTop: 4,
+              fontFamily: FONT_MONO,
+            }}
+          >
+            {method.response}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  OfficeCard
+// ════════════════════════════════════════════════════════════════════
+function OfficeCard({ office }: { office: Office }) {
+  return (
+    <Card className={CARD_CLASS} style={{ padding: 16 }}>
+      <div
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: CHARCOAL,
+          letterSpacing: "-0.02em",
+          marginBottom: 6,
+        }}
+      >
+        {office.city}
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          color: TEXT_BODY,
+          lineHeight: 1.5,
+          marginBottom: 10,
+        }}
+      >
+        {office.address}
+      </div>
+      <span
+        style={{
+          display: "inline-block",
+          fontSize: 11,
+          fontWeight: 600,
+          color: SAGE,
+          background: "rgba(74,123,95,0.10)",
+          padding: "4px 10px",
+          borderRadius: 100,
+          fontFamily: FONT_MONO,
+          letterSpacing: "0.04em",
+        }}
+      >
+        {office.type}
+      </span>
+    </Card>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ContactPage (default export)
+// ════════════════════════════════════════════════════════════════════
 export default function ContactPage() {
   return (
     <>
+      <style>{contactFormCss}</style>
       <ScrollProgress />
       <CursorGlow />
       <AtelierNav />
 
-      {/* HERO */}
-      <section style={{
-        background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`,
-        borderBottom: `1px solid ${C.border}`,
-        padding: "48px 16px 16px",
-      }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "10px",
-            padding: "6px 14px", background: C.surface,
-            border: `1px solid ${C.border}`, borderRadius: "100px",
-            fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-            color: C.sage, letterSpacing: "0.14em", textTransform: "uppercase",
-            marginBottom: "20px",
-          }}>
-            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.sage, animation: "pulse 2s infinite" }} />
-            Contact us
-          </div>
-          <h1 style={{
-            fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
-            letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
-            margin: "0 0 16px", maxWidth: "900px",
-          }}>
-            Let&apos;s talk reputation.
-          </h1>
-          <p style={{
-            fontSize: "16px", color: C.textSec, lineHeight: 1.55,
-            maxWidth: "760px", marginBottom: "0",
-          }}>
-            Whether you want a demo, have a security question, or are interested in partnering —
-            we respond fast. Pick the right inbox below to reach the right team.
-          </p>
-        </div>
-      </section>
-
-      {/* CONTACT FORM */}
-      <section
+      {/* MAIN */}
+      <main
         style={{
-          maxWidth: "1100px",
-          margin: "0 auto",
-          padding: "24px 16px",
+          background: BG_SUBTLE,
+          minHeight: "100vh",
+          fontFamily: FONT_SANS,
+          color: CHARCOAL,
         }}
       >
-        <ContactForm />
-      </section>
+        <div
+          style={{
+            maxWidth: 900,
+            margin: "0 auto",
+            padding: "48px 24px",
+          }}
+        >
+          {/* ─── Section 1: Hero ───────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            style={{
+              textAlign: "center",
+              marginBottom: 40,
+            }}
+          >
+            <h1
+              style={{
+                fontSize: 32,
+                fontWeight: 700,
+                color: CHARCOAL,
+                letterSpacing: "-0.03em",
+                margin: "0 0 12px",
+              }}
+            >
+              Contact
+            </h1>
+            <p
+              style={{
+                fontSize: 16,
+                color: TEXT_MUTED,
+                lineHeight: 1.55,
+                margin: 0,
+                maxWidth: 640,
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              Notre équipe vous répond sous 4 heures ouvrées.
+            </p>
+          </motion.div>
 
-      {/* CONTACT METHODS GRID */}
-      <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "48px 16px" }}>
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: "20px",
-        }}>
-          {CONTACT_METHODS.map(m => (
-            <div key={m.title} style={{
-              padding: "28px", background: C.surface,
-              border: `1px solid ${C.border}`, borderRadius: "12px",
-              boxShadow: C.shadow, borderTop: `3px solid ${C.sage}`,
-            }}>
-              <div style={{
-                width: "44px", height: "44px", borderRadius: "10px",
-                background: `${C.sage}15`, color: C.sage,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "16px", marginBottom: "16px",
-                fontFamily: "'JetBrains Mono', monospace",
-              }}>
-                {m.icon}
-              </div>
-              <h3 style={{
-                fontSize: "18px", fontWeight: 700, color: C.text,
-                marginBottom: "8px", letterSpacing: "-0.01em",
-              }}>
-                {m.title}
-              </h3>
-              <p style={{
-                fontSize: "13px", color: C.textSec, lineHeight: 1.55,
-                marginBottom: "16px",
-              }}>
-                {m.desc}
-              </p>
-              <a href={`mailto:${m.email}`} style={{
-                display: "block", fontSize: "14px", fontWeight: 600,
-                color: C.sage, marginBottom: "8px", textDecoration: "none",
-                fontFamily: "'JetBrains Mono', monospace",
-              }}>
-                {m.email} →
-              </a>
-              <div style={{
-                fontSize: "11px", color: C.textMuted,
-                fontFamily: "'JetBrains Mono', monospace",
-                padding: "6px 10px", background: C.surfaceAlt,
-                borderRadius: "6px", display: "inline-block",
-              }}>
-                ⏱ {m.response}
-              </div>
+          {/* ─── Section 2: Form + Contact methods ──────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut", delay: 0.05 }}
+            className="grid gap-8 harch-contact-grid"
+            style={{
+              gridTemplateColumns: "1fr 1fr",
+            }}
+          >
+            {/* Left: form (first on mobile via DOM order) */}
+            <ContactForm />
+
+            {/* Right: contact methods */}
+            <div className="flex flex-col gap-3">
+              {CONTACT_METHODS.map((m) => (
+                <ContactMethodCard key={m.email} method={m} />
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </motion.div>
 
-      {/* OFFICES */}
-      <section style={{
-        background: C.surface, padding: "48px 16px",
-        borderTop: `1px solid ${C.border}`,
-      }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
-          <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.accent, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
-            Our offices
+          {/* ─── Section 3: Offices ─────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+            style={{ marginTop: 64 }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontFamily: FONT_MONO,
+                color: TEXT_HEADER,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                fontWeight: 700,
+                marginBottom: 16,
+              }}
+            >
+              Bureaux
+            </div>
+            <div
+              className="grid gap-4"
+              style={{
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(240px, 1fr))",
+              }}
+            >
+              {OFFICES.map((o) => (
+                <OfficeCard key={o.city} office={o} />
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* ─── Section 4: CTA ──────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
+          style={{
+            background: CHARCOAL,
+            padding: "48px 24px",
+            textAlign: "center",
+            marginTop: 64,
+          }}
+        >
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            <h2
+              style={{
+                fontSize: 24,
+                fontWeight: 700,
+                color: "#FFFFFF",
+                letterSpacing: "-0.02em",
+                margin: "0 0 12px",
+              }}
+            >
+              Préférez parler à un humain ?
+            </h2>
+            <p
+              style={{
+                fontSize: 14,
+                color: "rgba(255,255,255,0.7)",
+                lineHeight: 1.6,
+                margin: "0 0 28px",
+              }}
+            >
+              Réservez un appel de 30 minutes avec notre équipe.
+            </p>
+            <a
+              href="mailto:sales@harchcorp.com?subject=Demande d'appel — Harch Atelier"
+              className="harch-contact-cta"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                background: SAGE,
+                color: "#FFFFFF",
+                fontSize: 14,
+                fontWeight: 600,
+                padding: "12px 24px",
+                borderRadius: 10,
+                textDecoration: "none",
+                fontFamily: FONT_SANS,
+                height: 42,
+              }}
+            >
+              <span>Réserver un appel</span>
+              <ArrowRight size={14} strokeWidth={2} />
+            </a>
           </div>
-          <h2 style={{ fontSize: "clamp(24px, 6vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 48px" }}>
-            Where we work.
-          </h2>
-
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "20px",
-          }}>
-            {OFFICES.map(o => (
-              <div key={o.city} style={{
-                padding: "28px", background: C.bg,
-                border: `1px solid ${C.border}`, borderRadius: "12px",
-              }}>
-                <div style={{
-                  fontSize: "11px", fontFamily: "'JetBrains Mono', monospace",
-                  color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase",
-                  marginBottom: "8px",
-                }}>
-                  {o.country}
-                </div>
-                <h3 style={{
-                  fontSize: "28px", fontWeight: 800, color: C.text,
-                  letterSpacing: "-0.02em", margin: "0 0 8px",
-                }}>
-                  {o.city}
-                </h3>
-                <div style={{ fontSize: "13px", color: C.textSec, marginBottom: "12px", fontFamily: "'JetBrains Mono', monospace" }}>
-                  {o.address}
-                </div>
-                <div style={{ fontSize: "13px", color: C.textSec, lineHeight: 1.5, marginBottom: "16px" }}>
-                  {o.desc}
-                </div>
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: "6px",
-                  fontSize: "11px", color: C.sage, fontWeight: 700,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  padding: "4px 10px", background: `${C.sage}10`, borderRadius: "100px",
-                }}>
-                  ● {o.employees} {o.employees === 1 ? "person" : "people"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section style={{
-        background: C.text, color: "#FFFFFF",
-        padding: "48px 16px", textAlign: "center",
-      }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
-            Prefer to talk to a human?
-          </h2>
-          <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.7)", marginBottom: "32px", lineHeight: 1.6 }}>
-            Book a 30-minute discovery call with our team. We&apos;ll show you the platform,
-            understand your needs, and recommend the right package.
-          </p>
-          <a href="mailto:sales@harchcorp.com?subject=Discovery call request" style={{
-            display: "inline-block", padding: "16px 32px",
-            background: C.sage, color: "#FFFFFF",
-            fontSize: "15px", fontWeight: 600, textDecoration: "none",
-            borderRadius: "8px", fontFamily: "'Inter', sans-serif",
-          }}>
-            Book a discovery call →
-          </a>
-        </div>
-      </section>
+        </motion.div>
+      </main>
 
       <AtelierFooter />
       <BackToTop />
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `}</style>
     </>
   );
 }
+
+// ─── Scoped CSS (inputs, focus, hover, mobile responsive) ───────────
+const contactFormCss = `
+  .harch-contact-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 14px;
+  }
+  .harch-contact-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: ${CHARCOAL};
+    margin-bottom: 4px;
+    font-family: ${FONT_SANS};
+  }
+  .harch-contact-input {
+    width: 100%;
+    height: 42px;
+    border: 1px solid ${BORDER};
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 14px;
+    background: ${BG_SUBTLE};
+    color: ${CHARCOAL};
+    box-sizing: border-box;
+    outline: none;
+    font-family: ${FONT_SANS};
+    transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  }
+  .harch-contact-input::placeholder {
+    color: ${TEXT_HEADER};
+  }
+  .harch-contact-input:focus {
+    border-color: ${SAGE};
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(74,123,95,0.08);
+  }
+  .harch-contact-textarea {
+    height: 120px;
+    padding: 12px 14px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .harch-contact-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 42px;
+    background: ${CHARCOAL};
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: ${FONT_SANS};
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+  }
+  .harch-contact-submit:not(:disabled):hover {
+    background: #1A1A1A;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  .harch-contact-submit:disabled {
+    cursor: not-allowed;
+  }
+  .harch-contact-error {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #991B1B;
+    margin-bottom: 16px;
+    font-family: ${FONT_SANS};
+  }
+  .harch-contact-mailto:hover {
+    text-decoration: underline;
+  }
+  .harch-contact-cta:hover {
+    background: #3D6B51 !important;
+  }
+  @media (max-width: 768px) {
+    .harch-contact-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+`;
