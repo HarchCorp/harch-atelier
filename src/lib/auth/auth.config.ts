@@ -122,21 +122,12 @@ export const authOptions: NextAuthOptions = {
         // store, never touching Prisma. This keeps the console + dashboard
         // + accounts flows working in environments where the PostgreSQL DB
         // is not provisioned (sandbox, local dev without Neon).
+        // ─── DEMO BYPASS REMOVED ───────────────────────────────────
+        // Demo accounts have been disabled. All users must go through
+        // the proper invitation + credentials flow.
+        // isDemoEmail always returns false now (see demo-session.ts stub).
         if (isDemoEmail(credentials.email)) {
-          if (credentials.password !== DEMO_PASSWORD) {
-            return null;
-          }
-          const demoUser = getDemoUser(credentials.email);
-          return {
-            id: demoUser.id,
-            email: demoUser.email,
-            name: demoUser.name,
-            role: demoUser.role,
-            accountType: demoUser.accountType,
-            companyId: demoUser.companyId,
-            status: demoUser.status,
-            isDemo: true,
-          };
+          return null;
         }
 
         // ─── Extract IP + UA from the NextAuth request context ─────
@@ -305,17 +296,8 @@ export const authOptions: NextAuthOptions = {
           // DB error — leave token as-is (will fail at the route level with 401)
         }
       }
-      // Demo fallback: if token.id is still missing and the email is a
-      // demo account, backfill from the in-memory store (no Prisma).
-      if (!token.id && token.email && isDemoEmail(token.email)) {
-        const demoUser = getDemoUser(token.email);
-        token.id = demoUser.id;
-        token.role = demoUser.role;
-        token.accountType = demoUser.accountType;
-        token.companyId = demoUser.companyId;
-        token.status = demoUser.status;
-        token.isDemo = true;
-      }
+      // Demo fallback REMOVED — demo accounts are disabled.
+      // isDemoEmail always returns false, so this block never executes.
 
       // ─── YGGDRASIL-N40: Session Revocation Check ───────────────
       // On every JWT refresh (not initial sign-in), check if the user's

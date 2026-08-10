@@ -135,7 +135,7 @@ export async function GET() {
 }
 
 function buildDemo() {
-  const team = getDemoTeam();
+  const team = getDemoTeam("disabled");
   const now = Date.now();
   const at = (msAgo: number) => new Date(now - msAgo).toISOString();
 
