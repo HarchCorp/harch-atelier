@@ -3083,3 +3083,17 @@ Stage Summary:
 - CTA section: YES
 - No emojis: YES
 - 0 TypeScript errors
+
+---
+Task ID: ENHANCE-ESSENTIEL
+Agent: Essentiel Enhance
+Task: Add sidebar + improve header + anchor navigation
+
+Stage Summary:
+- Sidebar (240px, sticky, plan-aware): YES
+- Mobile hamburger overlay: YES
+- Header improved (frosted glass, hamburger): YES
+- Anchor IDs on sections: YES
+- Smooth scroll navigation: YES
+- Active section tracking: YES (IntersectionObserver)
+- 0 TypeScript errors

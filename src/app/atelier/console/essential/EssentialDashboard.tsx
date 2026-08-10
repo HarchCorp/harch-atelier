@@ -59,7 +59,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -69,20 +69,27 @@ import {
   ArrowUp,
   ArrowUpCircle,
   Bell,
+  Brain,
   CalendarDays,
   ChevronRight,
   Download,
   ExternalLink,
   Globe2,
+  Hash,
   Languages,
+  LayoutGrid,
   LogOut,
+  Menu,
   MessageSquare,
   Minus,
+  Newspaper,
   RefreshCw,
+  Settings,
   Sparkles,
   TrendingDown,
   TrendingUp,
   Trophy,
+  X,
   Cloud,
   CloudRain,
   Sun,
@@ -569,6 +576,249 @@ const cardMotion = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
 };
+
+// ─── SIDEBAR NAV (plan-aware — Essentiel only) ───────────────────────
+// Each item maps to a section `id` we attach to the corresponding
+// motion.div wrapper. Clicking scrolls smoothly; an IntersectionObserver
+// highlights the item matching the section currently in view.
+
+const NAV_ITEMS: { id: string; label: string; Icon: typeof LayoutGrid }[] = [
+  { id: "score", label: "Tableau de bord", Icon: LayoutGrid },
+  { id: "sentiment", label: "Sentiment", Icon: TrendingUp },
+  { id: "alertes", label: "Alertes", Icon: Bell },
+  { id: "sujets", label: "Sujets", Icon: Hash },
+  { id: "sources", label: "Sources", Icon: Newspaper },
+  { id: "visibilite-ia", label: "Visibilité IA", Icon: Brain },
+  { id: "harch-100", label: "Harch 100", Icon: Trophy },
+];
+
+function scrollToSection(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+function userInitials(name?: string | null): string {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  const letters = parts.slice(0, 2).map((p) => p[0] ?? "").filter(Boolean);
+  return (letters.length ? letters.join("") : name[0] ?? "U").toUpperCase();
+}
+
+// SidebarContent — shared by desktop (sticky aside) and mobile overlay.
+// Self-contained: same NAV_ITEMS, same footer, same user block.
+function SidebarContent({
+  activeSection,
+  alertCount,
+  onNavigate,
+}: {
+  activeSection: string;
+  alertCount: number;
+  onNavigate?: (id: string) => void;
+}) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? "Utilisateur";
+  const userEmail = session?.user?.email ?? "—";
+  const initials = userInitials(session?.user?.name);
+
+  const handleClick = (id: string) => {
+    scrollToSection(id);
+    onNavigate?.(id);
+  };
+
+  return (
+    <div className="flex flex-col h-full" style={{ fontFamily: FONT_SANS }}>
+      {/* Logo header */}
+      <div
+        className="px-4 py-4 flex items-center gap-2"
+        style={{ borderBottom: `1px solid ${BORDER}` }}
+      >
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 14,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: CHARCOAL,
+          }}
+        >
+          HARCH
+        </span>
+        <span style={{ color: TEXT_HEADER, fontFamily: FONT_MONO, fontSize: 12 }}>
+          |
+        </span>
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            color: TEXT_MUTED,
+            textTransform: "uppercase",
+          }}
+        >
+          Atelier
+        </span>
+      </div>
+
+      {/* Nav items */}
+      <nav
+        className="flex-1 px-2 py-3 space-y-1 overflow-y-auto"
+        aria-label="Navigation principale"
+      >
+        {NAV_ITEMS.map(({ id, label, Icon }) => {
+          const isActive = activeSection === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleClick(id)}
+              className="w-full flex items-center gap-3 text-left transition-colors group"
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? SAGE : TEXT_BODY,
+                backgroundColor: isActive ? SAGE_BG : "transparent",
+                borderLeft: isActive
+                  ? `3px solid ${SAGE}`
+                  : "3px solid transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              aria-current={isActive ? "true" : undefined}
+            >
+              <Icon size={18} style={{ flexShrink: 0 }} />
+              <span className="flex-1 truncate">{label}</span>
+              {id === "alertes" && alertCount > 0 && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 18,
+                    height: 18,
+                    padding: "0 5px",
+                    borderRadius: 9,
+                    backgroundColor: NEGATIVE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {alertCount > 9 ? "9+" : alertCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Plan + user footer */}
+      <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+        <div style={FONT_HEADER}>Plan</div>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 14,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            Essentiel
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 12,
+              color: SAGE,
+            }}
+          >
+            · Actif
+          </span>
+        </div>
+
+        <div
+          className="mt-3"
+          style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{
+                width: 28,
+                height: 28,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+              aria-hidden="true"
+            >
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userName}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  color: TEXT_MUTED,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userEmail}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1">
+            <Link
+              href="/atelier/console/settings/account"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-[#FAFAFA]"
+              style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}
+            >
+              <Settings size={14} />
+              <span>Paramètres</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/atelier/login" })}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-[#FEF2F2]"
+              style={{ fontFamily: FONT_SANS, fontSize: 12, color: NEGATIVE }}
+            >
+              <LogOut size={14} />
+              <span>Déconnexion</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 1 — SCORE DE RÉPUTATION (hero, full width)
@@ -2590,13 +2840,18 @@ function BoiteOutilsCard() {
 function DashboardHeader({
   lastUpdated,
   alertCount,
+  onMenuClick,
 }: {
   lastUpdated: string | null;
   alertCount: number;
+  onMenuClick?: () => void;
 }) {
+  const { data: session } = useSession();
+  const initials = userInitials(session?.user?.name);
+
   return (
     <header
-      className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3.5"
+      className="sticky top-0 z-30 px-4 sm:px-6 py-3.5"
       style={{
         backgroundColor: "rgba(255,255,255,0.88)",
         backdropFilter: "blur(12px)",
@@ -2605,32 +2860,64 @@ function DashboardHeader({
       }}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
+        {/* Left: hamburger + HARCH | ATELIER logo + plan badge */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
+            aria-label="Ouvrir le menu"
+          >
+            <Menu size={16} />
+          </button>
+          <div className="flex items-center gap-2">
             <span
-              className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: SAGE_BG,
-                color: SAGE,
                 fontFamily: FONT_MONO,
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                color: CHARCOAL,
               }}
             >
-              Plan Essentiel
+              HARCH
             </span>
             <span
-              className="text-[11px] hidden sm:inline"
-              style={{ color: TEXT_MUTED, fontFamily: FONT_MONO }}
+              style={{
+                color: TEXT_HEADER,
+                fontFamily: FONT_MONO,
+                fontSize: 13,
+              }}
             >
-              Surveillance 24/7 · Maroc & Afrique
+              |
+            </span>
+            <span
+              className="hidden sm:inline"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                color: TEXT_MUTED,
+                textTransform: "uppercase",
+              }}
+            >
+              Atelier
             </span>
           </div>
-          <h1
-            className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight"
-            style={{ color: CHARCOAL, fontFamily: FONT_SANS }}
+          <span
+            className="hidden md:inline text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+              fontFamily: FONT_MONO,
+            }}
           >
-            Tableau de bord réputation
-          </h1>
+            Plan Essentiel
+          </span>
         </div>
+
+        {/* Right: last updated + bell with badge + avatar */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right hidden sm:block">
             <div
@@ -2639,33 +2926,59 @@ function DashboardHeader({
             >
               Dernière maj
             </div>
-            <div className="text-[12px]" style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}>
+            <div
+              className="text-[12px]"
+              style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}
+            >
               {lastUpdated ?? "—"}
             </div>
           </div>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/atelier/login" })}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
+            onClick={() => scrollToSection("alertes")}
+            className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
             style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
-            aria-label="Se déconnecter"
-            title="Se déconnecter"
+            aria-label={`Alertes${alertCount > 0 ? ` (${alertCount})` : ""}`}
+            title="Alertes"
           >
-            <LogOut size={15} />
+            <Bell size={15} />
+            {alertCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center"
+                style={{
+                  minWidth: 16,
+                  height: 16,
+                  padding: "0 4px",
+                  borderRadius: 8,
+                  backgroundColor: NEGATIVE,
+                  color: "#FFFFFF",
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
+            )}
           </button>
+          <div
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+              fontFamily: FONT_MONO,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+            aria-label="Compte utilisateur"
+          >
+            {initials}
+          </div>
         </div>
       </div>
-      {alertCount > 0 && (
-        <div
-          className="mt-2 flex items-center gap-2 text-[12px]"
-          style={{ color: alertCount >= 3 ? NEGATIVE : NEUTRAL_AMBER, fontFamily: FONT_SANS }}
-        >
-          <Bell size={13} />
-          <span>
-            <strong style={{ fontFamily: FONT_MONO }}>{alertCount}</strong> alerte{alertCount > 1 ? "s" : ""} active{alertCount > 1 ? "s" : ""} · traiter en priorité
-          </span>
-        </div>
-      )}
     </header>
   );
 }
@@ -2677,6 +2990,8 @@ function DashboardHeader({
 export default function EssentialDashboard() {
   const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
   const [regenerating, setRegenerating] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("score");
 
   // ─── Data fetchers ──────────────────────────────────────────────
   const {
@@ -2731,6 +3046,42 @@ export default function EssentialDashboard() {
     return () => clearInterval(id);
   }, [refreshAll]);
 
+  // Body scroll lock when mobile sidebar is open
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  // Active section tracking via IntersectionObserver.
+  // Highlights the sidebar item matching the section currently in view.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return;
+    const ids = NAV_ITEMS.map((n) => n.id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) {
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-100px 0px -70% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   // Regenerate weekly summary
   const handleRegen = useCallback(async () => {
     setRegenerating(true);
@@ -2750,123 +3101,301 @@ export default function EssentialDashboard() {
   const activeAlertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
   const insightsList = insights?.insights ?? null;
 
+  const handleNavigate = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  // Shared scroll-margin so smooth-scroll targets clear the sticky header.
+  const sectionScrollStyle: React.CSSProperties = { scrollMarginTop: 80 };
+
   return (
     <div
+      className="flex min-h-screen"
       style={{
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#FAFAFA",
         fontFamily: FONT_SANS,
         color: CHARCOAL,
-        minHeight: "100vh",
       }}
-      className="min-h-screen"
     >
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
-        <DashboardHeader lastUpdated={lastUpdated} alertCount={activeAlertCount} />
+      {/* ─── Desktop sidebar (sticky, 240px) ─────────────────────────── */}
+      <aside
+        className="hidden lg:block shrink-0"
+        style={{
+          width: 240,
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          backgroundColor: "#FFFFFF",
+          borderRight: `1px solid ${BORDER}`,
+          overflow: "hidden",
+        }}
+        aria-label="Navigation latérale"
+      >
+        <SidebarContent
+          activeSection={activeSection}
+          alertCount={activeAlertCount}
+          onNavigate={handleNavigate}
+        />
+      </aside>
 
-        <TooltipProvider delayDuration={200}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mt-6">
-            {/* Row 1 — Hero */}
-            <motion.div {...cardMotion} className="lg:col-span-12">
-              <ScoreReputationCard health={health} loading={healthLoading} />
-            </motion.div>
-
-            {/* Row 2 — KPI Strip (4 cards) */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.04 }} className="lg:col-span-3 md:col-span-6">
-              <SentimentMoyenKpi health={health} trend={trend} loading={trendLoading} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.08 }} className="lg:col-span-3 md:col-span-6">
-              <MentionsJourKpi health={health} trend={trend} loading={trendLoading} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.12 }} className="lg:col-span-3 md:col-span-6">
-              <CitationsIaKpi ai={ai} loading={aiLoading} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.16 }} className="lg:col-span-3 md:col-span-6">
-              <AlertesActivesKpi alerts={alerts} loading={alertsLoading} />
-            </motion.div>
-
-            {/* Row 3 — Charts */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.20 }} className="lg:col-span-7">
-              <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.24 }} className="lg:col-span-5">
-              <DiversiteSourcesCard src={src} loading={srcLoading} />
-            </motion.div>
-
-            {/* Row 4 — Feed + AI */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.28 }} className="lg:col-span-7">
-              <DernieresMentionsCard alerts={alerts} loading={alertsLoading} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.32 }} className="lg:col-span-5">
-              <ResumeHebdoCard
-                insights={insightsList}
-                loading={insightsLoading}
-                onRegen={handleRegen}
-                regenerating={regenerating}
-              />
-            </motion.div>
-
-            {/* Row 5 — AI Visibility + Topics */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.36 }} className="lg:col-span-7">
-              <VisibiliteIaCard ai={ai} loading={aiLoading} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.40 }} className="lg:col-span-5">
-              <TopSujetsCard topics={topics} trend={trend} />
-            </motion.div>
-
-            {/* Row 6 — Crisis + Geo */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.44 }} className="lg:col-span-7">
-              <IndicateurCriseCard health={health} alerts={alerts} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.48 }} className="lg:col-span-5">
-              <GeoHeatmapCard src={src} />
-            </motion.div>
-
-            {/* Row 7 — Harch 100 + Social */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.52 }} className="lg:col-span-5">
-              <Harch100Card h100={h100} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.56 }} className="lg:col-span-7">
-              <ActiviteReseauCard trend={trend} />
-            </motion.div>
-
-            {/* Row 8 — Language + Evolution */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.60 }} className="lg:col-span-6">
-              <MeteoLangueCard health={health} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.64 }} className="lg:col-span-6">
-              <EvolutionScoreCard health={health} trend={trend} />
-            </motion.div>
-
-            {/* Row 9 — Volume + Schedule */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.68 }} className="lg:col-span-6">
-              <VolumeMentionsCard trend={trend} />
-            </motion.div>
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.72 }} className="lg:col-span-6">
-              <ProchainesEcheancesCard />
-            </motion.div>
-
-            {/* Row 10 — Tools */}
-            <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.76 }} className="lg:col-span-12">
-              <BoiteOutilsCard />
-            </motion.div>
-          </div>
-        </TooltipProvider>
-
-        <footer
-          className="mt-8 pt-4 text-center"
-          style={{ borderTop: `1px solid ${BORDER}` }}
+      {/* ─── Mobile sidebar overlay (full-screen, slide from left) ──── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu de navigation"
         >
-          <p
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            onClick={() => setSidebarOpen(false)}
+          />
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="absolute left-0 top-0 bottom-0"
             style={{
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              color: TEXT_MUTED,
-              letterSpacing: "0.04em",
+              width: 280,
+              backgroundColor: "#FFFFFF",
+              borderRight: `1px solid ${BORDER}`,
+              boxShadow: "4px 0 24px rgba(0,0,0,0.08)",
             }}
           >
-            Harch Atelier · Console Essentiel · Données en temps réel · Mis à jour automatiquement
-          </p>
-        </footer>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5] z-10"
+              style={{ color: TEXT_BODY }}
+              aria-label="Fermer le menu"
+            >
+              <X size={16} />
+            </button>
+            <SidebarContent
+              activeSection={activeSection}
+              alertCount={activeAlertCount}
+              onNavigate={handleNavigate}
+            />
+          </motion.div>
+        </div>
+      )}
+
+      {/* ─── Main content ─────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <DashboardHeader
+          lastUpdated={lastUpdated}
+          alertCount={activeAlertCount}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+
+        <div className="mx-auto max-w-[1200px] w-full px-4 sm:px-6 py-6">
+          <TooltipProvider delayDuration={200}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+              {/* Row 1 — Hero */}
+              <motion.div {...cardMotion} id="score" style={sectionScrollStyle} className="lg:col-span-12">
+                <ScoreReputationCard health={health} loading={healthLoading} />
+              </motion.div>
+
+              {/* Row 2 — KPI Strip (4 cards) */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.04 }}
+                id="sentiment"
+                style={sectionScrollStyle}
+                className="lg:col-span-3 md:col-span-6"
+              >
+                <SentimentMoyenKpi health={health} trend={trend} loading={trendLoading} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.08 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-3 md:col-span-6"
+              >
+                <MentionsJourKpi health={health} trend={trend} loading={trendLoading} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.12 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-3 md:col-span-6"
+              >
+                <CitationsIaKpi ai={ai} loading={aiLoading} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.16 }}
+                id="alertes"
+                style={sectionScrollStyle}
+                className="lg:col-span-3 md:col-span-6"
+              >
+                <AlertesActivesKpi alerts={alerts} loading={alertsLoading} />
+              </motion.div>
+
+              {/* Row 3 — Charts */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.20 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-7"
+              >
+                <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.24 }}
+                id="sources"
+                style={sectionScrollStyle}
+                className="lg:col-span-5"
+              >
+                <DiversiteSourcesCard src={src} loading={srcLoading} />
+              </motion.div>
+
+              {/* Row 4 — Feed + AI */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.28 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-7"
+              >
+                <DernieresMentionsCard alerts={alerts} loading={alertsLoading} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.32 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-5"
+              >
+                <ResumeHebdoCard
+                  insights={insightsList}
+                  loading={insightsLoading}
+                  onRegen={handleRegen}
+                  regenerating={regenerating}
+                />
+              </motion.div>
+
+              {/* Row 5 — AI Visibility + Topics */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.36 }}
+                id="visibilite-ia"
+                style={sectionScrollStyle}
+                className="lg:col-span-7"
+              >
+                <VisibiliteIaCard ai={ai} loading={aiLoading} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.40 }}
+                id="sujets"
+                style={sectionScrollStyle}
+                className="lg:col-span-5"
+              >
+                <TopSujetsCard topics={topics} trend={trend} />
+              </motion.div>
+
+              {/* Row 6 — Crisis + Geo */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.44 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-7"
+              >
+                <IndicateurCriseCard health={health} alerts={alerts} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.48 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-5"
+              >
+                <GeoHeatmapCard src={src} />
+              </motion.div>
+
+              {/* Row 7 — Harch 100 + Social */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.52 }}
+                id="harch-100"
+                style={sectionScrollStyle}
+                className="lg:col-span-5"
+              >
+                <Harch100Card h100={h100} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.56 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-7"
+              >
+                <ActiviteReseauCard trend={trend} />
+              </motion.div>
+
+              {/* Row 8 — Language + Evolution */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.60 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-6"
+              >
+                <MeteoLangueCard health={health} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.64 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-6"
+              >
+                <EvolutionScoreCard health={health} trend={trend} />
+              </motion.div>
+
+              {/* Row 9 — Volume + Schedule */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.68 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-6"
+              >
+                <VolumeMentionsCard trend={trend} />
+              </motion.div>
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.72 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-6"
+              >
+                <ProchainesEcheancesCard />
+              </motion.div>
+
+              {/* Row 10 — Tools */}
+              <motion.div
+                {...cardMotion}
+                transition={{ ...cardMotion.transition, delay: 0.76 }}
+                style={sectionScrollStyle}
+                className="lg:col-span-12"
+              >
+                <BoiteOutilsCard />
+              </motion.div>
+            </div>
+          </TooltipProvider>
+
+          <footer
+            className="mt-8 pt-4 text-center"
+            style={{ borderTop: `1px solid ${BORDER}` }}
+          >
+            <p
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+              }}
+            >
+              Harch Atelier · Console Essentiel · Données en temps réel · Mis à jour automatiquement
+            </p>
+          </footer>
+        </div>
       </div>
     </div>
   );
