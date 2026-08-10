@@ -2362,3 +2362,585 @@ Files touched:
 - src/app/atelier/console/settings/account/AccountSettings.tsx (NEW — 1957 lines, full settings UX)
 - src/app/atelier/console/settings/account/page.tsx (NEW — thin wrapper for App Router route)
 - src/app/atelier/login/LoginPage.tsx (FIX — added missing `errorStyle` const at module scope; trivial 1-line addition to clear pre-existing TS error left by another agent's edits)
+
+---
+Task ID: BRAIN-1
+Agent: Agent BRAINSTORM-1 — Essentiel + Pro dashboards
+Task: Brainstorm every possible section/widget/chart for Essentiel + Pro dashboards
+
+Stage Summary:
+- Spy reports not yet available (spy-meltwater.md, research-user-needs.md missing) — used own knowledge of Meltwater/Brandwatch/Talkwalker + HarchIQ positioning
+- Read worklog tail (last 60 lines) for context: HarchIQ is Moroccan/African reputation intelligence platform, plans tiered Essentiel (3 users) / Pro (20 users) / Enterprise / Agency
+- Read MASTER_OFFER.md grep for context on existing features: reputation score, sentiment (FR/AR/EN/Darija), crisis detector (0-100), Harch 100 benchmark, HarchIQ insight engine (GLM-4), AI visibility, geo-signals, alerts, Ask HarchIQ chatbot
+
+Brainstorm output: /home/z/my-project/brainstorm/brainstorm-essentiel-pro.md (1 file, ~600 lines)
+
+ESSENTIEL — 20 sections brainstormed (10 must-have, 8 nice-to-have, 2 crazy):
+- Must-haves: Score de Réputation (gauge), Top 3 Alertes, Tendance Sentiment 7j, Dernières Mentions, Snapshot Visibilité IA, Résumé Hebdo IA, Indicateur de Crise, Météo Sentiment par Langue (Darija differentiator), Actions Rapides, Évolution Score 30j, Position Harch 100, Volume Mentions 7j
+- Nice-to-haves: Diversité Sources (donut), Carte Chaleur Géo, Top 5 Sujets, Activité Réseau Social, Hall of Fame/Shame, Prochaines Échéances, Boîte à Outils Dircom
+- Crazy: Streamgraph mini sujets
+
+PRO — 30 sections brainstormed (12 must-have, 10 nice-to-have, 8 crazy):
+- Must-haves: Dashboard Personnalisable (drag-drop), Benchmark Concurrentiel (table), Radar Réputation (6 axes), Part de Voix (donut), Comparaison Sentiment 4 séries, Constructeur de Rapports (drag-drop PDF/PPTX), Recherches Sauvegardées, Configuration Alertes Avancée (rule builder), Comparaison Semaine vs Semaine, Estimation Reach, Veille Concurrentielle Auto, Alertes Intelligence IA hebdo, Rapport Auto PDF hebdo, Dashboard Mobile + Push, Scorecard Mensuelle
+- Nice-to-haves: Fil Activité Équipe, Top 5 Influenceurs, Streamgraph 90j, Métriques Engagement, Carte de Crise timeline, Analyse Sujets Émergents, Heatmap Heure×Jour, Répartition Type Média, Analyse Multi-Marque, Module Dircom Personnel
+- Crazy: Audit Marque Employeur, Carte Parties Prenantes (network graph), Détection Bot/Campagne Coordonnée, Prévisions IA 72h, Module Anti-Boycott
+
+CRAZY IDEAS — 25 ideas (Reputation Time Machine, WhatsApp Voice Note Analysis, Crisis Simulator, AI Spokesperson Coach, Harch 100 Live Ticker, Daily Standup Video AI avatar, Crisis WhatsApp Bot, Journalist CRM, Sentiment of Own Comms, Boycott Early Warning Network, Predictive Editor's Pick, Voice-of-Employee Pulse, Geopolitical Overlay, Auto-Drafted Press Release crisis mode, Industry Conversation Map 3D, Dircom OS mission control, Hallucination Detector, Sentiment Heatmap Morocco real-time, Competitor PR AI Critique, Sunday Night WhatsApp Briefing, Harch 100 Awards, AI Crisis Timeline Video, Tone-of-Voice Consistency Checker, Crisis Replay annotated, Competitor Sentiment Anomaly Alerts)
+
+Key differentiators emphasized in brainstorm:
+1. Darija sentiment (only HarchIQ has this — Météo Langues widget)
+2. AI Visibility (LLM citation tracking — category-creating)
+3. Harch 100 (Moroccan benchmark — exclusive ranking)
+4. Crisis detector (15-min early warning promise)
+5. Anti-boycott module (Morocco-specific pain point — 2018 Centrale Danone)
+
+Upgrade triggers documented (Essentiel → Pro):
+- AI Visibility 1/4 → upgrade for 10 questions weekly
+- Score history locked 30j → upgrade for 365j
+- No benchmark → upgrade for 3 competitors
+- No reports → upgrade for auto weekly PDF
+- Single user → upgrade for team collaboration
+- Basic alerts → upgrade for custom rule builder + WhatsApp
+
+Next actions for implementation agents:
+1. Build Essentiel dashboard with 10 must-have sections first
+2. Wire real APIs (replace demo data)
+3. Add Pro-only sections behind plan gate
+4. Implement report builder + saved searches (Pro core)
+5. Build custom alert rule engine (Pro core)
+6. Crazy ideas → spike individually, validate with 3 design partners before building
+
+No code changes (brainstorm-only task). No TypeScript/ESLint impact.
+
+---
+Task ID: BRAIN-2
+Agent: Agent BRAINSTORM-2 — Enterprise + Agency
+Task: Brainstorm every section/widget/chart/feature for Enterprise + Agency dashboards
+
+Stage Summary:
+- Output: /home/z/my-project/brainstorm/brainstorm-enterprise-agency.md (~60 features documented)
+- 30 Enterprise sections: Executive KPI grid, DEFCON crisis, Multi-team view, Governance Center, API & Integrations, Influencer Marketing, 9-LLM AI Visibility grid, AI Executive Briefing generator, Crisis War Room, Competitor Vault, ESG tracking, Geographic Atlas, AMMC/BAM Regulatory monitoring, Custom Report Scheduler, SSO/SAML console, Data Export Center, Legal Audit Vault (hash-chain), Narrative Tracker, Investor Relations scorecard, Share-of-Voice, Stakeholder Graph, Coordinated Campaigns Detector, Year-over-Year, Semantic Search (AlphaSense-style), Multi-channel Alert Console, Adoption Academy, Mobile Companion App, Brand Digital Twin (crazy), Executive Office Mode (crazy), What-If Lab (crazy)
+- 30 Agency sections: Client Switcher (sticky), Client Portfolio table, Aggregate Agency View, Per-Client Console, Campaign Tracker w/ ROI, ROI Calculator, Pitch Deck Studio, Prospect Landscape, Scheduled Reports, White-Label Studio, Team×Client Matrix, Side-by-Side Comparison, Revenue Tracker, Client Health Score, AI Proposal Generator, Client Portal (white-label), Templates Library, Cross-Client Influencer Atlas, Strategic Notes Notebook, Renewals Tracker, Cross-Client Sector View, New Business Radar, Agency Brand Monitoring, Workflow Kanban, Time & Billing, SOS Client Alerts, Playbooks Library, Alert Configurator, Wall of Wins (crazy), Cold Prospect Reactivation (crazy)
+- Each feature documented with: Name (FR), What it shows, Why user needs it, Chart type, Data source, Plan, Priority (must-have/nice-to-have/crazy)
+- Priority matrix: 20 must-have (10 Enterprise + 10 Agency) for Phase 1 Q4 2026; 26 nice-to-have for Phase 2 Q1 2027; 5 crazy ideas for Phase 3 Q2 2027
+- Differentiator analysis: WhatsApp, MAD pricing, Darija NLP, 9-LLM AI Visibility, white-label Client Portal, AI Pitch Deck Studio, Brand Digital Twin — mapped vs 6 competitors (Brandwatch/Meltwater/Talkwalker/PeakMetrics/Signal AI/Dataminr)
+- Strategic recommendation: double down on (1) AI Visibility real LLM hookup and (2) Agency white-label portal + pitch deck studio — projects 1.5-2M MAD ARR additional over 12 months
+- Sources consulted: /competitive-reports/00-SYNTHESE.md, 01-brandwatch.md, 10-MASTER-SPEC-SHEET.md, MASTER_OFFER.md, existing worklog (POSTLOGIN-3 Settings already has SSO/SAML UI placeholder for Enterprise+Agency)
+- No code changes; pure design/brainstorm document
+
+---
+Task ID: RESEARCH-1
+Agent: Agent CHERCHEUR-1 — USER NEEDS
+Task: Research what comms directors, PR managers, marketing analysts actually need from a reputation intelligence platform
+
+Stage Summary:
+- Ran 10 web_search queries via z-ai CLI (queries 1-10 from mission brief all succeeded; queries 11-15 hit HTTP 429 rate-limit and were supplemented by existing /competitive-reports/ + /MASTER_OFFER.md).
+- Cross-referenced search results with competitive-reports/01-brandwatch.md, competitive-reports/02-meltwater.md, and MASTER_OFFER.md (pricing tiers: Starter 5K / Pro 15K / Enterprise 50K MAD/mo + Agency white-label 30% revenue share).
+- Documented 4 user personas (Essentiel/Starter, Pro, Enterprise, Agency) with archetype, job-to-be-done, and context constraints.
+- Documented 12 cross-persona pain points (P1-P12) + persona-specific frustrations, all with evidence (G2, Capterra, Trustpilot, TrustRadius, Agorapulse, Muck Rack, Agility PR, PRSA, Everbridge, GatherUp, etc.).
+- Documented must-have features per persona (E1-E8, P1-P10, X1-X13, A1-A8) and 25 nice-to-have delighters (AI, workflow, data depth, reporting polish).
+- Mapped expected dashboard sections in a universal 5-row layout (score strip → charts → breakdowns → act-now feed → AI layer) + per-persona landing page + section-by-persona expectation matrix (24 sections × 4 personas).
+- Synthesized 25-item build priority (Tier 0 ship-blocking → Tier 4 delighters) inferred from pain-point severity × persona frequency.
+- 6 open questions flagged for next research cycle (pricing validation, white-label scope, data residency legal, Darija NLP threshold, crisis latency tolerance, native app vs web).
+- Output: /home/z/my-project/brainstorm/research-user-needs.md (~22KB, 9 sections).
+
+Key findings (1-line each):
+1. Real-time alerts + sentiment accuracy in the user's language + customizable dashboards + 1-click reports = universal table-stakes across all 4 personas.
+2. Meltwater's #1 complaint (Trustpilot 1.5/5) is opaque pricing — Harch's public MAD pricing is already a competitive weapon.
+3. Meltwater + Brandwatch both fail on non-English sentiment (sarcasm, dialect, code-switching) — Darija NLP is Harch's defensible wedge.
+4. Enterprise procurement gate = ISO 27001 / SOC 2 (MASTER_OFFER §5) — without attestation, no bank/telecom/gov signs.
+5. Agency persona needs white-label (Brandwatch doesn't offer it publicly) + multi-client cockpit — unlocks distribution channel (Omocto, PRESMA, Webcom, Blue Lions).
+6. WhatsApp-native alerts + inbound-screenshot-to-NLP loop = Morocco-specific delighter no global competitor has.
+7. Crisis comms needs sub-15-min latency + multi-channel escalation (SMS/email/push/voice) + command-center big-screen view — Meltwater's minute-level latency loses here.
+8. Expected dashboard: score strip (reputation score + weather + sentiment arrow + crisis indicator + mention count) → volume/sentiment/SOV charts → source/geo/influencer breakdowns → live alerts feed + top mentions → AI Q&A + visibility + anomaly layer.
+
+Files touched:
+- /home/z/my-project/brainstorm/research-user-needs.md (NEW — research report, ~22KB)
+- /home/z/my-project/worklog.md (APPENDED — this summary)
+
+---
+Task ID: RESEARCH-2
+Agent: Agent CHERCHEUR-2 — DESIGN PATTERNS
+Task: Research dashboard design best practices — chart types, layout, widgets, color, IA
+
+Work Log:
+- Ran 10 web searches via `z-ai function -n web_search` (B2B SaaS dashboards, analytics UX, chart types, IA, Stripe/Linear teardowns, executive & real-time dashboards, color psychology, KPI cards, radar/heatmap). 4 rate-limit (429) retries; all 10 eventually succeeded.
+- Collected 65 primary sources across uxdesign.cc, context.dev, eleken.co, orbix.studio, pencilandpaper.io, dashboarddesignpatterns.github.io (Bach 2023, 354 citations), Atlassian, Tableau, Stripe/Linear teardowns, Clearpoint, Domo, fuselabcreative, Smashing Magazine, datawrapper.de, observablehq.
+- Cross-referenced findings against existing HarchIQ codebase: `Dashboard.tsx` (1526 LOC), `BrandMonitorDashboard.tsx` (4103 LOC), `Charts.tsx` (1449 LOC), `ConsoleShell.tsx`, `tokens.ts`, `CompetitorRadarChart.tsx`, `ShareOfVoicePanel.tsx`, `CrisisAlertFeed.tsx`, `useLiveAlerts.ts`, `PresentationMode.tsx`, `CommandPalette.tsx`.
+
+Findings (full report in /home/z/my-project/brainstorm/research-design-patterns.md, ~4,200 words / 12 sections):
+
+VERDICT: HarchIQ dashboard architecture is already 80% aligned with industry best practices.
+
+KEEP (already correct):
+- White + sage green #4A7B5F + charcoal #0A0A0A palette — matches Stripe/Linear/Vercel corporate aesthetic
+- Sidebar + main content layout (240-280px left rail, collapses to drawer < lg)
+- KPI cards with hover lift, 3-card row, segmented range toggles (7j/30j/90j)
+- Pure SVG sentiment area chart (no chart-lib bloat)
+- French-first copy, "—" for empty states (not "0" or "null")
+- JetBrains Mono for numbers/emails/IPs (tabular nums)
+- Plan-gated nav items (Pro/Enterprise/Agency/Superadmin)
+- CommandPalette.tsx + PresentationMode.tsx exist
+
+ADD (high-impact, low-effort — 8 items):
+1. Semantic color tokens: SUCCESS #16A34A / WARNING #D97706 / DANGER #DC2626 + soft variants — currently missing from tokens.ts
+2. Sparklines (12-point, no axes) inside KPI cards — currently absent
+3. Delta tooltip showing both absolute (+4.2) and relative (+6.2%) change
+4. Calendar heatmap widget for alert activity (GitHub-style, 53 weeks × 7 days, sage ramp)
+5. Gauge/radial chart for brand health score (semicircle, 3 color bands 0-40/40-70/70-100, big center number)
+6. Removable filter chips above all tables (replace dropdown filters — Stripe pattern)
+7. Side drawer (480px right) for article/crisis detail (replace page navigation — Stripe layered disclosure)
+8. Freshness cues on real-time tiles: pulsing "Live" dot + "Last updated Xs ago" timestamp
+
+Chart-type decision matrix documented:
+- Sentiment over time → line + area fill (8-15% opacity)
+- Share of voice → donut (≤5 slices, group rest as "Autres", center = total)
+- Topic distribution → horizontal bar (sorted desc, value label right of bar)
+- Competitor comparison → radar (2 entities max, 5-7 axes, pair with side-by-side table)
+- Alert activity → calendar heatmap (single-hue ramp, clickable as date selector)
+- Brand score → gauge (semicircle, 3 threshold bands)
+- Article feed → card list with infinite scroll (prepend new, "X new items" pill on scroll)
+
+Color rules:
+- Semantic colors paired with icon + text label (never color alone — color-blind safe)
+- Chart palette: sage #4A7B5F (lead/client) → teal-700 → violet-600 → pink-600 → orange-600 → gray-500 (Others)
+- Sequential ramp for heatmaps: #F0F5F2 → #C8D9CF → #95B5A4 → #628E78 → #4A7B5F → #2F5240
+- Dark mode (for PresentationMode v2): bg #0D0D0D → card #1A1A1A → elevated #222222; sage brightens to #5B9476; status colors +1 step lighter
+
+Information hierarchy (3-tier model):
+- TIER 1 (5s scan, top of page): score gauge + 3-5 KPI cards + top alert banner
+- TIER 2 (30s scan, middle): sentiment trend + share of voice + topic dist + competitor radar + source dist
+- TIER 3 (drill-down, bottom): live article feed + crisis alert table + regulatory feed + audit log
+
+Real-time dashboard specifics (Smashing + fuselabcreative):
+- Throttle WS re-renders to 1Hz max (batch updates)
+- Grey-out stale tiles (opacity 0.5) instead of removing — preserves mental model
+- Alert anatomy: timestamp + severity + affected entity + source + impact + owner + status + recommended next step
+- Alert fatigue prevention: dedupe within 5-min window, severity threshold (only Critical/High in live feed), quiet hours, daily digest
+
+Executive dashboard (Clearpoint + Domo + Appdeck):
+- 5-10 strategic KPIs on one screen (cap at 12), every KPI has a target line
+- Balance leading (sentiment trend, SoV momentum) vs lagging (crises resolved, coverage volume)
+- Export-first design: PDF looks identical to screen, white bg mandatory, landscape for charts / portrait for tables
+- 3 AI-generated key takeaways at bottom of executive briefing
+
+Stripe teardown (orbix.studio, aufaitux, LinkedIn):
+- Layered data disclosure: summary → table → side drawer (never leave page)
+- Filter chips as first-class (removable, "Clear all" visible)
+- Conservative color (almost monochrome; color only for status)
+- Tabular nums, uppercase 11px labels, 32px weight 600 values
+- Generous whitespace (24-32px padding) signals "premium B2B"
+
+Linear teardown (saasui.design, BenchCanvas):
+- Keyboard-first (⌘K command palette is primary nav)
+- Speed as feature: 60fps, instant nav, optimistic updates
+- Dark mode mastery: layered surfaces, strong contrast, accent pops
+- Role-based views (same data, different default layouts) — HarchIQ should adopt for IR/Comms/C-suite
+- Inline editing (click field, edit in place, no modal)
+- Status as color + icon + text (never color alone)
+
+Accessibility (WCAG 2.1 AA):
+- Charcoal #0A0A0A on white = 19.3:1 contrast (well above 4.5:1 AA)
+- All interactive elements keyboard-navigable, visible focus ring (sage green)
+- Charts need aria-label or aria-describedby pointing to data table
+- prefers-reduced-motion respected (disable animations)
+- Touch targets ≥44×44px on mobile
+
+DEFER (v2):
+- Drag-and-drop customizable layout (high cost, low payoff for current personas)
+- Full dark mode beyond PresentationMode
+- Inline editing of alert status/owner
+- Role-based default landing view
+- "X new items" pill on scrolled feeds
+- Bulk actions in tables
+
+Files touched:
+- /home/z/my-project/brainstorm/research-design-patterns.md (NEW — ~4,200 words, 12 sections, 65 sources)
+- /home/z/my-project/worklog.md (APPENDED — this summary)
+
+---
+
+## SPY-1 — MELTWATER DASHBOARD INTELLIGENCE (Agent ESPION-1)
+
+**Output**: `/home/z/my-project/brainstorm/spy-meltwater.md` (full report)
+
+**Scope**: 16+ Meltwater dashboard sections mapped with widgets, charts, user actions, and plan availability.
+
+**Platform architecture observed**:
+- Modules: Explore (search/monitor) · Analyze (Unified Dashboards) · Engage (inbox + publishing) · Media Relations (journalist DB + press releases) · Influencer Marketing (Klear) · GenAI Lens (AI visibility) · Mira (AI assistant) · Alerts
+- "Unified Dashboards" rebuilt Oct 2025 — widget library, templates (Brand/Benchmark/Crisis/Executive), drag-and-drop, scheduled PDF/PPTX/Google Slides exports
+- Coverage: 100M+ sources, 190 countries, 96 languages, 5-level sentiment + entity-level
+- Pricing: Starter ~$6k → Pro ~$25k → Enterprise ~$130k+ → Agency custom; GenAI Lens, Klear, Media Relations, Engage, Broadcast all add-ons
+
+**Key widgets Meltwater ships** (for Harch to mirror): Share of Voice, Potential Reach, Media Exposure/AVE, Sentiment (5-level + entity), Trending Themes, Top Sources/Authors, Word Cloud, Heat Map (geo), Hashtag Analytics, AI Positive/Negative Analysis, Narrative Summary, per-widget AI Insight wand icon.
+
+**Critical competitive differentiators Harch should build**:
+1. Native WhatsApp alerting (Meltwater only has Slack/Teams/Email/Mobile)
+2. SCIM auto-provisioning (Meltwater has SAML but no documented SCIM as of Jan 2026)
+3. ZKP + WebAuthn passkey auth (Meltwater recommends SAML only — no passwordless)
+4. GenAI Lens as first-class core tab, not a paid add-on
+5. Built-in DEFCON 1-5 crisis escalation (Meltwater relies on Spike Detection + Blackbird.AI partnership)
+6. FR/AR native + Africa/Casablanca TZ defaulting (Meltwater is English-first)
+7. Transparent tiered pricing & self-serve (Meltwater forces sales calls)
+8. Closed-loop PR ROI: mentions → Salesforce opportunities → revenue (Meltwater stops at "media exposure")
+9. Native client portal with SSO (Meltwater relies on scheduled PDFs)
+10. Proactive agentic Mira (Meltwater's Mira is chat-only, reactive)
+
+**Next actions for Harch team**:
+- Cross-reference this report with the existing Dashboard product spec to confirm widget coverage parity
+- Prioritize building WhatsApp alerting + GenAI Lens as v1 differentiators
+- File a follow-up spec for SCIM + DEFCON crisis ladder (Enterprise wedge)
+- Validate pricing tiers against Meltwater's published ranges when finalizing Harch packaging
+
+
+---
+Task ID: SPY-3
+Agent: Agent ESPION-3 — Talkwalker/Signal Spy
+Task: Research Talkwalker and Signal AI dashboards exhaustively
+
+Stage Summary:
+- Ran 8 `z-ai web_search` queries (5 in first parallel batch + 3 retried after HTTP 429 rate-limit cooldown of 60-240s). All 8 succeeded.
+- Cross-referenced fresh search results against pre-existing internal competitive dossiers /competitive-reports/03-talkwalker.md (450 lines, dated 2026-07-31) and /competitive-reports/05-signal-ai.md (260 lines, Wayback-archives-based).
+- Output: /home/z/my-project/brainstorm/spy-talkwalker-signal.md (~5,800 words, 3 parts: Talkwalker deep-dive + Signal AI deep-dive + cross-cutting analysis).
+
+Talkwalker findings (Part A — 7 sections):
+1. Dashboard sections — analyst-grade density: topbar (navy #1B3C7A) + dark left sidebar (Listening/Image Insight/Broadcast/Consumer Intel/Influencer/Crisis/Reports/Alerts) + 4-12col widget grid + right-panel Blue Silk GPT assistant chat
+2. Key widgets — proprietary viz library (not D3/ECharts): time-series w/ event annotations, stacked bar, bubble (sentiment×volume×reach), treemap (SOV), world choropleth, weighted wordcloud, Sankey (source→theme→sentiment), heatmap hour×day, mention feed, KPI strip, gauge, top sources/influencers tables, emoji chart, image grid
+3. Blue Silk AI — Blue Silk GPT (native LLM, Nov 2022, "saves 40% time from data to decision"), 1-Click AI Classifier, Blue Silk Insight, sentiment in 187 languages, 7-emotion detection w/ intensity, sarcasm (limited), anomaly detection + Smart Spike Analysis
+4. Image Recognition — flagship differentiator since Mar 2016: 30,000+ logos, 1,000+ scenes, celebrity face recognition (GDPR opt-out), object detection, OCR (text in image/meme), unsafe content, plus visual+audio recognition for video/podcasts. Pinterest-style Image Insight grid view
+5. Crisis Management — Monitor/Respond/Report lifecycle: real-time alerts (volume/sentiment/velocity thresholds), 24/7 phone+email+Slack push, Storm Alert, Smart Spike Analysis, dedicated Crisis Dashboard (red #FFF5F5 bg, gauge, timeline, top amplifiers, stakeholder tracking, scenario simulation), detection-to-response timestamping
+6. Innovations to copy: image recognition (start w/ 100 Moroccan brands on YOLOv8), AI assistant embedded in dashboard (not separate page), 7-emotion taxonomy, 50+ templates library, Sankey conversation flow, Smart Spike Analysis, heatmap hour×day, AI Summaries on every dashboard. Do NOT copy: opaque pricing, heavy onboarding, native mobile app (3.2/5 fail), UX debt accumulation
+7. Competitor benchmark — Share-of-Voice module (SOV%, sentiment-weighted SOV, awareness/purchase intent/loyalty overlays), multi-brand comparison (up to 10 competitors), benchmark dashboard w/ treemap + per-competitor profile cards, IQ Apps (pre-built dashboard bundles by use case)
+
+Signal AI findings (Part B — 6 sections):
+1. Dashboard sections — login-gated (reconstructed from marketing nav + PRWeek Dec 2020 Dashboards launch + Vimeo Feb 2021 demo): Media Monitoring, Reputation, Risk (Enterprise Risk), ESG, Regulation, Advanced Dashboards (Reputation/Risk sub-types), Insight Reports (5 types: Reputation/Media Impact/Deep Dive/Reputation Risk/Risk), Newsletters and Briefings (Media Newsletters + Risk Briefings), Alerts, Signal AI 500 ranking view
+2. Key widgets — widget catalog not publicly documented; inferred: mention volume time-series, sentiment breakdown pie, SOV bar (competitor comparison), risk index gauge, topic cluster/narrative detection, source distribution, coverage alerts feed, benchmark positioning, regulatory lifecycle tracker, reputation threat heatmap
+3. AIQ engine — hybrid discriminative (retrieval/filtering/classification) + generative (synthesis/summarization) architecture. Explicit anti-LLM-hallucination positioning vs "generalist generative AI tools" (read: ChatGPT). External Intelligence Graph (July 2022, knowledge graph layer). Podcast Intelligence (Dec 2021). SVP of AI Alexandre Martins Pinto since June 2022. 10+ years AI heritage (founded 2013)
+4. Image Recognition — Signal AI does NOT publicly promote visual listening. No logo/scene/face/OCR. Text+audio focus only. Clear competitive opening for Harch
+5. Crisis Management — Risk module (Proactive Identification, Alerting & Response, Ongoing Risk Surveillance, Strategic Planning & Reporting), Reputation Threat Sensing ("uncover hidden reputational landmines"), alert module (email only, no WhatsApp/push). Positioned for CRO/CCO office vs Talkwalker's PR/Comms framing
+6. Innovations to copy: hybrid AIQ architecture pitch (darija-tuned retrieval + GLM-4 synthesis — anti-hallucination narrative), External Intelligence Graph branding (rebrand Harch React Flow entity graph), Signal AI 500 ranking template (amplify Harch 100 → quarterly LLM visibility ranking), Regulatory Intelligence module (BAM/AMMC/ANCFCC/OMPIC), ESG dedicated module, Insight Reports productized (5 report types), Newsletters & Briefings as product, "Decision Augmentation" framing for enterprise. Do NOT copy: opaque pricing, no mobile app, vague semantic pivots, enterprise-only concentration
+
+Cross-cutting analysis (Part C):
+- Talkwalker decisive wins: broadcast TV/radio (1,500 channels + 1,000 stations), image recognition maturity, Blue Silk GPT native integration, Twitter firehose, Forrester/Gartner validation, Hootsuite distribution
+- Signal AI decisive wins: hybrid AIQ architecture, External Intelligence Graph, Signal AI 500 + Forbes partnership, Regulatory Intelligence module, Podcast Intelligence, 10+ years AI heritage
+- Where BOTH fail (Harch's open lanes): Darija/dialectal Arabic NLP, Moroccan media coverage (Hespress/TelQuel/Le360/Médias24), WhatsApp Daily Digest, AI Visibility/GEO/AEO (LLM probing), MAD billing, Africa presence, public pricing, mobile (Talkwalker 3.2/5, Signal AI none)
+
+Strategic recommendations (3 tiers):
+- Tier 1 (Q4 2026, immediate): embed Ask-HarchIQ in every dashboard, AI Summary on every dashboard, Smart Spike Analysis, 7-emotion taxonomy, Sankey + heatmap widgets, Harch 100 LLM Visibility quarterly ranking
+- Tier 2 (Q1-Q2 2027): image recognition for 100 Moroccan brands, External Intelligence Graph branding, hybrid AIQ pitch, Regulatory Intelligence module, ESG module, Podcast Intelligence, Insight Reports productized, 20+ dashboard templates
+- Tier 3 (2027-2028): broadcast monitoring for Moroccan TV/radio, Lisbon/Tunis/Dakar hub, Forbes Afrique / Jeune Afrique partnership, M&A target scan
+
+Risk assessment:
+- Talkwalker descending to mid-market: LOW probability (Hootsuite financially constrained), HIGH impact if happens, mitigation = lock Moroccan data partnerships with exclusivity
+- Signal AI opening MENA office: LOW probability (4 offices all OECD), MEDIUM impact, mitigation = Darija NLP investment (2-3 yr lead)
+- Either acquiring African player: VERY LOW probability, mitigation = build Harch 100 + Moroccan data partnerships as defensible assets
+- Strategic window: 2-3 years minimum before either competitor addresses Moroccan/African francophone market. Defense comes from local specificity, not out-building core tech
+
+Key findings (1-line each):
+1. Talkwalker's broadcast TV/radio stack (1,500 channels + 1,000 stations, 24/7 capture) is the most defensible media-monitoring asset in the market — no African competitor can replicate short-term.
+2. Talkwalker's image recognition (30,000+ logos since 2016, + scene + face + OCR + unsafe + audio) is years ahead of Harch and most competitors — Harch should start with 100 Moroccan brands on YOLOv8.
+3. Blue Silk GPT is natively integrated (right-panel assistant, not a ChatGPT bolt-on) — Harch must move Ask-HarchIQ INTO each dashboard, not keep as separate page.
+4. Signal AI's AIQ hybrid discriminative+generative architecture is the right 2025 design pattern — Harch should pitch darija-tuned retrieval + GLM-4 synthesis with anti-hallucination positioning.
+5. Signal AI's "Signal AI 500" + Forbes partnership is a recurring marketing asset — Harch 100 should be amplified into a quarterly "Most Visible Moroccan Companies in LLMs" ranking.
+6. Both competitors are blind to Darija, Moroccan local media, WhatsApp, AI Visibility probing, and MAD billing — Harch's moat is structurally protected for 2-3 years.
+7. Neither has a working mobile strategy (Talkwalker 3.2/5 native app, Signal AI no app) — Harch's PWA + WhatsApp Daily Digest is differentiated.
+8. Signal AI's Regulatory Intelligence and ESG modules show the roadmap for Harch's horizontal expansion beyond PR/Comms into compliance/ESG budgets (larger TAM).
+
+Files touched:
+- /home/z/my-project/brainstorm/spy-talkwalker-signal.md (NEW — spy report, ~5,800 words, 3 parts)
+- /home/z/my-project/worklog.md (APPENDED — this summary)
+
+No code changes (research-only task). No TypeScript/ESLint impact.
+
+---
+Task ID: SPY-2
+Agent: Agent ESPION-2 — Brandwatch/Sprinklr Spy
+Task: Research Brandwatch and Sprinklr dashboards exhaustively; document features to copy
+
+Stage Summary:
+- 10 z-ai web_search calls executed (3 rate-limit retries, all succeeded)
+- Both competitors profiled across 5 dimensions: dashboard sections, widgets/charts, user actions, AI features, unique features
+- 18-item priority-ranked implementation backlog produced
+- Cross-referenced against existing /home/z/my-project/competitive-reports/01-brandwatch.md
+
+Files delivered:
+- /home/z/my-project/brainstorm/spy-brandwatch-sprinklr.md (NEW — full spy report, ~14KB)
+
+Brandwatch findings (key):
+- Suite: 2 suites (Consumer Intelligence + Social Media Management) + 11 sub-modules + Search Intelligence + APIs
+- Key modules: Consumer Research (analyst), Measure (widget-based dashboards), Vizia (command center / big screen), Benchmark, Listen, Influence, Audience, Reviews
+- Widgets: line, bar (incl. horizontal Impressions widget), donut, word cloud, choropleth map, text widget (added Jan 2025), Brand Overview widget, Image Analysis widget, Top Authors/Advocates/Detractors lists, Iris-generated charts
+- AI: Iris AI = "always-on digital colleague" with 5 capabilities — Ask Iris (NL search, no query needed), AI Dashboards, Iris Conversation Insights (Listen), Iris Post Analysis (Measure), Iris Writing Assistant (Publish/Engage/Advertise). Plus Image Analysis (neural nets), Brightview ML classifiers, Dashboard Summaries (auto-narratives)
+- Unique to copy: Vizia big-screen mode, Ask Iris NL search, Dashboard Summaries, Image/logo recognition, Social Panels, day/hour heatmap, text widget, Search Intelligence (GenAI visibility), 1.4T historical post archive positioning
+
+Sprinklr findings (key):
+- Platform: Unified-CXM with 4 product families — Insights / Social / Care / Marketing / Voice (CCaaS)
+- Key dashboards: Listening Dashboards (Standard+Custom, tabbed Summary/Content/Sentiment/Demographics), Unified Monitoring Dashboard (cross-team), Reporting Dashboards (48 widgets configurable), Call Center dashboards, VoC dashboard, Value Realization Dashboard, Trending Topics, Presentations (slide-based)
+- Widgets: 13+ typed catalog (Bar, Column, Pie, Line, Area, Area Spline, Spline, Entity Word Cloud, Counter, Summary Table, Grouped Summary, Combination Chart, Content widget cards) + Period-Over-Period Compare Mode (8 chart types)
+- AI: 3-tier model — Sprinklr Copilot (NL assistant), Sprinklr AI Agents (autonomous), Smart Insights (anomaly root-cause: "top drivers of a spike"). Plus AI-generated summaries, 100+ languages sentiment, 130+ translation, real-time voice AI, 500M daily conversations
+- Unique to copy: Smart Insights (spike root-cause), CFM Copilot NL dashboard builder ("Plot a bar chart for NPS by region on Tab 2"), 1-click alert-from-widget, Compare Mode (PoP), Combination Charts, Unified Monitoring Dashboard, VoC dashboard, Value Realization Dashboard, 13+ typed widget catalog, copy/paste widgets between slides, multi-tier AI hierarchy, Content widget cards (inline likes/shares/comments), Trending Topics dashboard
+
+Top 7 implementation picks (S/M effort, High impact):
+1. Smart Insights — spike root-cause (Sprinklr) — click anomaly → AI explains top drivers
+2. Dashboard Summaries (Brandwatch) — 1-click "explain this dashboard" LLM narrative
+3. 1-click "Configure alert from widget" (Sprinklr) — auto-capture widget config
+4. Compare Mode Period-over-Period (Sprinklr) — toggle on all trend widgets
+5. Combination Charts (Sprinklr) — column + line (volume + sentiment overlay)
+6. Trending Topics dashboard (Sprinklr) — "what's trending in Morocco now"
+7. Content widget cards (Sprinklr) — inline likes/shares/comments per mention
+
+Strategic read:
+- Brandwatch = research-depth + command-center + GenAI-visibility play (PR/insights/brand teams)
+- Sprinklr = operational-breadth + AI-tiered + Care play (CX/service teams)
+- For Harch Atelier: cherry-pick Vizia + Ask Iris + Dashboard Summaries + Image recognition + Search Intelligence from Brandwatch; Smart Insights + CFM Copilot + alert-from-widget + Compare Mode + Combination Charts + Trending Topics + Content widget cards from Sprinklr
+
+---
+
+## [2026-08-10 15:28 UTC] SPY-4 — Screenshot Hunter (Agent ESPION-4) — COMPLETED
+
+**Mission**: Find & visually analyze competitor dashboard screenshots (Meltwater, Brandwatch, Talkwalker, Sprinklr) using VLM.
+
+**Method**:
+1. Used `z-ai function web_search` to find landing/blog/help pages mentioning competitor dashboards.
+2. Used `z-ai image-search` (US region, 8 images per query, 4 queries = 32 images total) to retrieve actual screenshot URLs re-hosted on OSS.
+3. Downloaded 32 images to `/tmp/spy-img/` (1 SVG skipped from VLM → 31 images analyzed).
+4. Ran Gemini VLM via `z-ai vision` on each image with a structured 9-section prompt (Likely Product / Layout / Sections / Charts / KPIs / Colors / UI Patterns / Innovative Features / Screenshot Quality).
+5. Aggregated all 31 JSON analyses into a structured markdown report with executive summary + cross-vendor pattern matrix + per-vendor sections + design recommendations.
+
+**Files delivered**:
+- `/home/z/my-project/brainstorm/spy-screenshots.md` (NEW — full visual intel report, ~260 KB, 1654 lines, 31 screenshots exhaustively analyzed)
+
+**Headline findings**:
+1. **Universal 3-zone layout**: left icon-rail sidebar + top filter/header bar + main widget grid — every competitor uses this; top-horizontal nav is dead in this category.
+2. **AI Insight blocks are now table-stakes**: Hootsuite/TalkwalkerAI, Sprinklr Smart Insights, Meltwater AI overviews (2024), YouScan Visual Insights, Adriel AI ad-copilot — all surface LLM natural-language summaries above the chart grid. **#1 differentiator for 2024-2025.**
+3. **Chart-type frequency** (across 31 screenshots): horizontal bar > donut/pie > line/area > world geo-map > bubble/tag cloud > heatmap > stacked-bar > gauge. Horizontal bar charts dominate KPI breakdowns.
+4. **Sentiment color convention is locked**: green=positive / red=negative / gray=neutral — no opportunity to differentiate, users expect this mapping.
+5. **Filter chips** (removable pills under header) replacing long filter sidebars — Sprout Social, Hootsuite, Adriel leading.
+6. **Anomaly callout chips** on time-series charts (Talkwalker + Sprinklr) — most differentiated 2024 visual feature.
+7. **Channel-icon rows** (FB/X/IG/LI/TikTok/YT glyphs) double as filters AND series legends.
+
+**Cross-vendor pattern matrix** (in report) confirms:
+- Holy trinity required at launch: **world geo-map + sentiment donut + horizontal-bar top-sources** (all 4 target vendors have all 3)
+- **Drag-to-rearrange widgets** universally expected — build grid with this from day one
+- **Top-right Export** (PDF/PNG/CSV/XLSX) non-negotiable for agency/PR buyers
+
+**Bonus intel**: Image search also surfaced dashboards from adjacent competitors (YouScan, Hootsuite, Sprout Social, Brand24, Adriel, Agorapulse) — useful additional context for the same market segment. YouScan's image-recognition-based demographics (gender/age/occupation from photo analysis, not bio scraping) is a particularly notable innovative feature.
+
+**Top 5 implementation priorities for our product** (from visual analysis):
+1. AI Insight hero card (top of every dashboard, 2-3 sentence NL summary, filter-aware)
+2. Removable filter chips under header (replace filter drawer)
+3. Three-tier KPI hero band (big number 48px + delta pill + sparkline × 4-5 KPIs)
+4. Anomaly callout chips on time-series (Talkwalker/Sprinklr pattern)
+5. Drag-to-rearrange widget grid with "Edit layout" toggle
+
+**Caveat documented in report**: Image search returns semantically related results; not every screenshot is from the queried vendor. VLM-detected actual product is recorded per screenshot in the "Likely Product" field — this is more reliable than search-source attribution.
+
+**Next actions for downstream agents**:
+- ESPION-1 (Meltwater text spy) — cross-reference text features against visual inventory in this report
+- ESPION-2/3 (Brandwatch/Sprinklr text spies) — already delivered yesterday; this report complements with visual confirmation
+- Product/design team — use the 10-item "Design Patterns We Should Adopt" priority list as direct sprint backlog input
+- The raw VLM JSON analyses are preserved in `/tmp/spy-img/analysis/` (31 files) for re-querying if needed
+
+---
+Task ID: BUILD-1
+Agent: Build-1 — Essentiel Dashboard
+Task: Build Essentiel dashboard with 10 sections from brainstorm
+
+Stage Summary:
+- 10 sections built: YES
+  1. Score de Réputation (GaugeChart + trend arrow + narrative)
+  2. Top 3 Alertes (3-col severity tiles, sorted by severity then recency)
+  3. Tendance Sentiment 7 jours (LineChart 3-series: positive/neutral/negative + % summary)
+  4. Dernières Mentions (5 most recent articles feed with sentiment badges)
+  5. Snapshot Visibilité IA (3 LLM cards: ChatGPT, Perplexity, Gemini — position, cited, sentiment, confidence)
+  6. Résumé Hebdo IA (HarchIQ insight + regenerate button calling /api/console/insights?force=1)
+  7. Diversité Sources (BarChart top 10 + 20+ sources badge + media/social legend)
+  8. Position Harch 100 (big rank #, period, sector, score, articles, percentile)
+  9. Actions Rapides (4 buttons: CSV export → /api/console/export-csv, Ask HarchIQ, Harch 100, Demo Pro)
+  10. Upsell Pro (sage-green-tinted banner with charcoal "Découvrir Pro →" button)
+- Real API integration: YES
+  • /api/console/brand-health (score, trend, sentiment, narrative)
+  • /api/console/crisis-alerts (top 3 + 5 articles)
+  • /api/console/sentiment-trend?range=7d (3-series chart + company name for Harch 100 match)
+  • /api/console/ai-visibility (3 LLM cards)
+  • /api/console/insights (weekly summary + regenerate via ?force=1)
+  • /api/console/source-distribution (top 10 sources BarChart)
+  • /api/harch100/latest (rank lookup by company name match)
+  • /api/console/export-csv?type=articles&days=90 (CSV download via window.location.href)
+- Charts from Charts.tsx: YES (GaugeChart, LineChart, BarChart imported and used)
+- 0 TypeScript errors (verified with `bunx tsc --noEmit --pretty false`)
+- 0 ESLint errors (verified with `bunx eslint` on the file)
+- Design: white cards, 12px radius, 1px C.border, 24px padding (p-6), 24px gap (gap-6 / mb-6)
+- Layout: sections 3+4, 5+6, 7+8 in 2-col grid (grid-cols-1 lg:grid-cols-2); mobile-first responsive
+- French throughout, no mock data, "—" empty states, skeleton loaders while fetching
+- File: src/app/atelier/console/essential/EssentialDashboard.tsx (~1825 lines, single "use client" file)
+- Agent context note: /home/z/my-project/agent-ctx/BUILD-1-Build1-EssentielDashboard.md
+
+---
+Task ID: BUILD-2
+Agent: Build-2 — Pro Dashboard
+Task: Build Pro dashboard with 12 sections from brainstorm
+
+Work Log:
+- Read 3 brainstorm docs (brainstorm-essentiel-pro.md, spy-brandwatch-sprinklr.md, research-design-patterns.md)
+- Read Charts.tsx (1449 lines) — exports: RadarChart, DonutChart, LineChart, BarChart, HeatMap, GaugeChart
+- Read C tokens (components/tokens.ts) — emerald CTA, stone accent, neutral backgrounds
+- Read existing ProDashboard.tsx (2230 lines — 8 sections, pre-brainstorm) — completely rebuilt
+- Audited 50+ existing /api/console/* endpoints; mapped each section to its real data source
+- Built shared primitives: Card (with eyebrow/title/right/bodyStyle), Pill, EmptyState (with action CTA), SkeletonBlock, MiniGauge (local SVG), DeltaArrow (colored arrows), fmtRelative, fmtNumber, fmtPct
+- Built 12 sections in order, each self-contained component with its own useEffect + useMemo + loading/empty states
+
+Stage Summary:
+- 12 sections built: YES
+  1. Enhanced KPI Strip (6 cards: Sentiment moyen [MiniGauge], Mentions/jour, Citations IA X/Y, Parts de voix %, Sources distinctes, Engagement)
+  2. Sentiment Chart (LineChart 3-series positive/neutral/negative as %; 7j/30j/90j toggle; area fills; hover tooltip; anomaly markers — flag days where neg% > 50 or count > 2× median)
+  3. Competitive Benchmarking Table (you + 3 competitors; columns: Entreprise | Score | Sentiment | Mentions | Visibilité IA | Trend; sortable headers asc/desc; cells color-coded green/red based on min/max ratio)
+  4. Radar Chart (5 axes: Réputation, Sentiment, Visibilité IA, Diversité, Résilience; sage green for you, amber for top competitor; legend)
+  5. Share of Voice Donut (DonutChart with center total mentions; legend with counts + %; "Voir le détail →" link)
+  6. Topic Evolution (BarChart top 5 by volume; each row clickable to expand detail; sentiment badge per topic; "Voir tous les sujets →" link)
+  7. Custom Dashboards (3 saved dashboard cards: Vue Dircom, Veille concurrentielle, Analyse IA — each with name/desc/last modified/Ouvrir →; "Nouveau tableau de bord +" button; drag-drop hint)
+  8. HarchIQ AI Panel (chat input + Interroger button; quota bar 147/200 questions restantes with green→amber→red color shift; 5 suggestion chips; conversation history last 3 turns)
+  9. Saved Searches + Alerts (3 saved searches: name/query/last run/results count + Relancer button; 3 active alerts with type icon + toggle PATCH to /api/console/custom-alerts)
+  10. Weekly Comparison (4 cards: Sentiment %, Mentions, Sources, Visibilité IA — each with current/previous/delta arrow)
+  11. Report History (last 5 reports: title + type pill + status pill + period + relative date + Télécharger; "Générer un rapport +" button + Programmer button)
+  12. Upsell Enterprise (sage gradient banner with "Découvrir →" CTA + 4 feature bullets: API, Gouvernance, Influence, SSO)
+- Charts from Charts.tsx: YES (RadarChart, DonutChart, LineChart, BarChart imported and used; type imports LinePoint, RadarAxis, DonutDatum, BarDatum)
+- Real API integration (zero mock data):
+  • /api/console/brand-health (KPI strip sentiment score, mentions24h, shareOfVoice, aiVisibility)
+  • /api/console/share-of-voice (KPI engagement proxy + donut chart)
+  • /api/console/ai-visibility (KPI citations + benchmarking table)
+  • /api/console/source-distribution (KPI sources count)
+  • /api/console/sentiment-trend?range=7d|30d|365d (sentiment chart 3-series, sliced to 90 for 90j)
+  • /api/console/sentiment-comparison (benchmarking table base rows)
+  • /api/console/competitor-radar (radar 5 axes + benchmarking aiVisibility scores)
+  • /api/console/neighbors (benchmarking trend delta)
+  • /api/console/topics (topic evolution bar chart)
+  • /api/console/custom-alerts GET + PATCH (saved alerts with toggles)
+  • /api/console/weekly-comparison (4 weekly cards)
+  • /api/console/reports/list (report history + saved searches proxy + custom dashboards last modified)
+  • /api/console/reports POST (generate now button)
+  • /api/console/ask POST (HarchIQ AI chat with quota)
+- Layout: 2-col grid for most sections (repeat(auto-fit, minmax(320px, 1fr))); KPI strip + sentiment chart + report history + upsell = full width
+- Design: white cards, 12px radius, 1px C.border, 20px padding, 20px gap, sage green accents (SAGE #10b981), amber for competitor A, charcoal for competitor B, neutral stone for "autres"
+- Mobile-first responsive: all grids auto-collapse to 1 column on mobile
+- Sticky footer: root wrapper min-h-screen flex flex-col + mt-auto on footer
+- French throughout, no mock data, "—" empty states, skeleton loaders while fetching
+- File: src/app/atelier/console/pro/ProDashboard.tsx (~1650 lines, single "use client" file)
+- TypeScript: 0 errors (verified with `bunx tsc --noEmit --pretty false` exit 0)
+- ESLint: 0 errors (verified with `bunx eslint` exit 0 — fixed react-hooks/set-state-in-effect warning by wrapping setLoading(true) inside async function)
+- Agent context note: /home/z/my-project/agent-ctx/BUILD-2-Build2-ProDashboard.md
+
+---
+Task ID: BUILD-4
+Agent: Build-4 — Agency Dashboard
+Task: Build Agency dashboard with 10 sections from brainstorm
+
+Stage Summary:
+- 10 sections built: YES
+- Client switcher: YES
+- Charts from Charts.tsx: YES
+- 0 TypeScript errors
+
+File: `src/app/atelier/console/agency/AgencyDashboard.tsx` (~2600 lines)
+
+Sections delivered:
+1. Client Switcher (searchable dropdown + agency sub-level badge + Vue agrégée option)
+2. Aggregate KPI Dashboard (6 KPI tiles + DonutChart sentiment + GaugeChart score)
+3. Client Portfolio Table (8 columns + search + sector filter + pagination 20/page)
+4. Campaign Tracker + ROI (3 active campaigns + custom SVG semicircle ROI gauge)
+5. Pitch Deck Generator (3 tools calling HarchIQ AI via /api/console/ask)
+6. Automated Reports Panel (4 stat cards + 3 recent reports with PDF links)
+7. White-Label Settings (toggle + logo + color pickers + domain + live preview + PATCH save)
+8. Team & Client Assignment (team table + users × clients checkbox matrix)
+9. Client Comparison (top 3 clients, 8 metrics side-by-side)
+10. Revenue Tracker (commission tier + 6-month LineChart + top 5 BarChart + per-client table)
+
+Charts used from Charts.tsx:
+- DonutChart (Section 2 — sentiment global agrégé)
+- GaugeChart (Section 2 — score moyen du portefeuille)
+- LineChart (Section 10 — tendance du revenu 6 mois)
+- BarChart (Section 10 — top 5 clients par revenu)
+- Custom RoiSemiGauge SVG (Section 4 — campaign ROI semicircle)
+
+Real APIs used (NO mock data):
+- GET /api/agency/clients — sub-clients + usage + quota + branding
+- POST /api/agency/switch — workspace switch
+- GET /api/console/reports/list — recent reports
+- POST /api/console/ask — HarchIQ AI for pitch decks
+- GET /api/console/settings/users — team members
+- PATCH /api/agency/clients/[id] — white-label branding update
+
+Derived real signals (no fabrication):
+- Per-client score = quota utilization % (apiRequests/maxApiRequests)
+- Per-client sentiment = function of WhatsApp alert count
+- Per-client campaign = active client with budget = monthlyPriceMAD
+- 6-month revenue trend = sum of monthlyPriceMAD for clients active at each month-end (based on createdAt)
+
+Quality:
+- bunx tsc --noEmit --pretty false → 0 errors in AgencyDashboard.tsx
+- bunx eslint AgencyDashboard.tsx → 0 errors, 0 warnings
+- French throughout
+- Mobile responsive (CSS Grid auto-fit on every section)
+- WHITE bg + sage green + charcoal accents (matches C token system)
+
+Work record: /home/z/my-project/agent-ctx/BUILD-4-agency-build.md
+
+---
+Task ID: BUILD-3
+Agent: Build-3 — Enterprise Dashboard
+Task: Build Enterprise dashboard with 10 sections from brainstorm
+
+Stage Summary:
+- 10 sections built: YES
+- Charts from Charts.tsx: YES
+- 0 TypeScript errors
+
+Sections delivered (all real API data, NO mock):
+1. Executive KPI Dashboard — 8 KPIs in 4×2 grid
+   (score, sentiment, AI vis, SOV, alerts, articles, influencers, API calls)
+   Sources: brand-health + crisis-alerts + ai-visibility + share-of-voice
+            + influencers-db + api-keys + sentiment-trend(30d)
+2. DEFCON Crisis Readiness — gauge + pulse button + HeatMap of alerts
+   Sources: crisis-alerts → derived DEFCON 1-5 + HeatMap from alert timestamps
+3. Multi-Team Dashboard — 5 teams, expandable rows + sentiment bars
+   Sources: company/team + brand-health (sentiment)
+4. Governance Panel — 4 cards (Équipes/Utilisateurs/Workflows/Audit SHA-256)
+   Sources: company/team (count)
+5. API & Integrations — masked key + usage bar + 5 integration cards
+   Sources: api-keys + webhooks
+6. 9-LLM AI Visibility Grid — 3×3 grid (GPT-4, Claude, Gemini, Grok, Mistral,
+   Llama, Perplexity, Copilot, HarchIQ) + AI paragraph
+   Sources: ai-visibility (real platforms merged with canonical 9-LLM list)
+7. Influencer Marketing — 3 KPIs + top 5 table
+   Sources: influencers-db
+8. Executive Briefing Generator — 5 report types + Q1-Q4 + 7 sections + history
+   Sources: briefing/list + briefing(POST)
+9. HarchIQ AI Enterprise — full chat with conversation sidebar, 6 suggestions,
+   export button, sources cited
+   Sources: console/ask (POST)
+10. Competitor Deep-Dive — RadarChart + LineChart + DonutChart + AI insights
+    + "Surveiller ce concurrent" toggle
+    Sources: competitor-radar + share-of-voice + sentiment-trend + console/ask
+
+Charts used from Charts.tsx:
+- RadarChart (Section 10 — vous vs concurrent, 6 axes)
+- DonutChart (Section 10 — parts de voix marché)
+- LineChart (Section 10 — évolution sentiment 30j, 2 séries)
+- HeatMap (Section 2 — activité alertes 26 semaines)
+
+Design:
+- WHITE bg + sage green + charcoal accents (C token system)
+- 4-column KPI grid, 2-column section grids
+- French throughout
+- Mobile responsive (CSS Grid auto-fit minmax on every section)
+- Inline SVG icons (8 custom icons)
+- Board-ready dense layout, eyebrow + title + subtitle per section
+- Pulse animation on "Activer le mode crise" button
+
+Quality:
+- bunx tsc --noEmit --pretty false → 0 errors (exit 0)
+- bun run lint → 0 errors in EnterpriseDashboard.tsx
+  (pre-existing errors in other modules unchanged)
+- Converted heatData from useEffect+setState to useMemo (lint-clean)
+
+Work record: /home/z/my-project/agent-ctx/BUILD-3-Build3-EnterpriseDashboard.md

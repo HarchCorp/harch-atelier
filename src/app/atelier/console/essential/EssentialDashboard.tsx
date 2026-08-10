@@ -1,46 +1,66 @@
 "use client";
 
-// ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard — Plan "Essentiel" (PME)
 //
-//  Richer than "basic and simple". Includes 7 new sections on top
-//  of the existing baseline (onboarding checklist, KPIs, sentiment
-//  chart, topics, AI visibility, HarchIQ panel):
+//  ULTIMATE single-screen monitoring dashboard — 10 must-have sections
+//  from brainstorm-essentiel-pro.md:
 //
-//   1. Live article feed — last 5 articles mentioning the company
-//   2. Source diversity widget — top 10 sources, SVG bars
-//   3. Weekly AI summary — synthèse de la semaine (HarchIQ AI)
-//   4. Quick stats bar — Sources / Langues / Portée / Engagement
-//   5. Enhanced HarchIQ AI panel — conversation history + suggestions
-//   6. Competitor snapshot — you vs 2 competitors (Pro upsell)
-//   7. Recent alerts timeline — 7-day horizontal SVG timeline
-//
-//  Data sources:
-//   • /api/console/brand-health          (score, sentiment, crisis)
-//   • /api/console/crisis-alerts         (live article feed)
-//   • /api/console/insights             (weekly AI summary)
-//   • /api/console/source-distribution  (source diversity)
-//   • /api/console/topics              (top topics)
-//   • /api/console/alert-timeline      (7-day timeline)
-//   • /api/console/ai-visibility       (engine visibility)
-//   • /api/console/sentiment-trend     (sentiment chart)
-//   • /api/console/competitor-radar    (competitor snapshot)
-//   • /api/console/ask                 (HarchIQ Q&A, POST)
+//    1. Score de Réputation (GaugeChart) — semi-circular gauge + trend
+//    2. Top 3 Alertes — 3 most critical alerts (severity tiles)
+//    3. Tendance Sentiment 7 jours (LineChart) — 3-series daily trend
+//    4. Dernières Mentions — 5 most recent articles feed
+//    5. Snapshot Visibilité IA — 3 LLM cards (ChatGPT, Perplexity, Gemini)
+//    6. Résumé Hebdo IA — HarchIQ-generated weekly summary + regenerate
+//    7. Diversité Sources (BarChart) — top 10 sources by article count
+//    8. Position Harch 100 — company's rank in the monthly Harch 100
+//    9. Actions Rapides — 4 quick action buttons (CSV, Ask, H100, Demo)
+//   10. Upsell Pro — sage-tinted banner with "Découvrir Pro →" CTA
 //
 //  Design:
-//   • C.* design tokens (sage/stone + emerald-500 CTA, neutral-950 text)
-//   • White cards, 12px radius, subtle shadow (C.shadowSm)
-//   • SVG charts only (sage green + charcoal)
+//   • C.* design tokens (white surfaces, emerald-500 CTA, charcoal text)
+//   • Each section: white card, 12px radius, 1px border, 24px padding
+//   • 24px gap between sections (Tailwind gap-6)
+//   • 2-column grid: sections 3+4, 5+6, 7+8 (collapses to 1-col on mobile)
 //   • French throughout, mobile-first responsive
-//   • Real API data only — show "—" if empty
+//   • Real API data only — "—" when empty, skeletons while loading
+//   • Charts imported from ../Charts.tsx (GaugeChart, LineChart, BarChart)
 //
-//  Task ID: ENRICH-1
-// ════════════════════════════════════════════════════════════════
+//  Data sources (all real, no mock):
+//   • /api/console/brand-health          (score, trend, sentiment)
+//   • /api/console/crisis-alerts         (alerts + articles)
+//   • /api/console/sentiment-trend       (7d sentiment + company name)
+//   • /api/console/ai-visibility         (LLM rankings)
+//   • /api/console/insights             (weekly AI summary)
+//   • /api/console/source-distribution  (source diversity)
+//   • /api/harch100/latest              (Harch 100 ranking)
+//   • /api/console/export-csv           (CSV download trigger)
+//
+//  Task ID: BUILD-1
+// ════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { signOut } from "next-auth/react";
+import {
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ArrowRight,
+  Bell,
+  Download,
+  MessageSquare,
+  BarChart3,
+  Sparkles,
+  RefreshCw,
+  LogOut,
+  ExternalLink,
+  ChevronRight,
+} from "lucide-react";
 import { C } from "../../components/tokens";
+import { GaugeChart, LineChart, BarChart, type LinePoint, type BarDatum } from "../Charts";
 
-// ─── TYPES ────────────────────────────────────────────────────────
+// ─── TYPES ────────────────────────────────────────────────────────────
 
 interface BrandHealth {
   score: number;
@@ -51,7 +71,7 @@ interface BrandHealth {
   mentionVelocity: number;
   crisisLevel: "safe" | "watch" | "warning" | "critical";
   crisisScore: number;
-  topNarrative: { label: string; momentum: string; sentiment: number };
+  topNarrative: { label: string; momentum: string; sentiment: number } | null;
   aiVisibility: Array<{ engine: string; score: number }>;
   recommendation: string;
   lastUpdated: string;
@@ -89,40 +109,6 @@ interface SourceRow {
   type: "media" | "social";
 }
 
-interface TopicRow {
-  label: string;
-  count: number;
-  type: "source" | "risk";
-}
-
-interface TimelineBucket {
-  time: string;
-  count: number;
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-}
-
-interface TimelineEvent {
-  id: string;
-  date: string;
-  source: string;
-  title: string;
-  sentiment: number | null;
-  sentimentLabel: string | null;
-  severity: "critical" | "high" | "medium" | "low";
-}
-
-interface AiVisibilityEngine {
-  platform: string;
-  cited: boolean;
-  position: string | null;
-  sentiment: string | null;
-  confidence: number;
-  summary: string | null;
-}
-
 interface SentimentDay {
   date: string;
   avgScore: number;
@@ -132,29 +118,36 @@ interface SentimentDay {
   negative: number;
 }
 
-interface CompetitorBrand {
-  name: string;
-  color: string;
-  isYou: boolean;
-  scores: {
-    sentiment: number;
-    shareOfVoice: number;
-    aiVisibility: number;
-    influencerAuthority: number;
-    crisisResilience: number;
-    mediaReach: number;
-  };
+interface AiVisibilityEngine {
+  platform: string;
+  cited: boolean;
+  position: string | null;
+  sentiment: string | null;
+  confidence: number;
+  summary: string | null;
+  checkedAt: string;
 }
 
-interface AskTurn {
+interface Harch100Ranking {
+  rank: number;
+  companyId: string;
+  companyName: string;
+  sector: string;
+  reputationScore: number;
+  totalArticles: number;
+  negativeCount: number;
+  positiveCount: number;
+}
+
+interface Harch100Snapshot {
   id: string;
-  question: string;
-  answer: string;
-  sources: Array<{ type: string; id: string; title: string }>;
-  at: number;
+  period: string;
+  rankings: Harch100Ranking[];
+  generatedAt: string;
+  publishedAt: string | null;
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────
+// ─── HELPERS ──────────────────────────────────────────────────────────
 
 function fmtRelative(ts: number | string | undefined): string {
   if (!ts) return "—";
@@ -171,10 +164,23 @@ function fmtRelative(ts: number | string | undefined): string {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
-function fmtDayLabel(iso: string): string {
+function fmtDayShort(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit" });
+}
+
+function fmtPeriod(period: string): string {
+  // "2026-08" → "août 2026"
+  if (!period || !/^\d{4}-\d{2}$/.test(period)) return period || "—";
+  const [y, m] = period.split("-");
+  const months = [
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+  ];
+  const mi = parseInt(m, 10) - 1;
+  if (mi < 0 || mi > 11) return period;
+  return `${months[mi]} ${y}`;
 }
 
 function fmtNumber(n: number | undefined | null): string {
@@ -204,43 +210,27 @@ function severityLabel(sev: string): string {
   return "OK";
 }
 
-// Quick stats (Sources / Langues / Portée / Engagement) — derived
-// from source-distribution + brand-health + alert-timeline.
-function deriveQuickStats(
-  sources: SourceRow[] | null,
-  health: BrandHealth | null,
-  buckets: TimelineBucket[] | null,
-): { sources: number; languages: string[]; reach: string; engagement: string } {
-  const sourceCount = sources?.length ?? 0;
-  // Detect languages from article/alert fields — Essentiel doesn't
-  // have a dedicated endpoint, so derive from source types and the
-  // brand-health summary. If real data is missing, show "—".
-  const langs: string[] = [];
-  if (sourceCount > 0) {
-    // Morocco-targeted monitoring → at least FR + AR.
-    langs.push("FR", "AR");
-    // If any "international" source detected, add EN.
-    if (sources?.some((s) => /facebook|twitter|tiktok|reuters|bloomberg/i.test(s.name))) {
-      langs.push("EN");
-    }
-  }
-  // Reach — estimate as mentionCount24h * 100 * shareOfVoice%
-  let reach = "—";
-  if (health) {
-    const est = Math.round((health.mentionCount24h ?? 0) * 1850 * (health.shareOfVoice / 100 || 1));
-    reach = est > 0 ? fmtNumber(est) : "—";
-  }
-  // Engagement — derive from total mentions over 7d.
-  let engagement = "—";
-  if (buckets && buckets.length > 0) {
-    const total7d = buckets.reduce((s, b) => s + b.count, 0);
-    const est = Math.round(total7d * 3.7);
-    engagement = est > 0 ? fmtNumber(est) : "—";
-  }
-  return { sources: sourceCount, languages: langs, reach, engagement };
+// Match the user's company name against Harch 100 rankings.
+// Case-insensitive, trims whitespace, also matches on slug-ish forms.
+function findCompanyRank(
+  rankings: Harch100Ranking[],
+  companyName: string | undefined,
+): Harch100Ranking | null {
+  if (!rankings || rankings.length === 0 || !companyName) return null;
+  const target = companyName.trim().toLowerCase();
+  // Exact match first
+  let match = rankings.find((r) => r.companyName.trim().toLowerCase() === target);
+  if (match) return match;
+  // Substring match (one contains the other)
+  match = rankings.find(
+    (r) =>
+      r.companyName.toLowerCase().includes(target) ||
+      target.includes(r.companyName.toLowerCase()),
+  );
+  return match ?? null;
 }
 
-// ─── PRIMITIVE: Card ──────────────────────────────────────────────
+// ─── PRIMITIVE: Card ──────────────────────────────────────────────────
 
 function Card({
   title,
@@ -250,6 +240,7 @@ function Card({
   className = "",
   bodyClassName = "",
   headerRight,
+  style,
 }: {
   title?: string;
   subtitle?: string;
@@ -258,20 +249,22 @@ function Card({
   className?: string;
   bodyClassName?: string;
   headerRight?: React.ReactNode;
+  style?: CSSProperties;
 }) {
   return (
     <section
-      className={`bg-white rounded-[12px] border border-[${C.border}] ${className}`}
+      className={`bg-white rounded-[12px] ${className}`}
       style={{
         backgroundColor: C.bg,
         borderRadius: 12,
         border: `1px solid ${C.border}`,
         boxShadow: C.shadowSm,
+        ...style,
       }}
     >
       {(title || headerRight) && (
         <header
-          className="flex items-start justify-between gap-3 px-5 pt-4 pb-3"
+          className="flex items-start justify-between gap-3 px-6 pt-5 pb-4"
           style={{ borderBottom: `1px solid ${C.border}` }}
         >
           <div className="min-w-0">
@@ -307,464 +300,555 @@ function Card({
           </div>
         </header>
       )}
-      <div className={bodyClassName || "p-5"}>{children}</div>
+      <div className={bodyClassName || "p-6"}>{children}</div>
     </section>
   );
 }
 
-// ─── SECTION: Header ──────────────────────────────────────────────
+// ─── PRIMITIVE: EmptyState ────────────────────────────────────────────
 
-function DashboardHeader({ lastUpdated }: { lastUpdated: string | null }) {
+function EmptyState({ label, height = 120 }: { label: string; height?: number }) {
   return (
-    <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
-            style={{
-              backgroundColor: "rgba(16,185,129,0.10)",
-              color: C.cta,
-              fontFamily: C.fontMono,
-            }}
+    <div className="py-8 text-center flex flex-col items-center justify-center" style={{ minHeight: height }}>
+      <div
+        className="w-10 h-10 mb-2 rounded-full flex items-center justify-center"
+        style={{ backgroundColor: "rgba(120,113,108,0.10)" }}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="9" cy="9" r="7" stroke={C.accent} strokeWidth="1.4" />
+          <path d="M9 5 V9 M9 12 V12.5" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </div>
+      <p className="text-[12px]" style={{ color: C.textMuted }}>
+        {label}
+      </p>
+    </div>
+  );
+}
+
+// ─── PRIMITIVE: Skeleton ──────────────────────────────────────────────
+
+function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <div
+      className={`animate-pulse rounded ${className}`}
+      style={{ backgroundColor: "rgba(120,113,108,0.08)", ...style }}
+    />
+  );
+}
+
+// ─── HEADER ───────────────────────────────────────────────────────────
+
+function DashboardHeader({
+  lastUpdated,
+  alertCount,
+}: {
+  lastUpdated: string | null;
+  alertCount: number;
+}) {
+  return (
+    <header
+      className="sticky top-0 z-30 mb-6 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: `1px solid ${C.border}`,
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: "rgba(16,185,129,0.10)",
+                color: C.cta,
+                fontFamily: C.fontMono,
+              }}
+            >
+              Plan Essentiel
+            </span>
+            <span
+              className="text-[11px] hidden sm:inline"
+              style={{ color: C.textMuted, fontFamily: C.fontMono }}
+            >
+              Surveillance 24/7 · Maroc & Afrique
+            </span>
+          </div>
+          <h1
+            className="text-[22px] sm:text-[26px] font-bold tracking-tight leading-tight"
+            style={{ color: C.text, fontFamily: C.fontSans }}
           >
-            Plan Essentiel
-          </span>
-          <span className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-            PME · Surveillance 24/7
-          </span>
+            Tableau de bord réputation
+          </h1>
         </div>
-        <h1
-          className="text-[26px] sm:text-[30px] font-bold tracking-tight"
-          style={{ color: C.text, fontFamily: C.fontSans }}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right hidden sm:block">
+            <div
+              className="text-[10px] uppercase tracking-wider"
+              style={{ color: C.textMuted, fontFamily: C.fontMono }}
+            >
+              Dernière maj
+            </div>
+            <div className="text-[12px]" style={{ color: C.textBody, fontFamily: C.fontMono }}>
+              {lastUpdated ?? "—"}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/atelier/login" })}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+            style={{ border: `1px solid ${C.borderStrong}`, color: C.textBody }}
+            aria-label="Se déconnecter"
+            title="Se déconnecter"
+          >
+            <LogOut size={15} />
+          </button>
+        </div>
+      </div>
+      {alertCount > 0 && (
+        <div
+          className="mt-3 flex items-center gap-2 text-[12px]"
+          style={{ color: alertCount >= 3 ? C.danger : C.warning }}
         >
-          Tableau de bord réputation
-        </h1>
-        <p className="text-[13px] mt-1" style={{ color: C.textBody }}>
-          Vue d'ensemble de votre image publique — sources, sentiment, IA, crises.
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wider" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-            Dernière maj
-          </div>
-          <div className="text-[12px]" style={{ color: C.textBody, fontFamily: C.fontMono }}>
-            {lastUpdated ?? "—"}
-          </div>
+          <Bell size={13} />
+          <span>
+            <strong style={{ fontFamily: C.fontMono }}>{alertCount}</strong> alerte{alertCount > 1 ? "s" : ""} active{alertCount > 1 ? "s" : ""} · traiter en priorité
+          </span>
         </div>
-      </div>
+      )}
     </header>
   );
 }
 
-// ─── SECTION: Onboarding Checklist ───────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 1 — Score de Réputation (GaugeChart)
+// ════════════════════════════════════════════════════════════════════
 
-interface OnboardingStep {
-  id: string;
-  label: string;
-  done: boolean;
-}
-
-function OnboardingChecklist({
-  steps,
+function ScoreReputationSection({
+  health,
   isLoading,
 }: {
-  steps: OnboardingStep[];
+  health: BrandHealth | null;
   isLoading: boolean;
 }) {
-  const done = steps.filter((s) => s.done).length;
-  const total = steps.length || 4;
-  const pct = Math.round((done / total) * 100);
+  const score = health?.score ?? 0;
+  const trend = health?.trend ?? 0;
+  const trendUp = trend > 0;
+  const trendDown = trend < 0;
 
-  // Derive onboarding steps from real signals.
-  // • "Connect sources" — done if source-distribution returned ≥ 1 source
-  // • "AI engines checked" — done if aiVisibility returned ≥ 1 engine
-  // • "Alerts configured" — done if brand-health crisisScore is not 0 OR crisis-alerts returned ≥ 1
-  // • "First report viewed" — always false (Essentiel — encourage upgrade)
-  // The parent passes these in.
+  const zoneLabel =
+    score >= 70 ? "Solide" : score >= 40 ? "À surveiller" : "Critique";
+  const zoneColor =
+    score >= 70 ? C.success : score >= 40 ? C.warning : C.danger;
 
   return (
     <Card
-      title="Configuration du suivi"
-      subtitle="Configurez votre surveillance en 4 étapes"
-      badge={`${done}/${total}`}
-      bodyClassName="p-5"
-    >
-      <div
-        className="mb-4 h-1.5 w-full rounded-full overflow-hidden"
-        style={{ backgroundColor: "rgba(120,113,108,0.12)" }}
-        aria-label={`Progression ${pct}%`}
-      >
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: C.cta }}
-        />
-      </div>
-      <ul className="space-y-2.5">
-        {isLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <li key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "rgba(120,113,108,0.15)" }} />
-                <div className="flex-1 h-3 rounded" style={{ backgroundColor: "rgba(120,113,108,0.10)" }} />
-              </li>
-            ))
-          : steps.map((s) => (
-              <li key={s.id} className="flex items-center gap-3">
-                <div
-                  className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                  style={{
-                    backgroundColor: s.done ? C.cta : "transparent",
-                    border: s.done ? "none" : `1.5px solid ${C.borderStrong}`,
-                  }}
-                >
-                  {s.done && (
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path
-                        d="M2 5 L4 7 L8 3"
-                        stroke="white"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <span
-                  className="text-[13px]"
-                  style={{
-                    color: s.done ? C.textMuted : C.text,
-                    textDecoration: s.done ? "line-through" : "none",
-                  }}
-                >
-                  {s.label}
-                </span>
-              </li>
-            ))}
-      </ul>
-    </Card>
-  );
-}
-
-// ─── SECTION 4: Quick Stats Bar ──────────────────────────────────
-
-function QuickStatsBar({
-  sources,
-  languages,
-  reach,
-  engagement,
-  isLoading,
-}: {
-  sources: number;
-  languages: string[];
-  reach: string;
-  engagement: string;
-  isLoading: boolean;
-}) {
-  const stats: Array<{ label: string; value: string; sub?: string }> = [
-    { label: "Sources", value: isLoading ? "—" : sources > 0 ? String(sources) : "—", sub: "distinctes" },
-    {
-      label: "Langues",
-      value: isLoading ? "—" : languages.length > 0 ? languages.join(", ") : "—",
-      sub: "détectées",
-    },
-    { label: "Portée", value: isLoading ? "—" : reach, sub: "estimée" },
-    { label: "Engagement", value: isLoading ? "—" : engagement, sub: "social" },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {stats.map((s) => (
-        <div
-          key={s.label}
-          className="bg-white rounded-[12px] p-3 sm:p-4"
-          style={{
-            backgroundColor: C.bg,
-            borderRadius: 12,
-            border: `1px solid ${C.border}`,
-            boxShadow: C.shadowSm,
-          }}
+      title="Score de réputation"
+      subtitle="Synthèse temps réel — sentiment, visibilité, crises"
+      badge={health?.source === "demo" ? "Démo" : "Live"}
+      bodyClassName="p-6"
+      headerRight={
+        <a
+          href="/atelier/console/brand-monitor"
+          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
+          style={{ color: C.cta }}
         >
-          <div
-            className="text-[10px] uppercase tracking-wider mb-1"
-            style={{ color: C.textMuted, fontFamily: C.fontMono }}
-          >
-            {s.label}
-          </div>
-          <div
-            className="text-[18px] sm:text-[20px] font-semibold leading-tight"
-            style={{ color: C.text, fontFamily: C.fontSans }}
-          >
-            {s.value}
-          </div>
-          {s.sub && (
-            <div className="text-[11px] mt-0.5" style={{ color: C.textMuted }}>
-              {s.sub}
+          Voir le détail
+          <ChevronRight size={13} />
+        </a>
+      }
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+        {/* Gauge — spans 2 cols on desktop */}
+        <div className="lg:col-span-2 flex justify-center">
+          {isLoading ? (
+            <Skeleton style={{ width: "100%", maxWidth: 460, height: 220 }} />
+          ) : (
+            <div style={{ width: "100%", maxWidth: 460 }}>
+              <GaugeChart
+                value={score}
+                max={100}
+                label="Score global / 100"
+                height={220}
+              />
             </div>
           )}
         </div>
-      ))}
-    </div>
-  );
-}
 
-// ─── SECTION: KPIs ───────────────────────────────────────────────
-
-function KpisRow({ health, isLoading }: { health: BrandHealth | null; isLoading: boolean }) {
-  const crisisLabel =
-    health?.crisisLevel === "critical"
-      ? "Critique"
-      : health?.crisisLevel === "warning"
-      ? "Alerte"
-      : health?.crisisLevel === "watch"
-      ? "Veille"
-      : "Nominal";
-
-  const kpis: Array<{ label: string; value: string; sub: string; tone?: "warn" | "danger" | "ok" }> = [
-    {
-      label: "Score réputation",
-      value: isLoading || !health ? "—" : String(health.score),
-      sub: isLoading || !health ? "—" : `${health.trend >= 0 ? "+" : ""}${health.trend} pts`,
-      tone: (health?.score ?? 0) >= 70 ? "ok" : (health?.score ?? 0) < 50 ? "danger" : "warn",
-    },
-    {
-      label: "Sentiment positif",
-      value: isLoading || !health ? "—" : `${health.sentiment.positive}%`,
-      sub: isLoading || !health ? "—" : `Neg ${health.sentiment.negative}% · Neu ${health.sentiment.neutral}%`,
-    },
-    {
-      label: "Mentions 24h",
-      value: isLoading || !health ? "—" : fmtNumber(health.mentionCount24h),
-      sub: isLoading || !health ? "—" : `${health.mentionVelocity} mentions/h`,
-    },
-    {
-      label: "Niveau de crise",
-      value: isLoading || !health ? "—" : crisisLabel,
-      sub: isLoading || !health ? "—" : `Score ${health.crisisScore}/100`,
-      tone:
-        health?.crisisLevel === "critical"
-          ? "danger"
-          : health?.crisisLevel === "warning"
-          ? "warn"
-          : "ok",
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {kpis.map((k) => {
-        const accent =
-          k.tone === "danger"
-            ? C.danger
-            : k.tone === "warn"
-            ? C.warning
-            : k.tone === "ok"
-            ? C.success
-            : C.text;
-        return (
-          <div
-            key={k.label}
-            className="bg-white rounded-[12px] p-4 sm:p-5"
-            style={{
-              backgroundColor: C.bg,
-              borderRadius: 12,
-              border: `1px solid ${C.border}`,
-              boxShadow: C.shadowSm,
-            }}
-          >
-            <div
-              className="text-[10px] uppercase tracking-wider mb-1.5"
-              style={{ color: C.textMuted, fontFamily: C.fontMono }}
-            >
-              {k.label}
-            </div>
-            <div
-              className="text-[24px] sm:text-[28px] font-bold leading-none"
-              style={{ color: accent, fontFamily: C.fontSans }}
-            >
-              {k.value}
-            </div>
-            <div className="text-[11px] mt-1.5" style={{ color: C.textMuted }}>
-              {k.sub}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── SECTION: Sentiment Chart (SVG) ──────────────────────────────
-
-function SentimentChart({ data, isLoading }: { data: SentimentDay[]; isLoading: boolean }) {
-  // SVG line chart — daily avg sentiment over 7-30 days.
-  // x-axis: dates, y-axis: avgScore (-1..+1 → mapped to 0..100).
-  const W = 600;
-  const H = 200;
-  const PAD_X = 32;
-  const PAD_Y = 24;
-  const innerW = W - 2 * PAD_X;
-  const innerH = H - 2 * PAD_Y;
-
-  const points = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    return data.map((d, i) => {
-      const x = PAD_X + (i / Math.max(1, data.length - 1)) * innerW;
-      // Map -1..+1 to bottom..top.
-      const v = Math.max(-1, Math.min(1, d.avgScore ?? 0));
-      const y = PAD_Y + innerH - ((v + 1) / 2) * innerH;
-      return { x, y, d };
-    });
-  }, [data, innerW, innerH]);
-
-  const pathD = useMemo(() => {
-    if (points.length === 0) return "";
-    return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-  }, [points]);
-
-  // Area fill (under the line).
-  const areaD = useMemo(() => {
-    if (points.length === 0) return "";
-    const top = `M ${points[0].x.toFixed(1)} ${PAD_Y + innerH} `;
-    const line = points.map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-    const bottom = `L ${points[points.length - 1].x.toFixed(1)} ${PAD_Y + innerH} Z`;
-    return top + line + bottom;
-  }, [points, innerH]);
-
-  // Zero-line y-position (sentiment = 0).
-  const zeroY = PAD_Y + innerH / 2;
-
-  return (
-    <Card
-      title="Tendance du sentiment"
-      subtitle="Score moyen quotidien · 7 derniers jours"
-      badge="7 jours"
-      bodyClassName="p-4 sm:p-5"
-    >
-      {isLoading ? (
-        <div className="h-[200px] w-full animate-pulse rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-      ) : points.length === 0 ? (
-        <EmptyState label="Pas encore de données de sentiment" />
-      ) : (
-        <div className="w-full overflow-x-auto">
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 480 }} role="img" aria-label="Tendance du sentiment 7 jours">
-            {/* Y-axis grid: 3 lines (-1, 0, +1) */}
-            <line x1={PAD_X} y1={PAD_Y} x2={W - PAD_X} y2={PAD_Y} stroke={C.border} strokeWidth="1" />
-            <line
-              x1={PAD_X}
-              y1={zeroY}
-              x2={W - PAD_X}
-              y2={zeroY}
-              stroke={C.borderStrong}
-              strokeWidth="1"
-              strokeDasharray="3 3"
-            />
-            <line x1={PAD_X} y1={PAD_Y + innerH} x2={W - PAD_X} y2={PAD_Y + innerH} stroke={C.border} strokeWidth="1" />
-
-            {/* Y labels */}
-            <text x={PAD_X - 8} y={PAD_Y + 4} fontSize="9" fill={C.textMuted} textAnchor="end" fontFamily={C.fontMono}>
-              +1
-            </text>
-            <text x={PAD_X - 8} y={zeroY + 4} fontSize="9" fill={C.textMuted} textAnchor="end" fontFamily={C.fontMono}>
-              0
-            </text>
-            <text x={PAD_X - 8} y={PAD_Y + innerH + 4} fontSize="9" fill={C.textMuted} textAnchor="end" fontFamily={C.fontMono}>
-              -1
-            </text>
-
-            {/* Area fill */}
-            {areaD && <path d={areaD} fill="rgba(120,113,108,0.10)" stroke="none" />}
-
-            {/* Line */}
-            {pathD && (
-              <path d={pathD} fill="none" stroke={C.accent} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-            )}
-
-            {/* Points */}
-            {points.map((p, i) => {
-              const color =
-                (p.d.avgScore ?? 0) > 0.1
-                  ? C.success
-                  : (p.d.avgScore ?? 0) < -0.1
-                  ? C.danger
-                  : C.accent;
-              return <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={color} stroke={C.bg} strokeWidth="1" />;
-            })}
-
-            {/* X labels (every other point if many) */}
-            {points.map((p, i) => {
-              const step = points.length > 14 ? 3 : points.length > 7 ? 2 : 1;
-              if (i % step !== 0 && i !== points.length - 1) return null;
-              return (
-                <text
-                  key={i}
-                  x={p.x}
-                  y={H - 6}
-                  fontSize="9"
-                  fill={C.textMuted}
-                  textAnchor="middle"
-                  fontFamily={C.fontMono}
+        {/* Trend + zone + narrative */}
+        <div className="space-y-4">
+          {isLoading ? (
+            <>
+              <Skeleton style={{ height: 60 }} />
+              <Skeleton style={{ height: 40 }} />
+              <Skeleton style={{ height: 40 }} />
+            </>
+          ) : (
+            <>
+              {/* Trend */}
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  backgroundColor: trendUp
+                    ? "rgba(16,185,129,0.06)"
+                    : trendDown
+                    ? "rgba(239,68,68,0.06)"
+                    : "rgba(120,113,108,0.06)",
+                  border: `1px solid ${trendUp ? C.success + "30" : trendDown ? C.danger + "30" : C.border}`,
+                }}
+              >
+                <div
+                  className="text-[10px] uppercase tracking-wider mb-1"
+                  style={{ color: C.textMuted, fontFamily: C.fontMono }}
                 >
-                  {fmtDayLabel(p.d.date)}
-                </text>
-              );
-            })}
-          </svg>
+                  Variation
+                </div>
+                <div className="flex items-baseline gap-2">
+                  {trendUp ? (
+                    <TrendingUp size={18} style={{ color: C.success }} />
+                  ) : trendDown ? (
+                    <TrendingDown size={18} style={{ color: C.danger }} />
+                  ) : (
+                    <Minus size={18} style={{ color: C.accent }} />
+                  )}
+                  <span
+                    className="text-[22px] font-bold tabular-nums"
+                    style={{
+                      color: trendUp ? C.success : trendDown ? C.danger : C.accent,
+                      fontFamily: C.fontMono,
+                    }}
+                  >
+                    {trend >= 0 ? "+" : ""}
+                    {trend.toFixed(1)}
+                  </span>
+                  <span className="text-[11px]" style={{ color: C.textMuted }}>
+                    pts vs semaine dernière
+                  </span>
+                </div>
+              </div>
+
+              {/* Zone label */}
+              <div>
+                <div
+                  className="text-[10px] uppercase tracking-wider mb-1"
+                  style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                >
+                  Statut
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: zoneColor }}
+                  />
+                  <span
+                    className="text-[16px] font-semibold"
+                    style={{ color: zoneColor, fontFamily: C.fontSans }}
+                  >
+                    {zoneLabel}
+                  </span>
+                </div>
+              </div>
+
+              {/* Narrative */}
+              {health?.topNarrative && (
+                <div>
+                  <div
+                    className="text-[10px] uppercase tracking-wider mb-1"
+                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                  >
+                    Narrative dominant
+                  </div>
+                  <p className="text-[13px] font-medium leading-snug" style={{ color: C.text }}>
+                    {health.topNarrative.label}
+                  </p>
+                  <div
+                    className="text-[11px] mt-1 flex items-center gap-2"
+                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                  >
+                    <span>Momentum: {health.topNarrative.momentum}</span>
+                    <span>·</span>
+                    <span>Sentiment: {health.topNarrative.sentiment.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
     </Card>
   );
 }
 
-// ─── SECTION 1: Live Article Feed ────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 2 — Top 3 Alertes
+// ════════════════════════════════════════════════════════════════════
 
-function LiveArticleFeed({
+function TopAlertsSection({
   alerts,
   isLoading,
 }: {
   alerts: CrisisAlert[];
   isLoading: boolean;
 }) {
-  const top = alerts.slice(0, 5);
+  // Sort by severity (critical > warning > watch) then by timestamp desc
+  const sevRank = (s: string) => (s === "critical" ? 3 : s === "warning" ? 2 : s === "watch" ? 1 : 0);
+  const top = useMemo(
+    () =>
+      [...alerts]
+        .sort((a, b) => sevRank(b.severity) - sevRank(a.severity) || b.timestamp - a.timestamp)
+        .slice(0, 3),
+    [alerts],
+  );
 
   return (
     <Card
-      title="Articles en direct"
-      subtitle="Dernières mentions · triées par date"
+      title="Top 3 alertes"
+      subtitle="Critiques et prioritaires — à traiter immédiatement"
+      badge={top.length > 0 ? `${top.length} actives` : "—"}
+      bodyClassName="p-6"
+      headerRight={
+        <a
+          href="/atelier/console/brand-monitor"
+          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
+          style={{ color: C.cta }}
+        >
+          Voir toutes les alertes
+          <ChevronRight size={13} />
+        </a>
+      }
+    >
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} style={{ height: 120 }} />
+          ))}
+        </div>
+      ) : top.length === 0 ? (
+        <EmptyState label="Aucune alerte active — tout est sous contrôle" height={120} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {top.map((a) => {
+            const color = severityColor(a.severity);
+            const bg = severityBg(a.severity);
+            return (
+              <article
+                key={a.id}
+                className="rounded-xl p-4 transition-all hover:translate-y-[-1px]"
+                style={{
+                  backgroundColor: bg,
+                  border: `1px solid ${color}30`,
+                  borderLeft: `3px solid ${color}`,
+                }}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium"
+                    style={{ backgroundColor: color, color: "white", fontFamily: C.fontMono }}
+                  >
+                    {a.severity === "critical" && <AlertTriangle size={10} />}
+                    {severityLabel(a.severity)}
+                  </span>
+                  <span
+                    className="text-[10px]"
+                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                  >
+                    {fmtRelative(a.timestamp)}
+                  </span>
+                </div>
+                <p
+                  className="text-[13px] font-medium leading-snug mb-2 line-clamp-2"
+                  style={{ color: C.text }}
+                >
+                  {a.title}
+                </p>
+                <div
+                  className="text-[11px] flex items-center gap-1.5"
+                  style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                >
+                  <span className="truncate">{a.source || "—"}</span>
+                  {a.language && (
+                    <>
+                      <span>·</span>
+                      <span className="uppercase">{a.language}</span>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 3 — Tendance Sentiment 7 jours (LineChart)
+// ════════════════════════════════════════════════════════════════════
+
+function SentimentTrendSection({
+  data,
+  isLoading,
+}: {
+  data: SentimentDay[];
+  isLoading: boolean;
+}) {
+  // Build LinePoint[] for the multi-series chart.
+  // 3 series: positive (green), neutral (gray), negative (red).
+  const chartData: LinePoint[] = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    return data.map((d) => ({
+      date: d.date,
+      series: [
+        { name: "Positif", value: d.positive, color: C.success },
+        { name: "Neutre", value: d.neutral, color: C.accent },
+        { name: "Négatif", value: d.negative, color: C.danger },
+      ],
+    }));
+  }, [data]);
+
+  // Last 7 days summary
+  const last7 = data.slice(-7);
+  const totalPos = last7.reduce((s, d) => s + d.positive, 0);
+  const totalNeg = last7.reduce((s, d) => s + d.negative, 0);
+  const totalNeu = last7.reduce((s, d) => s + d.neutral, 0);
+  const total = totalPos + totalNeg + totalNeu || 1;
+
+  return (
+    <Card
+      title="Tendance sentiment · 7 jours"
+      subtitle="Volume quotidien par polarité"
+      badge="7 jours"
+      bodyClassName="p-6"
+    >
+      {isLoading ? (
+        <Skeleton style={{ height: 240 }} />
+      ) : chartData.length < 2 ? (
+        <EmptyState label="Pas assez de données de sentiment sur 7 jours" height={200} />
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="text-center">
+              <div
+                className="text-[10px] uppercase tracking-wider mb-0.5"
+                style={{ color: C.textMuted, fontFamily: C.fontMono }}
+              >
+                Positif
+              </div>
+              <div
+                className="text-[18px] font-bold tabular-nums"
+                style={{ color: C.success, fontFamily: C.fontMono }}
+              >
+                {Math.round((totalPos / total) * 100)}%
+              </div>
+              <div className="text-[10px]" style={{ color: C.textMuted }}>
+                {fmtNumber(totalPos)} mentions
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className="text-[10px] uppercase tracking-wider mb-0.5"
+                style={{ color: C.textMuted, fontFamily: C.fontMono }}
+              >
+                Neutre
+              </div>
+              <div
+                className="text-[18px] font-bold tabular-nums"
+                style={{ color: C.accent, fontFamily: C.fontMono }}
+              >
+                {Math.round((totalNeu / total) * 100)}%
+              </div>
+              <div className="text-[10px]" style={{ color: C.textMuted }}>
+                {fmtNumber(totalNeu)} mentions
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className="text-[10px] uppercase tracking-wider mb-0.5"
+                style={{ color: C.textMuted, fontFamily: C.fontMono }}
+              >
+                Négatif
+              </div>
+              <div
+                className="text-[18px] font-bold tabular-nums"
+                style={{ color: C.danger, fontFamily: C.fontMono }}
+              >
+                {Math.round((totalNeg / total) * 100)}%
+              </div>
+              <div className="text-[10px]" style={{ color: C.textMuted }}>
+                {fmtNumber(totalNeg)} mentions
+              </div>
+            </div>
+          </div>
+          <LineChart data={chartData} height={240} />
+          <div
+            className="text-[10px] mt-2 text-center"
+            style={{ color: C.textMuted, fontFamily: C.fontMono }}
+          >
+            {fmtDayShort(last7[0]?.date)} → {fmtDayShort(last7[last7.length - 1]?.date)} · {fmtNumber(total)} mentions au total
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 4 — Dernières Mentions (article feed)
+// ════════════════════════════════════════════════════════════════════
+
+function LastMentionsSection({
+  alerts,
+  isLoading,
+}: {
+  alerts: CrisisAlert[];
+  isLoading: boolean;
+}) {
+  // 5 most recent articles (sorted by timestamp desc)
+  const top = useMemo(
+    () => [...alerts].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5),
+    [alerts],
+  );
+
+  return (
+    <Card
+      title="Dernières mentions"
+      subtitle="5 articles les plus récents vous citant"
       badge="Live"
       bodyClassName="p-0"
       headerRight={
-        <span
-          className="inline-flex items-center gap-1.5 text-[11px]"
-          style={{ color: C.textMuted, fontFamily: C.fontMono }}
+        <a
+          href="/atelier/console/brand-monitor"
+          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
+          style={{ color: C.cta }}
         >
-          <span
-            className="w-1.5 h-1.5 rounded-full inline-block animate-pulse"
-            style={{ backgroundColor: C.cta }}
-          />
-          temps réel
-        </span>
+          Voir tous les articles
+          <ChevronRight size={13} />
+        </a>
       }
     >
-      <div
-        className="max-h-[400px] overflow-y-auto"
-        style={{ scrollbarWidth: "thin" }}
-      >
+      <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
         {isLoading ? (
-          <div className="p-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="animate-pulse space-y-2">
-                <div className="h-3 w-1/3 rounded" style={{ backgroundColor: "rgba(120,113,108,0.10)" }} />
-                <div className="h-4 w-3/4 rounded" style={{ backgroundColor: "rgba(120,113,108,0.10)" }} />
-              </div>
+          <div className="p-5 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} style={{ height: 56 }} />
             ))}
           </div>
         ) : top.length === 0 ? (
-          <EmptyState label="Aucune mention récente" />
+          <div className="p-5">
+            <EmptyState label="Aucune mention récente" height={120} />
+          </div>
         ) : (
           <ul className="divide-y" style={{ borderColor: C.border }}>
             {top.map((a) => {
               const sev =
-                a.severity === "critical" ? "critical" : a.severity === "warning" ? "warning" : "watch";
+                a.severity === "critical"
+                  ? "critical"
+                  : a.severity === "warning"
+                  ? "warning"
+                  : "watch";
               return (
                 <li
                   key={a.id}
@@ -783,7 +867,10 @@ function LiveArticleFeed({
                       {severityLabel(sev)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-[11px] mb-0.5" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
+                      <div
+                        className="flex items-center gap-2 text-[11px] mb-0.5"
+                        style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                      >
                         <span className="truncate">{a.source || "—"}</span>
                         <span>·</span>
                         <span>{fmtRelative(a.timestamp)}</span>
@@ -795,16 +882,11 @@ function LiveArticleFeed({
                         )}
                       </div>
                       <p
-                        className="text-[13px] font-medium leading-snug mb-1"
+                        className="text-[13px] font-medium leading-snug line-clamp-2"
                         style={{ color: C.text }}
                       >
                         {a.title}
                       </p>
-                      {a.summary && (
-                        <p className="text-[12px] leading-snug line-clamp-2" style={{ color: C.textBody }}>
-                          {a.summary}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </li>
@@ -817,15 +899,169 @@ function LiveArticleFeed({
   );
 }
 
-// ─── SECTION 3: Weekly AI Summary ────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 5 — Snapshot Visibilité IA (3 LLM cards)
+// ════════════════════════════════════════════════════════════════════
 
-function WeeklySummary({ insight, isLoading }: { insight: InsightItem | null; isLoading: boolean }) {
+const TARGET_LLMS = ["ChatGPT", "Perplexity", "Gemini"] as const;
+
+function AIVisibilitySection({
+  engines,
+  isLoading,
+}: {
+  engines: AiVisibilityEngine[] | null;
+  isLoading: boolean;
+}) {
+  // Pick the 3 target LLMs (ChatGPT, Perplexity, Gemini).
+  // If a target LLM is not present in the response, show an "Non cité" placeholder card.
+  const cards = useMemo(() => {
+    if (!engines) return [];
+    return TARGET_LLMS.map((name) => {
+      const exact = engines.find((e) => e.platform.toLowerCase() === name.toLowerCase());
+      if (exact) return { name, engine: exact, missing: false as const };
+      // Fuzzy match (e.g. "ChatGPT-4" or "Perplexity AI")
+      const fuzzy = engines.find(
+        (e) =>
+          e.platform.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(e.platform.toLowerCase()),
+      );
+      if (fuzzy) return { name, engine: fuzzy, missing: false as const };
+      return { name, engine: null, missing: true as const };
+    });
+  }, [engines]);
+
   return (
     <Card
-      title="Synthèse de la semaine"
-      subtitle="Résumé généré par HarchIQ AI"
-      badge="IA"
-      bodyClassName="p-5"
+      title="Visibilité IA"
+      subtitle="Ce que les moteurs IA disent de vous"
+      badge={engines && engines.length > 0 ? `${engines.filter((e) => e.cited).length}/${engines.length} moteurs` : "—"}
+      bodyClassName="p-6"
+      headerRight={
+        <a
+          href="/atelier/console/brand-monitor"
+          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
+          style={{ color: C.cta }}
+        >
+          Voir le détail complet
+          <ChevronRight size={13} />
+        </a>
+      }
+    >
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} style={{ height: 130 }} />
+          ))}
+        </div>
+      ) : cards.length === 0 ? (
+        <EmptyState label="Aucune donnée IA disponible" height={130} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {cards.map(({ name, engine, missing }) => {
+            const cited = engine?.cited ?? false;
+            const position = engine?.position ?? null;
+            const sentiment = engine?.sentiment ?? null;
+            const sentimentLabel =
+              sentiment === "positive" ? "Positif" : sentiment === "negative" ? "Négatif" : sentiment === "neutral" ? "Neutre" : "—";
+            const sentimentColor =
+              sentiment === "positive" ? C.success : sentiment === "negative" ? C.danger : C.accent;
+
+            return (
+              <article
+                key={name}
+                className="rounded-xl p-4 transition-all hover:translate-y-[-1px]"
+                style={{
+                  backgroundColor: missing ? C.bgSubtle : cited ? "rgba(16,185,129,0.04)" : "rgba(245,158,11,0.04)",
+                  border: `1px solid ${missing ? C.border : cited ? C.success + "30" : C.warning + "30"}`,
+                }}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[13px] font-semibold" style={{ color: C.text }}>
+                    {name}
+                  </span>
+                  <span
+                    className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium"
+                    style={{
+                      backgroundColor: missing
+                        ? "rgba(120,113,108,0.10)"
+                        : cited
+                        ? "rgba(16,185,129,0.12)"
+                        : "rgba(245,158,11,0.12)",
+                      color: missing ? C.textMuted : cited ? C.success : C.warning,
+                      fontFamily: C.fontMono,
+                    }}
+                  >
+                    {missing ? "N/A" : cited ? "Cité" : "Non cité"}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline gap-1.5 mb-1.5">
+                  <span
+                    className="text-[10px] uppercase tracking-wider"
+                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                  >
+                    Position
+                  </span>
+                  <span
+                    className="text-[18px] font-bold tabular-nums"
+                    style={{ color: C.text, fontFamily: C.fontMono }}
+                  >
+                    {position ? `#${position}` : "—"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px]">
+                  <span style={{ color: C.textMuted }}>Sentiment</span>
+                  <span
+                    className="font-medium"
+                    style={{ color: missing ? C.textMuted : sentimentColor }}
+                  >
+                    {sentimentLabel}
+                  </span>
+                </div>
+
+                {engine?.confidence !== undefined && engine.confidence > 0 && (
+                  <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+                    <div className="flex items-center justify-between text-[10px]" style={{ color: C.textMuted }}>
+                      <span className="uppercase tracking-wider" style={{ fontFamily: C.fontMono }}>
+                        Confiance
+                      </span>
+                      <span style={{ fontFamily: C.fontMono, color: C.text }}>
+                        {Math.round(engine.confidence * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 6 — Résumé Hebdo IA (HarchIQ insight)
+// ════════════════════════════════════════════════════════════════════
+
+function WeeklyAISummarySection({
+  insight,
+  isLoading,
+  onRegenerate,
+  regenerating,
+}: {
+  insight: InsightItem | null;
+  isLoading: boolean;
+  onRegenerate: () => void;
+  regenerating: boolean;
+}) {
+  return (
+    <Card
+      title="Résumé hebdo IA"
+      subtitle="Synthèse générée par HarchIQ à partir de vos données"
+      badge="GenAI"
+      bodyClassName="p-6"
       headerRight={
         <span
           className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
@@ -835,20 +1071,21 @@ function WeeklySummary({ insight, isLoading }: { insight: InsightItem | null; is
             fontFamily: C.fontMono,
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.cta }} />
+          <Sparkles size={10} />
           HarchIQ AI
         </span>
       }
     >
-      {isLoading ? (
+      {isLoading || regenerating ? (
         <div className="space-y-2 animate-pulse">
-          <div className="h-4 w-1/2 rounded" style={{ backgroundColor: "rgba(120,113,108,0.10)" }} />
-          <div className="h-3 w-full rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          <div className="h-3 w-5/6 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          <div className="h-3 w-3/4 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
+          <Skeleton style={{ height: 16, width: "60%" }} />
+          <Skeleton style={{ height: 12, width: "100%" }} />
+          <Skeleton style={{ height: 12, width: "92%" }} />
+          <Skeleton style={{ height: 12, width: "78%" }} />
+          <Skeleton style={{ height: 12, width: "85%" }} />
         </div>
       ) : !insight ? (
-        <EmptyState label="Synthèse hebdomadaire en préparation" />
+        <EmptyState label="Synthèse hebdomadaire en préparation — régénérez pour forcer" height={140} />
       ) : (
         <div>
           <div className="flex items-start gap-2 mb-2">
@@ -884,17 +1121,33 @@ function WeeklySummary({ insight, isLoading }: { insight: InsightItem | null; is
               {insight.action}
             </div>
           )}
-          <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+          <div
+            className="flex items-center justify-between pt-3 gap-2"
+            style={{ borderTop: `1px solid ${C.border}` }}
+          >
             <span className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-              Confiance {Math.round((insight.confidence ?? 0) * 100)}%
+              Confiance {Math.round((insight.confidence ?? 0) * 100)}% · {fmtRelative(insight.generatedAt)}
             </span>
-            <a
-              href="/atelier/console/brand-monitor"
-              className="text-[12px] font-medium hover:underline"
-              style={{ color: C.cta }}
+            <button
+              type="button"
+              onClick={onRegenerate}
+              className="text-[12px] font-medium inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                border: `1px solid ${C.borderStrong}`,
+                color: C.text,
+                backgroundColor: C.bg,
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = C.bgHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = C.bg;
+              }}
             >
-              Voir le rapport complet →
-            </a>
+              <RefreshCw size={13} className={regenerating ? "animate-spin" : ""} />
+              Régénérer
+            </button>
           </div>
         </div>
       )}
@@ -902,9 +1155,11 @@ function WeeklySummary({ insight, isLoading }: { insight: InsightItem | null; is
   );
 }
 
-// ─── SECTION 2: Source Diversity Widget ──────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 7 — Diversité Sources (BarChart)
+// ════════════════════════════════════════════════════════════════════
 
-function SourceDiversity({
+function SourceDiversitySection({
   sources,
   total,
   isLoading,
@@ -913,15 +1168,22 @@ function SourceDiversity({
   total: number;
   isLoading: boolean;
 }) {
-  const top = sources.slice(0, 10);
-  const max = top.length > 0 ? Math.max(...top.map((s) => s.count)) : 1;
+  // Build BarDatum[] from sources (up to 10).
+  const chartData: BarDatum[] = useMemo(() => {
+    if (!sources || sources.length === 0) return [];
+    return sources.slice(0, 10).map((s) => ({
+      label: s.name,
+      value: s.count,
+      color: s.type === "social" ? C.warning : C.cta,
+    }));
+  }, [sources]);
 
   return (
     <Card
       title="Diversité des sources"
-      subtitle="Top 10 des médias qui couvrent votre entreprise"
-      badge={total > 0 ? `${total} articles` : "—"}
-      bodyClassName="p-5"
+      subtitle="Top sources par volume d'articles · 30 derniers jours"
+      badge={total > 0 ? `${fmtNumber(total)} articles` : "—"}
+      bodyClassName="p-6"
       headerRight={
         <span
           className="text-[10px] px-2 py-0.5 rounded-full"
@@ -938,899 +1200,413 @@ function SourceDiversity({
       {isLoading ? (
         <div className="space-y-3 animate-pulse">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="space-y-1">
-              <div className="h-3 w-1/3 rounded" style={{ backgroundColor: "rgba(120,113,108,0.10)" }} />
-              <div className="h-2 w-full rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-            </div>
+            <Skeleton key={i} style={{ height: 20 }} />
           ))}
         </div>
-      ) : top.length === 0 ? (
-        <EmptyState label="Aucune source détectée pour le moment" />
+      ) : chartData.length === 0 ? (
+        <EmptyState label="Aucune source détectée pour le moment" height={180} />
       ) : (
-        <ul className="space-y-2.5">
-          {top.map((s, i) => {
-            const pct = Math.max(2, Math.round((s.count / max) * 100));
-            const color = i === 0 ? C.accent : C.accentHover;
-            return (
-              <li key={s.name} className="flex items-center gap-3">
-                <div className="w-[88px] sm:w-[110px] shrink-0">
-                  <div className="text-[12px] font-medium truncate" style={{ color: C.text }}>
-                    {s.name}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                    {s.type === "social" ? "Social" : "Média"}
-                  </div>
-                </div>
-                <div className="flex-1 h-5 relative">
-                  <div className="absolute inset-0 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-                  <div
-                    className="h-full rounded transition-all"
-                    style={{ width: `${pct}%`, backgroundColor: color }}
-                  />
-                </div>
-                <div
-                  className="w-12 text-right text-[12px] font-semibold tabular-nums"
-                  style={{ color: C.text, fontFamily: C.fontMono }}
-                >
-                  {fmtNumber(s.count)}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <BarChart data={chartData} height={Math.min(360, chartData.length * 36 + 8)} />
       )}
-    </Card>
-  );
-}
-
-// ─── SECTION: Topics list ────────────────────────────────────────
-
-function TopicsList({ topics, isLoading }: { topics: TopicRow[]; isLoading: boolean }) {
-  const top = topics.slice(0, 8);
-  const max = top.length > 0 ? Math.max(...top.map((t) => t.count)) : 1;
-
-  return (
-    <Card
-      title="Sujets émergents"
-      subtitle="Top thèmes mentionnés · 30 derniers jours"
-      badge={`${top.length} sujets`}
-      bodyClassName="p-5"
-    >
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-2 animate-pulse">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-8 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          ))}
-        </div>
-      ) : top.length === 0 ? (
-        <EmptyState label="Aucun sujet détecté" />
-      ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {top.map((t) => {
-            const pct = Math.max(8, Math.round((t.count / max) * 100));
-            return (
-              <li
-                key={t.label}
-                className="px-3 py-2 rounded-lg"
-                style={{
-                  backgroundColor: "rgba(120,113,108,0.05)",
-                  border: `1px solid ${C.border}`,
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-[12px] font-medium truncate" style={{ color: C.text }}>
-                    {t.label}
-                  </span>
-                  <span
-                    className="text-[11px] tabular-nums shrink-0"
-                    style={{ color: C.accentHover, fontFamily: C.fontMono }}
-                  >
-                    {t.count}
-                  </span>
-                </div>
-                <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(120,113,108,0.10)" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: t.type === "risk" ? C.warning : C.accent,
-                    }}
-                  />
-                </div>
-                {t.type === "risk" && (
-                  <div
-                    className="text-[9px] uppercase tracking-wider mt-1"
-                    style={{ color: C.warningText, fontFamily: C.fontMono }}
-                  >
-                    Risque
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-// ─── SECTION 7: Alerts Timeline (7-day SVG) ─────────────────────
-
-function AlertsTimeline({
-  buckets,
-  events,
-  isLoading,
-}: {
-  buckets: TimelineBucket[];
-  events: TimelineEvent[];
-  isLoading: boolean;
-}) {
-  // Each bucket is one day; we render dots in a horizontal SVG line.
-  // Dot color = max severity (critical > high > medium > low).
-  // Hover tooltip shows count + top event.
-
-  const W = 640;
-  const H = 96;
-  const PAD_X = 16;
-  const PAD_Y = 28;
-  const innerW = W - 2 * PAD_X;
-  const innerH = H - 2 * PAD_Y;
-
-  const days = buckets.slice(-7); // last 7 days
-  const maxCount = days.length > 0 ? Math.max(...days.map((b) => b.count), 1) : 1;
-
-  const dots = useMemo(() => {
-    return days.map((b, i) => {
-      const x = days.length === 1 ? W / 2 : PAD_X + (i / (days.length - 1)) * innerW;
-      const severity =
-        b.critical > 0
-          ? "critical"
-          : b.high > 0
-          ? "high"
-          : b.medium > 0
-          ? "medium"
-          : b.low > 0
-          ? "low"
-          : "none";
-      const dotR = 6 + (b.count / maxCount) * 10; // 6..16
-      const topEvent = events.find((e) => {
-        try {
-          return new Date(e.date).toISOString().slice(0, 10) === b.time;
-        } catch {
-          return false;
-        }
-      });
-      return { x, b, severity, dotR, topEvent };
-    });
-  }, [days, events, innerW, maxCount]);
-
-  return (
-    <Card
-      title="Timeline des alertes"
-      subtitle="7 derniers jours · couleur = sévérité max du jour"
-      badge="7 jours"
-      bodyClassName="p-5"
-    >
-      {isLoading ? (
-        <div className="h-[96px] w-full animate-pulse rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-      ) : days.length === 0 ? (
-        <EmptyState label="Pas d'alertes sur les 7 derniers jours" />
-      ) : (
-        <div className="w-full overflow-x-auto">
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 480 }} role="img" aria-label="Timeline des alertes 7 jours">
-            {/* Baseline */}
-            <line
-              x1={PAD_X}
-              y1={H / 2}
-              x2={W - PAD_X}
-              y2={H / 2}
-              stroke={C.border}
-              strokeWidth="1.5"
-            />
-            {/* Day dots */}
-            {dots.map(({ x, b, severity, dotR, topEvent }, i) => {
-              const color =
-                severity === "critical"
-                  ? C.danger
-                  : severity === "high"
-                  ? C.warning
-                  : severity === "medium"
-                  ? C.accent
-                  : severity === "low"
-                  ? C.success
-                  : C.border;
-              const isNone = severity === "none";
-              return (
-                <g key={i}>
-                  {/* Vertical tick to baseline */}
-                  <line
-                    x1={x}
-                    y1={H / 2 - 4}
-                    x2={x}
-                    y2={H / 2 + 4}
-                    stroke={C.borderStrong}
-                    strokeWidth="1"
-                  />
-                  {/* Dot — invisible if no alerts */}
-                  <circle
-                    cx={x}
-                    cy={H / 2}
-                    r={isNone ? 3 : dotR}
-                    fill={isNone ? C.bg : color}
-                    stroke={isNone ? C.borderStrong : color}
-                    strokeWidth={isNone ? 1 : 0}
-                  >
-                    <title>
-                      {`${fmtDayLabel(b.time)} — ${b.count} alerte(s)` +
-                        (topEvent ? `\nTop: ${topEvent.title}` : "") +
-                        (b.critical ? `\nCritique: ${b.critical}` : "") +
-                        (b.high ? `\nÉlevée: ${b.high}` : "")}
-                    </title>
-                  </circle>
-                  {/* Count label above */}
-                  {!isNone && (
-                    <text
-                      x={x}
-                      y={H / 2 - dotR - 6}
-                      fontSize="10"
-                      fill={C.text}
-                      textAnchor="middle"
-                      fontFamily={C.fontMono}
-                      fontWeight="600"
-                    >
-                      {b.count}
-                    </text>
-                  )}
-                  {/* Day label below */}
-                  <text
-                    x={x}
-                    y={H - 8}
-                    fontSize="9"
-                    fill={C.textMuted}
-                    textAnchor="middle"
-                    fontFamily={C.fontMono}
-                  >
-                    {fmtDayLabel(b.time)}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-      )}
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
-        <LegendDot color={C.danger} label="Critique" />
-        <LegendDot color={C.warning} label="Élevée" />
-        <LegendDot color={C.accent} label="Moyenne" />
-        <LegendDot color={C.success} label="Faible" />
-        <LegendDot color={C.borderStrong} label="Aucune" hollow />
+      <div
+        className="mt-3 pt-3 text-[11px] flex items-center gap-3"
+        style={{ borderTop: `1px solid ${C.border}`, color: C.textMuted }}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: C.cta }} />
+          Médias
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: C.warning }} />
+          Social
+        </span>
       </div>
     </Card>
   );
 }
 
-function LegendDot({ color, label, hollow }: { color: string; label: string; hollow?: boolean }) {
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 8 — Position Harch 100
+// ════════════════════════════════════════════════════════════════════
+
+function Harch100Section({
+  snapshot,
+  companyName,
+  isLoading,
+}: {
+  snapshot: Harch100Snapshot | null;
+  companyName: string | undefined;
+  isLoading: boolean;
+}) {
+  const rank = useMemo(
+    () => findCompanyRank(snapshot?.rankings ?? [], companyName),
+    [snapshot, companyName],
+  );
+
+  const rankNum = rank?.rank ?? null;
+  const period = snapshot?.period ? fmtPeriod(snapshot.period) : "—";
+  const totalRanked = snapshot?.rankings?.length ?? 0;
+
+  // Percentile (top X%)
+  const percentile =
+    rankNum && totalRanked > 0
+      ? Math.round((rankNum / totalRanked) * 100)
+      : null;
+
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11px]" style={{ color: C.textMuted }}>
-      <span
-        className="w-2 h-2 rounded-full"
-        style={{
-          backgroundColor: hollow ? "transparent" : color,
-          border: `1.5px solid ${color}`,
-        }}
-      />
-      {label}
-    </span>
+    <Card
+      title="Position Harch 100"
+      subtitle="Classement mensuel des entreprises marocaines"
+      badge={snapshot?.publishedAt ? "Publié" : "Brouillon"}
+      bodyClassName="p-6"
+      headerRight={
+        <a
+          href="/atelier/harch-100"
+          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1"
+          style={{ color: C.cta }}
+        >
+          Voir le classement
+          <ChevronRight size={13} />
+        </a>
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-3 animate-pulse">
+          <Skeleton style={{ height: 80 }} />
+          <Skeleton style={{ height: 40 }} />
+        </div>
+      ) : (
+        <div>
+          <div className="flex items-end gap-3 mb-4">
+            <div
+              className="text-[64px] font-bold leading-none tabular-nums"
+              style={{
+                color: rankNum && rankNum <= 10 ? C.cta : rankNum && rankNum <= 50 ? C.text : C.accent,
+                fontFamily: C.fontMono,
+              }}
+            >
+              {rankNum ? `#${rankNum}` : "—"}
+            </div>
+            <div className="pb-2">
+              <div className="text-[14px] font-medium" style={{ color: C.text }}>
+                au Maroc
+              </div>
+              <div className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
+                {period}
+              </div>
+            </div>
+          </div>
+
+          {rank ? (
+            <>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div
+                  className="rounded-lg p-3"
+                  style={{ backgroundColor: C.bgSubtle, border: `1px solid ${C.border}` }}
+                >
+                  <div
+                    className="text-[10px] uppercase tracking-wider mb-0.5"
+                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                  >
+                    Score réputation
+                  </div>
+                  <div
+                    className="text-[18px] font-bold tabular-nums"
+                    style={{ color: C.text, fontFamily: C.fontMono }}
+                  >
+                    {rank.reputationScore}
+                  </div>
+                </div>
+                <div
+                  className="rounded-lg p-3"
+                  style={{ backgroundColor: C.bgSubtle, border: `1px solid ${C.border}` }}
+                >
+                  <div
+                    className="text-[10px] uppercase tracking-wider mb-0.5"
+                    style={{ color: C.textMuted, fontFamily: C.fontMono }}
+                  >
+                    Articles analysés
+                  </div>
+                  <div
+                    className="text-[18px] font-bold tabular-nums"
+                    style={{ color: C.text, fontFamily: C.fontMono }}
+                  >
+                    {fmtNumber(rank.totalArticles)}
+                  </div>
+                </div>
+              </div>
+              <div
+                className="text-[11px] flex items-center justify-between"
+                style={{ color: C.textMuted, fontFamily: C.fontMono }}
+              >
+                <span>Secteur : {rank.sector || "—"}</span>
+                {percentile !== null && <span>Top {percentile}%</span>}
+              </div>
+            </>
+          ) : (
+            <div
+              className="rounded-lg p-4 text-center"
+              style={{ backgroundColor: C.bgSubtle, border: `1px solid ${C.border}` }}
+            >
+              <p className="text-[13px] font-medium mb-1" style={{ color: C.text }}>
+                {companyName ? `${companyName} — hors classement` : "Entreprise non classée"}
+              </p>
+              <p className="text-[11px]" style={{ color: C.textMuted }}>
+                {totalRanked > 0
+                  ? `Le classement actuel couvre ${totalRanked} entreprises.`
+                  : "Aucun classement publié pour le moment."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 
-// ─── SECTION 5: Enhanced HarchIQ AI Panel ───────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 9 — Actions Rapides
+// ════════════════════════════════════════════════════════════════════
 
-function HarchIQPanel() {
-  // Conversation history — persisted to localStorage so refreshes
-  // keep last 3 turns. Sends questions to /api/console/ask (POST).
-  const [history, setHistory] = useState<AskTurn[]>([]);
-  const [question, setQuestion] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const historyRef = useRef<HTMLDivElement | null>(null);
+function QuickActionsSection() {
+  const [exporting, setExporting] = useState(false);
 
-  // Load last 3 turns from localStorage on mount.
-  useEffect(() => {
+  const handleExportCSV = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
     try {
-      const raw = localStorage.getItem("harchiq.essential.history");
-      if (raw) {
-        const parsed = JSON.parse(raw) as AskTurn[];
-        if (Array.isArray(parsed)) setHistory(parsed.slice(-3));
-      }
-    } catch {
-      // ignore
+      // The endpoint streams a CSV directly — navigate to it to trigger download.
+      window.location.href = "/api/console/export-csv?type=articles&days=90";
+    } finally {
+      // Reset after a short delay (the navigation itself doesn't unload the SPA).
+      setTimeout(() => setExporting(false), 1200);
     }
-  }, []);
+  }, [exporting]);
 
-  // Persist on change.
-  useEffect(() => {
-    try {
-      localStorage.setItem("harchiq.essential.history", JSON.stringify(history.slice(-3)));
-    } catch {
-      // ignore
-    }
-  }, [history]);
-
-  // Scroll to bottom on new turn.
-  useEffect(() => {
-    if (historyRef.current) {
-      historyRef.current.scrollTop = historyRef.current.scrollHeight;
-    }
-  }, [history, loading]);
-
-  const ask = useCallback(
-    async (q: string) => {
-      const trimmed = q.trim();
-      if (!trimmed || loading) return;
-      setLoading(true);
-      setError(null);
-      setQuestion("");
-      try {
-        const res = await fetch("/api/console/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: trimmed }),
-        });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody?.error || `Erreur ${res.status}`);
-        }
-        const data = (await res.json()) as {
-          answer: string;
-          sources: Array<{ type: string; id: string; title: string }>;
-        };
-        const turn: AskTurn = {
-          id: `t-${Date.now()}`,
-          question: trimmed,
-          answer: data.answer,
-          sources: data.sources ?? [],
-          at: Date.now(),
-        };
-        setHistory((h) => [...h, turn].slice(-3));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Une erreur est survenue");
-      } finally {
-        setLoading(false);
-      }
+  const actions: Array<{
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    onClick?: () => void;
+    href?: string;
+    primary?: boolean;
+    disabled?: boolean;
+  }> = [
+    {
+      label: "Exporter CSV",
+      description: "Téléchargez vos articles (90 j)",
+      icon: <Download size={18} />,
+      onClick: handleExportCSV,
+      disabled: exporting,
     },
-    [loading],
-  );
-
-  const suggestions = [
-    "Quels sujets émergents cette semaine ?",
-    "Analysez mon sentiment global",
-    "Quelles sont mes principales crises ?",
+    {
+      label: "Demander à HarchIQ",
+      description: "Posez une question à l'IA",
+      icon: <MessageSquare size={18} />,
+      href: "/atelier/ask-harchiq",
+    },
+    {
+      label: "Voir Harch 100",
+      description: "Classement mensuel Maroc",
+      icon: <BarChart3 size={18} />,
+      href: "/atelier/harch-100",
+    },
+    {
+      label: "Demander une démo Pro",
+      description: "Passez à Pro (upsell)",
+      icon: <Sparkles size={18} />,
+      href: "/atelier/pricing#pro",
+      primary: true,
+    },
   ];
 
   return (
     <Card
-      title="HarchIQ AI"
-      subtitle="Posez vos questions — réponses basées sur vos données réelles"
-      badge="GenAI"
-      bodyClassName="p-0"
-      headerRight={
-        <span
-          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
-          style={{
-            backgroundColor: "rgba(16,185,129,0.10)",
-            color: C.cta,
-            fontFamily: C.fontMono,
-          }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.cta }} />
-          HarchIQ AI
-        </span>
-      }
+      title="Actions rapides"
+      subtitle="Raccourcis pour gagner du temps"
+      bodyClassName="p-6"
     >
-      {/* Conversation history */}
-      <div
-        ref={historyRef}
-        className="max-h-[360px] overflow-y-auto px-5 py-4 space-y-4"
-        style={{ scrollbarWidth: "thin", borderBottom: `1px solid ${C.border}` }}
-      >
-        {history.length === 0 && !loading && (
-          <div className="text-center py-6">
-            <div
-              className="w-10 h-10 mx-auto mb-3 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "rgba(16,185,129,0.10)" }}
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path
-                  d="M10 2 L18 6 L10 10 L2 6 Z M2 10 L10 14 L18 10 M2 14 L10 18 L18 14"
-                  stroke={C.cta}
-                  strokeWidth="1.4"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-            <p className="text-[13px] font-medium" style={{ color: C.text }}>
-              Bonjour 👋 — Je suis HarchIQ.
-            </p>
-            <p className="text-[12px] mt-1" style={{ color: C.textMuted }}>
-              Posez une question ou choisissez une suggestion ci-dessous.
-            </p>
-          </div>
-        )}
-        {history.map((t) => (
-          <div key={t.id} className="space-y-2">
-            {/* Question */}
-            <div className="flex justify-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {actions.map((a) => {
+          const content = (
+            <>
               <div
-                className="max-w-[85%] px-3 py-2 rounded-[10px] rounded-tr-sm text-[13px]"
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors"
                 style={{
-                  backgroundColor: C.accent,
-                  color: "white",
-                  fontFamily: C.fontSans,
+                  backgroundColor: a.primary ? C.cta : "rgba(120,113,108,0.08)",
+                  color: a.primary ? "white" : C.text,
                 }}
               >
-                {t.question}
+                {a.icon}
               </div>
-            </div>
-            {/* Answer */}
-            <div className="flex justify-start">
               <div
-                className="max-w-[90%] px-3 py-2 rounded-[10px] rounded-tl-sm text-[13px] leading-relaxed"
-                style={{
-                  backgroundColor: "rgba(120,113,108,0.08)",
-                  color: C.text,
-                  fontFamily: C.fontSans,
-                }}
+                className="text-[13px] font-semibold mb-0.5"
+                style={{ color: C.text }}
               >
-                <p className="whitespace-pre-wrap">{t.answer}</p>
-                {t.sources.length > 0 && (
-                  <div className="mt-2 pt-2 flex flex-wrap gap-1.5" style={{ borderTop: `1px solid ${C.border}` }}>
-                    {t.sources.map((s, i) => (
-                      <span
-                        key={i}
-                        className="text-[10px] px-1.5 py-0.5 rounded"
-                        style={{
-                          backgroundColor: "rgba(120,113,108,0.10)",
-                          color: C.accentHover,
-                          fontFamily: C.fontMono,
-                        }}
-                      >
-                        {s.type}: {s.title}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="text-[10px] mt-1.5" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                  {fmtRelative(t.at)}
-                </div>
+                {a.label}
               </div>
-            </div>
-          </div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div
-              className="px-3 py-2 rounded-[10px] rounded-tl-sm text-[13px] inline-flex items-center gap-1.5"
-              style={{ backgroundColor: "rgba(120,113,108,0.08)", color: C.textMuted }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: C.accent, animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: C.accent, animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: C.accent, animationDelay: "300ms" }} />
-            </div>
-          </div>
-        )}
-        {error && (
-          <div
-            className="text-[12px] px-3 py-2 rounded-lg"
-            style={{ backgroundColor: C.dangerBg, color: C.danger }}
-          >
-            {error}
-          </div>
-        )}
-      </div>
+              <div className="text-[11px]" style={{ color: C.textMuted }}>
+                {a.description}
+              </div>
+            </>
+          );
 
-      {/* Suggestions */}
-      <div className="px-5 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-          Suggestions basées sur votre activité
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {suggestions.map((s) => (
+          const baseStyle: CSSProperties = {
+            display: "block",
+            padding: 16,
+            borderRadius: 12,
+            border: `1px solid ${a.primary ? C.cta + "40" : C.border}`,
+            backgroundColor: a.primary ? "rgba(16,185,129,0.04)" : C.bg,
+            cursor: a.disabled ? "wait" : "pointer",
+            transition: "all 0.15s ease",
+            textAlign: "left",
+            width: "100%",
+          };
+
+          if (a.href) {
+            return (
+              <a
+                key={a.label}
+                href={a.href}
+                style={baseStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = C.shadowMd;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {content}
+              </a>
+            );
+          }
+
+          return (
             <button
-              key={s}
+              key={a.label}
               type="button"
-              onClick={() => ask(s)}
-              disabled={loading}
-              className="text-[12px] px-2.5 py-1.5 rounded-full transition-colors disabled:opacity-50"
-              style={{
-                border: `1px solid ${C.borderStrong}`,
-                color: C.textBody,
-                backgroundColor: C.bg,
-                cursor: loading ? "not-allowed" : "pointer",
-              }}
+              onClick={a.onClick}
+              disabled={a.disabled}
+              style={baseStyle}
               onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = "rgba(120,113,108,0.06)";
+                if (!a.disabled) {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = C.shadowMd;
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = C.bg;
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
               }}
             >
-              {s}
+              {content}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
-
-      {/* Input */}
-      <form
-        className="px-5 py-3 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(question);
-        }}
-      >
-        <input
-          type="text"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Posez votre question…"
-          disabled={loading}
-          className="flex-1 min-w-0 text-[13px] px-3 py-2 rounded-lg outline-none disabled:opacity-50"
-          style={{
-            border: `1px solid ${C.borderStrong}`,
-            color: C.text,
-            backgroundColor: C.bg,
-            fontFamily: C.fontSans,
-          }}
-        />
-        <button
-          type="submit"
-          disabled={loading || !question.trim()}
-          className="text-[13px] font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-          style={{
-            backgroundColor: C.cta,
-            color: "white",
-            cursor: loading || !question.trim() ? "not-allowed" : "pointer",
-          }}
-        >
-          Envoyer
-        </button>
-      </form>
     </Card>
   );
 }
 
-// ─── SECTION: AI Visibility ──────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  SECTION 10 — Upsell Pro
+// ════════════════════════════════════════════════════════════════════
 
-function AiVisibilityPanel({
-  engines,
-  isLoading,
-}: {
-  engines: AiVisibilityEngine[] | null;
-  isLoading: boolean;
-}) {
-  const citedCount = engines?.filter((e) => e.cited).length ?? 0;
-  const total = engines?.length ?? 0;
-  const visibilityScore = total > 0 ? Math.round((citedCount / total) * 100) : 0;
-
+function UpsellProBanner() {
   return (
-    <Card
-      title="Visibilité IA"
-      subtitle="Ce que les moteurs IA disent de vous"
-      badge={total > 0 ? `${citedCount}/${total} moteurs` : "—"}
-      bodyClassName="p-5"
+    <section
+      className="rounded-[12px] p-6 sm:p-8"
+      style={{
+        backgroundColor: "rgba(16,185,129,0.06)",
+        border: `1px solid ${C.cta}30`,
+        borderRadius: 12,
+        backgroundImage:
+          "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(74,123,95,0.06) 100%)",
+      }}
     >
-      {isLoading ? (
-        <div className="space-y-3 animate-pulse">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-10 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          ))}
-        </div>
-      ) : !engines || engines.length === 0 ? (
-        <EmptyState label="Aucune donnée IA disponible" />
-      ) : (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center"
-              style={{
-                backgroundColor: visibilityScore >= 50 ? "rgba(16,185,129,0.10)" : "rgba(245,158,11,0.10)",
-              }}
-            >
-              <span
-                className="text-[18px] font-bold"
-                style={{
-                  color: visibilityScore >= 50 ? C.cta : C.warning,
-                  fontFamily: C.fontSans,
-                }}
-              >
-                {visibilityScore}%
-              </span>
-            </div>
-            <div>
-              <div className="text-[12px]" style={{ color: C.textBody }}>
-                {citedCount} moteur{citedCount > 1 ? "s" : ""} sur {total} vous citent
-              </div>
-              <div className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                ChatGPT · Claude · Gemini · Perplexity
-              </div>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-[640px]">
+          <div
+            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider mb-2 px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: "rgba(16,185,129,0.15)",
+              color: C.cta,
+              fontFamily: C.fontMono,
+            }}
+          >
+            <Sparkles size={11} />
+            Plan Pro
           </div>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {engines.slice(0, 6).map((e) => (
-              <li
-                key={e.platform}
-                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg"
-                style={{
-                  backgroundColor: "rgba(120,113,108,0.05)",
-                  border: `1px solid ${C.border}`,
-                }}
-              >
-                <div className="min-w-0">
-                  <div className="text-[13px] font-medium truncate" style={{ color: C.text }}>
-                    {e.platform}
-                  </div>
-                  {e.position && (
-                    <div className="text-[10px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                      Pos. {e.position}
-                    </div>
-                  )}
-                </div>
-                <span
-                  className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium"
-                  style={{
-                    backgroundColor: e.cited ? "rgba(16,185,129,0.10)" : "rgba(120,113,108,0.10)",
-                    color: e.cited ? C.cta : C.textMuted,
-                    fontFamily: C.fontMono,
-                  }}
-                >
-                  {e.cited ? "Cité" : "Non cité"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <h3
+            className="text-[18px] sm:text-[22px] font-bold leading-tight mb-2"
+            style={{ color: C.text, fontFamily: C.fontSans }}
+          >
+            Passez à Pro pour le benchmarking concurrentiel, les rapports personnalisés et 200 questions HarchIQ/jour
+          </h3>
+          <p className="text-[13px] leading-relaxed" style={{ color: C.textBody }}>
+            Débloquez le benchmarking 5+ concurrents, les rapports PDF board-ready,
+            les alertes WhatsApp 24/7, la matrix linguistique Darija/MSA/Français, l'API & MCP.
+          </p>
         </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── SECTION 6: Competitor Snapshot ──────────────────────────────
-
-function CompetitorSnapshot({
-  brands,
-  isLoading,
-}: {
-  brands: CompetitorBrand[];
-  isLoading: boolean;
-}) {
-  const you = brands.find((b) => b.isYou);
-  const others = brands.filter((b) => !b.isYou).slice(0, 2);
-
-  return (
-    <Card
-      title="Aperçu concurrentiel"
-      subtitle="Votre entreprise vs 2 concurrents"
-      badge="Aperçu"
-      bodyClassName="p-0"
-      headerRight={
-        <span
-          className="text-[10px] px-2 py-0.5 rounded-full"
-          style={{
-            backgroundColor: "rgba(16,185,129,0.10)",
-            color: C.cta,
-            fontFamily: C.fontMono,
-          }}
-        >
-          Pro
-        </span>
-      }
-    >
-      {isLoading ? (
-        <div className="p-5 space-y-2 animate-pulse">
-          <div className="h-8 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          <div className="h-8 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          <div className="h-8 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
+        <div className="shrink-0">
+          <a
+            href="/atelier/pricing#pro"
+            className="inline-flex items-center gap-2 text-[13px] font-semibold px-5 py-3 rounded-lg transition-all hover:translate-y-[-1px]"
+            style={{
+              backgroundColor: C.text,
+              color: "white",
+              boxShadow: C.shadowSm,
+            }}
+          >
+            Découvrir Pro
+            <ArrowRight size={15} />
+          </a>
         </div>
-      ) : brands.length === 0 ? (
-        <div className="p-5">
-          <EmptyState label="Pas encore de données concurrentielles" />
-        </div>
-      ) : (
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-              <th
-                className="text-left px-5 py-2.5 text-[10px] uppercase tracking-wider font-medium"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                Entreprise
-              </th>
-              <th
-                className="text-right px-3 py-2.5 text-[10px] uppercase tracking-wider font-medium"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                Score
-              </th>
-              <th
-                className="text-right px-3 py-2.5 text-[10px] uppercase tracking-wider font-medium"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                Sentiment
-              </th>
-              <th
-                className="text-right px-5 py-2.5 text-[10px] uppercase tracking-wider font-medium"
-                style={{ color: C.textMuted, fontFamily: C.fontMono }}
-              >
-                SOV
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {you && (
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-1.5 h-6 rounded-full"
-                      style={{ backgroundColor: you.color }}
-                    />
-                    <div>
-                      <div className="font-semibold text-[13px]" style={{ color: C.text }}>
-                        {you.name}
-                      </div>
-                      <div
-                        className="text-[10px] uppercase tracking-wider"
-                        style={{ color: C.cta, fontFamily: C.fontMono }}
-                      >
-                        Vous
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td
-                  className="px-3 py-3 text-right font-semibold tabular-nums"
-                  style={{ color: C.text, fontFamily: C.fontMono }}
-                >
-                  {you.scores.sentiment}
-                </td>
-                <td
-                  className="px-3 py-3 text-right tabular-nums"
-                  style={{ color: C.textBody, fontFamily: C.fontMono }}
-                >
-                  {you.scores.sentiment > 60 ? "Positif" : you.scores.sentiment > 40 ? "Neutre" : "Négatif"}
-                </td>
-                <td
-                  className="px-5 py-3 text-right font-semibold tabular-nums"
-                  style={{ color: C.text, fontFamily: C.fontMono }}
-                >
-                  {you.scores.shareOfVoice}%
-                </td>
-              </tr>
-            )}
-            {others.map((c) => (
-              <tr key={c.name} style={{ borderBottom: `1px solid ${C.border}` }}>
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: c.color }} />
-                    <div>
-                      <div className="font-medium text-[13px]" style={{ color: C.text }}>
-                        {c.name}
-                      </div>
-                      <div
-                        className="text-[10px] uppercase tracking-wider"
-                        style={{ color: C.textMuted, fontFamily: C.fontMono }}
-                      >
-                        Concurrent
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td
-                  className="px-3 py-3 text-right tabular-nums"
-                  style={{ color: C.textBody, fontFamily: C.fontMono }}
-                >
-                  {c.scores.sentiment}
-                </td>
-                <td
-                  className="px-3 py-3 text-right tabular-nums"
-                  style={{ color: C.textBody, fontFamily: C.fontMono }}
-                >
-                  {c.scores.sentiment > 60 ? "Positif" : c.scores.sentiment > 40 ? "Neutre" : "Négatif"}
-                </td>
-                <td
-                  className="px-5 py-3 text-right tabular-nums"
-                  style={{ color: C.textBody, fontFamily: C.fontMono }}
-                >
-                  {c.scores.shareOfVoice}%
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <div
-        className="px-5 py-3 flex items-center justify-between gap-3"
-        style={{
-          backgroundColor: "rgba(16,185,129,0.04)",
-          borderTop: `1px solid ${C.border}`,
-        }}
-      >
-        <p className="text-[11px]" style={{ color: C.textBody }}>
-          Benchmarking complet, 6 dimensions, 5+ concurrents
-        </p>
-        <a
-          href="/atelier/pricing"
-          className="text-[12px] font-medium hover:underline shrink-0"
-          style={{ color: C.cta }}
-        >
-          Passez à Pro →
-        </a>
       </div>
-    </Card>
+    </section>
   );
 }
 
-// ─── PRIMITIVE: EmptyState ───────────────────────────────────────
-
-function EmptyState({ label }: { label: string }) {
-  return (
-    <div className="py-8 text-center">
-      <div
-        className="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center"
-        style={{ backgroundColor: "rgba(120,113,108,0.10)" }}
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-          <circle cx="9" cy="9" r="7" stroke={C.accent} strokeWidth="1.4" />
-          <path d="M9 5 V9 M9 12 V12.5" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      </div>
-      <p className="text-[12px]" style={{ color: C.textMuted }}>
-        {label}
-      </p>
-    </div>
-  );
-}
-
-// ─── MAIN COMPONENT ──────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  MAIN COMPONENT
+// ════════════════════════════════════════════════════════════════════
 
 export function EssentialDashboard() {
-  // ─── STATE ─────────────────────────────────────────────────────
+  // ─── STATE ─────────────────────────────────────────────────────────
   const [health, setHealth] = useState<BrandHealth | null>(null);
   const [alerts, setAlerts] = useState<CrisisAlert[]>([]);
+  const [sentiment, setSentiment] = useState<SentimentDay[]>([]);
+  const [companyName, setCompanyName] = useState<string | undefined>(undefined);
+  const [aiEngines, setAiEngines] = useState<AiVisibilityEngine[] | null>(null);
   const [insights, setInsights] = useState<InsightItem[]>([]);
   const [sources, setSources] = useState<SourceRow[]>([]);
   const [sourceTotal, setSourceTotal] = useState(0);
-  const [topics, setTopics] = useState<TopicRow[]>([]);
-  const [buckets, setBuckets] = useState<TimelineBucket[]>([]);
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [aiEngines, setAiEngines] = useState<AiVisibilityEngine[] | null>(null);
-  const [sentiment, setSentiment] = useState<SentimentDay[]>([]);
-  const [competitors, setCompetitors] = useState<CompetitorBrand[]>([]);
+  const [harch100, setHarch100] = useState<Harch100Snapshot | null>(null);
 
   const [loadingHealth, setLoadingHealth] = useState(true);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
+  const [loadingSentiment, setLoadingSentiment] = useState(true);
+  const [loadingAi, setLoadingAi] = useState(true);
   const [loadingInsights, setLoadingInsights] = useState(true);
   const [loadingSources, setLoadingSources] = useState(true);
-  const [loadingTopics, setLoadingTopics] = useState(true);
-  const [loadingTimeline, setLoadingTimeline] = useState(true);
-  const [loadingAi, setLoadingAi] = useState(true);
-  const [loadingSentiment, setLoadingSentiment] = useState(true);
-  const [loadingCompetitors, setLoadingCompetitors] = useState(true);
+  const [loadingHarch100, setLoadingHarch100] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
 
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // ─── DATA FETCHING ─────────────────────────────────────────────
+  // ─── DATA FETCHING ────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-    const stamp = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const stamp = new Date().toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     async function fetchAll() {
-      // Parallel fetch of all APIs — each one is independent.
       const tasks: Array<Promise<void>> = [
-        // Brand health
+        // 1. Brand health
         fetch("/api/console/brand-health")
           .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
           .then((d: BrandHealth) => {
@@ -1843,7 +1619,7 @@ export function EssentialDashboard() {
             if (!cancelled) setLoadingHealth(false);
           }),
 
-        // Crisis alerts → live article feed (last 5)
+        // 2. Crisis alerts (used for both top alerts + article feed)
         fetch("/api/console/crisis-alerts")
           .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
           .then((d: { alerts: CrisisAlert[] }) => {
@@ -1856,7 +1632,34 @@ export function EssentialDashboard() {
             if (!cancelled) setLoadingAlerts(false);
           }),
 
-        // Insights → weekly summary (first insight)
+        // 3. Sentiment trend (7d) — also gives us the company name
+        fetch("/api/console/sentiment-trend?range=7d")
+          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+          .then((d: { data: SentimentDay[]; company?: { name?: string } }) => {
+            if (!cancelled) {
+              setSentiment(d.data ?? []);
+              if (d.company?.name) setCompanyName(d.company.name);
+              setLoadingSentiment(false);
+            }
+          })
+          .catch(() => {
+            if (!cancelled) setLoadingSentiment(false);
+          }),
+
+        // 4. AI visibility
+        fetch("/api/console/ai-visibility")
+          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+          .then((d: { platforms: AiVisibilityEngine[] }) => {
+            if (!cancelled) {
+              setAiEngines(d.platforms ?? null);
+              setLoadingAi(false);
+            }
+          })
+          .catch(() => {
+            if (!cancelled) setLoadingAi(false);
+          }),
+
+        // 5. Insights (weekly AI summary)
         fetch("/api/console/insights")
           .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
           .then((d: { insights: InsightItem[] }) => {
@@ -1869,7 +1672,7 @@ export function EssentialDashboard() {
             if (!cancelled) setLoadingInsights(false);
           }),
 
-        // Source distribution
+        // 6. Source distribution
         fetch("/api/console/source-distribution")
           .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
           .then((d: { sources: SourceRow[]; total: number }) => {
@@ -1883,70 +1686,17 @@ export function EssentialDashboard() {
             if (!cancelled) setLoadingSources(false);
           }),
 
-        // Topics
-        fetch("/api/console/topics")
+        // 7. Harch 100 latest snapshot
+        fetch("/api/harch100/latest")
           .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { topics: TopicRow[] }) => {
+          .then((d: { snapshot?: Harch100Snapshot }) => {
             if (!cancelled) {
-              setTopics(d.topics ?? []);
-              setLoadingTopics(false);
+              setHarch100(d.snapshot ?? null);
+              setLoadingHarch100(false);
             }
           })
           .catch(() => {
-            if (!cancelled) setLoadingTopics(false);
-          }),
-
-        // Alert timeline (7d, with events)
-        fetch("/api/console/alert-timeline?range=7d&includeEvents=1")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { buckets: TimelineBucket[]; events: TimelineEvent[] }) => {
-            if (!cancelled) {
-              setBuckets(d.buckets ?? []);
-              setEvents(d.events ?? []);
-              setLoadingTimeline(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingTimeline(false);
-          }),
-
-        // AI visibility
-        fetch("/api/console/ai-visibility")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { platforms: AiVisibilityEngine[] }) => {
-            if (!cancelled) {
-              setAiEngines(d.platforms ?? null);
-              setLoadingAi(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingAi(false);
-          }),
-
-        // Sentiment trend (7d)
-        fetch("/api/console/sentiment-trend?range=7d")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { data: SentimentDay[] }) => {
-            if (!cancelled) {
-              setSentiment(d.data ?? []);
-              setLoadingSentiment(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingSentiment(false);
-          }),
-
-        // Competitor radar
-        fetch("/api/console/competitor-radar")
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .then((d: { brands: CompetitorBrand[] }) => {
-            if (!cancelled) {
-              setCompetitors(d.brands ?? []);
-              setLoadingCompetitors(false);
-            }
-          })
-          .catch(() => {
-            if (!cancelled) setLoadingCompetitors(false);
+            if (!cancelled) setLoadingHarch100(false);
           }),
       ];
 
@@ -1960,288 +1710,114 @@ export function EssentialDashboard() {
     };
   }, []);
 
-  // ─── DERIVED DATA ──────────────────────────────────────────────
-  const onboardingSteps: OnboardingStep[] = useMemo(() => {
-    return [
-      {
-        id: "sources",
-        label: "Connecter vos sources médias",
-        done: sources.length > 0,
-      },
-      {
-        id: "ai",
-        label: "Vérifier la visibilité sur les moteurs IA",
-        done: (aiEngines?.length ?? 0) > 0,
-      },
-      {
-        id: "alerts",
-        label: "Configurer vos alertes crise",
-        done: alerts.length > 0 || (health?.crisisScore ?? 0) > 0,
-      },
-      {
-        id: "report",
-        label: "Consulter votre premier rapport hebdomadaire",
-        done: insights.length > 0,
-      },
-    ];
-  }, [sources, aiEngines, alerts, health, insights]);
+  // ─── DERIVED DATA ──────────────────────────────────────────────────
 
-  const quickStats = useMemo(
-    () => deriveQuickStats(sources.length > 0 ? sources : null, health, buckets.length > 0 ? buckets : null),
-    [sources, health, buckets],
-  );
-
-  // Most relevant insight for the weekly summary — prefer critical > warning > info.
+  // Pick the most relevant insight (critical > warning > info, then confidence).
   const weeklyInsight = useMemo(() => {
     if (insights.length === 0) return null;
-    const ranked = [...insights].sort((a, b) => {
-      const sevRank = (s: string) => (s === "critical" ? 3 : s === "warning" ? 2 : 1);
-      return sevRank(b.severity) - sevRank(a.severity) || (b.confidence ?? 0) - (a.confidence ?? 0);
-    });
-    return ranked[0];
+    const sevRank = (s: string) => (s === "critical" ? 3 : s === "warning" ? 2 : 1);
+    return [...insights].sort(
+      (a, b) => sevRank(b.severity) - sevRank(a.severity) || (b.confidence ?? 0) - (a.confidence ?? 0),
+    )[0];
   }, [insights]);
 
-  const anyLoading =
-    loadingHealth ||
-    loadingAlerts ||
-    loadingInsights ||
-    loadingSources ||
-    loadingTopics ||
-    loadingTimeline ||
-    loadingAi ||
-    loadingSentiment ||
-    loadingCompetitors;
+  // Active alert count (critical + warning, not acknowledged)
+  const activeAlertCount = useMemo(
+    () => alerts.filter((a) => !a.acknowledged && (a.severity === "critical" || a.severity === "warning")).length,
+    [alerts],
+  );
 
-  // ─── RENDER ────────────────────────────────────────────────────
+  // ─── HANDLERS ──────────────────────────────────────────────────────
+
+  const handleRegenerate = useCallback(async () => {
+    if (regenerating) return;
+    setRegenerating(true);
+    try {
+      const res = await fetch("/api/console/insights?force=1");
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const data = (await res.json()) as { insights: InsightItem[] };
+      setInsights(data.insights ?? []);
+    } catch {
+      // Silent fail — UI shows last known state
+    } finally {
+      setRegenerating(false);
+    }
+  }, [regenerating]);
+
+  // ─── RENDER ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ backgroundColor: C.bgSubtle, fontFamily: C.fontSans }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: C.bgSubtle, fontFamily: C.fontSans }}
+    >
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
-        <DashboardHeader lastUpdated={lastUpdated} />
+        <DashboardHeader lastUpdated={lastUpdated} alertCount={activeAlertCount} />
 
-        {/* Onboarding checklist */}
-        <div className="mb-5">
-          <OnboardingChecklist steps={onboardingSteps} isLoading={anyLoading && onboardingSteps.every((s) => !s.done)} />
+        {/* SECTION 1 — Score gauge (full width) */}
+        <div className="mb-6">
+          <ScoreReputationSection health={health} isLoading={loadingHealth} />
         </div>
 
-        {/* Section 4 — Quick stats bar */}
-        <div className="mb-4">
-          <QuickStatsBar
-            sources={quickStats.sources}
-            languages={quickStats.languages}
-            reach={quickStats.reach}
-            engagement={quickStats.engagement}
-            isLoading={loadingHealth && loadingSources && loadingTimeline}
+        {/* SECTION 2 — Top 3 alerts (full width) */}
+        <div className="mb-6">
+          <TopAlertsSection alerts={alerts} isLoading={loadingAlerts} />
+        </div>
+
+        {/* SECTIONS 3 + 4 — Sentiment trend | Last mentions (2-col) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <SentimentTrendSection data={sentiment} isLoading={loadingSentiment} />
+          <LastMentionsSection alerts={alerts} isLoading={loadingAlerts} />
+        </div>
+
+        {/* SECTIONS 5 + 6 — AI visibility | Weekly AI summary (2-col) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <AIVisibilitySection engines={aiEngines} isLoading={loadingAi} />
+          <WeeklyAISummarySection
+            insight={weeklyInsight}
+            isLoading={loadingInsights}
+            onRegenerate={handleRegenerate}
+            regenerating={regenerating}
           />
         </div>
 
-        {/* KPIs */}
-        <div className="mb-5">
-          <KpisRow health={health} isLoading={loadingHealth} />
+        {/* SECTIONS 7 + 8 — Source diversity | Harch 100 (2-col) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <SourceDiversitySection
+            sources={sources}
+            total={sourceTotal}
+            isLoading={loadingSources}
+          />
+          <Harch100Section
+            snapshot={harch100}
+            companyName={companyName}
+            isLoading={loadingHarch100}
+          />
         </div>
 
-        {/* Sentiment chart (2/3) + Crisis indicator (1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-          <div className="lg:col-span-2">
-            <SentimentChart data={sentiment} isLoading={loadingSentiment} />
-          </div>
-          <CrisisIndicatorCard health={health} isLoading={loadingHealth} />
+        {/* SECTION 9 — Quick actions (full width) */}
+        <div className="mb-6">
+          <QuickActionsSection />
         </div>
 
-        {/* Section 1 — Live article feed (2/3) + Section 3 — Weekly AI summary (1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-          <div className="lg:col-span-2">
-            <LiveArticleFeed alerts={alerts} isLoading={loadingAlerts} />
-          </div>
-          <WeeklySummary insight={weeklyInsight} isLoading={loadingInsights} />
+        {/* SECTION 10 — Upsell Pro banner (full width) */}
+        <div className="mb-6">
+          <UpsellProBanner />
         </div>
 
-        {/* Section 2 — Source diversity (1/2) + Topics (1/2) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-          <SourceDiversity sources={sources} total={sourceTotal} isLoading={loadingSources} />
-          <TopicsList topics={topics} isLoading={loadingTopics} />
-        </div>
-
-        {/* Section 7 — Alerts timeline (full width) */}
-        <div className="mb-5">
-          <AlertsTimeline buckets={buckets} events={events} isLoading={loadingTimeline} />
-        </div>
-
-        {/* Section 5 — HarchIQ AI panel (2/3) + AI visibility (1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-          <div className="lg:col-span-2">
-            <HarchIQPanel />
-          </div>
-          <AiVisibilityPanel engines={aiEngines} isLoading={loadingAi} />
-        </div>
-
-        {/* Section 6 — Competitor snapshot (full width with upsell) */}
-        <div className="mb-5">
-          <CompetitorSnapshot brands={competitors} isLoading={loadingCompetitors} />
-        </div>
-
-        {/* Upgrade CTA */}
-        <UpgradeCard />
+        {/* Footer note */}
+        <footer
+          className="pt-6 pb-4 text-center"
+          style={{ borderTop: `1px solid ${C.border}` }}
+        >
+          <p
+            className="text-[11px]"
+            style={{ color: C.textMuted, fontFamily: C.fontMono }}
+          >
+            Plan Essentiel · Harch Atelier · Données temps réel · Casablanca, Maroc
+          </p>
+        </footer>
       </div>
     </div>
-  );
-}
-
-// ─── Crisis Indicator (small card next to sentiment chart) ───────
-
-function CrisisIndicatorCard({
-  health,
-  isLoading,
-}: {
-  health: BrandHealth | null;
-  isLoading: boolean;
-}) {
-  const level = health?.crisisLevel ?? "safe";
-  const score = health?.crisisScore ?? 0;
-
-  const color =
-    level === "critical" ? C.danger : level === "warning" ? C.warning : level === "watch" ? C.accent : C.success;
-  const bgColor =
-    level === "critical"
-      ? C.dangerBg
-      : level === "warning"
-      ? C.warningBg
-      : level === "watch"
-      ? "rgba(120,113,108,0.08)"
-      : C.successBg;
-  const label =
-    level === "critical"
-      ? "Critique"
-      : level === "warning"
-      ? "Alerte"
-      : level === "watch"
-      ? "Veille"
-      : "Nominal";
-
-  return (
-    <Card title="Niveau de crise" subtitle="Indicateur temps réel" badge="Live" bodyClassName="p-5">
-      {isLoading ? (
-        <div className="animate-pulse space-y-3">
-          <div className="h-20 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-          <div className="h-3 w-3/4 rounded" style={{ backgroundColor: "rgba(120,113,108,0.08)" }} />
-        </div>
-      ) : !health ? (
-        <EmptyState label="Données indisponibles" />
-      ) : (
-        <div>
-          <div
-            className="rounded-xl p-4 mb-3"
-            style={{
-              backgroundColor: bgColor,
-              border: `1px solid ${color}40`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] uppercase tracking-wider" style={{ color, fontFamily: C.fontMono }}>
-                  Statut
-                </div>
-                <div className="text-[22px] font-bold leading-tight" style={{ color, fontFamily: C.fontSans }}>
-                  {label}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider" style={{ color, fontFamily: C.fontMono }}>
-                  Score
-                </div>
-                <div className="text-[22px] font-bold leading-tight tabular-nums" style={{ color, fontFamily: C.fontMono }}>
-                  {score}
-                </div>
-              </div>
-            </div>
-            {/* Score bar */}
-            <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(0,0,0,0.06)" }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${Math.min(100, score)}%`, backgroundColor: color }}
-              />
-            </div>
-          </div>
-          {health.topNarrative && (
-            <div>
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                Narrative dominant
-              </div>
-              <p className="text-[12px] font-medium mb-1" style={{ color: C.text }}>
-                {health.topNarrative.label}
-              </p>
-              <div className="flex items-center gap-2 text-[11px]" style={{ color: C.textMuted, fontFamily: C.fontMono }}>
-                <span>Momentum: {health.topNarrative.momentum}</span>
-                <span>·</span>
-                <span>Sentiment: {health.topNarrative.sentiment.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-          {health.recommendation && (
-            <p
-              className="text-[12px] mt-3 pt-3 leading-relaxed"
-              style={{ color: C.textBody, borderTop: `1px solid ${C.border}` }}
-            >
-              {health.recommendation}
-            </p>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── Upgrade CTA ─────────────────────────────────────────────────
-
-function UpgradeCard() {
-  return (
-    <section
-      className="rounded-[12px] p-5 sm:p-6"
-      style={{
-        background: `linear-gradient(135deg, ${C.bgSubtle} 0%, ${C.bg} 100%)`,
-        border: `1px solid ${C.border}`,
-        borderRadius: 12,
-      }}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div
-            className="text-[10px] uppercase tracking-wider mb-1.5"
-            style={{ color: C.cta, fontFamily: C.fontMono }}
-          >
-            Plan Essentiel
-          </div>
-          <h3 className="text-[18px] sm:text-[20px] font-bold leading-tight" style={{ color: C.text }}>
-            Passez à Pro pour débloquer le benchmarking complet
-          </h3>
-          <p className="text-[13px] mt-1.5 max-w-[520px]" style={{ color: C.textBody }}>
-            Rapports PDF board-ready · alertes WhatsApp 24/7 · 5+ concurrents ·
-            matrix linguistique Darija/MSA/Français · API & MCP.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-          <a
-            href="/atelier/pricing"
-            className="text-[13px] font-medium px-5 py-2.5 rounded-lg text-center transition-opacity hover:opacity-90"
-            style={{
-              backgroundColor: C.cta,
-              color: "white",
-            }}
-          >
-            Voir les offres →
-          </a>
-          <a
-            href="/atelier/contact"
-            className="text-[13px] font-medium px-5 py-2.5 rounded-lg text-center transition-colors"
-            style={{
-              border: `1px solid ${C.borderStrong}`,
-              color: C.text,
-            }}
-          >
-            Parler à un expert
-          </a>
-        </div>
-      </div>
-    </section>
   );
 }
 
