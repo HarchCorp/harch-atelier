@@ -1,822 +1,729 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { C } from "../components/tokens";
-import { isWorkEmail } from "@/lib/harchiq/domain-extract";
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  ShieldCheck,
+  ChevronDown,
+} from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
-//  REQUEST ACCESS — Public form (competitor-grade)
+//  REQUEST ACCESS — Minimalist institutional demo request form
 //
-//  Two modes:
-//    1. SIGN UP WITH WORK EMAIL — for users whose company is already
-//       registered. Real-time domain lookup against
-//       /api/companies/lookup-domain. If the domain matches a known
-//       real company, the user creates a password and we POST to
-//       /api/auth/register-company. They're auto-attached to their
-//       company.
-//    2. REQUEST ACCESS — for users whose company is NOT registered
-//       yet (or who used a disposable email). Falls back to the
-//       existing 3-step access-request form. Submits to
-//       /api/access-request and creates a lead for the sales team.
+//  Same design language as /atelier/login: white card on a subtle
+//  neutral gradient, sage green (#4A7B5F) accents, charcoal (#0A0A0A)
+//  primary action. French language. Lucide icons only — no emojis.
 //
-//  Task: domain-matching-demo-isolation
+//  Submits to POST /api/access-request.
+//    - 200 → success state (CheckCircle, sage green)
+//    - 409 → "Un compte existe déjà avec cet email. Connectez-vous."
+//    - other → red error banner (AlertCircle, role=alert)
 // ═══════════════════════════════════════════════════════════════
 
-type DomainStatus =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "disposable"; message: string }
-  | { kind: "unknown"; domain: string; message: string }
-  | { kind: "known"; companyName: string; slug: string; sector: string; hasSubscription: boolean; message: string }
-  | { kind: "error"; message: string };
+type Plan = "essentiel" | "pro" | "grandes-entreprises" | "agences";
 
-type Mode = "signup" | "request";
+const PLANS: { id: Plan; label: string; desc: string; popular?: boolean }[] = [
+  { id: "essentiel", label: "Essentiel", desc: "Pour vous lancer dans la veille" },
+  { id: "pro", label: "Pro", desc: "Pour les marques en croissance", popular: true },
+  { id: "grandes-entreprises", label: "Grandes Entreprises", desc: "Pour les leaders internationaux" },
+  { id: "agences", label: "Agences", desc: "Pour les multi-clients" },
+];
+
+const FONCTION_OPTIONS = ["Dircom", "CEO", "Analyste", "Consultant", "Autre"];
+
+// API expects companySize as one of: startup | sme | mid-market | enterprise.
+// We display human-readable labels but send the API enum value.
+const COMPANY_SIZE_OPTIONS: { label: string; value: string }[] = [
+  { label: "1-50", value: "startup" },
+  { label: "51-200", value: "sme" },
+  { label: "201-1000", value: "mid-market" },
+  { label: "1000+", value: "enterprise" },
+];
 
 export function RequestAccessPage() {
-  const [mode, setMode] = useState<Mode>("signup");
+  const [plan, setPlan] = useState<Plan>("pro");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [fonction, setFonction] = useState("");
+  const [companySize, setCompanySize] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  // ─── Sign-up mode state ───────────────────────────────────────
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupName, setSignupName] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [domainStatus, setDomainStatus] = useState<DomainStatus>({ kind: "idle" });
-  const [signupStatus, setSignupStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [signupError, setSignupError] = useState("");
+  // Synchronous rage-click guard (see LoginPage for rationale).
+  const submittingRef = useRef(false);
 
-  // ─── Request-access mode state (existing 3-step form) ─────────
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    email: "",
-    name: "",
-    company: "",
-    role: "",
-    accountType: "brand-monitor" as "brand-monitor" | "market-competitor" | "investment-bank" | "harch-alpha",
-    companySize: "" as "" | "startup" | "sme" | "mid-market" | "enterprise",
-    useCase: "",
-    budget: "",
-    phone: "",
-    country: "Morocco",
-    referralSource: "",
-    message: "",
-  });
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
-
-  const update = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // ─── Real-time domain lookup (debounced 350ms) ───────────────
-  // We do the client-side disposable check first (instant) and only
-  // hit the API when the email looks like a work email. This avoids
-  // a network round-trip for every keystroke on a gmail.com address.
-  useEffect(() => {
-    const email = signupEmail.trim();
-    if (!email) {
-      setDomainStatus({ kind: "idle" });
-      return;
-    }
-    if (!email.includes("@")) {
-      setDomainStatus({ kind: "idle" });
-      return;
-    }
-
-    // Client-side disposable check — instant feedback, no network.
-    if (!isWorkEmail(email)) {
-      const domain = email.split("@")[1]?.toLowerCase() ?? "";
-      setDomainStatus({
-        kind: "disposable",
-        message:
-          domain.length > 0
-            ? `Please use your work email address. ${domain} is a personal provider.`
-            : "Please use your work email address.",
-      });
-      return;
-    }
-
-    setDomainStatus({ kind: "loading" });
-
-    const controller = new AbortController();
-    const timeout = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `/api/companies/lookup-domain?email=${encodeURIComponent(email)}`,
-          { signal: controller.signal },
-        );
-        const data = await res.json();
-        if (data.status === "known") {
-          setDomainStatus({
-            kind: "known",
-            companyName: data.company.name,
-            slug: data.company.slug,
-            sector: data.company.sector,
-            hasSubscription: data.hasSubscription,
-            message: data.message,
-          });
-        } else if (data.status === "unknown") {
-          setDomainStatus({
-            kind: "unknown",
-            domain: data.domain,
-            message: data.message,
-          });
-        } else if (data.status === "disposable") {
-          setDomainStatus({ kind: "disposable", message: data.message });
-        } else {
-          setDomainStatus({ kind: "idle" });
-        }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        setDomainStatus({
-          kind: "error",
-          message: "Couldn't verify your domain. Try again in a moment.",
-        });
-      }
-    }, 350);
-
-    return () => {
-      controller.abort();
-      clearTimeout(timeout);
-    };
-  }, [signupEmail]);
-
-  const canSubmitSignup = useMemo(() => {
-    if (domainStatus.kind !== "known") return false;
-    if (!domainStatus.hasSubscription) return false;
-    if (!signupEmail.trim() || !signupName.trim()) return false;
-    if (signupPassword.length < 8) return false;
-    return true;
-  }, [domainStatus, signupEmail, signupName, signupPassword]);
-
-  const handleSignupSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmitSignup) return;
-
-    setSignupStatus("loading");
-    setSignupError("");
-
-    try {
-      const res = await fetch("/api/auth/register-company", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: signupEmail.trim(),
-          name: signupName.trim(),
-          password: signupPassword,
-        }),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setSignupStatus("success");
-        return;
-      }
-
-      // 403 with status=pending_access means we created an AccessRequest
-      // for them. Treat as soft-success (they should hear back from us).
-      if (res.status === 403 && data.status === "pending_access") {
-        setSignupStatus("success");
-        return;
-      }
-
-      setSignupError(data.message || data.error || "Registration failed.");
-      setSignupStatus("error");
-    } catch {
-      setSignupError("Network error. Please try again.");
-      setSignupStatus("error");
-    }
-  };
-
-  const handleRequestAccessSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.email.trim() || !formData.name.trim()) {
-      setErrorMsg("Email and name are required.");
-      setStatus("error");
-      return;
-    }
-
-    setStatus("loading");
-    setErrorMsg("");
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/access-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name,
+          email,
+          company,
+          fonction,
+          companySize: companySize || undefined,
+          plan,
+          message,
+          source: "request-access",
+        }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || "Request failed.");
-        setStatus("error");
+      if (res.ok) {
+        setSuccess(true);
         return;
       }
 
-      setStatus("success");
+      if (res.status === 409) {
+        setError("Un compte existe déjà avec cet email. Connectez-vous.");
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      setError(
+        (data?.error as string) ||
+          "Une erreur est survenue. Veuillez réessayer."
+      );
     } catch {
-      setErrorMsg("Network error. Please try again.");
-      setStatus("error");
+      setError("Erreur réseau. Vérifiez votre connexion.");
+    } finally {
+      setLoading(false);
+      submittingRef.current = false;
     }
   };
 
-  // ─── Success screens ─────────────────────────────────────────
-  if (mode === "signup" && signupStatus === "success") {
+  // ─── Success state ─────────────────────────────────────────────
+  if (success) {
     return (
-      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px", fontFamily: C.fontSans }}>
-        <div style={{ maxWidth: "480px", width: "100%", textAlign: "center" }}>
-          <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.cta, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-            {domainStatus.kind === "known" ? "Account created" : "Request received"}
+      <div style={pageWrapperStyle}>
+        <style>{raCss}</style>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="harch-ra-card"
+          style={cardStyle}
+        >
+          <div style={successIconWrapperStyle}>
+            <CheckCircle size={32} strokeWidth={2} style={{ color: "#4A7B5F" }} />
           </div>
-          <h1 style={{ fontSize: "clamp(28px, 5vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>
-            {domainStatus.kind === "known"
-              ? `Welcome aboard, ${signupName.split(" ")[0]}.`
-              : "Thank you."}
-          </h1>
-          <p style={{ fontSize: "15px", color: C.textBody, lineHeight: 1.6, marginBottom: "32px" }}>
-            {domainStatus.kind === "known"
-              ? `Your account is attached to ${domainStatus.companyName}. Sign in with your work email to access the console.`
-              : `We couldn't find a company matching your email domain. Our team will review your request and reach out within 48 hours.`}
+          <h1 style={successTitleStyle}>Demande reçue</h1>
+          <p style={successTextStyle}>
+            Notre équipe vous contactera sous 4 heures ouvrées.
           </p>
-          <div style={{ padding: "16px 20px", background: C.bgSubtle, borderRadius: "6px", marginBottom: "24px", textAlign: "left" }}>
-            <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Your account</div>
-            <div style={{ fontSize: "13px", color: C.textBody, lineHeight: 1.6 }}>
-              <strong style={{ color: C.text }}>{signupName}</strong> · {signupEmail}<br />
-              {domainStatus.kind === "known" && <>Company: <span style={{ color: C.accent }}>{domainStatus.companyName}</span></>}
-            </div>
-          </div>
-          {domainStatus.kind === "known" ? (
-            <a href="/atelier/login" style={{ display: "inline-block", padding: "12px 24px", background: C.cta, color: "#ffffff", fontSize: "13px", fontWeight: 600, textDecoration: "none", borderRadius: "4px" }}>
-              Sign in
-            </a>
-          ) : (
-            <a href="/atelier" style={{ display: "inline-block", padding: "12px 24px", background: C.cta, color: "#ffffff", fontSize: "13px", fontWeight: 600, textDecoration: "none", borderRadius: "4px" }}>
-              Back to Harch Atelier
-            </a>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === "request" && status === "success") {
-    return (
-      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px", fontFamily: C.fontSans }}>
-        <div style={{ maxWidth: "480px", width: "100%", textAlign: "center" }}>
-          <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.cta, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "12px" }}>
-            Request received
-          </div>
-          <h1 style={{ fontSize: "clamp(28px, 5vw, 36px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 16px" }}>
-            Thank you, {formData.name.split(" ")[0]}.
-          </h1>
-          <p style={{ fontSize: "15px", color: C.textBody, lineHeight: 1.6, marginBottom: "32px" }}>
-            Your request has been received. The Harch Atelier team will review it and send you an access link if approved — usually within 48 hours.
-          </p>
-          <div style={{ padding: "16px 20px", background: C.bgSubtle, borderRadius: "6px", marginBottom: "24px", textAlign: "left" }}>
-            <div style={{ fontSize: "11px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>Your request</div>
-            <div style={{ fontSize: "13px", color: C.textBody, lineHeight: 1.6 }}>
-              <strong style={{ color: C.text }}>{formData.name}</strong> · {formData.email}<br />
-              Account type: <span style={{ color: C.accent }}>{formData.accountType}</span><br />
-              {formData.company && <>Company: {formData.company}<br /></>}
-              {formData.budget && <>Budget: {formData.budget}<br /></>}
-            </div>
-          </div>
-          <a href="/atelier" style={{ display: "inline-block", padding: "12px 24px", background: C.cta, color: "#ffffff", fontSize: "13px", fontWeight: 600, textDecoration: "none", borderRadius: "4px" }}>
-            Back to Harch Atelier
+          <a href="/atelier" style={successLinkStyle} className="harch-ra-link">
+            Retour à l&rsquo;accueil
           </a>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  const accountTypes = [
-    { value: "brand-monitor" as const, label: "Brand Monitor", desc: "Monitor your company's reputation across media + AI" },
-    // Task ID: 5-standby — the 3 offers below are on standby.
-    // They still appear in the list (greyed-out + Standby badge)
-    // so prospects know what's coming back, but they cannot be
-    // selected. Their consoles render a StandbyBanner.
-    { value: "market-competitor" as const, label: "Market & Competitor", desc: "Brand + up to 10 competitors + sector intelligence", standby: true },
-    { value: "investment-bank" as const, label: "Investment Bank", desc: "Due diligence, M&A, portfolio roll-up, ESG screening", standby: true },
-    { value: "harch-alpha" as const, label: "Harch Alpha", desc: "Track sentiment-to-price correlation on Moroccan assets", standby: true },
-  ];
-
-  const companySizes = [
-    { value: "startup", label: "Startup", desc: "1-10 employees" },
-    { value: "sme", label: "SME", desc: "11-50 employees" },
-    { value: "mid-market", label: "Mid-market", desc: "51-500 employees" },
-    { value: "enterprise", label: "Enterprise", desc: "500+ employees" },
-  ];
-
-  const budgets = [
-    "< 5K MAD/month",
-    "5K - 15K MAD/month",
-    "15K - 40K MAD/month",
-    "40K - 75K MAD/month",
-    "75K+ MAD/month",
-  ];
-
-  const referralSources = [
-    "LinkedIn",
-    "Twitter/X",
-    "Google search",
-    "Word of mouth",
-    "Press article",
-    "Conference/event",
-    "Other",
-  ];
-
+  // ─── Form state ────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: C.fontSans }}>
-      <header style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}` }}>
-        <a href="/atelier" style={{ fontFamily: C.fontMono, fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", color: C.text, textTransform: "uppercase", textDecoration: "none" }}>
-          HarchIQ<span style={{ color: C.accent, marginLeft: "8px" }}>Console</span>
-        </a>
-      </header>
+    <div style={pageWrapperStyle}>
+      <style>{raCss}</style>
 
-      <main style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
-        <div style={{ maxWidth: "560px", width: "100%" }}>
-          {/* ─── Mode switcher ─────────────────────────────────── */}
-          <div style={{ display: "flex", gap: "0", marginBottom: "32px", border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden" }}>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              style={{
-                flex: 1,
-                padding: "12px 16px",
-                background: mode === "signup" ? C.bgSubtle : "transparent",
-                border: "none",
-                borderRight: `1px solid ${C.border}`,
-                cursor: "pointer",
-                fontFamily: C.fontMono,
-                fontSize: "11px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: mode === "signup" ? C.cta : C.textMuted,
-                transition: "all 0.15s",
-              }}
-            >
-              Sign up with work email
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("request")}
-              style={{
-                flex: 1,
-                padding: "12px 16px",
-                background: mode === "request" ? C.bgSubtle : "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: C.fontMono,
-                fontSize: "11px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: mode === "request" ? C.cta : C.textMuted,
-                transition: "all 0.15s",
-              }}
-            >
-              Request access
-            </button>
-          </div>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="harch-ra-card"
+        style={cardStyle}
+      >
+        {/* 1. Logo */}
+        <div style={logoWrapperStyle}>
+          <span style={logoHarchStyle}>HARCH</span>
+          <span style={logoPipeStyle}>|</span>
+          <span style={logoAtelierStyle}>ATELIER</span>
+        </div>
 
-          {/* ═══ SIGN UP MODE ════════════════════════════════════ */}
-          {mode === "signup" && (
-            <form onSubmit={handleSignupSubmit}>
-              <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
-                Self-service registration
-              </div>
-              <h1 style={{ fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 12px" }}>
-                Sign up with your work email.
-              </h1>
-              <p style={{ fontSize: "14px", color: C.textBody, lineHeight: 1.5, marginBottom: "24px" }}>
-                If your company is already registered with Harch Atelier, you can create your account instantly. We&apos;ll match your email domain to your organization.
-              </p>
+        {/* 2. Title + subtitle */}
+        <h1 style={titleStyle}>Demande d&rsquo;accès</h1>
+        <p style={subtitleStyle}>
+          Choisissez votre plan et demandez une démonstration
+        </p>
 
-              {/* Email + Name */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "12px", marginBottom: "16px" }}>
-                <div>
-                  <label style={labelStyle}>Full name *</label>
-                  <input type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Jane Doe" required style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Work email *</label>
-                  <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="jane@company.com" required style={inputStyle} />
-                </div>
-              </div>
-
-              {/* Password — only shown when domain is known + has subscription */}
-              {domainStatus.kind === "known" && domainStatus.hasSubscription && (
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={labelStyle}>Password *</label>
-                  <input
-                    type="password"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    required
-                    minLength={8}
-                    style={inputStyle}
-                  />
-                </div>
-              )}
-
-              {/* Domain feedback banner */}
-              <DomainFeedbackBanner status={domainStatus} />
-
-              {/* Error message */}
-              {signupStatus === "error" && signupError && (
-                <div style={{ padding: "12px 14px", background: C.dangerBg, border: `1px solid ${C.danger}30`, borderRadius: "4px", fontSize: "13px", color: C.danger, marginBottom: "16px", marginTop: "16px" }}>
-                  {signupError}
-                </div>
-              )}
-
-              {/* Submit */}
+        {/* 3. Plan selector (2x2 grid) */}
+        <div style={planGridStyle}>
+          {PLANS.map((p) => {
+            const selected = plan === p.id;
+            return (
               <button
-                type="submit"
-                disabled={!canSubmitSignup || signupStatus === "loading"}
-                style={btnStyle(!canSubmitSignup || signupStatus === "loading")}
+                key={p.id}
+                type="button"
+                onClick={() => setPlan(p.id)}
+                className="harch-plan-card"
+                style={{
+                  ...planCardBaseStyle,
+                  ...(selected ? planCardSelectedStyle : null),
+                }}
+                aria-pressed={selected}
               >
-                {signupStatus === "loading" ? "Creating account..." : "Create account"}
+                {p.popular && (
+                  <span style={popularBadgeStyle}>Le plus populaire</span>
+                )}
+                <span style={planLabelStyle}>{p.label}</span>
+                <span style={planDescStyle}>{p.desc}</span>
               </button>
+            );
+          })}
+        </div>
 
-              {/* Fallback hint */}
-              {domainStatus.kind === "unknown" && (
-                <div style={{ marginTop: "16px", fontSize: "12px", color: C.textMuted, textAlign: "center" }}>
-                  Your company isn&apos;t registered yet.{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("request");
-                      setFormData((prev) => ({ ...prev, email: signupEmail, name: signupName }));
-                    }}
-                    style={{ background: "none", border: "none", color: C.cta, cursor: "pointer", fontSize: "12px", fontWeight: 600, padding: 0, textDecoration: "underline" }}
-                  >
-                    Request access instead →
-                  </button>
-                </div>
-              )}
-
-              <div style={{ marginTop: "24px", textAlign: "center" }}>
-                <a href="/atelier/login" style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textDecoration: "none" }}>Already have an account? Sign in</a>
-              </div>
-            </form>
+        {/* 4. Form */}
+        <form onSubmit={handleSubmit} style={{ marginTop: "24px" }}>
+          {/* 8. Error banner */}
+          {error && (
+            <div role="alert" style={errorStyle}>
+              <AlertCircle size={14} strokeWidth={2} style={errorIconStyle} />
+              <span>{error}</span>
+            </div>
           )}
 
-          {/* ═══ REQUEST ACCESS MODE (existing 3-step form) ══════ */}
-          {mode === "request" && (
-            <>
-              {/* Progress indicator */}
-              <div style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
-                {[1, 2, 3].map((s) => (
-                  <div key={s} style={{
-                    flex: 1,
-                    height: "3px",
-                    background: s <= step ? C.cta : C.border,
-                    borderRadius: "2px",
-                    transition: "background 0.2s",
-                  }} />
-                ))}
-              </div>
-
-              <form onSubmit={handleRequestAccessSubmit}>
-                {/* Step 1: Account type + basic info */}
-                {step === 1 && (
-                  <div>
-                    <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
-                      Step 1 of 3 · Account type
-                    </div>
-                    <h1 style={{ fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 12px" }}>
-                      What do you need?
-                    </h1>
-                    <p style={{ fontSize: "14px", color: C.textBody, lineHeight: 1.5, marginBottom: "24px" }}>
-                      Choose your account type. You can&apos;t change this later without contacting us.
-                    </p>
-
-                    {/* Account type cards */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
-                      {accountTypes.map((opt) => {
-                        const isStandby = !!(opt as { standby?: boolean }).standby;
-                        const isSelected = formData.accountType === opt.value && !isStandby;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            disabled={isStandby}
-                            onClick={() => !isStandby && update("accountType", opt.value)}
-                            style={{
-                              padding: "16px 20px",
-                              background: isSelected ? C.bgSubtle : "transparent",
-                              border: `1px solid ${isSelected ? C.accent : C.border}`,
-                              borderRadius: "6px",
-                              cursor: isStandby ? "not-allowed" : "pointer",
-                              textAlign: "left",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "12px",
-                              transition: "all 0.15s",
-                              opacity: isStandby ? 0.55 : 1,
-                              position: "relative",
-                            }}
-                          >
-                            <div style={{
-                              width: "16px",
-                              height: "16px",
-                              borderRadius: "50%",
-                              border: `2px solid ${isSelected ? C.accent : C.border}`,
-                              flexShrink: 0,
-                              position: "relative",
-                            }}>
-                              {isSelected && (
-                                <div style={{
-                                  position: "absolute",
-                                  top: "2px",
-                                  left: "2px",
-                                  width: "8px",
-                                  height: "8px",
-                                  borderRadius: "50%",
-                                  background: C.accent,
-                                }} />
-                              )}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: "14px", fontWeight: 600, color: isSelected ? C.accent : C.text }}>{opt.label}</div>
-                              <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "2px" }}>{opt.desc}</div>
-                            </div>
-                            {isStandby && (
-                              <span
-                                style={{
-                                  fontFamily: C.fontMono,
-                                  fontSize: "9px",
-                                  fontWeight: 700,
-                                  letterSpacing: "0.14em",
-                                  textTransform: "uppercase",
-                                  color: C.warningText,
-                                  background: C.warningBg,
-                                  border: `1px solid ${C.warningBorder}`,
-                                  borderRadius: "4px",
-                                  padding: "3px 7px",
-                                  lineHeight: 1,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                Standby
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Email + Name */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "12px", marginBottom: "16px" }}>
-                      <div>
-                        <label style={labelStyle}>Full name *</label>
-                        <input type="text" value={formData.name} onChange={(e) => update("name", e.target.value)} placeholder="Jane Doe" required style={inputStyle} />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>Email *</label>
-                        <input type="email" value={formData.email} onChange={(e) => update("email", e.target.value)} placeholder="jane@company.com" required style={inputStyle} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "12px" }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={labelStyle}>Phone (WhatsApp)</label>
-                        <input type="tel" value={formData.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+212 6XX XXX XXX" style={inputStyle} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={labelStyle}>Country</label>
-                        <input type="text" value={formData.country} onChange={(e) => update("country", e.target.value)} placeholder="Morocco" style={inputStyle} />
-                      </div>
-                    </div>
-
-                    <button type="button" onClick={() => setStep(2)} disabled={!formData.email || !formData.name} style={btnStyle(!formData.email || !formData.name)}>
-                      Continue →
-                    </button>
-                  </div>
-                )}
-
-                {/* Step 2: Company + size + budget */}
-                {step === 2 && (
-                  <div>
-                    <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
-                      Step 2 of 3 · Company info
-                    </div>
-                    <h1 style={{ fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 12px" }}>
-                      Tell us about you.
-                    </h1>
-
-                    <div style={{ marginBottom: "16px" }}>
-                      <label style={labelStyle}>Company</label>
-                      <input type="text" value={formData.company} onChange={(e) => update("company", e.target.value)} placeholder="Bank of Africa" style={inputStyle} />
-                    </div>
-
-                    <div style={{ marginBottom: "16px" }}>
-                      <label style={labelStyle}>Your role</label>
-                      <input type="text" value={formData.role} onChange={(e) => update("role", e.target.value)} placeholder="Comms Director, CEO, Analyst..." style={inputStyle} />
-                    </div>
-
-                    {/* Company size */}
-                    <div style={{ marginBottom: "16px" }}>
-                      <label style={labelStyle}>Company size</label>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: "8px" }}>
-                        {companySizes.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => update("companySize", opt.value)}
-                            style={{
-                              padding: "10px 12px",
-                              background: formData.companySize === opt.value ? C.bgSubtle : "transparent",
-                              border: `1px solid ${formData.companySize === opt.value ? C.accent : C.border}`,
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              textAlign: "left",
-                            }}
-                          >
-                            <div style={{ fontSize: "12px", fontWeight: 600, color: formData.companySize === opt.value ? C.accent : C.text }}>{opt.label}</div>
-                            <div style={{ fontSize: "10px", color: C.textMuted }}>{opt.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Budget */}
-                    <div style={{ marginBottom: "16px" }}>
-                      <label style={labelStyle}>Monthly budget</label>
-                      <select value={formData.budget} onChange={(e) => update("budget", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                        <option value="">Select a range</option>
-                        {budgets.map((b) => <option key={b} value={b}>{b}</option>)}
-                      </select>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button type="button" onClick={() => setStep(1)} style={{ ...btnStyle(false), background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, flex: 1 }}>
-                        ← Back
-                      </button>
-                      <button type="button" onClick={() => setStep(3)} style={{ ...btnStyle(false), flex: 2 }}>
-                        Continue →
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Use case + referral + message */}
-                {step === 3 && (
-                  <div>
-                    <div style={{ fontFamily: C.fontMono, fontSize: "10px", color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "8px" }}>
-                      Step 3 of 3 · Almost there
-                    </div>
-                    <h1 style={{ fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, color: C.text, letterSpacing: "-0.03em", margin: "0 0 12px" }}>
-                      What are you looking for?
-                    </h1>
-
-                    <div style={{ marginBottom: "16px" }}>
-                      <label style={labelStyle}>Use case</label>
-                      <textarea value={formData.useCase} onChange={(e) => update("useCase", e.target.value)} placeholder="I want to monitor what media and AI say about my company..." rows={3} style={{ ...inputStyle, resize: "vertical" }} />
-                    </div>
-
-                    <div style={{ marginBottom: "16px" }}>
-                      <label style={labelStyle}>How did you hear about us?</label>
-                      <select value={formData.referralSource} onChange={(e) => update("referralSource", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                        <option value="">Select a source</option>
-                        {referralSources.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-
-                    <div style={{ marginBottom: "24px" }}>
-                      <label style={labelStyle}>Anything else? (optional)</label>
-                      <textarea value={formData.message} onChange={(e) => update("message", e.target.value)} placeholder="Tell us about your specific needs..." rows={2} style={{ ...inputStyle, resize: "vertical" }} />
-                    </div>
-
-                    {status === "error" && (
-                      <div style={{ padding: "12px 14px", background: C.dangerBg, border: `1px solid ${C.danger}30`, borderRadius: "4px", fontSize: "13px", color: C.danger, marginBottom: "16px" }}>
-                        {errorMsg}
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button type="button" onClick={() => setStep(2)} style={{ ...btnStyle(false), background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, flex: 1 }}>
-                        ← Back
-                      </button>
-                      <button type="submit" disabled={status === "loading"} style={{ ...btnStyle(status === "loading"), flex: 2 }}>
-                        {status === "loading" ? "Submitting..." : "Submit request"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </form>
-            </>
-          )}
-
-          <div style={{ marginTop: "24px", textAlign: "center" }}>
-            <a href="/atelier" style={{ fontSize: "12px", color: C.textMuted, fontFamily: C.fontMono, textDecoration: "none" }}>← Back to Harch Atelier</a>
+          {/* Nom complet */}
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="ra-name">
+              Nom complet <span style={requiredStyle}>*</span>
+            </label>
+            <input
+              id="ra-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="harch-ra-input"
+              autoComplete="name"
+            />
           </div>
-        </div>
-      </main>
+
+          {/* Email professionnel */}
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="ra-email">
+              Email professionnel <span style={requiredStyle}>*</span>
+            </label>
+            <input
+              id="ra-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="harch-ra-input"
+              autoComplete="email"
+            />
+          </div>
+
+          {/* Entreprise */}
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="ra-company">
+              Entreprise <span style={requiredStyle}>*</span>
+            </label>
+            <input
+              id="ra-company"
+              type="text"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              required
+              className="harch-ra-input"
+              autoComplete="organization"
+            />
+          </div>
+
+          {/* Fonction */}
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="ra-fonction">
+              Fonction
+            </label>
+            <div style={selectWrapperStyle}>
+              <select
+                id="ra-fonction"
+                value={fonction}
+                onChange={(e) => setFonction(e.target.value)}
+                className="harch-ra-input harch-ra-select"
+              >
+                <option value="">Sélectionner…</option>
+                {FONCTION_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={14}
+                strokeWidth={2}
+                style={selectChevronStyle}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+
+          {/* Taille de l'entreprise */}
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="ra-size">
+              Taille de l&rsquo;entreprise
+            </label>
+            <div style={selectWrapperStyle}>
+              <select
+                id="ra-size"
+                value={companySize}
+                onChange={(e) => setCompanySize(e.target.value)}
+                className="harch-ra-input harch-ra-select"
+              >
+                <option value="">Sélectionner…</option>
+                {COMPANY_SIZE_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={14}
+                strokeWidth={2}
+                style={selectChevronStyle}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+
+          {/* Message */}
+          <div style={{ ...fieldStyle, marginBottom: 0 }}>
+            <label style={labelStyle} htmlFor="ra-message">
+              Message
+            </label>
+            <textarea
+              id="ra-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="harch-ra-input harch-ra-textarea"
+              rows={4}
+            />
+          </div>
+
+          {/* 5. Trust badges */}
+          <div style={trustRowStyle}>
+            <span style={trustItemStyle}>
+              <ShieldCheck
+                size={12}
+                strokeWidth={2}
+                style={trustIconStyle}
+                aria-hidden="true"
+              />
+              <span style={trustTextStyle}>Conforme CNDP</span>
+            </span>
+            <span style={dotStyle} aria-hidden="true" />
+            <span style={trustItemStyle}>
+              <ShieldCheck
+                size={12}
+                strokeWidth={2}
+                style={trustIconStyle}
+                aria-hidden="true"
+              />
+              <span style={trustTextStyle}>Loi 09-08</span>
+            </span>
+            <span style={dotStyle} aria-hidden="true" />
+            <span style={trustItemStyle}>
+              <ShieldCheck
+                size={12}
+                strokeWidth={2}
+                style={trustIconStyle}
+                aria-hidden="true"
+              />
+              <span style={trustTextStyle}>Audit SHA-256</span>
+            </span>
+          </div>
+
+          {/* 6. Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="harch-submit-btn"
+            style={{
+              ...submitButtonStyle,
+              opacity: loading ? 0.6 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+              marginTop: "20px",
+            }}
+          >
+            <span>{loading ? "Envoi…" : "Demander une démonstration"}</span>
+            {!loading && (
+              <ArrowRight
+                size={14}
+                strokeWidth={2}
+                style={{ marginLeft: "6px" }}
+              />
+            )}
+          </button>
+        </form>
+      </motion.div>
+
+      {/* Below the card */}
+      <div style={belowCardStyle}>
+        Pas encore sûr?
+        <a href="/atelier" style={belowLinkStyle} className="harch-ra-link">
+          Découvrir la plateforme
+        </a>
+      </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  DOMAIN FEEDBACK BANNER — inline validation result
-// ═══════════════════════════════════════════════════════════════
+// ─── Styles ────────────────────────────────────────────────────────
 
-function DomainFeedbackBanner({ status }: { status: DomainStatus }) {
-  if (status.kind === "idle" || status.kind === "loading") {
-    return null;
+const raCss = `
+  .harch-ra-input {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #E5E5E5;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 14px;
+    background: #FAFAFA;
+    color: #0A0A0A;
+    box-sizing: border-box;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
   }
+  .harch-ra-input::placeholder {
+    color: #9CA3AF;
+  }
+  .harch-ra-input:focus {
+    border-color: #4A7B5F;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(74,123,95,0.08);
+  }
+  .harch-ra-textarea {
+    height: 120px;
+    padding: 12px 14px;
+    resize: vertical;
+    line-height: 1.5;
+    font-family: inherit;
+  }
+  .harch-ra-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  .harch-plan-card {
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+    text-align: left;
+    font-family: inherit;
+  }
+  .harch-plan-card:hover {
+    border-color: #4A7B5F !important;
+  }
+  .harch-submit-btn {
+    transition: background 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+  }
+  .harch-submit-btn:not(:disabled):hover {
+    background: #1A1A1A !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+  }
+  .harch-ra-link {
+    text-decoration: none;
+    transition: text-decoration 150ms ease;
+  }
+  .harch-ra-link:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 520px) {
+    .harch-ra-card {
+      max-width: 92% !important;
+      padding: 32px 22px !important;
+    }
+  }
+`;
 
-  // Color palette per status kind
-  const palette = {
-    disposable: { bg: C.warningBg, border: C.warningBorder, text: C.warningText, icon: "!" },
-    unknown: { bg: C.warningBg, border: C.warningBorder, text: C.warningText, icon: "?" },
-    known: { bg: C.successBg, border: C.success, text: C.success, icon: "OK" },
-    error: { bg: C.dangerBg, border: `${C.danger}30`, text: C.danger, icon: "x" },
-  } as const;
+const pageWrapperStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  background: "linear-gradient(180deg, #FAFAFA 0%, #F4F4F5 100%)",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "32px 16px",
+  fontFamily:
+    "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+  color: "#0A0A0A",
+};
 
-  const p = palette[status.kind];
+const cardStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "480px",
+  background: "#FFFFFF",
+  borderRadius: "16px",
+  boxShadow: "0 4px 24px rgba(0, 0, 0, 0.04)",
+  border: "1px solid #F0F0F0",
+  padding: "40px",
+  boxSizing: "border-box",
+};
 
-  return (
-    <div style={{
-      padding: "14px 16px",
-      background: p.bg,
-      border: `1px solid ${p.border}`,
-      borderRadius: "6px",
-      marginBottom: "16px",
-      marginTop: "8px",
-      display: "flex",
-      alignItems: "flex-start",
-      gap: "10px",
-    }}>
-      <div style={{
-        flexShrink: 0,
-        width: "20px",
-        height: "20px",
-        borderRadius: "50%",
-        background: p.text,
-        color: "#ffffff",
-        fontSize: "10px",
-        fontWeight: 700,
-        fontFamily: C.fontMono,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        lineHeight: 1,
-      }}>
-        {p.icon}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: "13px", color: p.text, fontWeight: 600, marginBottom: "2px" }}>
-          {status.kind === "known" && status.hasSubscription && `You're joining ${status.companyName}.`}
-          {status.kind === "known" && !status.hasSubscription && `${status.companyName} is registered.`}
-          {status.kind === "unknown" && "Unknown company domain."}
-          {status.kind === "disposable" && "Use your work email."}
-          {status.kind === "error" && "Lookup failed."}
-        </div>
-        <div style={{ fontSize: "12px", color: C.textBody, lineHeight: 1.5 }}>
-          {status.message}
-        </div>
-      </div>
-    </div>
-  );
-}
+const logoWrapperStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: "24px",
+};
+
+const logoHarchStyle: React.CSSProperties = {
+  fontSize: "18px",
+  fontWeight: 700,
+  color: "#0A0A0A",
+  letterSpacing: "-0.02em",
+};
+
+const logoPipeStyle: React.CSSProperties = {
+  color: "#E5E5E5",
+  margin: "0 8px",
+  fontSize: "18px",
+  fontWeight: 400,
+};
+
+const logoAtelierStyle: React.CSSProperties = {
+  fontSize: "14px",
+  fontWeight: 400,
+  color: "#71717A",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: "22px",
+  fontWeight: 700,
+  color: "#0A0A0A",
+  textAlign: "center",
+  margin: "0 0 4px",
+  letterSpacing: "-0.02em",
+};
+
+const subtitleStyle: React.CSSProperties = {
+  fontSize: "13px",
+  color: "#71717A",
+  textAlign: "center",
+  margin: "0 0 28px",
+};
+
+// ─── Plan selector ──────────────────────────────────────────────
+
+const planGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "10px",
+};
+
+const planCardBaseStyle: React.CSSProperties = {
+  position: "relative",
+  padding: "14px",
+  border: "1px solid #E5E5E5",
+  borderRadius: "10px",
+  background: "#FFFFFF",
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+};
+
+const planCardSelectedStyle: React.CSSProperties = {
+  border: "2px solid #4A7B5F",
+  background: "rgba(74,123,95,0.06)",
+  // Compensate for 1px → 2px border so the card doesn't shift.
+  padding: "13px",
+};
+
+const popularBadgeStyle: React.CSSProperties = {
+  display: "inline-block",
+  fontSize: "9px",
+  fontWeight: 600,
+  color: "#4A7B5F",
+  background: "rgba(74,123,95,0.10)",
+  borderRadius: "4px",
+  padding: "2px 6px",
+  marginBottom: "2px",
+  alignSelf: "flex-start",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  fontFamily: "'JetBrains Mono', 'Space Mono', monospace",
+  lineHeight: 1.4,
+};
+
+const planLabelStyle: React.CSSProperties = {
+  fontSize: "10px",
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  fontFamily: "'JetBrains Mono', 'Space Mono', monospace",
+  color: "#9CA3AF",
+};
+
+const planDescStyle: React.CSSProperties = {
+  fontSize: "12px",
+  color: "#71717A",
+  lineHeight: 1.4,
+};
+
+// ─── Form fields ────────────────────────────────────────────────
+
+const fieldStyle: React.CSSProperties = {
+  marginBottom: "14px",
+  display: "flex",
+  flexDirection: "column",
+};
 
 const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "11px",
-  fontFamily: "'Space Mono', monospace",
-  color: "#737373",
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  marginBottom: "6px",
+  fontSize: "12px",
+  fontWeight: 600,
+  color: "#0A0A0A",
+  marginBottom: "4px",
 };
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "12px 14px",
-  border: "1px solid #e5e5e5",
-  borderRadius: "4px",
+const requiredStyle: React.CSSProperties = {
+  color: "#4A7B5F",
+  marginLeft: "2px",
+};
+
+const selectWrapperStyle: React.CSSProperties = {
+  position: "relative",
+};
+
+const selectChevronStyle: React.CSSProperties = {
+  position: "absolute",
+  right: "12px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  color: "#71717A",
+  pointerEvents: "none",
+};
+
+// ─── Error banner (matches LoginPage) ───────────────────────────
+
+const errorStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  padding: "10px 14px",
+  background: "#FEF2F2",
+  border: "1px solid #FECACA",
+  borderRadius: "8px",
+  fontSize: "13px",
+  color: "#991B1B",
+  marginBottom: "16px",
   fontFamily: "'Inter', system-ui, sans-serif",
-  fontSize: "14px",
-  color: "#0a0a0a",
-  background: "#ffffff",
-  boxSizing: "border-box",
-  outline: "none",
 };
 
-function btnStyle(disabled: boolean): React.CSSProperties {
-  return {
-    width: "100%",
-    padding: "14px 20px",
-    background: disabled ? "#e5e5e5" : "#10b981",
-    border: "none",
-    color: "#ffffff",
-    fontFamily: "'Inter', system-ui, sans-serif",
-    fontSize: "14px",
-    fontWeight: 600,
-    cursor: disabled ? "not-allowed" : "pointer",
-    borderRadius: "4px",
-    transition: "background 0.15s",
-  };
-}
+const errorIconStyle: React.CSSProperties = {
+  marginRight: "6px",
+  flexShrink: 0,
+};
+
+// ─── Trust badges ───────────────────────────────────────────────
+
+const trustRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "6px",
+  marginTop: "16px",
+};
+
+const trustItemStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+};
+
+const trustIconStyle: React.CSSProperties = {
+  color: "#4A7B5F",
+  flexShrink: 0,
+};
+
+const trustTextStyle: React.CSSProperties = {
+  fontSize: "11px",
+  color: "#9CA3AF",
+};
+
+const dotStyle: React.CSSProperties = {
+  width: "4px",
+  height: "4px",
+  borderRadius: "50%",
+  background: "#D4D4D4",
+  display: "inline-block",
+  flexShrink: 0,
+};
+
+// ─── Submit button ──────────────────────────────────────────────
+
+const submitButtonStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  height: "42px",
+  background: "#0A0A0A",
+  color: "#FFFFFF",
+  border: "none",
+  borderRadius: "10px",
+  fontSize: "14px",
+  fontWeight: 600,
+  fontFamily: "inherit",
+  cursor: "pointer",
+};
+
+// ─── Success state ──────────────────────────────────────────────
+
+const successIconWrapperStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "center",
+  marginBottom: "16px",
+};
+
+const successTitleStyle: React.CSSProperties = {
+  fontSize: "20px",
+  fontWeight: 700,
+  color: "#0A0A0A",
+  textAlign: "center",
+  margin: "0 0 8px",
+  letterSpacing: "-0.02em",
+};
+
+const successTextStyle: React.CSSProperties = {
+  fontSize: "13px",
+  color: "#71717A",
+  textAlign: "center",
+  margin: "0 0 16px",
+  lineHeight: 1.5,
+};
+
+const successLinkStyle: React.CSSProperties = {
+  display: "block",
+  textAlign: "center",
+  fontSize: "13px",
+  color: "#4A7B5F",
+  fontWeight: 500,
+};
+
+// ─── Below the card ─────────────────────────────────────────────
+
+const belowCardStyle: React.CSSProperties = {
+  marginTop: "24px",
+  textAlign: "center",
+  fontSize: "13px",
+  color: "#71717A",
+};
+
+const belowLinkStyle: React.CSSProperties = {
+  color: "#4A7B5F",
+  fontWeight: 500,
+  marginLeft: "6px",
+};
