@@ -711,6 +711,37 @@ function useApi<T>(url: string | null, opts?: RequestInit): {
   return { data, loading, error, refetch };
 }
 
+// ─── usePersistentState — localStorage-backed useState (AURA fix #2) ───
+// Prevents data loss on page refresh. SSR-safe.
+function usePersistentState<T>(
+  key: string,
+  initial: T,
+): [T, (v: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(initial);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as T;
+        setState(parsed);
+      }
+    } catch {
+      // Ignore parse errors / corrupted data
+    }
+  }, [key]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch {
+      // Quota exceeded or localStorage disabled
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
+
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────
 
 const FONT_HEADER: CSSProperties = {
@@ -1413,7 +1444,10 @@ function HarchIQWorkspace({ prefillQuestion, onPrefillConsumed }: HarchIQWorkspa
   const [sending, setSending] = useState(false);
   const [quota, setQuota] = useState({ used: 7, total: 200 });
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
-  const [history, setHistory] = useState<ConversationHistoryItem[]>([]);
+  const [history, setHistory] = usePersistentState<ConversationHistoryItem[]>(
+    "harchiq:pro:chat-history",
+    [],
+  );
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -1448,7 +1482,7 @@ function HarchIQWorkspace({ prefillQuestion, onPrefillConsumed }: HarchIQWorkspa
     };
     setHistory((h) => {
       const filtered = h.filter((x) => x.id !== convId);
-      return [item, ...filtered].slice(0, 5);
+      return [item, ...filtered].slice(0, 50); // 50 conversations (AURA fix #2)
     });
     setActiveConversationId(convId);
   }, [activeConversationId]);
@@ -1736,7 +1770,7 @@ function HarchIQWorkspace({ prefillQuestion, onPrefillConsumed }: HarchIQWorkspa
               className="px-4 py-3 flex items-center justify-between"
               style={{ borderBottom: `1px solid ${BORDER}` }}
             >
-              <span style={FONT_HEADER}>Historique</span>
+              <span style={FONT_HEADER}>Historique (50 max)</span>
               <button
                 type="button"
                 onClick={handleNewConversation}
