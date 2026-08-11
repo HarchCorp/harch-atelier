@@ -3735,3 +3735,295 @@ Stage Summary:
 - localStorage keys (9 total): 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIEL-A (notifications, tour-completed, briefing-date) — toutes usePersistentState-backed (SSR-safe, quota-safe, hydrated pattern pour éviter race)
 - Web Speech API: guard typeof window + 'speechSynthesis' in window, SpeechSynthesisUtterance lang fr-FR, recherche voice française best-effort, cancel() avant speak() pour éviter overlap
 - Hydrated flag pattern: useState(false) + useEffect(() => setHydrated(true), []) — utilisé pour gate les effects de seed notifications et auto-launch tour, évite que usePersistentState lise localStorage APRÈS ces effects (race condition qui causerait re-seed ou re-launch pour returning users)
+
+---
+Task ID: R2-AGENCY-B
+Agent: AURA — Agency Round 2B
+Task: Team performance + pitch analytics + white-label editor on AgencyDashboard
+Work Log:
+- Step 1 — Read worklog tail + scanned AgencyDashboard.tsx (11566 lines, 9 features ENV-AGENCY + R2-AGENCY-A already present). Anchored insertion points: PitchPipelineCard @8456, ClientPortalPreviewCard @8165, TeamWorkloadBalancerCard @8746, ClientHealthScoringCard @9269 (uses computeClientHealth helper).
+- Step 2 — Added 5 new lucide-react imports: RotateCcw, Maximize2, Award, Clock, Type (Star + ImagePlus removed post-audit — unused). Total icons now 70.
+- Step 3 — Defined 5 new types in R2-B FEATURES TYPES block (after R2-A types): TeamPerfMember, TeamPerfSort, PitchFunnelStage, PitchSourceRow, PitchAnalyticsCache, WLabelTheme. All persisted via existing usePersistentState hook.
+- Step 4 — Implemented Feature 1: TeamPerformanceDashboardCard (~625 lines). 5 seed members (Yasmine, Karim, Salma, Omar, Nadia — rôles agence RP marocaine). computeTeamPerfScore composite: 30% avg client health (via computeClientHealth) + 25% reports (capped 10→100) + 15% HarchIQ questions (capped 40→100) + 30% response time (inverse 0h=100, 8h+=0). Manual override supported (manualScoreAdjust). Top performer: sage border + box-shadow + Crown icon + "Top performeur" badge. Sort buttons: score / clients / reports / response. Horizontal BarChart (recharts, layout="vertical", 0-100 domain, top performer Cell highlighted sage, others sage-dim 0.65 opacity). "Évaluer" button → modal with: score block (perf / clients / santé moy / temps réponse), activity breakdown (FileBarChart, Brain, Clock icons), assigned clients with health-band color chips, manual score adjust (-5 / +5 / Calculé). Bootstrap effect: deterministic client assignment when assignedClientIds is empty (mirrors TeamWorkloadBalancerCard pattern). Persisted in localStorage "agency:team-perf".
+- Step 5 — Implemented Feature 2: PitchDeckAnalyticsCard (~370 lines). Reads "agency:pitch-pipeline" via window.localStorage.getItem (cross-card shared state — PitchPipelineCard writes, PitchDeckAnalyticsCard reads). Refresh button + cross-tab 'storage' event listener for live updates. computePitchAnalytics derives: 4-stage funnel (Prospects=all, Propositions envoyées=proposition+won, Meetings=proposition proba≥60+won, Won=won only), metrics strip (total pipeline MAD, win rate %, avg deal cycle days = 14 + days since nextActionDate, avg deal size MAD), sources breakdown (LinkedIn/Referral/Cold outreach/Inbound deterministic via hashStr(prospectName)), monthly wins LineChart 6 mois (format fr locale). Funnel rendering: custom CSS trapezoid via clipPath polygon for stages 2-4 + flat for stage 1, conversion rate % badges (sage if ≥50%, amber if <50%). Sources donut: recharts PieChart innerRadius 42 outerRadius 70 with 4 distinct colors (#1E3A5F slate, SAGE, #A0524B terracotta, #8B6914 ochre) + legend grid. Empty state with KanbanSquare icon + CTA button when pipeline empty. Cache persisted in "agency:pitch-analytics".
+- Step 6 — Implemented Feature 3: WhiteLabelThemeEditorCard (~510 lines). Per-client theme editor using usePersistentState<Record<string, WLabelTheme>>("agency:wlabel-themes", {}). Default theme = sage (#4A7B5F), Inter, 8px radius, badge visible, "Bienvenue sur votre console" title. Controls: client selector (native select with ChevronDown overlay), primary color picker (native color input + hex text input + 6 presets: Sage / Sage foncé / Sage pâle / Terracotta / Ocre / Ardoise — each with color swatch chip), logo upload (hidden file input + label button + FileReader.readAsDataURL + max 600 Ko validation + remove button + live preview), font family (3-button grid: Inter / Space Mono / System with Type icon + sample font preview), border radius slider (range 0-16px, accentColor sage, live numeric label), login title input, favicon color picker (same pattern as primary), hide badge toggle (shadcn-style switch). Live preview panel: PreviewPanel component renders mini-dashboard mockup (header with logo/initials + display name + Propulsé par Harch conditionally hidden, body with loginTitle + 3 KPI cards + primary button "Se connecter" + 14-bar mini chart in primary color, footer with favicon swatch + hex). All elements update in real-time via theme state. Action buttons: "Sauvegarder le thème" (sage solid, toast success), "Réinitialiser" (outline + RotateCcw, removes theme entry from localStorage), "Aperçu en plein écran" (outline + Maximize2, opens modal with larger preview scaled 480px max-width), "Export JSON" (outline sage, Blob + URL.createObjectURL + anchor download with filename `theme-{slug}.json` containing clientId, clientName, theme, exportedAt ISO). Fullscreen modal: same ClientOnboardingWizard pattern (fixed inset-0, motion.div scale-in, X button, max-w-3xl).
+- Step 7 — Inserted 3 motion.div wrappers in main render with section IDs: id="pitch-analytics" (after PitchPipelineCard), id="wlabel-editor" (after ClientPortalPreviewCard), id="team-perf" (after TeamWorkloadBalancerCard). All lg:col-span-12, transition=d(15/16/17), style=sectionScrollStyle.
+- Step 8 — Updated footer counter: "25 sections" → "28 sections · 3 R2-AGENCY-B features" alongside existing "6 ENV-AGENCY · 3 R2-AGENCY".
+- Step 9 — Fixed 3 tsc errors after first run: (a) selectedClient?.slug → selectedClient?.company?.slug (AgencyClient type nests slug under company), (b) onToast signature mismatch with pushToast — removed "error" from kind union (pushToast only accepts "info" | "success") and downgraded 2 error toasts to info. Final tsc: 0 errors (NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → empty output).
+- Step 10 — Audit unused imports: removed Star + ImagePlus (added in initial pass but no usage sites). Kept RotateCcw, Maximize2, Award, Clock, Type (all verified used ≥2x).
+
+Stage Summary:
+- 3 new agency features implemented (ADD only — 0 removals of existing code).
+- File: 11566 → 13294 lines (+1728 lines for 3 cards + types + import additions).
+- Feature 1 — Team Performance Dashboard: 5 seeded members, composite score (30/25/15/30 weights), top performer sage highlight + Crown badge, 4 sort axes (score/clients/reports/response), horizontal BarChart, evaluation modal with manual override ±5, persisted "agency:team-perf". Avg client health computed via existing computeClientHealth() helper (R2-AGENCY-A) for cross-feature data coherence.
+- Feature 2 — Pitch Deck Analytics: 4-stage CSS-trapezoid funnel with conversion %, 4-KPI metrics strip (pipeline total / win rate / cycle moyen / deal moyen), sources donut (4 channels deterministic via hashStr), 6-month LineChart of wins, empty-state CTA when pipeline empty. Reads shared "agency:pitch-pipeline" localStorage (written by PitchPipelineCard) + cross-tab storage listener + manual refresh. Analytics cache persisted "agency:pitch-analytics".
+- Feature 3 — White-Label Theme Editor: per-client theme Record<string, WLabelTheme> persisted "agency:wlabel-themes". Controls: client dropdown, primary color picker + 6 sage presets, logo upload (FileReader data URL, 600 Ko max, PNG/JPG/SVG), font family 3-button grid (Inter / Space Mono / System), border radius slider 0-16px, hide Harch badge toggle, login title input, favicon color picker. Live preview panel (mini dashboard mockup updating in real-time). Buttons: Sauvegarder / Réinitialiser / Aperçu plein écran (modal) / Export JSON (Blob download `theme-{slug}.json` for backend integration).
+- Design system respected: white bg #FFFFFF, sage #4A7B5F, charcoal #0A0A0A, Space Mono headers (FONT_HEADER), Inter body, Lucide icons only (5 new), NO emojis, French throughout, agency/commercial tone.
+- localStorage keys added (3): agency:team-perf, agency:pitch-analytics, agency:wlabel-themes (all usePersistentState-backed, SSR-safe).
+- Cross-feature coherence: TeamPerformanceDashboardCard consumes computeClientHealth() from R2-AGENCY-A Feature 1; PitchDeckAnalyticsCard reads agency:pitch-pipeline written by ENV-AGENCY Feature 5 PitchPipelineCard.
+- tsc --noEmit: 0 errors (verified empty output, NODE_OPTIONS max-old-space-size=4096).
+- No regression: all 9 existing features (6 ENV-AGENCY + 3 R2-AGENCY-A) preserved untouched. Footer counter bumped 25→28 sections.
+
+---
+Task ID: R2-ENTERPRISE-B
+Agent: AURA — Enterprise Round 2B
+Task: Board PDF templates + audit timeline + SIEM configurator on EnterpriseDashboard
+
+Work Log:
+- Read worklog.md tail (R2-ENTERPRISE-A entry at line 3528 + R2-PRO-A, R2-AGENCY-A, R2-ESSENTIEL-A entries for context) — confirmed EnterpriseDashboard.tsx at 9100 lines with 9 features from ENV-ENTERPRISE (sections 26-30) + R2-ENTERPRISE-A (sections 31-32 + KPI row at top + RegulatoryCalendarCard).
+- Read EnterpriseDashboard.tsx in chunks: header/imports (1-220), design tokens (220-247), types (248-505), helpers (505-560), usePersistentState hook (730-757), shared atoms SectionHeader/CardShell/AiCommentary (770-888), cardMotion/containerStagger (929-939), BoardBriefingGeneratorCard pattern (6137-6330), ComplianceCockpitCard (6530-6590), ApiIntegrationHubCard (6800-6900), RegulatoryCalendarCard (8268+), main render tree (10415-10465), footer (10505-10510).
+- Étape 1 — Imports Lucide : ajouté 5 nouveaux icônes en ordre alphabétique — EyeOff (after Eye), Filter (after FileText), CalendarClock (after CalendarDays), Server (after Send), Pencil (after Plug). MultiEdit single insertion at lucide-react import block. Pas de régression sur les 47 icônes existants.
+- Étape 2 — Types & seeds (insérés avant MAIN, après KpiExecutiveSummaryRow) :
+  • SECTION 33 types: PdfTemplateId (4 ids), PdfCadence (3 vals), PdfTemplateMeta, PdfTemplatesState (lastGenerated + schedules Partial Records).
+  • PDF_TEMPLATES const: 4 templates (comex 1p sage, trimestriel 12p charcoal, esg 8p sage, geopolitique 6p charcoal) avec title/description/pageCount/sections/accent.
+  • PDF_TEMPLATES_INITIAL seed: { lastGenerated: { comex: 18h ago }, schedules: { comex: "mensuel" } }.
+  • SECTION 34 types: AuditLogType (7 types), AuditLogEntry, AUDIT_TYPE_META (Record type→{label,Icon,color,bg}), AUDIT_USERS (5 names), initialsOf helper.
+  • makeSeedAuditLog(): 15 entrées spanning 7 jours (8 types: 3 connexion, 3 modification, 2 approbation, 1 rejet, 3 export, 2 creation, 1 suppression) avec IPs simulées 41.92.18.x (Casablanca office) et 105.159.241.x (mobile Maroc Telecom).
+  • SECTION 35 types: SiemConnectorId (3), SiemStatus (3), SiemEventType (5), SiemEventMapping, SiemConnectorState, SiemConfig.
+  • SIEM_EVENT_LABELS (5 labels fr), HARCH_EVENTS_BASE (5 event names dotted notation).
+  • makeSiemInitial(): Splunk connected (endpoint splunk.harch.ma:8088/services/collector, token masked, 3 event types crisis/sentiment-shift/anomaly, lastSync 47min ago, 1247 events, rate 142/500, 5 mappings pré-remplis) + QRadar unconfigured + Sentinel unconfigured (mappings vides avec HARCH_EVENTS_BASE).
+- Étape 3 — FEATURE 1 · BoardPdfTemplateGalleryCard (~175 lignes + sub-composants PdfThumbnail/PdfConfigModal/PdfFullLayout/PdfPreviewModal ~440 lignes) :
+  • PdfThumbnail : 4 mockups CSS mini A4 (120×170px) par template — comex (header sage + 2 KPI blocks + 3 risk dots + decision block), trimestriel (header + 4 section cards EXÉCUTIF/KPI/RISQUES/CONFORMITÉ), esg (header + 2×2 pillars grid E/S/G/R colorés), geopolitique (header + 4×4 matrix intensity + 4 market bars). Page count badge top-right accent color.
+  • PdfConfigModal : overlay fixed z-50 (rgba 0.55) + centered card 500px, header CONFIGURATION PDF + tpl.title + X close, body 3 sections (PÉRIODE COUVERTE 2 date inputs start/end, SECTIONS INCLUSES toggle buttons sage-bg quand actif avec CheckCircle2, DESTINATAIRES email input), footer Annuler + Générer le PDF (sage bg). Click-outside ferme, stopPropagation sur card.
+  • PdfPreviewModal : overlay fixed z-50 (rgba 0.88) full-screen, header dark APERÇU PDF · CONFIDENTIEL + tpl.title + X, body scrollable avec PdfFullLayout (cartouche Harch Atelier + titre + date + page X/Y, puis layout spécifique par template : COMEX = 2 KPI cards + ordered risks + decision block / TRIMESTRIEL = synthèse + 3 KPI mini-cards + table KPI 4 lignes + 4 regulators statut / ESG = 2×2 pillars E/S/G/R + scorecard globale 83/100 / GÉOPOLITIQUE = 5×5 matrix colorée + table 5 marchés + recommandation sage block).
+  • BoardPdfTemplateGalleryCard : grid 4-cols responsive de 4 template cards. Chaque card : thumbnail mini A4 + page count badge + title + description (minHeight 28) + last-generated date + schedule indicator (CalendarClock M/T) + 3 boutons (GÉNÉRER sage-bg Sparkles / APERÇU outline Eye / PROGRAMMER outline CalendarDays). Schedule dropdown inline (aucune/mensuel/trimestriel). State via useState: genOpenFor, previewFor, scheduleOpenFor, cfgStart/cfgEnd (default -30j → today), cfgSections (Set, reset on open gen), cfgRecipients (default comex@harch.ma). Handlers useCallback: handleOpenGen (reset cfgSections pour nouveau template), handleConfirmGen (update lastGenerated + toast.success), handleSchedule (update schedules + toast), toggleSection. AiCommentary footer.
+- Étape 4 — FEATURE 2 · AuditLogTimelineCard (~210 lignes) :
+  • State local : filterType (all|7types), filterUser (all|5users), filterStart/filterEnd (date strings), search (full-text), visibleCount (10).
+  • filtered = useMemo (entries.filter sur type/user/date-range/search). visible = filtered.slice(0, visibleCount). hasActiveFilters bool.
+  • HandleExport useCallback : toast.success "Journal d'audit exporté (CSV)" + description filtered.length + timestamp.
+  • HandleClearFilters useCallback : reset 5 filtres + visibleCount=10.
+  • Filters UI : grid 5-cols (search input + type select + user select + 2 date inputs). Réinitialiser filtres button conditionnel si hasActiveFilters.
+  • Timeline : relative pl-6 container + absolute vertical sage-bg-strong line (left:11, width:2). Chaque entry : dot 22×22 border-2 colored + icon coloré (Key gray / Pencil amber / CheckCircle2 sage / X red / Download blue / Plus sage / Trash2 red), card border-BORDER avec user initials avatar 28×28 sage-bg + type badge + user bold + action text + meta line (timestamp absolu + relatif via fmtRelative + IP + section sage).
+  • Empty state : Filter icon + "Aucune entrée ne correspond aux filtres."
+  • Charger plus button (si visible < filtered) : +10 entrées, compteur restant.
+  • AiCommentary footer (entries.length entries tracées sur 7 jours, conservation 5 ans AMMC/BAM).
+- Étape 5 — FEATURE 3 · SiemIntegrationConfiguratorCard (~280 lignes) :
+  • State local : expandedId (default "splunk"), showTokens Record, testing Record, syncing Record.
+  • updateConnector/updateMapping/toggleEventType useCallback (immutable updates via map + spread).
+  • handleTest useCallback : validation endpoint+token non-empty, sinon toast.error "Configuration incomplète". Sinon setTesting true + setTimeout 900ms + 90% succès toast.success (latence 40-120ms simulée) / 10% échec toast.error timeout.
+  • handleSync useCallback : guard status === "connected" sinon toast.error. Sinon setSyncing + setTimeout 1100ms + update lastSync/Date.now() + eventsSynced +50-200 + rateLimitCurrent dégressive. Toast.success avec newEvents count + total.
+  • handleSaveConfig useCallback : willBeConnected = endpoint+token+eventTypes.length>0. Update status. Toast.success "Configuration enregistrée" + description adaptée.
+  • 3 connector cards grid 3-cols : header cliquable (Server icon + label + status badge coloré Connecté sage / Non configuré gray / Erreur red + ChevronDown rotate). Expand forme : endpoint input + token input masked (Eye/EyeOff toggle per connector) + event types 2-cols grid (5 boutons toggle avec CheckCircle2 quand actif) + rate limit bar (coloré selon pct sage/amber/red) + last sync + events synced block + 2 boutons (TESTER LA CONNEXION outline + Zap icon, SYNCHRONISER sage outline + RefreshCw, disabled si !connected) + ENREGISTRER LA CONFIGURATION charcoal bg.
+  • Event mapping table (sous la grid, si expandedId) : 2-cols table (ÉVÉNEMENT HARCHIQ mono bold / CHAMP SIEM input editable), 5 rows HARCH_EVENTS_BASE. Header "MAPPING ÉVÉNEMENTS → {LABEL}" + "ÉDITABLE" hint.
+  • AiCommentary footer (intégration SIEM bidirectionnelle, 3 connecteurs Splunk/QRadar/Sentinel, mapping ECS/CEF).
+- Étape 6 — Wiring main EnterpriseDashboard :
+  • Ajouté 3 nouveaux usePersistentState (lignes 10172-10174) : pdfTemplatesState ("enterprise:pdf-templates", PDF_TEMPLATES_INITIAL), auditLogState ("enterprise:audit-log", makeSeedAuditLog()), siemConfigState ("enterprise:siem-config", makeSiemInitial()). Tous via hook existant (SSR-safe, quota-safe).
+  • Rendu BoardPdfTemplateGalleryCard après BoardBriefingGeneratorCard (SECTION 33, ligne 10426).
+  • Rendu AuditLogTimelineCard après ComplianceCockpitCard (SECTION 34, ligne 10438, avant RegulatoryCalendarCard qui fait partie du bloc conformité).
+  • Rendu SiemIntegrationConfiguratorCard après ApiIntegrationHubCard (SECTION 35, ligne 10453, avant MultiMarketReputationMapCard).
+  • Footer text updated : "33 sections" → "36 sections".
+- Étape 7 — Quality checks :
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors).
+  • bunx eslint EnterpriseDashboard.tsx → 8 errors + 4 warnings, TOUS pré-existants dans lignes ≤ 5452 (CompetitorDeepDiveCard react-hooks/preserve-manual-memoization lignes 5434-5452, usePersistentState react-hooks/set-state-in-effect ligne 746, TanStack useReactTable incompatible-library lignes 3450/4428, useMemo memoization lignes 3706/5412/5432/5434/5441/5452). Aucune nouvelle erreur/warning introduite par R2-ENTERPRISE-B (mon code démarre à ligne 8745).
+  • Vérifié 3 nouvelles localStorage keys présentes : enterprise:pdf-templates, enterprise:audit-log, enterprise:siem-config — toutes usePersistentState-backed.
+  • Vérifié 3 nouveaux section IDs présents : pdf-templates (ligne 9337), audit-log (ligne 9544), siem-config (ligne 9839) — tous scrollables via sidebar NAV existant.
+  • Vérifié design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 11-16px (EyeOff/Filter/CalendarClock/Server/Pencil/Sparkles/Eye/CalendarDays/CheckCircle2/Download/X/Plus/Trash2/Key/Pencil/ChevronDown/Zap/RefreshCw), no emojis, French throughout, executive tone.
+  • Vérifié tous les 5 nouveaux icônes utilisés au moins 2 fois (import + usage) : EyeOff (SIEM token mask), Filter (audit empty state), CalendarClock (PDF schedule indicator), Server (SIEM connectors), Pencil (AUDIT_TYPE_META modification type).
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (9100 → 10524 lines, +1424 net)
+- 3 level-2 features R2-ENTERPRISE-B livrées (toutes persisted localStorage via usePersistentState hook, SSR-safe, quota-safe) :
+  1. Board PDF Template Gallery — section 33 full-width (lg:col-span-12), 4 templates board-ready (Briefing COMEX 1p / Rapport trimestriel 12p / Audit ESG 8p / Cartographie géopolitique 6p) avec thumbnails mini A4 CSS-rendered (4 mockups distincts par layout), 3 actions par template (Générer modal config / Aperçu modal full-screen HTML mockup / Programmer dropdown mensuel/trimestriel), configuration modal (date range + sections toggle + recipients email), preview modal plein écran avec layout PDF complet (header Harch Atelier + cartouche date/page + contenu spécifique par template : COMEX 2 KPI + risques + décisions / TRIMESTRIEL synthèse + KPI table + régulateurs / ESG 4 piliers scorecard / GÉOPOLITIQUE matrix 5×5 + table marchés), programmation mensuel/trimestriel persistée, persistance "enterprise:pdf-templates" (lastGenerated + schedules records), seed 1 template déjà généré (comex 18h ago) + 1 schedule actif (comex mensuel).
+  2. Audit Log Timeline — section 34 full-width, timeline verticale sage-bg-strong line avec dots colorés par type (7 types : Connexion gray/Modification amber/Approbation sage/Rejet red/Export blue/Création sage/Suppression red), chaque entry : type icon coloré + user initials avatar 28×28 sage-bg + type badge + user bold + action description + meta line (timestamp absolu + relatif fmtRelative + IP simulée 41.92.18.x Casablanca / 105.159.241.x mobile + section sage), filters grid 5-cols (search full-text + type select + user select + 2 date inputs start/end), "Réinitialiser les filtres" bouton conditionnel, "Exporter CSV" bouton toast simulé, "Charger plus" pagination +10 par clic avec compteur restant, empty state Filter icon, AiCommentary footer (conservation 5 ans AMMC/BAM), persistance "enterprise:audit-log", seed 15 entrées spanning 7 jours (8 types variés, 5 users Karim B./Salma E./Younes T./Aicha L./Omar F., sections couvrant Compliance Cockpit/Risk Heatmap/DEFCON/Board Briefing/Board PDF Templates/API Hub/Regulatory Calendar/Suivi ESG/Session/Audit Log).
+  3. SIEM Integration Configurator — section 35 full-width, 3 connecteurs (Splunk Enterprise connecté / IBM QRadar non configuré / Microsoft Sentinel non configuré) en grid 3-cols, chaque card expandable : header cliquable (Server icon + label + status badge coloré Connecté sage/Non configuré gray/Erreur red + ChevronDown rotate), form expandable (endpoint URL input + auth token masked input avec toggle Eye/EyeOff per connector + event types 5-toggle grid Crise/Bascul. sentiment/Jalon/Conformité/Anomalie avec CheckCircle2 quand actif + rate limit bar colorée selon pct + last sync timestamp + events synced count + 2 boutons Tester la connexion (simulé 90% succès latence 40-120ms / 10% échec timeout) et Synchroniser maintenant (simulé +50-200 events, disabled si !connected) + Enregistrer la configuration charcoal bg qui set status connected si endpoint+token+eventTypes valides), event mapping table éditable sous la grid (5 rows HARCH_EVENTS_BASE crisis.alert/sentiment.drop/milestone.reached/compliance.update/anomaly.detected → input CHAMP SIEM editable), persistance "enterprise:siem-config", seed Splunk connected (endpoint splunk.harch.ma:8088, token masked, 3 event types, lastSync 47min ago, 1247 events, rate 142/500, 5 mappings pré-remplis harch.crisis.severity etc.) + QRadar/Sentinel unconfigured (mappings vides placeholder).
+- Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 11-16px, no emojis, French throughout, executive tone (gouvernance, COMEX, IR, conformité, SLA).
+- Tone Enterprise respecté : board-ready (4 PDF templates institutional layouts), gouvernance (audit log immuable 5 ans AMMC/BAM), SLA (SIEM connectors SOC-ready avec rate limits + last sync + events synced metrics), institutional charcoal-dominant (textes CHARCOAL, accents SAGE, badges SOCIABLE-READY/CONFIDENTIEL).
+- 0 régression sur les 33 sections existantes (25 base + 6 ENV-ENTERPRISE + 3 R2-ENTERPRISE-A — toutes préservées, juste 3 nouvelles insérées dans le motion.div grid à positions demandées : après BoardBriefingGenerator / après ComplianceCockpit / après ApiIntegrationHub).
+- Code quality : tsc 0 errors (EXIT_CODE=0), eslint 0 nouveaux errors/warnings (8 errors + 4 warnings TOUS pré-existants dans lignes ≤ 5452 CompetitorDeepDiveCard/usePersistentState/TanStack, mon code démarre à ligne 8745).
+- 3 nouvelles localStorage keys : enterprise:pdf-templates, enterprise:audit-log, enterprise:siem-config — toutes usePersistentState-backed. Total Enterprise dashboard localStorage keys : 11 (5 pré-existantes ENV-ENTERPRISE defcon-level/briefing-schedule/compliance/integrations/milestones + 2 R2-ENTERPRISE-A risk-matrix/reg-calendar + 3 R2-ENTERPRISE-B pdf-templates/audit-log/siem-config + 1 approvals useState).
+- 5 nouveaux icônes Lucide ajoutés (EyeOff, Filter, CalendarClock, Server, Pencil) — tous utilisés au moins 2 fois (import + usage).
+- 36 sections affichées (33 avant + 3 nouvelles : section 33 PDF Template Gallery après Board Briefing, section 34 Audit Log Timeline après Compliance Cockpit, section 35 SIEM Configurator après API Integration Hub).
+
+---
+Task ID: R2-PRO-B
+Agent: AURA — Pro Round 2B
+Task: Team collaboration + export + anomaly detection on ProDashboard
+
+Work Log:
+- Lu worklog.md tail (ENV-PRO, R2-PRO-A, R2-ESSENTIEL-A, R2-AGENCY-A) — fichier cible ProDashboard.tsx (9220 lignes, déjà 9 features: 6 ENV-PRO + 3 R2-PRO-A).
+- Lu ProDashboard.tsx en chunks : imports (1-160), types + constants (160-845), helpers + useApi + usePersistentState (845-1230), shared UI atoms + motion presets (1230-1470), TendanceSentimentCard (4570-4875), PartDeVoixDonutCard (5307-5445), TopSujetsCard (5479-5618), RepartitionTypeMediaCard (5393-5500 avant edits), DEFAULT_WIDGET_ORDER (10254), MAIN ProDashboard (10290-10676).
+- Étape 1 — Imports : ajouté createContext + useContext depuis react, createPortal depuis react-dom. Ajouté 7 nouveaux icônes Lucide en ordre alphabétique : Activity, AtSign, Check, FileImage, FileSpreadsheet, History, Pin. Total icônes : 69 (62 existants + 7 nouveaux).
+- Étape 2 — Types + constants R2-PRO-B (insérés après CHANNEL_LABELS, avant HELPERS) :
+  • 6 nouveaux types : Comment (id, author, body, createdAt, dataPoint?, resolved?), TeamMember (id, name, role), ExportFormat/ExportScope/ExportTheme (unions), ExportBranding (includeLogo, includeFooter, theme), ExportHistoryItem (id, format, scope, sectionId?, periodFrom?, periodTo?, timestamp, fileName, fileSizeKb), AnomalyPoint (index, value, zScore, severity, label?)
+  • 5 nouvelles constantes : TEAM_MEMBERS (6 membres), SEED_ANNOTATIONS (1 annotation seed sur tendance-sentiment), EXPORT_FORMAT_LABELS, EXPORT_SCOPE_LABELS, EXPORT_THEME_OPTIONS (sage/charcoal/neutral), MAX_EXPORT_HISTORY=5, ANNOTATABLE_SECTIONS (8 sections), MENTION_REGEX (regex pré-compilée pour highlight @MemberName)
+- Étape 3 — Helpers R2-PRO-B (insérés après scrollToSection, avant useApi) :
+  • mean(values) + stdDev(values, avg?) — statistiques de base
+  • computeZScores(values) — z-score pur JS, retourne array aligné avec l'input, guard length<2 et sd=0
+  • detectAnomalies(values, labels, threshold=2) — retourne AnomalyPoint[] avec severity critical (|z|>3) ou warning (|z|>2)
+  • csvEscape(value) — escape CSV (guillemets, virgules, newlines)
+  • downloadBlob(blob, fileName) — téléchargement via URL.createObjectURL + anchor click
+  • memberInitials(name) — initiales 2 lettres majuscules
+  • renderCommentBody(body) — rendu React avec @MemberName surlignés en sage via MENTION_REGEX
+- Étape 4 — Context + Provider + 4 nouveaux composants (insérés après motion presets, avant SIDEBAR NAV) :
+  • ProR2BContext + useProR2B() hook — fournit annotations (Record<string, Comment[]>), addComment, resolveThread, deleteComment, anomalyHidden, setAnomalyHidden, userName. ProR2BProvider utilise usePersistentState pour "pro:annotations" (initial = SEED_ANNOTATIONS) et "pro:anomaly-toggle" (initial = false). useMemo pour value stable.
+  • AnnotationTrigger(sectionId, sectionTitle) — bouton MessageSquare icon + count badge, tooltip, ouvre AnnotationDialog via createPortal(document.body). Check icon si thread résolu.
+  • AnnotationDialog(sectionId, sectionTitle, onClose) — side panel 440px (motion.div slide-in from right), header avec titre + badge résolu + close, thread scrollable (avatar initiales + auteur + timestamp relatif + dataPoint pin badge + body avec mentions highlightées + bouton supprimer), footer avec : bouton resolve toggle, input "Épingler à un point de données", textarea avec @mention dropdown (filtre substring sur TEAM_MEMBERS, insert @MemberName + space), hint "@ pour mentionner" + "Connecté en tant que [userName]", bouton "Publier" (disabled si vide). Escape key pour fermer.
+  • AnomalySummaryStrip(anomalies, totalLabel, hidden, onToggle) — strip avec Activity icon + count + badges severity (critical=NEGATIVE bg, warning=AMBER bg) + bouton toggle "Masquer/Afficher les anomalies" (Eye icon, persisted via context).
+  • ExportCenterCard(sentimentTrend, sources, topics, sov) — card full-width (lg:col-span-12) avec : grid 2 colonnes (config gauche, historique droite), format selector 3 boutons (CSV=FileSpreadsheet, PNG=FileImage, PDF=FileText), scope selector 3 boutons (Complet/Section/Période), section dropdown (si scope=section, 8 options ANNOTATABLE_SECTIONS), date range picker 2 inputs (si scope=period), branding options (logo toggle + footer toggle + theme 3 couleur swatches sage/charcoal/neutral), bouton "Exporter" avec spinner (RefreshCw animate-spin, 1.2s simulated delay), historique 5 derniers exports (icon + fileName + format·scope·taille·timestamp + bouton re-télécharger). CSV construit depuis données réelles (4 datasets : trend/sources/topics/sov selon scope). PNG/PDF simulés (blob texte avec metadata branding). Persisté "pro:export-branding" + "pro:export-history".
+- Étape 5 — Modified TendanceSentimentCard (chart 09) :
+  • Ajouté useProR2B() pour anomalyHidden + setAnomalyHidden
+  • Remplacé isAnomaly heuristic par z-score sur valeurs négatives (computeZScores + |z|>2)
+  • Ajouté zScore + isAnomaly à chaque data point
+  • Ajouté zAnomalies (AnomalyPoint[]) pour AnomalySummaryStrip
+  • Ajouté AnnotationTrigger dans SectionHeader right slot (avant PeriodCompareToggle)
+  • Ajouté AnomalySummaryStrip au-dessus du chart (totalLabel = "{N} jours")
+  • Wrappé ReferenceDots dans {!anomalyHidden && ...}
+  • Enhancé RTooltip formatter : si point est anomalie et key="Négatif", affiche "valeur · Anomalie détectée (écart type X.X)"
+- Étape 6 — Modified PartDeVoixDonutCard (chart 12 · Part de Voix / ShareOfVoice) :
+  • Ajouté useProR2B() + z-score sur mentionCount des concurrents
+  • Ajouté zAnomalies pour AnomalySummaryStrip (totalLabel = "{N} concurrents")
+  • Ajouté AnnotationTrigger dans SectionHeader right
+  • Ajouté AnomalySummaryStrip au-dessus du donut
+  • Cell stroke : rouge (NEGATIVE) + strokeWidth 2 pour tranches anomales quand !anomalyHidden
+  • AlertTriangle icon (10px, NEGATIVE) dans la légende à côté des items anomaux
+- Étape 7 — Modified TopSujetsCard (chart 13 · Topics) :
+  • Ajouté useProR2B() + z-score sur count des sujets
+  • Ajouté zAnomalies (totalLabel = "{N} sujets")
+  • Ajouté AnnotationTrigger dans SectionHeader right (wrapper div avec bouton "Voir tous les sujets")
+  • Ajouté AnomalySummaryStrip au-dessus des barres
+  • Button border : rouge (NEGATIVE) pour sujets anomaux quand !anomalyHidden
+  • AlertTriangle icon (11px, NEGATIVE) à côté du label des sujets anomaux
+- Étape 8 — Modified RepartitionTypeMediaCard (chart 22 · SourceDistribution) :
+  • Ajouté useProR2B() + z-score sur values des types de média
+  • Ajouté zAnomalies (totalLabel = "{N} types")
+  • Ajouté AnnotationTrigger dans SectionHeader right
+  • Ajouté AnomalySummaryStrip au-dessus du donut
+  • Cell stroke : rouge (NEGATIVE) + strokeWidth 2 pour tranches anomaux
+  • AlertTriangle icon (10px, NEGATIVE) dans la légende
+- Étape 9 — Added AnnotationTrigger à 4 cards supplémentaires :
+  • ScoreReputationCard (02) — sectionId="score-reputation", ajouté au début du fragment right
+  • BenchmarkConcurrentielTable (10) — sectionId="benchmark-concurrents", wrapper div avec bouton "Configurer"
+  • RadarReputationCard (11) — sectionId="radar-reputation", wrapper div avec badge "5 AXES"
+  • DernieresMentionsCard (14) — sectionId="dernieres-mentions", wrapper div avec badge "{N} ARTICLES"
+  Total : 8 cartes annotables (4 charts avec anomaly + 4 insight cards)
+- Étape 10 — Wired ExportCenterCard dans MAIN :
+  • Ajouté "export-center" à DEFAULT_WIDGET_ORDER (après "report-scheduler")
+  • Ajouté "export-center": <ExportCenterCard sentimentTrend={sentimentTrend} sources={sources} topics={topics} sov={sov} /> dans widgets map
+  • Le widget est reconcilié avec widgetOrder persisté (drop missing, append new) — backward compatible
+- Étape 11 — Wrapped MAIN return avec <ProR2BProvider userName={effectiveName}>...</ProR2BProvider> — tous les composants enfants (charts, triggers, dialog) peuvent appeler useProR2B()
+- Étape 12 — Updated footer : "v10X · ENV-PRO" → "v10X · ENV-PRO · R2-PRO-B", "29 sections" → "30 sections"
+- Étape 13 — Quality checks :
+  • Fixed 1 error : const rows: string[][] → (string | number)[][] dans buildCsv (les rows contiennent mix strings + numbers)
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors dans ProDashboard.tsx
+  • 0 régression sur les 9 features existantes (6 ENV-PRO + 3 R2-PRO-A) — aucun composant existant supprimé, seulement additions + modifications additives
+  • Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px, no emojis, French throughout
+  • 4 nouvelles localStorage keys : pro:annotations, pro:anomaly-toggle, pro:export-branding, pro:export-history — toutes usePersistentState-backed (SSR-safe)
+
+Stage Summary:
+- Fichier cible : /home/z/my-project/src/app/atelier/console/pro/ProDashboard.tsx (9220 → 10676 lignes, +1456 lignes net).
+- 3 features R2-PRO-B livrées (toutes persisted localStorage via usePersistentState, toutes client-side, aucune API backend requise) :
+  1. Team Annotations — contexte React (ProR2BProvider) partage annotations + anomaly toggle. AnnotationTrigger (bouton MessageSquare + count badge) sur 8 cartes (Score, TendanceSentiment, Benchmark, Radar, PartDeVoix, TopSujets, DernièresMentions, RépartitionMédia). AnnotationDialog (side panel 440px slide-in via createPortal) avec : thread scrollable (avatar initiales + auteur + timestamp relatif + dataPoint pin badge + body avec @MemberName highlightés sage via MENTION_REGEX + bouton supprimer), bouton resolve/unresolve toggle, input "Épingler à un point de données", textarea avec @mention dropdown (filtre substring sur 6 TEAM_MEMBERS, insert @MemberName + space, reposition cursor), hint + userName, bouton "Publier". Seed 1 annotation sur tendance-sentiment au premier visite. Persisté "pro:annotations".
+  2. Enhanced Export Center — ExportCenterCard (full-width, Section 28) avec : format selector 3 boutons (CSV=FileSpreadsheet / PNG=FileImage / PDF=FileText), scope selector 3 boutons (Complet / Section / Période), section dropdown (si scope=section, 8 options), date range picker 2 inputs (si scope=period), branding options (logo toggle + footer toggle + theme 3 swatches sage/charcoal/neutral), bouton "Exporter" avec spinner 1.2s, historique 5 derniers exports (icon + fileName + format·scope·taille·timestamp + re-télécharger). CSV depuis données réelles (4 datasets : trend/sources/topics/sov). PNG/PDF simulés (blob texte avec metadata branding). Persisté "pro:export-branding" + "pro:export-history".
+  3. Anomaly Detection Badges — z-score pur JS (computeZScores + detectAnomalies, |z|>2 = warning, |z|>3 = critical) sur 4 charts : TendanceSentiment (ReferenceDot rouge + tooltip "Anomalie détectée (écart type X.X)"), PartDeVoix (Cell stroke rouge + AlertTriangle légende), TopSujets (button border rouge + AlertTriangle label), RépartitionMédia (Cell stroke rouge + AlertTriangle légende). AnomalySummaryStrip au-dessus de chaque chart (Activity icon + count + badges severity + toggle "Masquer/Afficher"). Toggle persisted "pro:anomaly-toggle" (shared across 4 charts via context).
+- Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, tone Pro (équipe, données, benchmarking, ROI).
+- 7 nouveaux icônes Lucide importés en ordre alphabétique (Activity, AtSign, Check, FileImage, FileSpreadsheet, History, Pin) — préservé les 62 icônes existants.
+- 6 nouveaux types TypeScript (Comment, TeamMember, ExportFormat/Scope/Theme, ExportBranding, ExportHistoryItem, AnomalyPoint) + 8 nouvelles fonctions helpers (mean, stdDev, computeZScores, detectAnomalies, csvEscape, downloadBlob, memberInitials, renderCommentBody).
+- React Context (ProR2BContext + ProR2BProvider + useProR2B) — partage annotations + anomalyHidden + userName across tous les composants sans prop drilling.
+- createPortal pour AnnotationDialog — évite le bug `position: fixed` cassé par `transform` des motion.div ancêtres.
+- 0 régression sur les 9 features existantes (6 ENV-PRO + 3 R2-PRO-A) — aucun composant supprimé, seulement additions + modifications additives (4 charts enhanced, 4 insight cards gained AnnotationTrigger, 1 nouveau widget ExportCenterCard).
+- Code quality : tsc --noEmit → EXIT_CODE=0, 0 errors.
+- 4 nouvelles localStorage keys : pro:annotations, pro:anomaly-toggle, pro:export-branding, pro:export-history — toutes usePersistentState-backed (SSR-safe, quota-safe). Total Pro dashboard localStorage keys : 13 (6 ENV-PRO + 3 R2-PRO-A + 4 R2-PRO-B).
+
+---
+Task ID: R2-ESSENTIEL-B
+Agent: AURA — Essentiel Round 2B
+Task: Mobile polish + a11y + micro-interactions on EssentialDashboard
+
+Work Log:
+- Lu worklog.md tail (R2-AGENCY-A + R2-ESSENTIEL-A) — fichier cible EssentialDashboard.tsx (6481 lignes, déjà 9 features ENV-ESSENTIEL + R2-ESSENTIEL-A: onboarding banner, quota widget, quick start, help tooltips, empty states, milestones, daily briefing, notification center, guided tour)
+- Lu EssentialDashboard.tsx en chunks: imports (1-160), types (180-380), usePersistentState (566-628), UI atoms (630-900), SidebarContent (943-1149), Header (1200-1411), HarchIQWorkspace (1411-1830), ChatMessageView (1833-2050), ScoreReputationCard (2056-2235), KPI strips (2241-2546), TendanceSentimentCard (2638-2840), DiversiteSourcesCard (2784-2987), DernieresMentionsCard (2944-3172), ResumeHebdoCard (3126-3260), SnapshotVisibiliteCard (3279-3450), TopSujetsCard (3523-3735), IndicateurCriseCard (3738-3870), CarteChaleurGeoCard (3872-4025), PositionHarch100Card (4001-4145), ActiviteReseauSocialCard (4150-4310), MeteoSentimentsLangueCard (4265-4350), EvolutionScoreCard (4350-4470), VolumeMentionsCard (4465-4590), BoiteOutilsCard (4593-4765), WelcomeOnboardingBanner (4790-4920), QuotaUsageWidget (4943-5040), MilestoneBadge (5090-5145), QuickStartCard (5145-5245), EmptyState (5245-5325), MilestoneTrackerCard (5325-5460), R2-ESSENTIEL-A constants (5430-5520), DailyBriefingCard (5530-5705), NotificationBell (5710-5905), GuidedTour (5910-6135), MAIN (6345-7140)
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter), usePersistentState hook, framer-motion + shadcn/ui + recharts + lucide-react tous présents
+- Confirmé imports existants: AnimatePresence manquant (seulement motion importé), Search/Command/CornerDownLeft manquants
+
+- Étape 1 — Imports: ajouté 3 nouveaux icônes Lucide (Command pour palette trigger + CornerDownLeft pour hints clavier + Search pour input palette) en ordre alphabétique. Ajouté AnimatePresence à l'import framer-motion (requis pour ProgressiveList + CommandPalette animations).
+
+- Étape 2 — A11y helper components (insérés après CardShell, avant Delta):
+  • LiveSkeleton — wrapper autour de shadcn <Skeleton> qui ajoute role="status" + aria-live="polite" + aria-label="Chargement en cours". 22 occurrences de <Skeleton className=...> remplacées par <LiveSkeleton className=...> via sed (1 commande, 0 régression). Le remplacement est mécanique : LiveSkeleton accepte les mêmes props que Skeleton (className + label optionnel).
+  • SkipLink — composant <a> avec classe sr-only + focus:not-sr-only, devient visible au focus clavier. Style sage bordure + texte sage, position fixed top-2 left-2 z-[200]. href="#main-content" par défaut, children="Aller au contenu principal" par défaut.
+
+- Étape 3 — CommandPalette component (inséré après GuidedTour, avant MAIN, ~270 lignes) :
+  • interface CmdAction: { id, label, hint?, Icon: typeof Command, run: () => void }
+  • CommandPalette: 4 props (open, onClose, actions, recents, onPushRecent). State local: query (string), selected (number), inputRef (HTMLInputElement). 3 useEffect: (1) reset query+selected sur open + focus input après 60ms (eslint-disable react-hooks/set-state-in-effect sur setQuery car canonical reset pattern), (2) clamp selected quand flat.length change (eslint-disable sur setSelected), (3) aucun autre effect. 1 useMemo filtered (recent first + all sans doublons, filter par query sur label+hint). 1 useMemo flat (concat recent + all). 1 useCallback execute (run + pushRecent + close). 1 handleKeyDown (ArrowDown/Up/Enter/Escape). Render: AnimatePresence > motion.div backdrop (fixed inset-0 z-[150], rgba(10,10,10,0.45), backdropFilter blur(8px)) > motion.div panel (max-w-560px, rounded-xl, shadow-2xl, border BORDER_STRONG). Panel: input row (Search icon + input + ESC kbd) + list (max-h-400px overflow-y-auto, role="listbox") + footer hint (CornerDownLeft + Entrée + kbd ↑↓ + Naviguer). Rôles ARIA: dialog + aria-modal="true" + aria-label sur panel, combobox + aria-expanded + aria-controls + aria-activedescendant sur input, listbox + aria-label sur list, option + aria-selected sur chaque CmdRow.
+  • CmdRow: button avec role="option", id={`cmd-item-${action.id}`}, aria-selected={selected}, onClick + onMouseEnter (pour sync selected au hover). Style: backgroundColor SAGE_BG si selected + borderLeft 2px SAGE si selected. Icon container 24x24 (bg SAGE si selected, #FAFAFA sinon). Label 13px FONT_SANS + hint 10px FONT_MONO. CornerDownLeft indicator si selected.
+  • 7 actions définies dans MAIN via useMemo cmdActions: (1) goto-score → scrollToSection("score"), (2) ask-harchiq → scrollToSection("ai-workspace") + setTimeout 500ms focus #harchiq-input, (3) view-alertes → scrollToSection("alertes"), (4) download-report → fetch /api/console/export-csv + blob + download + handleReportDownload (milestone), (5) redo-tour → handleStartTour, (6) toggle-theme → toast.info "mode sombre pas encore disponible", (7) refresh-data → refetchHealth + refetchAlerts + refetchInsights + toast.success.
+
+- Étape 4 — ProgressiveList component (inséré après CmdRow, avant MAIN, ~105 lignes) :
+  • Generic <T> component: 6 props (sectionKey, items, limit=5, threshold=10, renderItem, title="Détails"). State persisté via usePersistentState<Record<string, boolean>>("essential:disclosure", {}) — un seul objet pour toutes les sections (évite 3 clés localStorage séparées). expanded = disclosure[sectionKey] ?? false. hasToggle = items.length > threshold (n'affiche le bouton que si >10 items). initial = items.slice(0, limit), rest = items.slice(limit). hiddenCount = items.length - limit. toggle via useCallback. Render: header (FONT_HEADER title + count "N éléments") + liste initiale (toujours visible) + AnimatePresence > motion.div (rest, height 0→auto + opacity 0→1, duration 0.28s ease cubic-bezier(0.16,1,0.3,1)) + bouton toggle (Voir plus/Voir moins + hint "X autres" si !expanded). ARIA: aria-expanded + aria-controls + id sur bouton. focus-visible:outline-2 focus-visible:outline-[#4A7B5F] sur bouton.
+
+- Étape 5 — Header wiring:
+  • Ajouté prop onOpenCmd: () => void à Header
+  • Ajouté bouton Command palette trigger (hidden sm:inline-flex) entre la badge HARCH/ESSENTIEL et MilestoneBadge: Command icon 14px + kbd ⌘K (hidden md:inline-flex, border BORDER_STRONG, bg #FAFAFA). Tooltip "Palette de commandes (Cmd+K / Ctrl+K)". aria-label="Ouvrir la palette de commandes (Cmd+K)". focus-visible inline.
+  • Ajouté focus-visible inline sur 3 autres boutons Header existants: menu hamburger, alertes bell, compte utilisateur (rounded-full).
+
+- Étape 6 — Sidebar nav wiring:
+  • Ajouté focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2 sur sidebar nav buttons (NAV_ITEMS.map)
+
+- Étape 7 — HarchIQ textarea wiring:
+  • Ajouté id="harchiq-input" sur le textarea (pour focus programmatique depuis CommandPalette action "ask-harchiq")
+  • Ajouté lang="fr" sur le textarea (placeholder français, prononciation screen reader)
+  • Ajouté focus-visible inline sur le textarea
+
+- Étape 8 — MAIN EssentialDashboard wiring:
+  • 2 nouveaux hooks usePersistentState: cmdRecents ("essential:cmd-recent", []), cmdOpen (useState false, transient)
+  • 1 nouveau useEffect: window keydown listener pour Cmd+K / Ctrl+K (e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K") → preventDefault + toggle cmdOpen. Cleanup removeEventListener.
+  • 4 nouveaux useCallback:
+    - handlePushRecent(id): setCmdRecents(prev => [id, ...prev.filter(x => x !== id)].slice(0, 5)) — dedupe + max 5
+    - handleCmdExport: async fetch /api/console/export-csv + blob + download + handleReportDownload (milestone) — partagé avec QuickStart action "rapport"
+    - handleCmdAskHarchIQ: scrollToSection("ai-workspace") + setTimeout 500ms focus #harchiq-input
+    - handleCmdRefresh: refetchHealth + refetchAlerts + refetchInsights + toast.success
+  • 1 nouveau useMemo cmdActions: 7 actions (goto-score, ask-harchiq, view-alertes, download-report, redo-tour, toggle-theme, refresh-data) avec icons Lucide (TrendingUp, Sparkles, AlertTriangle, Download, Map, Sun, RefreshCw)
+  • Ajouté <SkipLink /> comme premier élément dans le root div (avant <style>)
+  • Ajouté id="main-content" sur le <main> (cible du SkipLink)
+  • Ajouté onOpenCmd={() => setCmdOpen(true)} au <Header>
+  • Ajouté <CommandPalette open={cmdOpen} onClose actions={cmdActions} recents={cmdRecents} onPushRecent={handlePushRecent} /> à la fin du root div (après GuidedTour)
+  • Footer text mis à jour: "...R2-ESSENTIEL-A · R2-ESSENTIEL-B"
+
+- Étape 9 — ProgressiveList wiring dans 3 sections:
+  • DiversiteSourcesCard (Section 08): ajouté ProgressiveList sectionKey="sources" après AiCommentary. items = sources?.sources ?? [] (toutes les sources, pas seulement top 10 du chart). renderItem: row avec icon 18x18 (MessageCircle social / Newspaper média, couleurs SAGE_BG/SAGE ou #FEF3C7/#92400E) + name 12px FONT_SANS 600 CHARCOAL + count 11px FONT_MONO 700 SAGE. threshold=10, limit=5.
+  • TendanceSentimentCard (Section 07): ajouté ProgressiveList sectionKey="sentiment-trend" après AiCommentary. items = data (tous les jours mappés avec Positif/Neutre/Négatif/count/isAnomaly). renderItem: row avec date 11px FONT_MONO 600 CHARCOAL + dot rouge 6x6 si isAnomaly + breakdown "+P · N · -Neg" coloré (POSITIVE/TEXT_MUTED/NEGATIVE) + count "N mentions" SAGE. Background #FEF2F2 si isAnomaly pour highlight visuel. threshold=10, limit=5.
+  • TopSujetsCard (Section 12): ajouté ProgressiveList sectionKey="topics" après AiCommentary. items = topics?.topics ?? [] (tous les sujets, pas seulement top 5 du chart). renderItem: row avec badge type 32x16 (RISQUE #FEF2F2 red / SOURCE SAGE_BG sage, FONT_MONO 8px 700) + label 12px FONT_SANS 600 CHARCOAL + count 11px FONT_MONO 700 SAGE. threshold=10, limit=5.
+  • Ajouté focus-visible inline sur "Voir tous les sujets" Link dans TopSujetsCard
+
+- Étape 10 — A11y global CSS (inséré dans <style> existant):
+  • @keyframes sage-pulse-kf (existant, préservé)
+  • .sage-pulse (existant, préservé)
+  • R2-ESSENTIEL-B — global focus-visible outline: .min-h-screen button:focus-visible, a:focus-visible, [role="option"]:focus-visible, [role="combobox"]:focus-visible, [role="listbox"]:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid #4A7B5F; outline-offset: 2px; border-radius: 4px; } — couvre TOUS les éléments interactifs du dashboard (boutons, liens, inputs, textareas, options combobox, éléments avec tabindex). Scopé à .min-h-screen pour ne pas affecter autres pages.
+  • .sr-only:not(:focus):not(:focus-within) — utility class pour cacher visuellement mais garder accessible screen reader. Devient visible au focus (pour SkipLink).
+
+- Étape 11 — aria-label manquants:
+  • ResumeHebdo regenerate button (Button shadcn, icon-only RefreshCw): ajouté aria-label="Régénérer le résumé hebdomadaire"
+  • DiversiteSourcesCard selected close button: aria-label="Fermer" → "Fermer la sélection de source" (plus descriptif)
+  • Tous les autres boutons icon-only existants avaient déjà aria-label (Ouvrir le menu, Alertes crise, Compte utilisateur, Envoyer, Rafraîchir, Masquer la bannière, Masquer le démarrage rapide, Quotas du plan Essentiel, Notifications, Aide sur X, etc.)
+
+- Étape 12 — lang="fr" sur attributs français:
+  • HarchIQ textarea placeholder="Posez votre question à HarchIQ…": ajouté lang="fr"
+  • CommandPalette input placeholder="Rechercher une action…": ajouté lang="fr"
+  • SpeechSynthesisUtterance.lang = "fr-FR" déjà présent (R2-ESSENTIEL-A, préservé)
+
+- Étape 13 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → 0 errors dans EssentialDashboard.tsx (10 errors pré-existants dans ProDashboard.tsx d'un autre agent, non mon concern)
+  • bunx eslint src/app/atelier/console/essential/EssentialDashboard.tsx → 0 errors, 0 warnings
+  • Vérifié tous les 11 localStorage keys présents: 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIEL-A (notifications, tour-completed, briefing-date) + 2 R2-ESSENTIEL-B (cmd-recent, disclosure) — toutes usePersistentState-backed (SSR-safe, quota-safe)
+  • Vérifié Cmd+K keyboard shortcut: window keydown listener avec (e.metaKey || e.ctrlKey) && (e.key === "k" || "K") → preventDefault + toggle cmdOpen. Cross-platform (Mac Cmd+K / Win/Linux Ctrl+K).
+  • Vérifié CommandPalette fermeture: 3 méthodes — Escape key (handleKeyDown), click sur backdrop (onClick={onClose}), sélection d'action (execute → onClose). Toutes passent par setCmdOpen(false).
+  • Vérifié ProgressiveList state persistence: 3 sections (sources, sentiment-trend, topics) partagent 1 clé localStorage "essential:disclosure" (Record<string, boolean>). Toggle d'une section ne reset pas les autres.
+  • Vérifié focus-visible global CSS: scoupe à .min-h-screen (root div), couvre button/a/textarea/input/select/[role=option]/[role=combobox]/[role=listbox]/[tabindex]. Outline 2px solid #4A7B5F + offset 2px + border-radius 4px. Apparaît uniquement au focus clavier (pas au clic souris).
+  • Vérifié SkipLink: sr-only par défaut, focus:not-sr-only au focus clavier (devient visible fixed top-2 left-2). href="#main-content" matche <main id="main-content">. Texte "Aller au contenu principal".
+  • Vérifié LiveSkeleton: 22 occurrences de <Skeleton> remplacées par <LiveSkeleton>, chacune avec role="status" + aria-live="polite" + aria-label="Chargement en cours" (défaut). Aucune régression visuelle (LiveSkeleton passe className à Skeleton sous-jacent).
+  • Vérifié icon-only buttons aria-labels: ResumeHebdo regenerate (ajouté), DiversiteSources selected close (amélioré), tous les autres existants déjà conformes.
+  • Vérifié color contrast: charcoal #0A0A0A on white = 21:1 (AAA), text-muted #71717A on white = 4.8:1 (AA), text-header #9CA3AF on white = 2.6:1 (utilisé uniquement pour FONT_HEADER décoratif — labels uppercase 10px, pas pour body text). SAGE #4A7B5F on white = 4.6:1 (AA pour large text/UI). Tous les body text utilise TEXT_BODY #525252 (9.7:1 AAA) ou CHARCOAL.
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/essential/EssentialDashboard.tsx (6481 → 7337 lines, +856 net)
+- 3 features R2-ESSENTIEL-B livrées (toutes persisted localStorage via usePersistentState, SSR-safe, 0 régression sur 9 features existantes ENV-ESSENTIEL + R2-ESSENTIEL-A):
+  1. Command Palette (Cmd+K / Ctrl+K) — overlay fixed z-[150] avec backdrop blur(8px), 7 actions (goto-score, ask-harchiq, view-alertes, download-report, redo-tour, toggle-theme, refresh-data), fuzzy filter sur label+hint, recents section (max 5, dedupe, persisted "essential:cmd-recent"), keyboard nav (ArrowUp/Down/Enter/Esc), sage accent sur selected (SAGE_BG + border-left 2px SAGE + icon container SAGE), ARIA complète (dialog/combobox/listbox/option + aria-activedescendant), header trigger avec Command icon + ⌘K kbd hint + tooltip. Action "ask-harchiq" scroll + focus textarea via id="harchiq-input". Action "download-report" déclenche fetch /api/console/export-csv + blob + download + milestone firstReport. Action "refresh-data" appelle refetchHealth + refetchAlerts + refetchInsights.
+  2. Progressive Disclosure — 3 sections (sources, sentiment-trend, topics), ProgressiveList generic <T> component avec AnimatePresence (height 0→auto + opacity 0→1, 0.28s cubic-bezier(0.16,1,0.3,1)), top 5 visible + rest expandable, threshold >10 items pour afficher toggle, "Voir plus · X autres" / "Voir moins" bouton avec aria-expanded + aria-controls, state persisté dans "essential:disclosure" (Record<string, boolean> partagé). DiversiteSourcesCard: liste toutes les sources avec icon type + count. TendanceSentimentCard: décomposition quotidienne avec dot rouge si anomalie + breakdown +P/N/-Neg coloré + count. TopSujetsCard: liste tous les sujets avec badge RISQUE/SOURCE + count.
+  3. Accessibility Audit (WCAG 2.1 AA) — (a) LiveSkeleton wrapper sur 22 Skeleton avec role="status" + aria-live="polite" + aria-label; (b) SkipLink "Aller au contenu principal" comme premier élément, sr-only par défaut, focus:not-sr-only au focus clavier, href="#main-content" matche <main id="main-content">; (c) Global CSS focus-visible outline 2px solid #4A7B5F + offset 2px sur tous éléments interactifs (button, a, textarea, input, select, [role=option/combobox/listbox], [tabindex]) scopé à .min-h-screen; (d) aria-label ajouté sur ResumeHebdo regenerate button + DiversiteSources close button; (e) lang="fr" sur HarchIQ textarea + CommandPalette input (placeholder français); (f) sr-only utility class déclarée localement en backup de Tailwind v4; (g) Color contrast vérifié: charcoal 21:1 AAA, text-muted 4.8:1 AA, text-header 2.6:1 (décoratif uniquement, FONT_HEADER uppercase 10px), SAGE 4.6:1 AA large.
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, Lucide icons 16px, no emojis, French throughout
+- 3 nouveaux icônes Lucide importés (Command, CornerDownLeft, Search) — préservé les 47 icônes existants
+- 2 nouveaux types TypeScript (CmdAction) + 4 nouveaux components (LiveSkeleton, SkipLink, CommandPalette, CmdRow, ProgressiveList<T>) + 1 interface (CmdAction)
+- 2 nouveaux localStorage keys: essential:cmd-recent (string[]), essential:disclosure (Record<string, boolean>) — toutes usePersistentState-backed (SSR-safe, quota-safe)
+- 0 régression sur 9 features existantes (6 ENV-ESSENTIEL + 3 R2-ESSENTIAL-A) — aucun motion.div existant modifié, seul Ajout de ProgressiveList en fin de 3 sections + SkipLink en début de root + CommandPalette en fin de root + LiveSkeleton remplaçant Skeleton (wrapper transparent)
+- Code quality: tsc 0 errors dans EssentialDashboard.tsx (10 errors pré-existants dans ProDashboard.tsx d'un autre agent, non modifié par cette task), eslint 0 errors + 0 warnings
+- localStorage keys (11 total): 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIAL-A (notifications, tour-completed, briefing-date) + 2 R2-ESSENTIAL-B (cmd-recent, disclosure)
+- WCAG 2.1 AA compliance: SkipLink, focus-visible outlines, aria-live skeletons, aria-labels sur icon-only buttons, lang="fr" sur inputs français, role="status/dialog/combobox/listbox/option", aria-modal/aria-expanded/aria-controls/aria-activedescendant, color contrast ≥4.5:1 pour body text

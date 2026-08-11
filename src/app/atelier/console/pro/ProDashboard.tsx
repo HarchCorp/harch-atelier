@@ -72,29 +72,35 @@
 // ════════════════════════════════════════════════════════════════════
 
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
+  Activity,
   AlertTriangle,
   ArrowDown,
   ArrowLeftRight,
   ArrowRight,
   ArrowUp,
   ArrowUpCircle,
+  AtSign,
   BarChart3,
   Bell,
   BellRing,
   Brain,
   CalendarClock,
   CalendarDays,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -104,10 +110,13 @@ import {
   Download,
   ExternalLink,
   Eye,
+  FileImage,
+  FileSpreadsheet,
   FileText,
   Filter,
   GripVertical,
   Hash,
+  History,
   LayoutDashboard,
   LayoutGrid,
   Lightbulb,
@@ -121,6 +130,7 @@ import {
   Newspaper,
   Palette,
   PenSquare,
+  Pin,
   Play,
   Plus,
   Radio,
@@ -827,6 +837,112 @@ const CHANNEL_LABELS: Record<AlertChannel, string> = {
   dashboard: "Tableau de bord",
 };
 
+// ─── R2-PRO-B · Team Annotations + Export Center + Anomaly Detection ──
+
+interface Comment {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: number;
+  dataPoint?: string;
+  resolved?: boolean;
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+}
+
+type ExportFormat = "csv" | "png" | "pdf";
+type ExportScope = "full" | "section" | "period";
+type ExportTheme = "sage" | "charcoal" | "neutral";
+
+interface ExportBranding {
+  includeLogo: boolean;
+  includeFooter: boolean;
+  theme: ExportTheme;
+}
+
+interface ExportHistoryItem {
+  id: string;
+  format: ExportFormat;
+  scope: ExportScope;
+  sectionId?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  timestamp: number;
+  fileName: string;
+  fileSizeKb: number;
+}
+
+interface AnomalyPoint {
+  index: number;
+  value: number;
+  zScore: number;
+  severity: "critical" | "warning";
+  label?: string;
+}
+
+const TEAM_MEMBERS: TeamMember[] = [
+  { id: "tm-1", name: "Salma El Idrissi", role: "Responsable communication" },
+  { id: "tm-2", name: "Yassine Benchakroun", role: "Analyste données" },
+  { id: "tm-3", name: "Karim Tahiri", role: "Dircom" },
+  { id: "tm-4", name: "Leila Benjelloun", role: "Community manager" },
+  { id: "tm-5", name: "Hicham Mansouri", role: "Veilleur" },
+  { id: "tm-6", name: "Nadia Cherkaoui", role: "Stratège" },
+];
+
+const SEED_ANNOTATIONS: Record<string, Comment[]> = {
+  "tendance-sentiment": [
+    {
+      id: "ann-seed-1",
+      author: "Salma El Idrissi",
+      body: "Baisse du sentiment le 15 juillet — probablement liée à la couverture du dossier social dans la presse nationale. @Yassine Benchakroun peux-tu confirmer l'origine ?",
+      createdAt: Date.now() - 86400000 * 2,
+      dataPoint: "15 juillet",
+      resolved: false,
+    },
+  ],
+};
+
+const EXPORT_FORMAT_LABELS: Record<ExportFormat, string> = {
+  csv: "CSV (données brutes)",
+  png: "PNG (capture graphique)",
+  pdf: "PDF (rapport formaté)",
+};
+
+const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
+  full: "Tableau de bord complet",
+  section: "Cette section",
+  period: "Période sélectionnée",
+};
+
+const EXPORT_THEME_OPTIONS: Array<{ key: ExportTheme; label: string; color: string }> = [
+  { key: "sage", label: "Sage", color: SAGE },
+  { key: "charcoal", label: "Charcoal", color: CHARCOAL },
+  { key: "neutral", label: "Neutre", color: NEUTRAL_GRAY },
+];
+
+const MAX_EXPORT_HISTORY = 5;
+
+const ANNOTATABLE_SECTIONS: Array<{ id: string; label: string }> = [
+  { id: "score-reputation", label: "Score de réputation" },
+  { id: "tendance-sentiment", label: "Tendance sentiment" },
+  { id: "benchmark-concurrents", label: "Benchmark concurrentiel" },
+  { id: "radar-reputation", label: "Radar de réputation" },
+  { id: "part-voix-donut", label: "Part de voix" },
+  { id: "top-sujets", label: "Top 5 sujets" },
+  { id: "dernieres-mentions", label: "Dernières mentions" },
+  { id: "repartition-media", label: "Répartition par type de média" },
+];
+
+// Pre-computed mention regex for rendering @MemberName highlights in comment bodies
+const MENTION_REGEX = new RegExp(
+  `@(${TEAM_MEMBERS.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+  "g",
+);
+
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
 function fmtRelative(ts: number | string | undefined): string {
@@ -974,6 +1090,120 @@ function scrollToSection(id: string) {
     behavior: "smooth",
     block: "start",
   });
+}
+
+// ─── R2-PRO-B helpers: z-score, CSV, file download ────────────────────
+
+function mean(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((s, v) => s + v, 0) / values.length;
+}
+
+function stdDev(values: number[], avg?: number): number {
+  if (values.length < 2) return 0;
+  const m = avg ?? mean(values);
+  const variance = values.reduce((s, v) => s + (v - m) ** 2, 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+/** Compute z-scores for a series of values. Returns array aligned with input. */
+function computeZScores(values: number[]): number[] {
+  if (values.length < 2) return values.map(() => 0);
+  const m = mean(values);
+  const sd = stdDev(values, m);
+  if (sd === 0) return values.map(() => 0);
+  return values.map((v) => (v - m) / sd);
+}
+
+/** Detect anomalies: indices where |z| > threshold (default 2). */
+function detectAnomalies(
+  values: number[],
+  labels: string[] = [],
+  threshold = 2,
+): AnomalyPoint[] {
+  const zScores = computeZScores(values);
+  const anomalies: AnomalyPoint[] = [];
+  for (let i = 0; i < zScores.length; i++) {
+    const z = zScores[i];
+    if (Math.abs(z) > threshold) {
+      anomalies.push({
+        index: i,
+        value: values[i],
+        zScore: z,
+        severity: Math.abs(z) > 3 ? "critical" : "warning",
+        label: labels[i],
+      });
+    }
+  }
+  return anomalies;
+}
+
+function csvEscape(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  if (typeof window === "undefined") return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function memberInitials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0] ?? "")
+      .join("")
+      .toUpperCase() || "?"
+  );
+}
+
+/** Render comment body with @MemberName mentions highlighted in sage. */
+function renderCommentBody(body: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  // Reset regex state (global flag retains lastIndex)
+  MENTION_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = MENTION_REGEX.exec(body)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(
+        <span key={`t-${key++}`}>{body.slice(lastIdx, match.index)}</span>,
+      );
+    }
+    parts.push(
+      <span
+        key={`m-${key++}`}
+        style={{
+          color: SAGE,
+          backgroundColor: SAGE_BG,
+          borderRadius: 3,
+          padding: "0 3px",
+          fontWeight: 600,
+        }}
+      >
+        {match[0]}
+      </span>,
+    );
+    lastIdx = match.index + match[0].length;
+  }
+  if (lastIdx < body.length) {
+    parts.push(<span key={`t-${key++}`}>{body.slice(lastIdx)}</span>);
+  }
+  return parts;
 }
 
 // ─── useApi HOOK ──────────────────────────────────────────────────────
@@ -1238,6 +1468,1089 @@ const containerStagger = {
     transition: { staggerChildren: 0.04 },
   },
 };
+
+// ════════════════════════════════════════════════════════════════════
+// R2-PRO-B · Team Annotations + Export Center + Anomaly Detection
+//  Feature 1: Team Annotations (collaborative comments on insights)
+//  Feature 2: Enhanced Export Center (CSV/PNG/PDF + scope + branding)
+//  Feature 3: Anomaly Detection Badges (z-score on time-series charts)
+// ════════════════════════════════════════════════════════════════════
+
+// ─── R2-PRO-B Context (annotations + anomaly toggle) ──────────────────
+
+interface ProR2BContextValue {
+  annotations: Record<string, Comment[]>;
+  addComment: (sectionId: string, body: string, dataPoint?: string) => void;
+  resolveThread: (sectionId: string, resolved: boolean) => void;
+  deleteComment: (sectionId: string, commentId: string) => void;
+  anomalyHidden: boolean;
+  setAnomalyHidden: (v: boolean | ((prev: boolean) => boolean)) => void;
+  userName: string;
+}
+
+const ProR2BContext = createContext<ProR2BContextValue | null>(null);
+
+function useProR2B(): ProR2BContextValue {
+  const ctx = useContext(ProR2BContext);
+  if (!ctx) throw new Error("useProR2B must be used within ProR2BProvider");
+  return ctx;
+}
+
+function ProR2BProvider({
+  children,
+  userName,
+}: {
+  children: React.ReactNode;
+  userName: string;
+}) {
+  const [annotations, setAnnotations] = usePersistentState<Record<string, Comment[]>>(
+    "pro:annotations",
+    SEED_ANNOTATIONS,
+  );
+  const [anomalyHidden, setAnomalyHidden] = usePersistentState<boolean>(
+    "pro:anomaly-toggle",
+    false,
+  );
+
+  const addComment = useCallback(
+    (sectionId: string, body: string, dataPoint?: string) => {
+      const comment: Comment = {
+        id: `ann-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        author: userName,
+        body,
+        createdAt: Date.now(),
+        dataPoint: dataPoint || undefined,
+        resolved: false,
+      };
+      setAnnotations((prev) => ({
+        ...prev,
+        [sectionId]: [...(prev[sectionId] ?? []), comment],
+      }));
+    },
+    [userName, setAnnotations],
+  );
+
+  const resolveThread = useCallback(
+    (sectionId: string, resolved: boolean) => {
+      setAnnotations((prev) => ({
+        ...prev,
+        [sectionId]: (prev[sectionId] ?? []).map((c) => ({ ...c, resolved })),
+      }));
+    },
+    [setAnnotations],
+  );
+
+  const deleteComment = useCallback(
+    (sectionId: string, commentId: string) => {
+      setAnnotations((prev) => ({
+        ...prev,
+        [sectionId]: (prev[sectionId] ?? []).filter((c) => c.id !== commentId),
+      }));
+    },
+    [setAnnotations],
+  );
+
+  const value = useMemo<ProR2BContextValue>(
+    () => ({
+      annotations,
+      addComment,
+      resolveThread,
+      deleteComment,
+      anomalyHidden,
+      setAnomalyHidden,
+      userName,
+    }),
+    [annotations, addComment, resolveThread, deleteComment, anomalyHidden, setAnomalyHidden, userName],
+  );
+
+  return <ProR2BContext.Provider value={value}>{children}</ProR2BContext.Provider>;
+}
+
+// ─── R2-PRO-B · Feature 1: Annotation Trigger + Dialog ─────────────────
+
+function AnnotationTrigger({
+  sectionId,
+  sectionTitle,
+}: {
+  sectionId: string;
+  sectionTitle: string;
+}) {
+  const { annotations } = useProR2B();
+  const [open, setOpen] = useState(false);
+  const comments = annotations[sectionId] ?? [];
+  const count = comments.length;
+  const resolved = count > 0 && comments.every((c) => c.resolved);
+
+  return (
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 transition-colors hover:bg-[#FAFAFA]"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: count > 0 ? SAGE : TEXT_MUTED,
+                border: `1px solid ${count > 0 ? SAGE_DIM : BORDER}`,
+                backgroundColor: count > 0 ? SAGE_BG : "transparent",
+              }}
+              aria-label={`Annoter — ${count} commentaire(s)`}
+            >
+              {resolved ? <Check size={11} /> : <MessageSquare size={11} />}
+              {count > 0 && <span style={{ fontWeight: 700 }}>{count}</span>}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+              {count > 0
+                ? resolved
+                  ? `Fil résolu — ${count} commentaire(s)`
+                  : `${count} commentaire(s) — cliquer pour ouvrir`
+                : "Annoter cette section"}
+            </span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {open &&
+        createPortal(
+          <AnnotationDialog
+            sectionId={sectionId}
+            sectionTitle={sectionTitle}
+            onClose={() => setOpen(false)}
+          />,
+          document.body,
+        )}
+    </>
+  );
+}
+
+function AnnotationDialog({
+  sectionId,
+  sectionTitle,
+  onClose,
+}: {
+  sectionId: string;
+  sectionTitle: string;
+  onClose: () => void;
+}) {
+  const { annotations, addComment, resolveThread, deleteComment, userName } = useProR2B();
+  const comments = annotations[sectionId] ?? [];
+  const resolved = comments.length > 0 && comments.every((c) => c.resolved);
+  const [commentText, setCommentText] = useState("");
+  const [pinText, setPinText] = useState("");
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const filteredMembers = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return TEAM_MEMBERS.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [mentionQuery]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setCommentText(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, cursor);
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx === -1) {
+      setMentionQuery(null);
+      return;
+    }
+    const after = before.slice(atIdx + 1);
+    if (/[\s\n]/.test(after)) {
+      setMentionQuery(null);
+      return;
+    }
+    setMentionQuery(after);
+  };
+
+  const insertMention = (member: TeamMember) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursor = textarea.selectionStart ?? commentText.length;
+    const before = commentText.slice(0, cursor);
+    const after = commentText.slice(cursor);
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx === -1) return;
+    const newText = before.slice(0, atIdx) + `@${member.name} ` + after;
+    setCommentText(newText);
+    setMentionQuery(null);
+    const newCursor = atIdx + member.name.length + 2;
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursor, newCursor);
+    }, 0);
+  };
+
+  const handlePublish = () => {
+    const body = commentText.trim();
+    if (!body) {
+      toast.error("Le commentaire est vide.");
+      return;
+    }
+    addComment(sectionId, body, pinText.trim() || undefined);
+    setCommentText("");
+    setPinText("");
+    setMentionQuery(null);
+    toast.success("Commentaire publié.");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <motion.div
+        className="absolute right-0 top-0 h-full bg-white shadow-xl flex flex-col"
+        style={{ width: 440, maxWidth: "92vw" }}
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div className="min-w-0">
+            <div style={FONT_HEADER}>Annotations</div>
+            <div
+              className="truncate"
+              style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}
+            >
+              {sectionTitle}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {resolved && (
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: POSITIVE,
+                  backgroundColor: "rgba(16,185,129,0.1)",
+                  borderRadius: 3,
+                  padding: "2px 6px",
+                }}
+              >
+                <Check size={10} style={{ display: "inline", marginRight: 2 }} />
+                Résolu
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+              style={{ width: 28, height: 28 }}
+              aria-label="Fermer"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {comments.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center text-center py-12"
+              style={{ color: TEXT_MUTED }}
+            >
+              <MessageSquare size={28} style={{ color: BORDER_STRONG }} />
+              <p className="mt-2" style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+                Aucun commentaire sur cette section.
+                <br />
+                Lancez la discussion ci-dessous.
+              </p>
+            </div>
+          ) : (
+            comments.map((c) => (
+              <div
+                key={c.id}
+                className="rounded-md p-3"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+              >
+                <div className="flex items-start gap-2">
+                  <div
+                    className="flex items-center justify-center rounded-full shrink-0"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      backgroundColor: SAGE,
+                      color: "#FFFFFF",
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {memberInitials(c.author)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}
+                      >
+                        {c.author}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => deleteComment(sectionId, c.id)}
+                        className="inline-flex items-center justify-center rounded hover:bg-[#F4F4F5]"
+                        style={{ width: 20, height: 20 }}
+                        aria-label="Supprimer le commentaire"
+                      >
+                        <Trash2 size={11} style={{ color: TEXT_MUTED }} />
+                      </button>
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 1 }}>
+                      {fmtRelative(c.createdAt)}
+                    </div>
+                    {c.dataPoint && (
+                      <div
+                        className="inline-flex items-center gap-1 mt-1.5"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: SAGE,
+                          backgroundColor: SAGE_BG,
+                          borderRadius: 3,
+                          padding: "2px 5px",
+                        }}
+                      >
+                        <Pin size={9} />
+                        {c.dataPoint}
+                      </div>
+                    )}
+                    <p
+                      className="mt-1.5"
+                      style={{ fontFamily: FONT_SANS, fontSize: 12, lineHeight: 1.55, color: TEXT_BODY, margin: 0 }}
+                    >
+                      {renderCommentBody(c.body)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div
+          className="px-4 py-3 space-y-2"
+          style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+        >
+          {comments.length > 0 && (
+            <button
+              type="button"
+              onClick={() => resolveThread(sectionId, !resolved)}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: resolved ? TEXT_MUTED : SAGE,
+                border: `1px solid ${resolved ? BORDER : SAGE_DIM}`,
+                backgroundColor: resolved ? "#FFFFFF" : SAGE_BG,
+              }}
+            >
+              <Check size={11} />
+              {resolved ? "Marquer comme non résolu" : "Marquer comme résolu"}
+            </button>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Pin size={12} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+            <input
+              type="text"
+              value={pinText}
+              onChange={(e) => setPinText(e.target.value)}
+              placeholder="Épingler à un point de données (ex. 15 juillet)"
+              className="flex-1 rounded-md px-2 py-1.5 outline-none"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 11,
+                color: CHARCOAL,
+                border: `1px solid ${BORDER}`,
+                backgroundColor: "#FAFAFA",
+              }}
+            />
+          </div>
+
+          <div style={{ position: "relative" }}>
+            {filteredMembers.length > 0 && (
+              <div
+                className="absolute z-20 mb-1 rounded-md shadow-lg overflow-hidden"
+                style={{
+                  bottom: "100%",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "#FFFFFF",
+                  border: `1px solid ${BORDER_STRONG}`,
+                }}
+              >
+                {filteredMembers.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => insertMention(m)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-left transition-colors hover:bg-[#FAFAFA]"
+                  >
+                    <div
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width: 22,
+                        height: 22,
+                        backgroundColor: SAGE,
+                        color: "#FFFFFF",
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {memberInitials(m.name)}
+                    </div>
+                    <div className="min-w-0">
+                      <div
+                        className="truncate"
+                        style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: CHARCOAL }}
+                      >
+                        {m.name}
+                      </div>
+                      <div
+                        className="truncate"
+                        style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+                      >
+                        {m.role}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              value={commentText}
+              onChange={handleTextChange}
+              placeholder="Ajouter un commentaire — tapez @ pour mentionner un membre"
+              rows={3}
+              className="w-full rounded-md px-2 py-1.5 outline-none resize-none"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 12,
+                color: CHARCOAL,
+                border: `1px solid ${BORDER_STRONG}`,
+                backgroundColor: "#FFFFFF",
+                lineHeight: 1.5,
+              }}
+            />
+            <div
+              className="flex items-center gap-1 mt-1"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+            >
+              <AtSign size={10} />
+              <span>Mentionnez un coéquipier avec @</span>
+              <span style={{ marginLeft: "auto" }}>
+                Connecté en tant que <span style={{ color: SAGE, fontWeight: 700 }}>{userName}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              className="h-8"
+              style={{ fontFamily: FONT_MONO, fontSize: 11, backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={handlePublish}
+              disabled={!commentText.trim()}
+            >
+              <Send size={12} className="mr-1" />
+              Publier
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── R2-PRO-B · Feature 3: Anomaly Detection shared components ─────────
+
+function AnomalySummaryStrip({
+  anomalies,
+  totalLabel,
+  hidden,
+  onToggle,
+}: {
+  anomalies: AnomalyPoint[];
+  totalLabel: string;
+  hidden: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  const criticalCount = anomalies.filter((a) => a.severity === "critical").length;
+  const warningCount = anomalies.filter((a) => a.severity === "warning").length;
+  const hasAnomalies = anomalies.length > 0;
+  return (
+    <div className="flex items-center gap-2 flex-wrap mb-2">
+      <div
+        className="inline-flex items-center gap-1.5 rounded-md px-2 py-1"
+        style={{
+          backgroundColor: hasAnomalies ? "rgba(239,68,68,0.06)" : "#FAFAFA",
+          border: `1px solid ${hasAnomalies ? "rgba(239,68,68,0.2)" : BORDER}`,
+        }}
+      >
+        <Activity size={12} style={{ color: hasAnomalies ? NEGATIVE : TEXT_MUTED }} />
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            color: hasAnomalies ? NEGATIVE : TEXT_MUTED,
+            fontWeight: 700,
+          }}
+        >
+          {anomalies.length} anomalie(s) — {totalLabel}
+        </span>
+        {criticalCount > 0 && (
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              fontWeight: 700,
+              color: "#FFFFFF",
+              backgroundColor: NEGATIVE,
+              borderRadius: 3,
+              padding: "1px 4px",
+            }}
+          >
+            {criticalCount} critique
+          </span>
+        )}
+        {warningCount > 0 && (
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              fontWeight: 700,
+              color: NEUTRAL_AMBER,
+              backgroundColor: "rgba(245,158,11,0.12)",
+              borderRadius: 3,
+              padding: "1px 4px",
+            }}
+          >
+            {warningCount} alerte
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggle(!hidden)}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 10,
+          color: hidden ? TEXT_MUTED : SAGE,
+          border: `1px solid ${hidden ? BORDER : SAGE_DIM}`,
+          backgroundColor: hidden ? "transparent" : SAGE_BG,
+        }}
+        aria-pressed={hidden}
+      >
+        <Eye size={11} />
+        {hidden ? "Afficher les anomalies" : "Masquer les anomalies"}
+      </button>
+    </div>
+  );
+}
+
+// ─── R2-PRO-B · Feature 2: Enhanced Export Center ──────────────────────
+
+function ExportCenterCard({
+  sentimentTrend,
+  sources,
+  topics,
+  sov,
+}: {
+  sentimentTrend: SentimentTrendResp | null;
+  sources: SourceDistResp | null;
+  topics: TopicsResp | null;
+  sov: ShareOfVoiceResp | null;
+}) {
+  const [format, setFormat] = useState<ExportFormat>("csv");
+  const [scope, setScope] = useState<ExportScope>("full");
+  const [sectionId, setSectionId] = useState<string>("tendance-sentiment");
+  const [periodFrom, setPeriodFrom] = useState<string>("");
+  const [periodTo, setPeriodTo] = useState<string>("");
+  const [branding, setBranding] = usePersistentState<ExportBranding>(
+    "pro:export-branding",
+    { includeLogo: true, includeFooter: true, theme: "sage" },
+  );
+  const [history, setHistory] = usePersistentState<ExportHistoryItem[]>(
+    "pro:export-history",
+    [],
+  );
+  const [exporting, setExporting] = useState(false);
+
+  const sectionDataMap: Record<string, "trend" | "sources" | "topics" | "sov"> = {
+    "tendance-sentiment": "trend",
+    "repartition-media": "sources",
+    "top-sujets": "topics",
+    "part-voix-donut": "sov",
+    "score-reputation": "trend",
+    "benchmark-concurrents": "sov",
+    "radar-reputation": "sov",
+    "dernieres-mentions": "trend",
+  };
+
+  const buildCsv = useCallback((): string => {
+    const rows: (string | number)[][] = [];
+    const includeSection = (key: "trend" | "sources" | "topics" | "sov"): boolean => {
+      if (scope === "full") return true;
+      if (scope === "section") return sectionDataMap[sectionId] === key;
+      if (scope === "period") return key === "trend";
+      return false;
+    };
+
+    if (includeSection("trend")) {
+      let trendData = sentimentTrend?.data ?? [];
+      if (scope === "period" && periodFrom && periodTo) {
+        trendData = trendData.filter((d) => d.date >= periodFrom && d.date <= periodTo);
+      }
+      rows.push(["# Tendance Sentiment"]);
+      rows.push(["Date", "Score moyen", "Positif", "Neutre", "Négatif", "Mentions"]);
+      for (const d of trendData) {
+        rows.push([d.date, d.avgScore, d.positive, d.neutral, d.negative, d.count]);
+      }
+      rows.push([]);
+    }
+    if (includeSection("sources")) {
+      rows.push(["# Répartition des Sources"]);
+      rows.push(["Source", "Type", "Mentions"]);
+      for (const s of sources?.sources ?? []) {
+        rows.push([s.name, s.type, s.count]);
+      }
+      rows.push([]);
+    }
+    if (includeSection("topics")) {
+      rows.push(["# Sujets"]);
+      rows.push(["Sujet", "Mentions", "Type"]);
+      for (const t of topics?.topics ?? []) {
+        rows.push([t.label, t.count, t.type]);
+      }
+      rows.push([]);
+    }
+    if (includeSection("sov")) {
+      rows.push(["# Part de Voix"]);
+      rows.push(["Concurrent", "Mentions", "Sentiment", "Tendance", "Vous"]);
+      for (const c of sov?.competitors ?? []) {
+        rows.push([c.name, c.mentionCount, c.sentiment, c.trend, c.isYou ? "Oui" : "Non"]);
+      }
+      rows.push([]);
+    }
+    if (rows.length === 0) {
+      rows.push(["# Aucune donnée à exporter pour cette sélection"]);
+    }
+    return rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  }, [scope, sectionId, periodFrom, periodTo, sentimentTrend, sources, topics, sov, sectionDataMap]);
+
+  const buildSimulatedReport = useCallback((): string => {
+    const themeColor = EXPORT_THEME_OPTIONS.find((t) => t.key === branding.theme)?.color ?? SAGE;
+    const lines: string[] = [
+      "HARCH ATELIER — RAPPORT EXPORTÉ",
+      "================================",
+      "",
+      `Format: ${format.toUpperCase()}`,
+      `Périmètre: ${EXPORT_SCOPE_LABELS[scope]}`,
+      `Date d'export: ${new Date().toISOString()}`,
+      "",
+      `Branding:`,
+      `  - Logo inclus: ${branding.includeLogo ? "Oui" : "Non"}`,
+      `  - Pied de page inclus: ${branding.includeFooter ? "Oui" : "Non"}`,
+      `  - Thème couleur: ${branding.theme} (${themeColor})`,
+      "",
+    ];
+    if (scope === "section") {
+      const sectionLabel = ANNOTATABLE_SECTIONS.find((s) => s.id === sectionId)?.label ?? sectionId;
+      lines.push(`Section: ${sectionLabel}`);
+    }
+    if (scope === "period") {
+      lines.push(`Période: ${periodFrom || "?"} → ${periodTo || "?"}`);
+    }
+    lines.push("", "--- DONNÉES ---", "");
+    if (format === "pdf") {
+      lines.push(buildCsv());
+    } else {
+      lines.push("[Capture graphique simulée — les graphiques recharts seraient capturés via html-to-image]");
+      const scopeLabel =
+        scope === "full"
+          ? "tous les graphiques"
+          : scope === "section"
+            ? ANNOTATABLE_SECTIONS.find((s) => s.id === sectionId)?.label ?? "section"
+            : "période sélectionnée";
+      lines.push(`Graphiques inclus: ${scopeLabel}`);
+    }
+    return lines.join("\n");
+  }, [format, scope, sectionId, periodFrom, periodTo, branding, buildCsv]);
+
+  const handleExport = useCallback(() => {
+    setExporting(true);
+    setTimeout(() => {
+      const ext = format === "csv" ? "csv" : format === "png" ? "png" : "pdf";
+      const stamp = `${Date.now()}`;
+      const fileName = `harch-export-${scope}-${format}-${stamp}.${ext}`;
+      let blob: Blob;
+      let fileSizeKb: number;
+      if (format === "csv") {
+        const csv = buildCsv();
+        blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        fileSizeKb = Math.max(1, Math.round(blob.size / 1024));
+      } else {
+        const report = buildSimulatedReport();
+        blob = new Blob([report], { type: format === "png" ? "image/png" : "application/pdf" });
+        fileSizeKb = format === "png" ? Math.round(150 + Math.random() * 200) : Math.round(80 + Math.random() * 120);
+      }
+      downloadBlob(blob, fileName);
+
+      const item: ExportHistoryItem = {
+        id: `exp-${Date.now()}`,
+        format,
+        scope,
+        sectionId: scope === "section" ? sectionId : undefined,
+        periodFrom: scope === "period" ? periodFrom || undefined : undefined,
+        periodTo: scope === "period" ? periodTo || undefined : undefined,
+        timestamp: Date.now(),
+        fileName,
+        fileSizeKb,
+      };
+      setHistory((prev) => [item, ...prev].slice(0, MAX_EXPORT_HISTORY));
+      setExporting(false);
+      toast.success(`Export ${format.toUpperCase()} généré — ${fileName}`);
+    }, 1200);
+  }, [format, scope, sectionId, periodFrom, periodTo, buildCsv, buildSimulatedReport, setHistory]);
+
+  const formatIcons: Record<ExportFormat, typeof FileText> = {
+    csv: FileSpreadsheet,
+    png: FileImage,
+    pdf: FileText,
+  };
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="28 · Centre d'Export"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              CSV · PNG · PDF
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div>
+              <Label className="mb-1.5 block">Format d'export</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(Object.keys(EXPORT_FORMAT_LABELS) as ExportFormat[]).map((f) => {
+                  const Icon = formatIcons[f];
+                  const active = format === f;
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setFormat(f)}
+                      className="flex flex-col items-center gap-1 rounded-md py-2 transition-colors"
+                      style={{
+                        border: `1px solid ${active ? SAGE : BORDER}`,
+                        backgroundColor: active ? SAGE_BG : "#FFFFFF",
+                      }}
+                      aria-pressed={active}
+                    >
+                      <Icon size={16} style={{ color: active ? SAGE : TEXT_MUTED }} />
+                      <span
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: active ? SAGE : TEXT_BODY,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {f}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block">Périmètre</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(Object.keys(EXPORT_SCOPE_LABELS) as ExportScope[]).map((s) => {
+                  const active = scope === s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setScope(s)}
+                      className="rounded-md py-1.5 px-2 transition-colors text-center"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: active ? SAGE : TEXT_BODY,
+                        border: `1px solid ${active ? SAGE : BORDER}`,
+                        backgroundColor: active ? SAGE_BG : "#FFFFFF",
+                      }}
+                      aria-pressed={active}
+                    >
+                      {s === "full" ? "Complet" : s === "section" ? "Section" : "Période"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {scope === "section" && (
+              <div>
+                <Label className="mb-1.5 block">Section à exporter</Label>
+                <select
+                  value={sectionId}
+                  onChange={(e) => setSectionId(e.target.value)}
+                  className="w-full rounded-md px-2 py-1.5 outline-none"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 12,
+                    color: CHARCOAL,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  {ANNOTATABLE_SECTIONS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {scope === "period" && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1 block">Du</Label>
+                  <input
+                    type="date"
+                    value={periodFrom}
+                    onChange={(e) => setPeriodFrom(e.target.value)}
+                    className="w-full rounded-md px-2 py-1.5 outline-none"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      color: CHARCOAL,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1 block">Au</Label>
+                  <input
+                    type="date"
+                    value={periodTo}
+                    onChange={(e) => setPeriodTo(e.target.value)}
+                    className="w-full rounded-md px-2 py-1.5 outline-none"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      color: CHARCOAL,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label className="mb-1.5 block">Options de branding</Label>
+              <div
+                className="rounded-md p-3 space-y-2"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+              >
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="flex items-center gap-1.5" style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}>
+                    <Palette size={12} style={{ color: SAGE }} />
+                    Inclure le logo
+                  </span>
+                  <Switch
+                    checked={branding.includeLogo}
+                    onCheckedChange={(v) => setBranding((prev) => ({ ...prev, includeLogo: v }))}
+                  />
+                </label>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="flex items-center gap-1.5" style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}>
+                    <FileText size={12} style={{ color: SAGE }} />
+                    Inclure le pied de page
+                  </span>
+                  <Switch
+                    checked={branding.includeFooter}
+                    onCheckedChange={(v) => setBranding((prev) => ({ ...prev, includeFooter: v }))}
+                  />
+                </label>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5" style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}>
+                    <Palette size={12} style={{ color: SAGE }} />
+                    Thème couleur
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {EXPORT_THEME_OPTIONS.map((t) => (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setBranding((prev) => ({ ...prev, theme: t.key }))}
+                        className="rounded-full transition-all"
+                        style={{
+                          width: 18,
+                          height: 18,
+                          backgroundColor: t.color,
+                          border: branding.theme === t.key ? `2px solid ${CHARCOAL}` : `2px solid transparent`,
+                          cursor: "pointer",
+                        }}
+                        aria-label={`Thème ${t.label}`}
+                        aria-pressed={branding.theme === t.key}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              size="sm"
+              className="w-full h-9"
+              style={{ fontFamily: FONT_MONO, fontSize: 12, backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={handleExport}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <>
+                  <RefreshCw size={14} className="mr-2 animate-spin" />
+                  Export en cours…
+                </>
+              ) : (
+                <>
+                  <Download size={14} className="mr-2" />
+                  Exporter en {format.toUpperCase()}
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <History size={14} style={{ color: TEXT_MUTED }} />
+              <span style={FONT_HEADER}>Historique des exports</span>
+            </div>
+            {history.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center text-center rounded-md py-8"
+                style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}
+              >
+                <Download size={24} style={{ color: BORDER_STRONG }} />
+                <p className="mt-2" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}>
+                  Aucun export pour le moment.
+                  <br />
+                  Vos 5 derniers exports apparaîtront ici.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[340px] overflow-y-auto">
+                {history.map((h) => {
+                  const Icon = formatIcons[h.format];
+                  return (
+                    <div
+                      key={h.id}
+                      className="flex items-center gap-2 rounded-md p-2"
+                      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                    >
+                      <div
+                        className="flex items-center justify-center rounded-md shrink-0"
+                        style={{
+                          width: 28,
+                          height: 28,
+                          backgroundColor: SAGE_BG,
+                          color: SAGE,
+                        }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="truncate"
+                          style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: CHARCOAL }}
+                        >
+                          {h.fileName}
+                        </div>
+                        <div
+                          className="flex items-center gap-2"
+                          style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+                        >
+                          <span>{h.format.toUpperCase()}</span>
+                          <span>·</span>
+                          <span>{EXPORT_SCOPE_LABELS[h.scope]}</span>
+                          <span>·</span>
+                          <span>{h.fileSizeKb} Ko</span>
+                          <span>·</span>
+                          <span>{fmtRelative(h.timestamp)}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const blob = new Blob(
+                            [`Re-téléchargement simulé — ${h.fileName}`],
+                            { type: "text/plain" },
+                          );
+                          downloadBlob(blob, h.fileName);
+                          toast.success(`Re-téléchargement — ${h.fileName}`);
+                        }}
+                        className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] shrink-0"
+                        style={{ width: 28, height: 28 }}
+                        aria-label="Re-télécharger"
+                      >
+                        <Download size={13} style={{ color: SAGE }} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <AiCommentary
+              text={
+                history.length === 0
+                  ? "Configurez le format, le périmètre et le branding, puis exportez. L'historique conserve vos 5 derniers exports pour re-téléchargement rapide."
+                  : `${history.length} export(s) récent(s). CSV pour analyse brute, PNG pour présentations, PDF pour rapports formels. Le branding (logo, pied de page, thème) est appliqué aux exports PNG et PDF.`
+              }
+            />
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
 
 // ─── SIDEBAR NAV (plan-aware — Pro : 10 items, 3 Pro exclusives) ──────
 
@@ -2645,6 +3958,7 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
           title="02 · Score de Réputation"
           right={
             <>
+              <AnnotationTrigger sectionId="score-reputation" sectionTitle="Score de Réputation" />
               {loading && <Skeleton className="h-3 w-16" />}
               {!loading && (
                 <span
@@ -3272,25 +4586,26 @@ function TendanceSentimentCard({
   onPeriodCompareChange: (v: boolean) => void;
 }) {
   const [compareMode, setCompareMode] = useState(false);
+  const { anomalyHidden, setAnomalyHidden } = useProR2B();
 
   const data = useMemo(() => {
     if (!trend?.data?.length) return [];
-    return trend.data.map((d) => {
-      // Synthetic competitor overlay: derived from your sentiment ± offset.
-      // In compare mode, the top competitor's sentiment is shown as a dashed line.
-      const topCompetitor = radar?.brands?.find((b) => !b.isYou);
-      const compOffset = topCompetitor ? (topCompetitor.scores.sentiment - 50) * 0.3 : 0;
-      return {
-        date: d.date,
-        Positif: d.positive,
-        Neutre: d.neutral,
-        Négatif: d.negative,
-        Score: Math.round(((d.avgScore + 1) / 2) * 100),
-        Concurrent: compareMode && topCompetitor ? Math.max(0, Math.round(d.positive + compOffset + (Math.sin(d.count) * 5))) : null,
-        count: d.count,
-        isAnomaly: d.negative > (d.positive + d.neutral) * 0.5 || (d.count > 0 && d.count > ((trend.data.reduce((s, x) => s + x.count, 0) / trend.data.length) * 2)),
-      };
-    });
+    const topCompetitor = radar?.brands?.find((b) => !b.isYou);
+    const compOffset = topCompetitor ? (topCompetitor.scores.sentiment - 50) * 0.3 : 0;
+    // R2-PRO-B: z-score anomaly detection on negative mentions
+    const negValues = trend.data.map((d) => d.negative);
+    const zScores = computeZScores(negValues);
+    return trend.data.map((d, i) => ({
+      date: d.date,
+      Positif: d.positive,
+      Neutre: d.neutral,
+      Négatif: d.negative,
+      Score: Math.round(((d.avgScore + 1) / 2) * 100),
+      Concurrent: compareMode && topCompetitor ? Math.max(0, Math.round(d.positive + compOffset + (Math.sin(d.count) * 5))) : null,
+      count: d.count,
+      zScore: zScores[i],
+      isAnomaly: Math.abs(zScores[i]) > 2,
+    }));
   }, [trend, compareMode, radar]);
 
   // Period compare data: split into halves, plot current vs previous
@@ -3322,6 +4637,23 @@ function TendanceSentimentCard({
   const anomalies = data.filter((d) => d.isAnomaly);
   const medianCount = trend?.data?.length ? trend.data.reduce((s, x) => s + x.count, 0) / trend.data.length : 0;
 
+  // R2-PRO-B: z-score anomaly points for summary strip
+  const zAnomalies: AnomalyPoint[] = useMemo(() => {
+    const result: AnomalyPoint[] = [];
+    data.forEach((d, i) => {
+      if (d.isAnomaly) {
+        result.push({
+          index: i,
+          value: d.Négatif,
+          zScore: d.zScore,
+          severity: Math.abs(d.zScore) > 3 ? "critical" : "warning",
+          label: d.date,
+        });
+      }
+    });
+    return result;
+  }, [data]);
+
   const aiCommentary = useMemo(() => {
     if (!data.length) return "Aucune donnée disponible pour cette période.";
     const topComp = radar?.brands?.find((b) => !b.isYou);
@@ -3347,6 +4679,7 @@ function TendanceSentimentCard({
           title="09 · Tendance Sentiment + Détection d'Anomalies"
           right={
             <div className="flex items-center gap-2">
+              <AnnotationTrigger sectionId="tendance-sentiment" sectionTitle="Tendance Sentiment" />
               <PeriodCompareToggle active={periodCompare} onToggle={onPeriodCompareChange} />
               <button
                 type="button"
@@ -3465,6 +4798,12 @@ function TendanceSentimentCard({
           </div>
         ) : (
           <>
+            <AnomalySummaryStrip
+              anomalies={zAnomalies}
+              totalLabel={`${data.length} jours`}
+              hidden={anomalyHidden}
+              onToggle={setAnomalyHidden}
+            />
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -3497,6 +4836,12 @@ function TendanceSentimentCard({
                       fontSize: 11,
                     }}
                     labelFormatter={(l) => fmtDayShort(String(l))}
+                    formatter={((value: number | string, name: string, item: { payload?: { isAnomaly?: boolean; zScore?: number } }) => {
+                      if (item?.payload?.isAnomaly && name === "Négatif") {
+                        return [`${value} · Anomalie détectée (écart type ${item.payload.zScore?.toFixed(1) ?? "?"})`, name];
+                      }
+                      return [String(value), name];
+                    }) as never}
                   />
                   <Legend
                     wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 8 }}
@@ -3524,19 +4869,20 @@ function TendanceSentimentCard({
                       isAnimationActive
                     />
                   )}
-                  {/* Anomaly dots */}
-                  {anomalies.map((a, i) => (
-                    <ReferenceDot
-                      key={`anom-${i}`}
-                      x={a.date}
-                      y={a.Négatif}
-                      r={5}
-                      fill={NEGATIVE}
-                      stroke="#FFFFFF"
-                      strokeWidth={2}
-                      isFront
-                    />
-                  ))}
+                  {/* R2-PRO-B: z-score anomaly dots */}
+                  {!anomalyHidden &&
+                    anomalies.map((a, i) => (
+                      <ReferenceDot
+                        key={`anom-${i}`}
+                        x={a.date}
+                        y={a.Négatif}
+                        r={5}
+                        fill={NEGATIVE}
+                        stroke="#FFFFFF"
+                        strokeWidth={2}
+                        isFront
+                      />
+                    ))}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -3703,16 +5049,19 @@ function BenchmarkConcurrentielTable({
         <SectionHeader
           title="10 · Benchmark Concurrentiel"
           right={
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2"
-              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
-              onClick={onOpenWizard}
-            >
-              <Plus size={12} className="mr-1" />
-              Configurer
-            </Button>
+            <div className="flex items-center gap-2">
+              <AnnotationTrigger sectionId="benchmark-concurrents" sectionTitle="Benchmark Concurrentiel" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={onOpenWizard}
+              >
+                <Plus size={12} className="mr-1" />
+                Configurer
+              </Button>
+            </div>
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
@@ -3883,13 +5232,16 @@ function RadarReputationCard({ radar, loading }: { radar: CompetitorRadarResp | 
         <SectionHeader
           title="11 · Radar de Réputation"
           right={
-            <Badge
-              variant="secondary"
-              className="h-5"
-              style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}
-            >
-              5 AXES
-            </Badge>
+            <div className="flex items-center gap-2">
+              <AnnotationTrigger sectionId="radar-reputation" sectionTitle="Radar de Réputation" />
+              <Badge
+                variant="secondary"
+                className="h-5"
+                style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}
+              >
+                5 AXES
+              </Badge>
+            </div>
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
@@ -3961,9 +5313,12 @@ function RadarReputationCard({ radar, loading }: { radar: CompetitorRadarResp | 
 
 function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; loading: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const { anomalyHidden, setAnomalyHidden } = useProR2B();
 
   const data = useMemo(() => {
     if (!sov?.competitors?.length) return [];
+    const values = sov.competitors.slice(0, 5).map((c) => c.mentionCount);
+    const zScores = computeZScores(values);
     return sov.competitors.slice(0, 5).map((c, i) => ({
       name: c.name,
       value: c.mentionCount,
@@ -3971,8 +5326,27 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
       sentiment: c.sentiment,
       isYou: c.isYou,
       color: c.isYou ? SAGE : ["#1e3a5f", "#a0524b", "#8b6914", "#78716c"][i % 4],
+      zScore: zScores[i],
+      isAnomaly: Math.abs(zScores[i]) > 2,
     }));
   }, [sov]);
+
+  // R2-PRO-B: z-score anomaly points for summary strip
+  const zAnomalies: AnomalyPoint[] = useMemo(() => {
+    const result: AnomalyPoint[] = [];
+    data.forEach((d, i) => {
+      if (d.isAnomaly) {
+        result.push({
+          index: i,
+          value: d.value,
+          zScore: d.zScore,
+          severity: Math.abs(d.zScore) > 3 ? "critical" : "warning",
+          label: d.name,
+        });
+      }
+    });
+    return result;
+  }, [data]);
 
   const total = data.reduce((s, d) => s + d.value, 0);
   const selectedRow = selected ? data.find((d) => d.name === selected) : null;
@@ -3988,7 +5362,7 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
   return (
     <motion.div {...cardMotion}>
       <CardShell className="lg:col-span-4">
-        <SectionHeader title="12 · Part de Voix" />
+        <SectionHeader title="12 · Part de Voix" right={<AnnotationTrigger sectionId="part-voix-donut" sectionTitle="Part de Voix" />} />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <Skeleton className="h-[240px] w-full" />
@@ -3998,6 +5372,12 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
           </div>
         ) : (
           <>
+            <AnomalySummaryStrip
+              anomalies={zAnomalies}
+              totalLabel={`${data.length} concurrents`}
+              hidden={anomalyHidden}
+              onToggle={setAnomalyHidden}
+            />
             <div className="flex items-center gap-4">
               <div style={{ position: "relative", width: 140, height: 140, flexShrink: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -4016,8 +5396,8 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
                         <Cell
                           key={i}
                           fill={d.color}
-                          stroke={selected === d.name ? CHARCOAL : "#FFFFFF"}
-                          strokeWidth={selected === d.name ? 2 : 1}
+                          stroke={selected === d.name ? CHARCOAL : (!anomalyHidden && d.isAnomaly ? NEGATIVE : "#FFFFFF")}
+                          strokeWidth={selected === d.name ? 2 : (!anomalyHidden && d.isAnomaly ? 2 : 1)}
                           style={{ cursor: "pointer" }}
                         />
                       ))}
@@ -4061,6 +5441,9 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
                     }}
                   >
                     <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: d.color, flexShrink: 0 }} />
+                    {!anomalyHidden && d.isAnomaly && (
+                      <AlertTriangle size={10} style={{ color: NEGATIVE, flexShrink: 0 }} />
+                    )}
                     <span
                       className="flex-1 truncate"
                       style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: d.isYou ? 700 : 500, color: CHARCOAL }}
@@ -4102,10 +5485,13 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
 
 function TopSujetsCard({ topics, trend, loading }: { topics: TopicsResp | null; trend: SentimentTrendResp | null; loading: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const { anomalyHidden, setAnomalyHidden } = useProR2B();
 
   const rows = useMemo(() => {
     if (!topics?.topics?.length) return [];
-    return topics.topics.slice(0, 5).map((t) => {
+    const counts = topics.topics.slice(0, 5).map((t) => t.count);
+    const zScores = computeZScores(counts);
+    return topics.topics.slice(0, 5).map((t, i) => {
       // Derive sentiment split from the trend data: use overall ratios
       const posRatio = trend?.data?.length
         ? trend.data.reduce((s, d) => s + d.positive, 0) / Math.max(1, trend.data.reduce((s, d) => s + d.count, 0))
@@ -4122,11 +5508,30 @@ function TopSujetsCard({ topics, trend, loading }: { topics: TopicsResp | null; 
         neutre: Math.round(t.count * neuRatio),
         negatif: Math.round(t.count * negRatio),
         trend: t.count > 15 ? 8 : t.count > 8 ? 3 : -2,
+        zScore: zScores[i],
+        isAnomaly: Math.abs(zScores[i]) > 2,
       };
     });
   }, [topics, trend]);
 
   const maxCount = Math.max(...rows.map((r) => r.count), 1);
+
+  // R2-PRO-B: z-score anomaly points for summary strip
+  const zAnomalies: AnomalyPoint[] = useMemo(() => {
+    const result: AnomalyPoint[] = [];
+    rows.forEach((r, i) => {
+      if (r.isAnomaly) {
+        result.push({
+          index: i,
+          value: r.count,
+          zScore: r.zScore,
+          severity: Math.abs(r.zScore) > 3 ? "critical" : "warning",
+          label: r.label,
+        });
+      }
+    });
+    return result;
+  }, [rows]);
   const mostNeg = rows.reduce((a, b) => (b.negatif > a.negatif ? b : a), rows[0] ?? { label: "—", negatif: 0, count: 0, type: "source" as const, positif: 0, neutre: 0, trend: 0 });
   const negPct = mostNeg && mostNeg.count > 0 ? Math.round((mostNeg.negatif / mostNeg.count) * 100) : 0;
   const insight = rows.length > 0
@@ -4141,16 +5546,19 @@ function TopSujetsCard({ topics, trend, loading }: { topics: TopicsResp | null; 
         <SectionHeader
           title="13 · Top 5 Sujets"
           right={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7"
-              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
-              onClick={() => toast.info("Vue tous les sujets — analyse complète des thématiques.")}
-            >
-              Voir tous les sujets
-              <ChevronRight size={11} className="ml-1" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <AnnotationTrigger sectionId="top-sujets" sectionTitle="Top 5 Sujets" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                onClick={() => toast.info("Vue tous les sujets — analyse complète des thématiques.")}
+              >
+                Voir tous les sujets
+                <ChevronRight size={11} className="ml-1" />
+              </Button>
+            </div>
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
@@ -4162,6 +5570,12 @@ function TopSujetsCard({ topics, trend, loading }: { topics: TopicsResp | null; 
           </div>
         ) : (
           <>
+            <AnomalySummaryStrip
+              anomalies={zAnomalies}
+              totalLabel={`${rows.length} sujets`}
+              hidden={anomalyHidden}
+              onToggle={setAnomalyHidden}
+            />
             <div className="space-y-2.5">
               {rows.map((r) => {
                 const total = r.positif + r.neutre + r.negatif;
@@ -4174,7 +5588,7 @@ function TopSujetsCard({ topics, trend, loading }: { topics: TopicsResp | null; 
                     className="w-full text-left rounded-md p-2 transition-colors hover:bg-[#FAFAFA]"
                     style={{
                       backgroundColor: isSel ? SAGE_BG : "transparent",
-                      border: `1px solid ${isSel ? SAGE : BORDER}`,
+                      border: `1px solid ${isSel ? SAGE : (!anomalyHidden && r.isAnomaly ? NEGATIVE : BORDER)}`,
                     }}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -4198,6 +5612,9 @@ function TopSujetsCard({ topics, trend, loading }: { topics: TopicsResp | null; 
                         >
                           {r.label}
                         </span>
+                        {!anomalyHidden && r.isAnomaly && (
+                          <AlertTriangle size={11} style={{ color: NEGATIVE, flexShrink: 0 }} />
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
@@ -4287,13 +5704,16 @@ function DernieresMentionsCard({
         <SectionHeader
           title="14 · Dernières Mentions"
           right={
-            <Badge
-              variant="secondary"
-              className="h-5"
-              style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}
-            >
-              {filtered.length} ARTICLES
-            </Badge>
+            <div className="flex items-center gap-2">
+              <AnnotationTrigger sectionId="dernieres-mentions" sectionTitle="Dernières Mentions" />
+              <Badge
+                variant="secondary"
+                className="h-5"
+                style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}
+              >
+                {filtered.length} ARTICLES
+              </Badge>
+            </div>
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
@@ -5391,6 +6811,8 @@ function HeatmapCard({ alerts, loading }: { alerts: CrisisAlertsResp | null; loa
 // ════════════════════════════════════════════════════════════════════
 
 function RepartitionTypeMediaCard({ sources, aiVis, loading }: { sources: SourceDistResp | null; aiVis: AiVisibilityResp | null; loading: boolean }) {
+  const { anomalyHidden, setAnomalyHidden } = useProR2B();
+
   const data = useMemo(() => {
     // Map sources to media types using name heuristics.
     const buckets: { Presse: number; Blogs: number; Social: number; IA: number; Podcasts: number } = {
@@ -5411,14 +6833,35 @@ function RepartitionTypeMediaCard({ sources, aiVis, loading }: { sources: Source
     buckets.IA = (aiVis?.citedCount ?? 0) * 50;
     const total = Object.values(buckets).reduce((s, v) => s + v, 0);
     if (total === 0) return [];
-    return [
+    const result = [
       { name: "Presse", value: buckets.Presse, color: SAGE },
       { name: "Blogs", value: buckets.Blogs, color: "#1e3a5f" },
       { name: "Réseau social", value: buckets.Social, color: NEUTRAL_AMBER },
       { name: "IA", value: buckets.IA, color: "#a0524b" },
       { name: "Podcasts", value: buckets.Podcasts, color: NEUTRAL_GRAY },
     ].filter((d) => d.value > 0);
+    // R2-PRO-B: z-score anomaly detection on media type values
+    const values = result.map((d) => d.value);
+    const zScores = computeZScores(values);
+    return result.map((d, i) => ({ ...d, zScore: zScores[i], isAnomaly: Math.abs(zScores[i]) > 2 }));
   }, [sources, aiVis]);
+
+  // R2-PRO-B: z-score anomaly points for summary strip
+  const zAnomalies: AnomalyPoint[] = useMemo(() => {
+    const result: AnomalyPoint[] = [];
+    data.forEach((d, i) => {
+      if (d.isAnomaly) {
+        result.push({
+          index: i,
+          value: d.value,
+          zScore: d.zScore,
+          severity: Math.abs(d.zScore) > 3 ? "critical" : "warning",
+          label: d.name,
+        });
+      }
+    });
+    return result;
+  }, [data]);
 
   const total = data.reduce((s, d) => s + d.value, 0);
   const topType = data.reduce((a, b) => (b.value > a.value ? b : a), data[0] ?? { name: "—", value: 0, color: SAGE });
@@ -5432,7 +6875,7 @@ function RepartitionTypeMediaCard({ sources, aiVis, loading }: { sources: Source
   return (
     <motion.div id="sources" {...cardMotion}>
       <CardShell className="lg:col-span-5">
-        <SectionHeader title="22 · Répartition par Type de Média" />
+        <SectionHeader title="22 · Répartition par Type de Média" right={<AnnotationTrigger sectionId="repartition-media" sectionTitle="Répartition par Type de Média" />} />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <Skeleton className="h-[220px] w-full" />
@@ -5442,6 +6885,12 @@ function RepartitionTypeMediaCard({ sources, aiVis, loading }: { sources: Source
           </div>
         ) : (
           <>
+            <AnomalySummaryStrip
+              anomalies={zAnomalies}
+              totalLabel={`${data.length} types`}
+              hidden={anomalyHidden}
+              onToggle={setAnomalyHidden}
+            />
             <div className="flex items-center gap-4">
               <div style={{ width: 130, height: 130, flexShrink: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -5456,7 +6905,7 @@ function RepartitionTypeMediaCard({ sources, aiVis, loading }: { sources: Source
                       isAnimationActive
                     >
                       {data.map((d, i) => (
-                        <Cell key={i} fill={d.color} />
+                        <Cell key={i} fill={d.color} stroke={!anomalyHidden && d.isAnomaly ? NEGATIVE : "#FFFFFF"} strokeWidth={!anomalyHidden && d.isAnomaly ? 2 : 1} />
                       ))}
                     </Pie>
                     <RTooltip
@@ -5475,6 +6924,9 @@ function RepartitionTypeMediaCard({ sources, aiVis, loading }: { sources: Source
                 {data.map((d) => (
                   <div key={d.name} className="flex items-center gap-2">
                     <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: d.color, flexShrink: 0 }} />
+                    {!anomalyHidden && d.isAnomaly && (
+                      <AlertTriangle size={10} style={{ color: NEGATIVE, flexShrink: 0 }} />
+                    )}
                     <span
                       className="flex-1 truncate"
                       style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 500, color: CHARCOAL }}
@@ -8818,6 +10270,7 @@ const DEFAULT_WIDGET_ORDER: string[] = [
   "comparaison-semaine",
   "historique-rapports",
   "report-scheduler",
+  "export-center",
   "recherches-alertes",
   "alert-rules-builder",
   "top-influenceurs",
@@ -9021,6 +10474,7 @@ export default function ProDashboard({
     "comparaison-semaine": <ComparaisonSemaineCard weekly={weekly} loading={weeklyLoading} />,
     "historique-rapports": <HistoriqueRapportsCard reports={reports} loading={reportsLoading} />,
     "report-scheduler": <ReportSchedulerPanel />,
+    "export-center": <ExportCenterCard sentimentTrend={sentimentTrend} sources={sources} topics={topics} sov={sov} />,
     "recherches-alertes": <RecherchesAlertesCard alertConfig={alertConfig} loading={alertConfigLoading} />,
     "alert-rules-builder": <AlertRulesBuilder />,
     "top-influenceurs": <TopInfluenceursCard influencers={influencers} loading={influencersLoading} />,
@@ -9056,6 +10510,7 @@ export default function ProDashboard({
   const sortableItems = orderedWidgets.map((w) => w.id);
 
   return (
+    <ProR2BProvider userName={effectiveName}>
     <div className="min-h-screen flex" style={{ backgroundColor: "#FFFFFF", fontFamily: FONT_SANS }}>
       {/* Sidebar — desktop sticky aside */}
       <aside
@@ -9193,7 +10648,7 @@ export default function ProDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE PRO · v10X · ENV-PRO
+              HARCH ATELIER · CONSOLE PRO · v10X · ENV-PRO · R2-PRO-B
             </div>
             <div
               style={{
@@ -9202,7 +10657,7 @@ export default function ProDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 29 sections · 200 questions IA/jour · Casablanca
+              Données temps réel · 30 sections · 200 questions IA/jour · Casablanca
             </div>
           </div>
         </footer>
@@ -9216,5 +10671,6 @@ export default function ProDashboard({
         />
       )}
     </div>
+    </ProR2BProvider>
   );
 }

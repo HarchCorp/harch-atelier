@@ -147,6 +147,11 @@ import {
   Landmark,
   Lock,
   Trash2,
+  EyeOff,
+  Filter,
+  CalendarClock,
+  Server,
+  Pencil,
 } from "lucide-react";
 import {
   addDays,
@@ -8739,6 +8744,1407 @@ function KpiExecutiveSummaryRow({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// SECTION 33 — BOARD PDF TEMPLATE GALLERY (R2-ENTERPRISE-B)
+// 4 board-ready PDF templates · mini A4 thumbnails · generate / preview /
+// schedule modals · localStorage "enterprise:pdf-templates"
+// ════════════════════════════════════════════════════════════════════
+
+type PdfTemplateId = "comex" | "trimestriel" | "esg" | "geopolitique";
+type PdfCadence = "aucune" | "mensuel" | "trimestriel";
+
+interface PdfTemplateMeta {
+  id: PdfTemplateId;
+  title: string;
+  description: string;
+  pageCount: number;
+  sections: string[];
+  accent: string;
+}
+
+interface PdfTemplatesState {
+  lastGenerated: Partial<Record<PdfTemplateId, number>>;
+  schedules: Partial<Record<PdfTemplateId, PdfCadence>>;
+}
+
+const PDF_TEMPLATES: PdfTemplateMeta[] = [
+  {
+    id: "comex",
+    title: "Briefing COMEX",
+    description: "Synthèse exécutive 1 page — score, risques, décisions attendues.",
+    pageCount: 1,
+    sections: ["Résumé exécutif", "Score de réputation", "Risques clés", "Décisions attendues"],
+    accent: SAGE,
+  },
+  {
+    id: "trimestriel",
+    title: "Rapport trimestriel",
+    description: "Multi-sections — exécutif, KPI, risques, conformité.",
+    pageCount: 12,
+    sections: ["Synthèse exécutive", "KPI trimestriels", "Cartographie des risques", "Statut conformité", "Recommandations"],
+    accent: CHARCOAL,
+  },
+  {
+    id: "esg",
+    title: "Audit ESG",
+    description: "Scorecard 4 piliers — Environnement, Social, Gouvernance, Réglementaire.",
+    pageCount: 8,
+    sections: ["Pilier Environnement", "Pilier Social", "Pilier Gouvernance", "Pilier Réglementaire", "Scorecard globale"],
+    accent: SAGE,
+  },
+  {
+    id: "geopolitique",
+    title: "Cartographie géopolitique",
+    description: "Matrice d'exposition + décomposition marchés francophones.",
+    pageCount: 6,
+    sections: ["Matrice exposition", "Décomposition marchés", "Scénarios", "Recommandations"],
+    accent: CHARCOAL,
+  },
+];
+
+const PDF_TEMPLATES_INITIAL: PdfTemplatesState = {
+  lastGenerated: { comex: Date.now() - 1000 * 60 * 60 * 18 },
+  schedules: { comex: "mensuel" },
+};
+
+function PdfThumbnail({ templateId, accent }: { templateId: PdfTemplateId; accent: string }) {
+  const headerStyle: CSSProperties = { height: 14, backgroundColor: accent, margin: "5px 5px 3px", borderRadius: 1 };
+  const labelStyle: CSSProperties = { fontFamily: FONT_MONO, fontSize: 5, color: TEXT_MUTED, padding: "0 5px", letterSpacing: "0.06em", fontWeight: 700 };
+
+  if (templateId === "comex") {
+    return (
+      <div className="w-full h-full">
+        <div style={headerStyle} />
+        <div style={labelStyle}>BRIEFING COMEX</div>
+        <div style={{ height: 5, margin: "3px 5px", backgroundColor: "#E5E5E5", borderRadius: 1 }} />
+        <div style={{ display: "flex", gap: 2, margin: "3px 5px" }}>
+          <div style={{ flex: 1, height: 22, backgroundColor: SAGE_BG, borderRadius: 1 }} />
+          <div style={{ flex: 1, height: 22, backgroundColor: "rgba(245,158,11,0.12)", borderRadius: 1 }} />
+        </div>
+        <div style={{ margin: "3px 5px" }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ display: "flex", gap: 2, marginBottom: 2, alignItems: "center" }}>
+              <div style={{ width: 3, height: 3, borderRadius: "50%", backgroundColor: accent }} />
+              <div style={{ flex: 1, height: 3, backgroundColor: "#F0F0F0", borderRadius: 1 }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ margin: "5px 5px 0", height: 16, backgroundColor: "#FAFAFA", border: `0.5px solid ${BORDER_STRONG}`, borderRadius: 1, padding: 2 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 4, color: accent, fontWeight: 700, letterSpacing: "0.08em" }}>DÉCISIONS</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (templateId === "trimestriel") {
+    return (
+      <div className="w-full h-full">
+        <div style={headerStyle} />
+        <div style={labelStyle}>RAPPORT TRIMESTRIEL</div>
+        <div style={{ height: 5, margin: "3px 5px", backgroundColor: "#E5E5E5", borderRadius: 1 }} />
+        {["EXÉCUTIF", "KPI", "RISQUES", "CONFORMITÉ"].map((lbl) => (
+          <div key={lbl} style={{ margin: "2px 5px", padding: 2, border: `0.5px solid ${BORDER_STRONG}`, borderRadius: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 4, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.06em" }}>{lbl}</div>
+              <div style={{ width: 6, height: 3, backgroundColor: accent, borderRadius: 1 }} />
+            </div>
+            <div style={{ marginTop: 2, height: 2, backgroundColor: "#F0F0F0", borderRadius: 1 }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (templateId === "esg") {
+    return (
+      <div className="w-full h-full">
+        <div style={headerStyle} />
+        <div style={labelStyle}>AUDIT ESG</div>
+        <div style={{ height: 5, margin: "3px 5px", backgroundColor: "#E5E5E5", borderRadius: 1 }} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, margin: "3px 5px" }}>
+          {[
+            { p: "E", c: SAGE_BG },
+            { p: "S", c: "rgba(245,158,11,0.12)" },
+            { p: "G", c: "rgba(10,10,10,0.06)" },
+            { p: "R", c: "rgba(239,68,68,0.10)" },
+          ].map((pillar) => (
+            <div key={pillar.p} style={{ height: 26, backgroundColor: pillar.c, borderRadius: 1, padding: 2 }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 5, color: CHARCOAL, fontWeight: 700 }}>{pillar.p}</div>
+              <div style={{ marginTop: 2, height: 10, backgroundColor: "#FFFFFF", borderRadius: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", border: `1px solid ${accent}` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full">
+      <div style={headerStyle} />
+      <div style={labelStyle}>CARTOGRAPHIE GÉOPOLITIQUE</div>
+      <div style={{ height: 5, margin: "3px 5px", backgroundColor: "#E5E5E5", borderRadius: 1 }} />
+      <div style={{ margin: "3px 5px", padding: 2, border: `0.5px solid ${BORDER_STRONG}`, borderRadius: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1 }}>
+          {Array.from({ length: 16 }).map((_, i) => {
+            const row = Math.floor(i / 4);
+            const col = i % 4;
+            const intensity = (row + col) / 6;
+            return (
+              <div
+                key={i}
+                style={{
+                  height: 6,
+                  backgroundColor: intensity > 0.5 ? accent : intensity > 0.33 ? "rgba(74,123,95,0.25)" : "#F0F0F0",
+                  borderRadius: 0.5,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ margin: "3px 5px" }}>
+        {[0.6, 0.4, 0.3, 0.2].map((w, i) => (
+          <div key={i} style={{ marginBottom: 1 }}>
+            <div style={{ width: w * 36, height: 2, backgroundColor: accent, borderRadius: 1 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PdfConfigModal({
+  templateId,
+  cfgStart,
+  cfgEnd,
+  cfgSections,
+  cfgRecipients,
+  onCfgStart,
+  onCfgEnd,
+  onToggleSection,
+  onCfgRecipients,
+  onClose,
+  onConfirm,
+}: {
+  templateId: PdfTemplateId;
+  cfgStart: string;
+  cfgEnd: string;
+  cfgSections: Set<string>;
+  cfgRecipients: string;
+  onCfgStart: (v: string) => void;
+  onCfgEnd: (v: string) => void;
+  onToggleSection: (s: string) => void;
+  onCfgRecipients: (v: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const tpl = PDF_TEMPLATES.find((t) => t.id === templateId)!;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(10,10,10,0.55)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-xl w-full max-w-lg max-h-[88vh] overflow-y-auto"
+        style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4" style={{ borderBottom: `1px solid ${BORDER}` }}>
+          <div>
+            <div style={FONT_HEADER}>CONFIGURATION PDF</div>
+            <h3 style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>{tpl.title}</h3>
+          </div>
+          <button type="button" onClick={onClose} className="rounded p-1 hover:bg-[#FAFAFA]">
+            <X size={16} style={{ color: TEXT_MUTED }} />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block mb-1" style={FONT_HEADER}>PÉRIODE COUVERTE</label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={cfgStart}
+                onChange={(e) => onCfgStart(e.target.value)}
+                className="rounded-md px-2 py-1.5 w-full"
+                style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+              />
+              <input
+                type="date"
+                value={cfgEnd}
+                onChange={(e) => onCfgEnd(e.target.value)}
+                className="rounded-md px-2 py-1.5 w-full"
+                style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block mb-1" style={FONT_HEADER}>SECTIONS INCLUSES ({cfgSections.size}/{tpl.sections.length})</label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {tpl.sections.map((s) => {
+                const on = cfgSections.has(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onToggleSection(s)}
+                    className="flex items-center gap-2 rounded-md px-2.5 py-2 text-left"
+                    style={{ border: `1px solid ${on ? SAGE : BORDER_STRONG}`, backgroundColor: on ? SAGE_BG : "#FFFFFF" }}
+                  >
+                    <div
+                      className="flex items-center justify-center rounded"
+                      style={{
+                        width: 14,
+                        height: 14,
+                        border: `1.5px solid ${on ? SAGE : BORDER_STRONG}`,
+                        backgroundColor: on ? SAGE : "transparent",
+                      }}
+                    >
+                      {on && <CheckCircle2 size={10} style={{ color: "#FFFFFF" }} />}
+                    </div>
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: on ? SAGE : CHARCOAL }}>{s}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <label className="block mb-1" style={FONT_HEADER}>DESTINATAIRES (EMAIL)</label>
+            <input
+              value={cfgRecipients}
+              onChange={(e) => onCfgRecipients(e.target.value)}
+              className="rounded-md px-2.5 py-2 w-full"
+              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+              placeholder="comex@harch.ma"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 p-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+          <Button type="button" size="sm" onClick={onConfirm} style={{ backgroundColor: SAGE, color: "#FFFFFF" }}>
+            <Sparkles size={12} className="mr-1.5" />
+            Générer le PDF
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PdfFullLayout({ templateId, tpl }: { templateId: PdfTemplateId; tpl: PdfTemplateMeta }) {
+  const headerBlock = (
+    <div className="flex items-center justify-between pb-3 mb-4" style={{ borderBottom: `2px solid ${tpl.accent}` }}>
+      <div>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.1em" }}>HARCH ATELIER · CONFIDENTIEL</div>
+        <h1 style={{ fontFamily: FONT_SANS, fontSize: 22, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>{tpl.title}</h1>
+      </div>
+      <div className="text-right" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+        <div>{format(new Date(), "d MMMM yyyy", { locale: fr })}</div>
+        <div>Page 1 / {tpl.pageCount}</div>
+      </div>
+    </div>
+  );
+
+  if (templateId === "comex") {
+    return (
+      <div>
+        {headerBlock}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="rounded p-3" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>SCORE RÉPUTATION</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: SAGE }}>78/100</div>
+            <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY }}>Tendance stable · sentiment 64% positif</div>
+          </div>
+          <div className="rounded p-3" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>NIVEAU D&apos;ALERTE</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: NEUTRAL_AMBER }}>DEFCON 2</div>
+            <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY }}>Surveillance · 0 crise active</div>
+          </div>
+        </div>
+        <div className="mb-4">
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.08em" }}>RISQUES CLÉS</div>
+          <ol className="mt-2 space-y-1" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, listStyleType: "decimal", paddingLeft: 16 }}>
+            <li>Sanctions géopolitiques — exposition marchés export (probabilité 3/5, impact 4/5)</li>
+            <li>Conformité CNDP — registre des traitements à mettre à jour avant le 30 du mois</li>
+            <li>Réputationnel — bad-buzz potentiel sur réseaux sociaux, sentiment négatif en hausse de 12 pts</li>
+          </ol>
+        </div>
+        <div className="rounded p-3" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, fontWeight: 700, letterSpacing: "0.08em" }}>DÉCISIONS ATTENDUES DU COMEX</div>
+          <ul className="mt-2 space-y-1" style={{ fontFamily: FONT_SANS, fontSize: 11, color: SAGE, listStyleType: "none", padding: 0 }}>
+            <li>— Validation du plan de communication Q4 (budget 2,4 M MAD)</li>
+            <li>— Approbation du protocole de gestion de crise révisé</li>
+            <li>— Reconduction du mandat HarchIQ pour 12 mois</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  if (templateId === "trimestriel") {
+    return (
+      <div>
+        {headerBlock}
+        <div className="mb-4">
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.08em" }}>1. SYNTHÈSE EXÉCUTIVE</div>
+          <p className="mt-2" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.6 }}>
+            Le trimestre écoulé confirme la trajectoire de redressement de la réputation de la marque, avec un score consolidé à 78/100 (+4 pts vs T-1). Les mentions positives progressent de 8 points, portées par la couverture du lancement produit. Trois zones de vigilance demeurent : exposition géopolitique, conformité réglementaire et dispersion des sources négatives.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[
+            { label: "SCORE", value: "78", delta: "+4" },
+            { label: "MENTIONS", value: "1 247", delta: "+12%" },
+            { label: "SOV", value: "31%", delta: "+2 pts" },
+          ].map((k) => (
+            <div key={k.label} className="rounded p-2" style={{ border: `1px solid ${BORDER_STRONG}` }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.08em" }}>{k.label}</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL }}>{k.value}</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: POSITIVE }}>{k.delta}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mb-4">
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.08em" }}>2. KPI TRIMESTRIELS</div>
+          <table className="w-full mt-2" style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY, borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${BORDER_STRONG}` }}>
+                <th className="text-left py-1">Indicateur</th>
+                <th className="text-right py-1">T-1</th>
+                <th className="text-right py-1">T</th>
+                <th className="text-right py-1">Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <td className="py-1">Score de réputation</td><td className="text-right">74</td><td className="text-right">78</td><td className="text-right" style={{ color: POSITIVE }}>+4</td>
+              </tr>
+              <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <td className="py-1">Sentiment positif</td><td className="text-right">56%</td><td className="text-right">64%</td><td className="text-right" style={{ color: POSITIVE }}>+8 pts</td>
+              </tr>
+              <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <td className="py-1">Visibilité IA (9 LLM)</td><td className="text-right">42%</td><td className="text-right">47%</td><td className="text-right" style={{ color: POSITIVE }}>+5 pts</td>
+              </tr>
+              <tr>
+                <td className="py-1">Part de voix</td><td className="text-right">29%</td><td className="text-right">31%</td><td className="text-right" style={{ color: POSITIVE }}>+2 pts</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.08em" }}>3. STATUT CONFORMITÉ</div>
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {[
+              { label: "CNDP", status: "Conforme", color: SAGE },
+              { label: "AMMC", status: "Surveillance", color: NEUTRAL_AMBER },
+              { label: "BAM", status: "Conforme", color: SAGE },
+              { label: "ESG", status: "Conforme", color: SAGE },
+            ].map((r) => (
+              <div key={r.label} className="rounded p-2 text-center" style={{ border: `1px solid ${BORDER_STRONG}` }}>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: CHARCOAL, fontWeight: 700 }}>{r.label}</div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: r.color, marginTop: 2 }}>{r.status}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (templateId === "esg") {
+    return (
+      <div>
+        {headerBlock}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {[
+            { p: "E", label: "Environnement", score: "B+", color: SAGE, items: ["Empreinte carbone Scope 1+2 : -8% YoY", "Scope 3 en cours de cartographie", "Objectif neutralité 2030 maintenu"] },
+            { p: "S", label: "Social", score: "A-", color: NEUTRAL_AMBER, items: ["Turnover : 9% (vs 14% secteur)", "Formation : 4,2 j/collab", "Diversité : 41% femmes cadres"] },
+            { p: "G", label: "Gouvernance", score: "A", color: SAGE, items: ["Conseil : 60% indépendants", "Audit interne : 3 missions/an", "Whistleblowing : 7 signalements"] },
+            { p: "R", label: "Réglementaire", score: "B", color: NEUTRAL_AMBER, items: ["CNDP : conforme", "AMMC : surveillance", "BAM : conforme"] },
+          ].map((pillar) => (
+            <div key={pillar.p} className="rounded p-3" style={{ border: `1px solid ${BORDER_STRONG}` }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center rounded" style={{ width: 24, height: 24, backgroundColor: pillar.color, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}>{pillar.p}</div>
+                  <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{pillar.label}</span>
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: pillar.color }}>{pillar.score}</span>
+              </div>
+              <ul style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY, listStyleType: "none", padding: 0, margin: 0 }}>
+                {pillar.items.map((it, i) => (
+                  <li key={i} style={{ marginBottom: 2 }}>— {it}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="rounded p-3" style={{ backgroundColor: SAGE_BG, borderLeft: `3px solid ${SAGE}` }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, fontWeight: 700, letterSpacing: "0.08em" }}>SCORECARD GLOBALE</div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 26, fontWeight: 700, color: SAGE }}>83/100</span>
+            <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: SAGE }}>Note consolidée ESG · catégorie « Avancée »</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {headerBlock}
+      <div className="mb-4">
+        <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.08em" }}>MATRICE D&apos;EXPOSITION (PROBABILITÉ × IMPACT)</div>
+        <div className="mt-2 grid grid-cols-5 gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9 }}>
+          <div></div>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <div key={n} className="text-center" style={{ color: TEXT_MUTED }}>I{n}</div>
+          ))}
+          {[5, 4, 3, 2, 1].map((row) => (
+            <Fragment key={row}>
+              <div className="text-right pr-1" style={{ color: TEXT_MUTED }}>P{row}</div>
+              {[1, 2, 3, 4, 5].map((col) => {
+                const score = row * col;
+                const bg = score >= 16 ? NEGATIVE : score >= 9 ? NEUTRAL_AMBER : score >= 4 ? SAGE_DIM : "#F0F0F0";
+                const fg = score >= 4 ? "#FFFFFF" : TEXT_MUTED;
+                return (
+                  <div key={col} className="rounded text-center py-1" style={{ backgroundColor: bg, color: fg, fontWeight: 700 }}>
+                    {score}
+                  </div>
+                );
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+      <div className="mb-4">
+        <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.08em" }}>DÉCOMPOSITION MARCHÉS FRANCOPHONES</div>
+        <table className="w-full mt-2" style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY, borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${BORDER_STRONG}` }}>
+              <th className="text-left py-1">Marché</th>
+              <th className="text-right py-1">Mentions</th>
+              <th className="text-right py-1">Sentiment</th>
+              <th className="text-right py-1">Exposition</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { m: "Maroc", n: "612", s: "68%", e: "Modérée" },
+              { m: "France", n: "287", s: "54%", e: "Élevée" },
+              { m: "Sénégal", n: "143", s: "71%", e: "Faible" },
+              { m: "Côte d'Ivoire", n: "98", s: "62%", e: "Faible" },
+              { m: "Belgique", n: "74", s: "49%", e: "Modérée" },
+            ].map((r) => (
+              <tr key={r.m} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <td className="py-1">{r.m}</td><td className="text-right">{r.n}</td><td className="text-right">{r.s}</td><td className="text-right">{r.e}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="rounded p-3" style={{ backgroundColor: SAGE_BG, borderLeft: `3px solid ${SAGE}` }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, fontWeight: 700, letterSpacing: "0.08em" }}>SCÉNARIO PRINCIPAL · RECOMMANDATION</div>
+        <p className="mt-1" style={{ fontFamily: FONT_SANS, fontSize: 11, color: SAGE, lineHeight: 1.55 }}>
+          Maintenir le niveau de veille géopolitique actuel. Renforcer la couverture France (sentiment en repli) et préparer un plan de communication de précaution pour le marché belge. Aucune exposition critique détectée sur la fenêtre 90 jours.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PdfPreviewModal({ templateId, onClose }: { templateId: PdfTemplateId; onClose: () => void }) {
+  const tpl = PDF_TEMPLATES.find((t) => t.id === templateId)!;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ backgroundColor: "rgba(10,10,10,0.88)" }}
+      onClick={onClose}
+    >
+      <div className="flex items-center justify-between p-4 text-white" onClick={(e) => e.stopPropagation()}>
+        <div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#9CA3AF", letterSpacing: "0.08em" }}>APERÇU PDF · CONFIDENTIEL</div>
+          <div style={{ fontFamily: FONT_SANS, fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginTop: 2 }}>{tpl.title}</div>
+        </div>
+        <button type="button" onClick={onClose} className="rounded p-2 hover:bg-white/10">
+          <X size={18} style={{ color: "#FFFFFF" }} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 flex justify-center" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white shadow-2xl w-full max-w-3xl" style={{ minHeight: 600, padding: 32, color: CHARCOAL }}>
+          <PdfFullLayout templateId={templateId} tpl={tpl} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BoardPdfTemplateGalleryCard({
+  state,
+  onStateChange,
+}: {
+  state: PdfTemplatesState;
+  onStateChange: (s: PdfTemplatesState) => void;
+}) {
+  const [genOpenFor, setGenOpenFor] = useState<PdfTemplateId | null>(null);
+  const [previewFor, setPreviewFor] = useState<PdfTemplateId | null>(null);
+  const [scheduleOpenFor, setScheduleOpenFor] = useState<PdfTemplateId | null>(null);
+  const [cfgStart, setCfgStart] = useState<string>(format(addDays(new Date(), -30), "yyyy-MM-dd"));
+  const [cfgEnd, setCfgEnd] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [cfgSections, setCfgSections] = useState<Set<string>>(new Set());
+  const [cfgRecipients, setCfgRecipients] = useState("comex@harch.ma");
+
+  const handleOpenGen = useCallback((id: PdfTemplateId) => {
+    const tpl = PDF_TEMPLATES.find((t) => t.id === id)!;
+    setCfgSections(new Set(tpl.sections));
+    setGenOpenFor(id);
+  }, []);
+
+  const handleConfirmGen = useCallback((id: PdfTemplateId) => {
+    const tpl = PDF_TEMPLATES.find((t) => t.id === id)!;
+    onStateChange({
+      ...state,
+      lastGenerated: { ...state.lastGenerated, [id]: Date.now() },
+    });
+    setGenOpenFor(null);
+    toast.success(`PDF « ${tpl.title} » généré.`, {
+      description: `${tpl.pageCount} page(s) · ${cfgSections.size} section(s) · ${cfgRecipients || "aucun destinataire"}`,
+    });
+  }, [state, onStateChange, cfgSections, cfgRecipients]);
+
+  const handleSchedule = useCallback((id: PdfTemplateId, cadence: PdfCadence) => {
+    onStateChange({
+      ...state,
+      schedules: { ...state.schedules, [id]: cadence },
+    });
+    setScheduleOpenFor(null);
+    const tpl = PDF_TEMPLATES.find((t) => t.id === id)!;
+    if (cadence === "aucune") toast.info(`Programmation désactivée pour « ${tpl.title} ».`);
+    else toast.success(`« ${tpl.title} » programmé : ${cadence === "mensuel" ? "mensuel" : "trimestriel"}.`);
+  }, [state, onStateChange]);
+
+  const toggleSection = useCallback((s: string) => {
+    setCfgSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  }, []);
+
+  return (
+    <motion.div id="pdf-templates" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="33 · Galerie Modèles PDF Board-Ready"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              4 MODÈLES
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {PDF_TEMPLATES.map((tpl) => {
+            const last = state.lastGenerated[tpl.id];
+            const sched = state.schedules[tpl.id];
+            return (
+              <div key={tpl.id} className="rounded-lg p-3 flex flex-col" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                <div className="relative mx-auto mb-3" style={{ width: 120, height: 170, border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FAFAFA", borderRadius: 4 }}>
+                  <PdfThumbnail templateId={tpl.id} accent={tpl.accent} />
+                  <span
+                    className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center rounded"
+                    style={{
+                      backgroundColor: tpl.accent,
+                      color: "#FFFFFF",
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: "2px 5px",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    {tpl.pageCount}P
+                  </span>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, textAlign: "center" }}>
+                  {tpl.title}
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, textAlign: "center", marginTop: 2, lineHeight: 1.4, minHeight: 28 }}>
+                  {tpl.description}
+                </div>
+                <div className="flex items-center justify-between mt-2" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.04em" }}>
+                  <span>{last ? `Généré ${format(last, "d MMM", { locale: fr })}` : "Jamais généré"}</span>
+                  {sched && sched !== "aucune" ? (
+                    <span className="inline-flex items-center gap-0.5" style={{ color: SAGE }}>
+                      <CalendarClock size={10} />
+                      {sched === "mensuel" ? "M" : "T"}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-3 gap-1 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenGen(tpl.id)}
+                    className="rounded-md py-1.5 flex flex-col items-center"
+                    style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG, color: SAGE, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}
+                  >
+                    <Sparkles size={11} />
+                    <span style={{ marginTop: 2 }}>GÉNÉRER</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewFor(tpl.id)}
+                    className="rounded-md py-1.5 flex flex-col items-center"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", color: CHARCOAL, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}
+                  >
+                    <Eye size={11} />
+                    <span style={{ marginTop: 2 }}>APERÇU</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleOpenFor(scheduleOpenFor === tpl.id ? null : tpl.id)}
+                    className="rounded-md py-1.5 flex flex-col items-center"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", color: CHARCOAL, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}
+                  >
+                    <CalendarDays size={11} />
+                    <span style={{ marginTop: 2 }}>PROGRAMMER</span>
+                  </button>
+                </div>
+                {scheduleOpenFor === tpl.id && (
+                  <div className="mt-2 rounded-md overflow-hidden" style={{ border: `1px solid ${BORDER_STRONG}` }}>
+                    {(["aucune", "mensuel", "trimestriel"] as PdfCadence[]).map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => handleSchedule(tpl.id, c)}
+                        className="block w-full text-left px-2.5 py-1.5 hover:bg-[#FAFAFA]"
+                        style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}
+                      >
+                        {c === "aucune" ? "Désactiver" : c === "mensuel" ? "Mensuel (tous les mois)" : "Trimestriel (tous les 3 mois)"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <AiCommentary text="4 modèles board-ready alignés sur les standards COMEX, ESG et réglementaire. Chaque PDF est structuré selon le format HarchIQ (synthèse exécutif, données chiffrées, recommandations actionnables) et exportable en moins de 60 secondes. La programmation mensuelle ou trimestrielle assure une cadence automatique pour les revues de gouvernance." />
+      </CardShell>
+
+      {genOpenFor && (
+        <PdfConfigModal
+          templateId={genOpenFor}
+          cfgStart={cfgStart}
+          cfgEnd={cfgEnd}
+          cfgSections={cfgSections}
+          cfgRecipients={cfgRecipients}
+          onCfgStart={setCfgStart}
+          onCfgEnd={setCfgEnd}
+          onToggleSection={toggleSection}
+          onCfgRecipients={setCfgRecipients}
+          onClose={() => setGenOpenFor(null)}
+          onConfirm={() => handleConfirmGen(genOpenFor)}
+        />
+      )}
+
+      {previewFor && (
+        <PdfPreviewModal templateId={previewFor} onClose={() => setPreviewFor(null)} />
+      )}
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 34 — AUDIT LOG TIMELINE (R2-ENTERPRISE-B)
+// Vertical timeline of governance actions · filters · search · CSV ·
+// pagination · localStorage "enterprise:audit-log"
+// ════════════════════════════════════════════════════════════════════
+
+type AuditLogType = "connexion" | "modification" | "approbation" | "rejet" | "export" | "creation" | "suppression";
+
+interface AuditLogEntry {
+  id: string;
+  type: AuditLogType;
+  user: string;
+  action: string;
+  timestamp: number;
+  ip: string;
+  section: string;
+}
+
+const AUDIT_TYPE_META: Record<AuditLogType, { label: string; Icon: typeof Key; color: string; bg: string }> = {
+  connexion: { label: "Connexion", Icon: Key, color: NEUTRAL_GRAY, bg: "rgba(161,161,170,0.14)" },
+  modification: { label: "Modification", Icon: Pencil, color: NEUTRAL_AMBER, bg: "rgba(245,158,11,0.14)" },
+  approbation: { label: "Approbation", Icon: CheckCircle2, color: SAGE, bg: SAGE_BG },
+  rejet: { label: "Rejet", Icon: X, color: NEGATIVE, bg: "rgba(239,68,68,0.14)" },
+  export: { label: "Export", Icon: Download, color: COMPETITOR_C, bg: "rgba(30,58,95,0.12)" },
+  creation: { label: "Création", Icon: Plus, color: SAGE, bg: SAGE_BG },
+  suppression: { label: "Suppression", Icon: Trash2, color: NEGATIVE, bg: "rgba(239,68,68,0.14)" },
+};
+
+const AUDIT_USERS = ["Karim B.", "Salma E.", "Younes T.", "Aicha L.", "Omar F."];
+
+function initialsOf(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function makeSeedAuditLog(): AuditLogEntry[] {
+  const now = Date.now();
+  const hour = 60 * 60 * 1000;
+  const day = 24 * hour;
+  const raw: Omit<AuditLogEntry, "id">[] = [
+    { type: "connexion", user: "Karim B.", action: "Connexion au tableau de bord entreprise depuis Casablanca", timestamp: now - 2 * hour, ip: "41.92.18.204", section: "Session" },
+    { type: "modification", user: "Salma E.", action: "Mise à jour du statut de conformité AMMC → Surveillance", timestamp: now - 5 * hour, ip: "41.92.18.211", section: "Compliance Cockpit" },
+    { type: "export", user: "Karim B.", action: "Export PDF du briefing COMEX mensuel", timestamp: now - 8 * hour, ip: "41.92.18.204", section: "Board Briefing" },
+    { type: "approbation", user: "Younes T.", action: "Approbation de la revue hebdomadaire des risques critiques", timestamp: now - 1 * day, ip: "105.159.241.18", section: "Risk Heatmap" },
+    { type: "creation", user: "Aicha L.", action: "Ajout d'une échéance réglementaire CNDP (30 novembre)", timestamp: now - 1 * day - 3 * hour, ip: "41.92.18.219", section: "Regulatory Calendar" },
+    { type: "rejet", user: "Omar F.", action: "Rejet de la proposition de révision de la politique de crise", timestamp: now - 2 * day, ip: "41.92.18.227", section: "Panneau Gouvernance" },
+    { type: "modification", user: "Karim B.", action: "Mise à jour du niveau DEFCON de 1 à 2 (surveillance)", timestamp: now - 2 * day - 6 * hour, ip: "41.92.18.204", section: "DEFCON Crise" },
+    { type: "connexion", user: "Salma E.", action: "Connexion mobile (iOS) pour revue rapide", timestamp: now - 3 * day, ip: "105.159.241.42", section: "Session" },
+    { type: "export", user: "Younes T.", action: "Export CSV du journal d'audit (48 entrées)", timestamp: now - 3 * day - 4 * hour, ip: "105.159.241.18", section: "Audit Log" },
+    { type: "creation", user: "Aicha L.", action: "Création d'une nouvelle clé API (label : Reporting BI)", timestamp: now - 4 * day, ip: "41.92.18.219", section: "API & Integration Hub" },
+    { type: "suppression", user: "Omar F.", action: "Suppression du webhook obsolète WH-002 (Slack #alerts)", timestamp: now - 4 * day - 2 * hour, ip: "41.92.18.227", section: "API & Integration Hub" },
+    { type: "approbation", user: "Karim B.", action: "Approbation du rapport ESG trimestriel pour diffusion COMEX", timestamp: now - 5 * day, ip: "41.92.18.204", section: "Suivi ESG" },
+    { type: "modification", user: "Salma E.", action: "Mise à jour des sections incluses dans le briefing COMEX", timestamp: now - 5 * day - 5 * hour, ip: "41.92.18.211", section: "Board PDF Templates" },
+    { type: "connexion", user: "Younes T.", action: "Connexion automatique (session persistante)", timestamp: now - 6 * day, ip: "105.159.241.18", section: "Session" },
+    { type: "export", user: "Karim B.", action: "Export PDF du rapport trimestriel Q3 (12 pages)", timestamp: now - 7 * day, ip: "41.92.18.204", section: "Board PDF Templates" },
+  ];
+  return raw.map((e, i) => ({ ...e, id: `LOG-${String(i + 1).padStart(3, "0")}` }));
+}
+
+function AuditLogTimelineCard({ entries }: { entries: AuditLogEntry[] }) {
+  const [filterType, setFilterType] = useState<"all" | AuditLogType>("all");
+  const [filterUser, setFilterUser] = useState<"all" | string>("all");
+  const [filterStart, setFilterStart] = useState<string>("");
+  const [filterEnd, setFilterEnd] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  const filtered = useMemo(() => {
+    return entries.filter((e) => {
+      if (filterType !== "all" && e.type !== filterType) return false;
+      if (filterUser !== "all" && e.user !== filterUser) return false;
+      if (filterStart) {
+        const start = new Date(filterStart).getTime();
+        if (!isNaN(start) && e.timestamp < start) return false;
+      }
+      if (filterEnd) {
+        const end = new Date(filterEnd).getTime() + 86400000;
+        if (!isNaN(end) && e.timestamp > end) return false;
+      }
+      if (search.trim() && !e.action.toLowerCase().includes(search.trim().toLowerCase())) return false;
+      return true;
+    });
+  }, [entries, filterType, filterUser, filterStart, filterEnd, search]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const hasActiveFilters = filterType !== "all" || filterUser !== "all" || filterStart !== "" || filterEnd !== "" || search.trim() !== "";
+
+  const handleExport = useCallback(() => {
+    toast.success("Journal d'audit exporté (CSV).", {
+      description: `${filtered.length} entrée(s) · ${format(Date.now(), "d MMM yyyy 'à' HH:mm", { locale: fr })}`,
+    });
+  }, [filtered.length]);
+
+  const handleClearFilters = useCallback(() => {
+    setFilterType("all");
+    setFilterUser("all");
+    setFilterStart("");
+    setFilterEnd("");
+    setSearch("");
+    setVisibleCount(10);
+  }, []);
+
+  return (
+    <motion.div id="audit-log" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="34 · Journal d'Audit — Timeline Gouvernance"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {filtered.length} ENTRÉE(S)
+              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={handleExport}
+              >
+                <Download size={12} className="mr-1" />
+                EXPORTER CSV
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setVisibleCount(10); }}
+            placeholder="Recherche (action)…"
+            className="rounded-md px-2.5 py-1.5"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+          />
+          <select
+            value={filterType}
+            onChange={(e) => { setFilterType(e.target.value as "all" | AuditLogType); setVisibleCount(10); }}
+            className="rounded-md px-2 py-1.5"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+          >
+            <option value="all">Tous les types</option>
+            {(Object.keys(AUDIT_TYPE_META) as AuditLogType[]).map((t) => (
+              <option key={t} value={t}>{AUDIT_TYPE_META[t].label}</option>
+            ))}
+          </select>
+          <select
+            value={filterUser}
+            onChange={(e) => { setFilterUser(e.target.value); setVisibleCount(10); }}
+            className="rounded-md px-2 py-1.5"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+          >
+            <option value="all">Tous les utilisateurs</option>
+            {AUDIT_USERS.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={filterStart}
+            onChange={(e) => { setFilterStart(e.target.value); setVisibleCount(10); }}
+            className="rounded-md px-2 py-1.5"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+          />
+          <input
+            type="date"
+            value={filterEnd}
+            onChange={(e) => { setFilterEnd(e.target.value); setVisibleCount(10); }}
+            className="rounded-md px-2 py-1.5"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+          />
+        </div>
+        {hasActiveFilters && (
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1"
+              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}
+            >
+              <X size={10} /> RÉINITIALISER LES FILTRES
+            </button>
+          </div>
+        )}
+
+        {visible.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Filter size={24} style={{ color: TEXT_MUTED }} />
+            <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 8 }}>Aucune entrée ne correspond aux filtres.</p>
+          </div>
+        ) : (
+          <div className="relative pl-6">
+            <div
+              className="absolute top-2 bottom-2"
+              style={{ left: 11, width: 2, backgroundColor: SAGE_BG_STRONG }}
+            />
+            <div className="space-y-3">
+              {visible.map((e) => {
+                const meta = AUDIT_TYPE_META[e.type];
+                const { Icon } = meta;
+                return (
+                  <div key={e.id} className="relative">
+                    <div
+                      className="absolute -left-6 top-1.5 flex items-center justify-center rounded-full"
+                      style={{ width: 22, height: 22, backgroundColor: "#FFFFFF", border: `2px solid ${meta.color}`, zIndex: 1 }}
+                    >
+                      <Icon size={11} style={{ color: meta.color }} />
+                    </div>
+                    <div className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                      <div className="flex items-start gap-2.5">
+                        <div
+                          className="flex items-center justify-center rounded-full shrink-0"
+                          style={{ width: 28, height: 28, backgroundColor: SAGE_BG, color: SAGE, fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}
+                        >
+                          {initialsOf(e.user)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5"
+                              style={{ backgroundColor: meta.bg, color: meta.color, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em" }}
+                            >
+                              {meta.label.toUpperCase()}
+                            </span>
+                            <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{e.user}</span>
+                          </div>
+                          <p className="mt-1" style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY, lineHeight: 1.5 }}>{e.action}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.04em" }}>
+                            <span>{format(e.timestamp, "d MMM yyyy 'à' HH:mm", { locale: fr })}</span>
+                            <span>·</span>
+                            <span>{fmtRelative(e.timestamp)}</span>
+                            <span>·</span>
+                            <span>IP {e.ip}</span>
+                            <span>·</span>
+                            <span style={{ color: SAGE }}>{e.section}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {visible.length < filtered.length && (
+          <div className="flex justify-center mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setVisibleCount((c) => c + 10)}
+              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+            >
+              <ChevronDown size={12} className="mr-1" />
+              CHARGER PLUS ({filtered.length - visibleCount} RESTANTE(S))
+            </Button>
+          </div>
+        )}
+        <AiCommentary text={`Journal d'audit immuable — ${entries.length} entrées tracées sur 7 jours glissants. Chaque action de gouvernance (connexion, modification, approbation, export) est horodatée, attribuée et géolocalisée par IP. Conformément aux exigences AMMC/BAM, le journal est conservé 5 ans et exportable à tout moment.`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 35 — SIEM INTEGRATION CONFIGURATOR (R2-ENTERPRISE-B)
+// 3 connectors (Splunk / QRadar / Sentinel) · status · config form ·
+// event mapping table · rate limit · localStorage "enterprise:siem-config"
+// ════════════════════════════════════════════════════════════════════
+
+type SiemConnectorId = "splunk" | "qradar" | "sentinel";
+type SiemStatus = "connected" | "unconfigured" | "error";
+type SiemEventType = "crisis" | "sentiment-shift" | "milestone" | "compliance" | "anomaly";
+
+interface SiemEventMapping {
+  harchEvent: string;
+  siemField: string;
+}
+
+interface SiemConnectorState {
+  id: SiemConnectorId;
+  label: string;
+  status: SiemStatus;
+  endpoint: string;
+  token: string;
+  eventTypes: SiemEventType[];
+  lastSync: number | null;
+  eventsSynced: number;
+  rateLimitPerMin: number;
+  rateLimitCurrent: number;
+  mappings: SiemEventMapping[];
+}
+
+interface SiemConfig {
+  connectors: SiemConnectorState[];
+}
+
+const SIEM_EVENT_LABELS: Record<SiemEventType, string> = {
+  crisis: "Crise",
+  "sentiment-shift": "Bascul. sentiment",
+  milestone: "Jalon",
+  compliance: "Conformité",
+  anomaly: "Anomalie",
+};
+
+const HARCH_EVENTS_BASE: string[] = [
+  "crisis.alert",
+  "sentiment.drop",
+  "milestone.reached",
+  "compliance.update",
+  "anomaly.detected",
+];
+
+function makeSiemInitial(): SiemConfig {
+  return {
+    connectors: [
+      {
+        id: "splunk",
+        label: "Splunk Enterprise",
+        status: "connected",
+        endpoint: "https://splunk.harch.ma:8088/services/collector",
+        token: "splunk-harch-token-9f3e2a8b7c1d4e5f",
+        eventTypes: ["crisis", "sentiment-shift", "anomaly"],
+        lastSync: Date.now() - 1000 * 60 * 47,
+        eventsSynced: 1247,
+        rateLimitPerMin: 500,
+        rateLimitCurrent: 142,
+        mappings: [
+          { harchEvent: "crisis.alert", siemField: "harch.crisis.severity" },
+          { harchEvent: "sentiment.drop", siemField: "harch.sentiment.delta" },
+          { harchEvent: "milestone.reached", siemField: "harch.milestone.id" },
+          { harchEvent: "compliance.update", siemField: "harch.compliance.status" },
+          { harchEvent: "anomaly.detected", siemField: "harch.anomaly.score" },
+        ],
+      },
+      {
+        id: "qradar",
+        label: "IBM QRadar",
+        status: "unconfigured",
+        endpoint: "",
+        token: "",
+        eventTypes: [],
+        lastSync: null,
+        eventsSynced: 0,
+        rateLimitPerMin: 300,
+        rateLimitCurrent: 0,
+        mappings: HARCH_EVENTS_BASE.map((h) => ({ harchEvent: h, siemField: "" })),
+      },
+      {
+        id: "sentinel",
+        label: "Microsoft Sentinel",
+        status: "unconfigured",
+        endpoint: "",
+        token: "",
+        eventTypes: [],
+        lastSync: null,
+        eventsSynced: 0,
+        rateLimitPerMin: 400,
+        rateLimitCurrent: 0,
+        mappings: HARCH_EVENTS_BASE.map((h) => ({ harchEvent: h, siemField: "" })),
+      },
+    ],
+  };
+}
+
+function SiemIntegrationConfiguratorCard({
+  state,
+  onStateChange,
+}: {
+  state: SiemConfig;
+  onStateChange: (s: SiemConfig) => void;
+}) {
+  const [expandedId, setExpandedId] = useState<SiemConnectorId | null>("splunk");
+  const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
+  const [testing, setTesting] = useState<Record<string, boolean>>({});
+  const [syncing, setSyncing] = useState<Record<string, boolean>>({});
+
+  const updateConnector = useCallback((id: SiemConnectorId, patch: Partial<SiemConnectorState>) => {
+    const connectors = state.connectors.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    onStateChange({ ...state, connectors });
+  }, [state, onStateChange]);
+
+  const updateMapping = useCallback((id: SiemConnectorId, idx: number, siemField: string) => {
+    const conn = state.connectors.find((c) => c.id === id);
+    if (!conn) return;
+    const mappings = conn.mappings.map((m, i) => (i === idx ? { ...m, siemField } : m));
+    updateConnector(id, { mappings });
+  }, [state, updateConnector]);
+
+  const toggleEventType = useCallback((id: SiemConnectorId, ev: SiemEventType) => {
+    const conn = state.connectors.find((c) => c.id === id);
+    if (!conn) return;
+    const set = new Set(conn.eventTypes);
+    if (set.has(ev)) set.delete(ev);
+    else set.add(ev);
+    updateConnector(id, { eventTypes: Array.from(set) });
+  }, [state, updateConnector]);
+
+  const handleTest = useCallback((id: SiemConnectorId) => {
+    const conn = state.connectors.find((c) => c.id === id);
+    if (!conn) return;
+    if (!conn.endpoint.trim() || !conn.token.trim()) {
+      toast.error(`Configuration incomplète pour ${conn.label}.`, { description: "Endpoint et token requis." });
+      return;
+    }
+    setTesting((t) => ({ ...t, [id]: true }));
+    window.setTimeout(() => {
+      setTesting((t) => ({ ...t, [id]: false }));
+      if (Math.random() > 0.1) {
+        toast.success(`Connexion à ${conn.label} établie.`, {
+          description: `Latence simulée : ${Math.floor(40 + Math.random() * 80)} ms · endpoint joignable`,
+        });
+      } else {
+        toast.error(`Échec de connexion à ${conn.label}.`, { description: "Timeout — vérifiez l'endpoint et le token." });
+      }
+    }, 900);
+  }, [state]);
+
+  const handleSync = useCallback((id: SiemConnectorId) => {
+    const conn = state.connectors.find((c) => c.id === id);
+    if (!conn) return;
+    if (conn.status !== "connected") {
+      toast.error(`${conn.label} n'est pas connecté.`);
+      return;
+    }
+    setSyncing((s) => ({ ...s, [id]: true }));
+    window.setTimeout(() => {
+      setSyncing((s) => ({ ...s, [id]: false }));
+      const newEvents = Math.floor(50 + Math.random() * 200);
+      updateConnector(id, {
+        lastSync: Date.now(),
+        eventsSynced: conn.eventsSynced + newEvents,
+        rateLimitCurrent: Math.max(20, Math.floor(conn.rateLimitCurrent * 0.7 + newEvents / 4)),
+      });
+      toast.success(`Synchronisation ${conn.label} terminée.`, {
+        description: `${newEvents} nouveaux événements ingérés · total ${conn.eventsSynced + newEvents}`,
+      });
+    }, 1100);
+  }, [state, updateConnector]);
+
+  const handleSaveConfig = useCallback((id: SiemConnectorId) => {
+    const conn = state.connectors.find((c) => c.id === id);
+    if (!conn) return;
+    const willBeConnected = conn.endpoint.trim() !== "" && conn.token.trim() !== "" && conn.eventTypes.length > 0;
+    updateConnector(id, { status: willBeConnected ? "connected" : "unconfigured" });
+    toast.success(`Configuration ${conn.label} enregistrée.`, {
+      description: willBeConnected ? "Statut : Connecté." : "Endpoint, token et au moins 1 événement requis pour activer.",
+    });
+  }, [state, updateConnector]);
+
+  const expandedConn = state.connectors.find((c) => c.id === expandedId) ?? null;
+
+  return (
+    <motion.div id="siem-config" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="35 · SIEM Integration Configurator"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {state.connectors.filter((c) => c.status === "connected").length}/{state.connectors.length} CONNECTÉS
+              </Badge>
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                SOC-READY
+              </Badge>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {state.connectors.map((conn) => {
+            const isExpanded = expandedId === conn.id;
+            const statusColor = conn.status === "connected" ? SAGE : conn.status === "error" ? NEGATIVE : NEUTRAL_GRAY;
+            const statusBg = conn.status === "connected" ? SAGE_BG : conn.status === "error" ? "rgba(239,68,68,0.14)" : "#FAFAFA";
+            const statusLabel = conn.status === "connected" ? "Connecté" : conn.status === "error" ? "Erreur" : "Non configuré";
+            const ratePct = conn.rateLimitPerMin > 0 ? Math.round((conn.rateLimitCurrent / conn.rateLimitPerMin) * 100) : 0;
+            const rateColor = ratePct > 80 ? NEGATIVE : ratePct > 60 ? NEUTRAL_AMBER : SAGE;
+            const showToken = showTokens[conn.id] ?? false;
+            return (
+              <div key={conn.id} className="rounded-lg" style={{ border: `1px solid ${isExpanded ? SAGE : BORDER}`, backgroundColor: "#FFFFFF", overflow: "hidden" }}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : conn.id)}
+                  className="w-full flex items-center justify-between p-3 text-left"
+                  style={{ borderBottom: isExpanded ? `1px solid ${BORDER}` : "none" }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="flex items-center justify-center rounded-md"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        backgroundColor: conn.status === "connected" ? SAGE_BG : "#FAFAFA",
+                        color: conn.status === "connected" ? SAGE : TEXT_MUTED,
+                      }}
+                    >
+                      <Server size={15} />
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>{conn.label}</div>
+                      <div
+                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 mt-0.5"
+                        style={{ backgroundColor: statusBg, color: statusColor, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em" }}
+                      >
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: statusColor }} />
+                        {statusLabel.toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronDown size={14} style={{ color: TEXT_MUTED, transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                </button>
+
+                {isExpanded && (
+                  <div className="p-3 space-y-3">
+                    <div>
+                      <label className="block mb-1" style={FONT_HEADER}>ENDPOINT API</label>
+                      <input
+                        value={conn.endpoint}
+                        onChange={(e) => updateConnector(conn.id, { endpoint: e.target.value })}
+                        placeholder="https://…"
+                        className="rounded-md px-2 py-1.5 w-full"
+                        style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1" style={FONT_HEADER}>AUTH TOKEN</label>
+                      <div className="relative">
+                        <input
+                          type={showToken ? "text" : "password"}
+                          value={conn.token}
+                          onChange={(e) => updateConnector(conn.id, { token: e.target.value })}
+                          placeholder="••••••••"
+                          className="rounded-md px-2 py-1.5 w-full pr-8"
+                          style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTokens((s) => ({ ...s, [conn.id]: !showToken }))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2"
+                          aria-label={showToken ? "Masquer le token" : "Afficher le token"}
+                        >
+                          {showToken ? <EyeOff size={12} style={{ color: TEXT_MUTED }} /> : <Eye size={12} style={{ color: TEXT_MUTED }} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block mb-1" style={FONT_HEADER}>ÉVÉNEMENTS ({conn.eventTypes.length}/5)</label>
+                      <div className="grid grid-cols-2 gap-1">
+                        {(Object.keys(SIEM_EVENT_LABELS) as SiemEventType[]).map((ev) => {
+                          const on = conn.eventTypes.includes(ev);
+                          return (
+                            <button
+                              key={ev}
+                              type="button"
+                              onClick={() => toggleEventType(conn.id, ev)}
+                              className="rounded-md px-2 py-1.5 text-left flex items-center gap-1.5"
+                              style={{ border: `1px solid ${on ? SAGE : BORDER_STRONG}`, backgroundColor: on ? SAGE_BG : "#FFFFFF" }}
+                            >
+                              <div
+                                className="flex items-center justify-center rounded shrink-0"
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  border: `1.5px solid ${on ? SAGE : BORDER_STRONG}`,
+                                  backgroundColor: on ? SAGE : "transparent",
+                                }}
+                              >
+                                {on && <CheckCircle2 size={8} style={{ color: "#FFFFFF" }} />}
+                              </div>
+                              <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: on ? SAGE : CHARCOAL, fontWeight: on ? 700 : 400 }}>
+                                {SIEM_EVENT_LABELS[ev]}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>
+                        <span>RATE LIMIT</span>
+                        <span style={{ color: rateColor, fontWeight: 700 }}>{conn.rateLimitCurrent}/{conn.rateLimitPerMin} REQ/MIN</span>
+                      </div>
+                      <div className="mt-1 rounded h-1.5" style={{ backgroundColor: "#F0F0F0" }}>
+                        <div className="rounded h-full" style={{ width: `${ratePct}%`, backgroundColor: rateColor, transition: "width 0.3s" }} />
+                      </div>
+                    </div>
+                    <div className="rounded-md p-2" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}>
+                      <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>
+                        <span>DERNIÈRE SYNCHRO</span>
+                        <span style={{ color: CHARCOAL }}>{conn.lastSync ? format(conn.lastSync, "d MMM HH:mm", { locale: fr }) : "—"}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>
+                        <span>ÉVÉNEMENTS INGÉRÉS</span>
+                        <span style={{ color: SAGE, fontWeight: 700 }}>{conn.eventsSynced.toLocaleString("fr-FR")}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={testing[conn.id]}
+                        onClick={() => handleTest(conn.id)}
+                        className="h-8"
+                        style={{ fontFamily: FONT_MONO, fontSize: 9, color: CHARCOAL, borderColor: BORDER_STRONG }}
+                      >
+                        {testing[conn.id] ? <RefreshCw size={11} className="mr-1 animate-spin" /> : <Zap size={11} className="mr-1" />}
+                        TESTER LA CONNEXION
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={syncing[conn.id] || conn.status !== "connected"}
+                        onClick={() => handleSync(conn.id)}
+                        className="h-8"
+                        style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, borderColor: SAGE }}
+                      >
+                        {syncing[conn.id] ? <RefreshCw size={11} className="mr-1 animate-spin" /> : <RefreshCw size={11} className="mr-1" />}
+                        SYNCHRONISER
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSaveConfig(conn.id)}
+                      className="w-full h-8"
+                      style={{ backgroundColor: CHARCOAL, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.06em" }}
+                    >
+                      ENREGISTRER LA CONFIGURATION
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {expandedConn && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div style={FONT_HEADER}>MAPPING ÉVÉNEMENTS → {expandedConn.label.toUpperCase()}</div>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>ÉDITABLE</span>
+            </div>
+            <div className="rounded-md overflow-hidden" style={{ border: `1px solid ${BORDER_STRONG}` }}>
+              <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#FAFAFA", borderBottom: `1px solid ${BORDER_STRONG}` }}>
+                    <th className="text-left px-3 py-2" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em", width: "40%" }}>ÉVÉNEMENT HARCHIQ</th>
+                    <th className="text-left px-3 py-2" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>CHAMP SIEM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expandedConn.mappings.map((m, i) => (
+                    <tr key={m.harchEvent} style={{ borderBottom: i < expandedConn.mappings.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                      <td className="px-3 py-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>{m.harchEvent}</td>
+                      <td className="px-3 py-2">
+                        <input
+                          value={m.siemField}
+                          onChange={(e) => updateMapping(expandedConn.id, i, e.target.value)}
+                          placeholder="ex: harch.crisis.severity"
+                          className="rounded px-2 py-1 w-full"
+                          style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <AiCommentary text="Intégration SIEM bidirectionnelle — les événements HarchIQ (crises, bascules de sentiment, jalons, mises à jour de conformité, anomalies) sont ingérés en temps réel par votre SOC. 3 connecteurs supportés : Splunk Enterprise, IBM QRadar, Microsoft Sentinel. Le mapping de champs est entièrement personnalisable pour s'aligner sur votre schéma ECS ou Common Event Format." />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EnterpriseDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -8763,6 +10169,9 @@ export function EnterpriseDashboard({
   const [milestonesState, setMilestonesState] = usePersistentState<Milestone[]>("enterprise:milestones", EXECUTIVE_MILESTONES_INITIAL);
   const [risksState, setRisksState] = usePersistentState<RiskItem[]>("enterprise:risk-matrix", RISK_MATRIX_INITIAL);
   const [regCalendarState, setRegCalendarState] = usePersistentState<RegDeadline[]>("enterprise:reg-calendar", REG_CALENDAR_INITIAL);
+  const [pdfTemplatesState, setPdfTemplatesState] = usePersistentState<PdfTemplatesState>("enterprise:pdf-templates", PDF_TEMPLATES_INITIAL);
+  const [auditLogState, setAuditLogState] = usePersistentState<AuditLogEntry[]>("enterprise:audit-log", makeSeedAuditLog());
+  const [siemConfigState, setSiemConfigState] = usePersistentState<SiemConfig>("enterprise:siem-config", makeSiemInitial());
   const [approvals, setApprovals] = useState<ApprovalItem[]>(DEFAULT_APPROVALS);
   const currentUserRole: UserRole = "comms"; // Karim B., VP Comms
 
@@ -9013,11 +10422,20 @@ export function EnterpriseDashboard({
               onScheduleChange={setBriefingSchedule}
             />
 
+            {/* SECTION 33 — Board PDF Template Gallery (R2-ENTERPRISE-B) */}
+            <BoardPdfTemplateGalleryCard
+              state={pdfTemplatesState}
+              onStateChange={setPdfTemplatesState}
+            />
+
             {/* SECTION 27 — Compliance Cockpit (CNDP / AMMC / BAM / ESG) */}
             <ComplianceCockpitCard
               state={complianceState}
               onStateChange={setComplianceState}
             />
+
+            {/* SECTION 34 — Audit Log Timeline (R2-ENTERPRISE-B) */}
+            <AuditLogTimelineCard entries={auditLogState} />
 
             {/* SECTION 31 — Regulatory Calendar (R2-ENTERPRISE-A) */}
             <RegulatoryCalendarCard
@@ -9029,6 +10447,12 @@ export function EnterpriseDashboard({
             <ApiIntegrationHubCard
               state={integrationsState}
               onStateChange={setIntegrationsState}
+            />
+
+            {/* SECTION 35 — SIEM Integration Configurator (R2-ENTERPRISE-B) */}
+            <SiemIntegrationConfiguratorCard
+              state={siemConfigState}
+              onStateChange={setSiemConfigState}
             />
 
             {/* SECTION 29 — Multi-Market Reputation Map (8 francophone markets) */}
@@ -9082,7 +10506,7 @@ export function EnterpriseDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 33 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
+              Données temps réel · 36 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
             </div>
           </div>
         </footer>

@@ -142,6 +142,7 @@ import {
   LineChart as LineChartIcon,
   LogOut,
   Mail,
+  Maximize2,
   Megaphone,
   Menu,
   MessageSquare,
@@ -151,6 +152,7 @@ import {
   Plus,
   Presentation,
   RefreshCw,
+  RotateCcw,
   Search,
   Send,
   Settings,
@@ -161,12 +163,15 @@ import {
   TrendingDown,
   TrendingUp,
   Trophy,
+  Type,
   Upload,
   UserPlus,
   Users,
   Wallet,
   X,
   Zap,
+  Award,
+  Clock,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -630,6 +635,61 @@ interface RevenueForecastInput {
   churnRatePct: number;
   winRatePct: number;
   upsellPct: number;
+}
+
+// ─── AGENCY R2-B FEATURES TYPES (Task ID: R2-AGENCY-B) ────────────────
+// Drives 3 new agency features: team performance dashboard, pitch deck
+// analytics, white-label theme editor. All persisted in localStorage via
+// usePersistentState hook (same pattern as R2-AGENCY-A / ENV-AGENCY).
+
+interface TeamPerfMember {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  initials: string;
+  assignedClientIds: string[];
+  reportsThisMonth: number;
+  harchiqQuestionsUsed: number;
+  responseTimeHours: number;        // avg hours to acknowledge alert
+  manualScoreAdjust?: number;       // 0-100 override (composite is computed otherwise)
+}
+
+type TeamPerfSort = "score" | "clients" | "reports" | "response";
+
+interface PitchFunnelStage {
+  key: "prospects" | "propositions" | "meetings" | "won";
+  label: string;
+  count: number;
+  value: number;
+}
+
+interface PitchSourceRow {
+  source: "LinkedIn" | "Referral" | "Cold outreach" | "Inbound";
+  count: number;
+  value: number;
+  color: string;
+}
+
+interface PitchAnalyticsCache {
+  computedAt: number;
+  totalPipelineValue: number;
+  winRatePct: number;
+  avgDealCycleDays: number;
+  avgDealSize: number;
+  funnel: PitchFunnelStage[];
+  sources: PitchSourceRow[];
+  monthlyWins: Array<{ month: string; wins: number; value: number }>;
+}
+
+interface WLabelTheme {
+  primaryColor: string;
+  logoDataUrl: string | null;
+  fontFamily: "inter" | "space-mono" | "system";
+  borderRadius: number;             // 0-16 px
+  hideHarchBadge: boolean;
+  loginTitle: string;
+  faviconColor: string;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
@@ -9082,6 +9142,1641 @@ function TeamWorkloadBalancerCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R2-AGENCY-B · FEATURE 1 — TEAM PERFORMANCE DASHBOARD (full-width card)
+// Per-team-member performance grid: avatar (initials), name, role, clients
+// assigned count, avg client health score (from Client Health Scoring),
+// reports generated this month, HarchIQ questions used, response time
+// (avg hours to acknowledge alert), composite performance score (0-100).
+// Top performer highlighted with sage border + "Top performeur" badge.
+// Sortable by: performance score, clients, reports, response time.
+// "Évaluer" button → detailed performance review modal. Horizontal
+// BarChart comparing team performance. 5 members seeded by default.
+// Persisted in "agency:team-perf".
+// ════════════════════════════════════════════════════════════════════
+
+const TEAM_PERF_SEED: TeamPerfMember[] = [
+  {
+    id: "tp-1",
+    name: "Yasmine Tahiri",
+    role: "Directrice de clientèle",
+    email: "y.tahiri@agence.ma",
+    initials: "YT",
+    assignedClientIds: [],
+    reportsThisMonth: 12,
+    harchiqQuestionsUsed: 48,
+    responseTimeHours: 1.4,
+  },
+  {
+    id: "tp-2",
+    name: "Karim Benjelloun",
+    role: "Account Manager Senior",
+    email: "k.benjelloun@agence.ma",
+    initials: "KB",
+    assignedClientIds: [],
+    reportsThisMonth: 9,
+    harchiqQuestionsUsed: 31,
+    responseTimeHours: 2.8,
+  },
+  {
+    id: "tp-3",
+    name: "Salma El Fassi",
+    role: "Consultante RP",
+    email: "s.elfassi@agence.ma",
+    initials: "SE",
+    assignedClientIds: [],
+    reportsThisMonth: 7,
+    harchiqQuestionsUsed: 22,
+    responseTimeHours: 4.2,
+  },
+  {
+    id: "tp-4",
+    name: "Omar Cherkaoui",
+    role: "Analyste Veille",
+    email: "o.cherkaoui@agence.ma",
+    initials: "OC",
+    assignedClientIds: [],
+    reportsThisMonth: 14,
+    harchiqQuestionsUsed: 39,
+    responseTimeHours: 1.9,
+  },
+  {
+    id: "tp-5",
+    name: "Nadia Berrada",
+    role: "Account Manager Junior",
+    email: "n.berrada@agence.ma",
+    initials: "NB",
+    assignedClientIds: [],
+    reportsThisMonth: 5,
+    harchiqQuestionsUsed: 14,
+    responseTimeHours: 6.5,
+  },
+];
+
+function computeTeamPerfScore(
+  m: TeamPerfMember,
+  avgClientHealth: number,
+): number {
+  if (m.manualScoreAdjust !== undefined) return m.manualScoreAdjust;
+  // Composite 0-100:
+  //  30% avg client health
+  //  25% reports (0-10 → 0-100, capped)
+  //  15% harchiq questions (0-40 → 0-100, capped)
+  //  30% response time (0h=100, 8h+=0)
+  const reportsScore = Math.min(100, Math.round((m.reportsThisMonth / 10) * 100));
+  const harchiqScore = Math.min(100, Math.round((m.harchiqQuestionsUsed / 40) * 100));
+  const responseScore = Math.max(0, Math.round(100 - (m.responseTimeHours / 8) * 100));
+  const score = Math.round(
+    avgClientHealth * 0.3 +
+      reportsScore * 0.25 +
+      harchiqScore * 0.15 +
+      responseScore * 0.3,
+  );
+  return Math.max(0, Math.min(100, score));
+}
+
+function TeamPerformanceDashboardCard({
+  clients,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  onToast: (msg: string, kind?: "info" | "success") => void;
+}) {
+  const [members, setMembers] = usePersistentState<TeamPerfMember[]>(
+    "agency:team-perf",
+    TEAM_PERF_SEED,
+  );
+  const [sortKey, setSortKey] = useState<TeamPerfSort>("score");
+  const [evalId, setEvalId] = useState<string | null>(null);
+
+  // Assign clients to members deterministically if none are assigned yet.
+  // Mirrors TeamWorkloadBalancerCard bootstrap pattern.
+  useEffect(() => {
+    const anyAssigned = members.some((m) => m.assignedClientIds.length > 0);
+    if (!anyAssigned && clients.length > 0) {
+      setMembers(
+        members.map((m, i) => ({
+          ...m,
+          assignedClientIds: clients
+            .filter((_, idx) => idx % Math.max(1, members.length) === i)
+            .map((c) => c.id),
+        })),
+      );
+    }
+  }, [clients, members, setMembers]);
+
+  // Compute avg client health score per member using the same
+  // computeClientHealth() helper as Client Health Scoring.
+  const rows = useMemo(() => {
+    return members.map((m) => {
+      const assigned = clients.filter((c) => m.assignedClientIds.includes(c.id));
+      const avgHealth =
+        assigned.length > 0
+          ? Math.round(
+              assigned.reduce((s, c) => s + computeClientHealth(c).score, 0) /
+                assigned.length,
+            )
+          : 65; // fallback when no clients assigned
+      const score = computeTeamPerfScore(m, avgHealth);
+      return { ...m, assignedClients: assigned, avgHealth, score };
+    });
+  }, [members, clients]);
+
+  const topPerformerId = useMemo(() => {
+    if (rows.length === 0) return null;
+    return rows.reduce((best, r) => (r.score > best.score ? r : best), rows[0]).id;
+  }, [rows]);
+
+  const sortedRows = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      switch (sortKey) {
+        case "score":
+          return b.score - a.score;
+        case "clients":
+          return b.assignedClientIds.length - a.assignedClientIds.length;
+        case "reports":
+          return b.reportsThisMonth - a.reportsThisMonth;
+        case "response":
+          return a.responseTimeHours - b.responseTimeHours;
+        default:
+          return 0;
+      }
+    });
+    return copy;
+  }, [rows, sortKey]);
+
+  const avgScore = rows.length
+    ? Math.round(rows.reduce((s, r) => s + r.score, 0) / rows.length)
+    : 0;
+  const avgResponse =
+    rows.length > 0
+      ? (rows.reduce((s, r) => s + r.responseTimeHours, 0) / rows.length).toFixed(1)
+      : "—";
+  const totalReports = rows.reduce((s, r) => s + r.reportsThisMonth, 0);
+  const totalQuestions = rows.reduce((s, r) => s + r.harchiqQuestionsUsed, 0);
+
+  const evalMember = evalId ? rows.find((r) => r.id === evalId) ?? null : null;
+
+  const handleAdjustScore = (id: string, delta: number) => {
+    setMembers((prev) =>
+      prev.map((m) => {
+        if (m.id !== id) return m;
+        const current = computeTeamPerfScore(
+          m,
+          rows.find((r) => r.id === id)?.avgHealth ?? 65,
+        );
+        const next = Math.max(0, Math.min(100, current + delta));
+        return { ...m, manualScoreAdjust: next };
+      }),
+    );
+  };
+
+  const handleClearOverride = (id: string) => {
+    setMembers((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, manualScoreAdjust: undefined } : m)),
+    );
+  };
+
+  const barData = sortedRows.map((r) => ({
+    name: r.initials,
+    fullName: r.name,
+    score: r.score,
+  }));
+
+  const sortBtn = (key: TeamPerfSort, label: string) => {
+    const active = sortKey === key;
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => setSortKey(key)}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors"
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 9,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          backgroundColor: active ? SAGE_BG : "#FAFAFA",
+          color: active ? SAGE_DEEP : TEXT_MUTED,
+          border: `1px solid ${active ? SAGE_DIM : BORDER}`,
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Performance Équipe"
+        right={
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              backgroundColor: SAGE_BG,
+              color: SAGE,
+              fontWeight: 700,
+            }}
+          >
+            <Trophy size={10} /> {members.length} membres · score moy. {avgScore}
+          </span>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {/* Aggregate strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Score moyen</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {avgScore}<span style={{ fontSize: 11, color: TEXT_MUTED }}> /100</span>
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Temps réponse moyen</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {avgResponse}<span style={{ fontSize: 11, color: TEXT_MUTED }}> h</span>
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Rapports (mois)</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {totalReports}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: SAGE_BG }}>
+          <div style={FONT_HEADER}>Questions HarchIQ</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+            {totalQuestions}
+          </div>
+        </div>
+      </div>
+
+      {/* Sort bar */}
+      <div className="flex items-center gap-1.5 mb-3">
+        <span style={{ ...FONT_HEADER, fontSize: 9 }}>Trier par :</span>
+        {sortBtn("score", "Score")}
+        {sortBtn("clients", "Clients")}
+        {sortBtn("reports", "Rapports")}
+        {sortBtn("response", "Temps réponse")}
+      </div>
+
+      {/* Member grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
+        {sortedRows.map((m) => {
+          const isTop = m.id === topPerformerId;
+          return (
+            <div
+              key={m.id}
+              className="p-3 rounded-md transition-shadow"
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: `1px solid ${isTop ? SAGE : BORDER_STRONG}`,
+                boxShadow: isTop ? `0 0 0 1px ${SAGE}` : "none",
+              }}
+            >
+              <div className="flex items-start gap-2.5">
+                <div
+                  className="inline-flex items-center justify-center shrink-0"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    backgroundColor: isTop ? SAGE : SAGE_BG,
+                    color: isTop ? "#FFFFFF" : SAGE_DEEP,
+                    fontFamily: FONT_MONO,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {m.initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }} className="truncate">
+                      {m.name}
+                    </span>
+                    {isTop && (
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ backgroundColor: SAGE_BG, color: SAGE_DEEP, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}
+                      >
+                        <Crown size={9} /> Top performeur
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 1 }}>
+                    {m.role}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: isTop ? SAGE_DEEP : CHARCOAL, lineHeight: 1 }}>
+                    {m.score}
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    /100
+                  </div>
+                </div>
+              </div>
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-1.5 mt-3">
+                <div className="p-1.5 rounded" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em", textTransform: "uppercase" }}>Clients</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{m.assignedClientIds.length}</div>
+                </div>
+                <div className="p-1.5 rounded" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em", textTransform: "uppercase" }}>Santé moy.</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{m.avgHealth}</div>
+                </div>
+                <div className="p-1.5 rounded" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em", textTransform: "uppercase" }}>Rapports</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{m.reportsThisMonth}</div>
+                </div>
+                <div className="p-1.5 rounded" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em", textTransform: "uppercase" }}>Temps rép.</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{m.responseTimeHours}h</div>
+                </div>
+              </div>
+              {/* HarchIQ + eval button */}
+              <div className="flex items-center justify-between mt-2.5">
+                <div className="inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE_DEEP }}>
+                  <Brain size={10} /> {m.harchiqQuestionsUsed} questions
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6"
+                  style={{ fontFamily: FONT_MONO, fontSize: 9, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+                  onClick={() => setEvalId(m.id)}
+                >
+                  <Award size={10} /> Évaluer
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bar chart: team comparison */}
+      <div style={FONT_HEADER} className="mb-2">Comparatif performance équipe</div>
+      <div style={{ height: 200, width: "100%" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} horizontal={false} />
+            <XAxis type="number" domain={[0, 100]} tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} stroke={BORDER} />
+            <YAxis type="category" dataKey="name" tick={{ fontFamily: FONT_MONO, fontSize: 11, fill: CHARCOAL }} stroke={BORDER} width={36} />
+            <RTooltip
+              cursor={{ fill: SAGE_BG }}
+              contentStyle={{
+                backgroundColor: "#FFFFFF",
+                border: `1px solid ${BORDER_STRONG}`,
+                borderRadius: 8,
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                color: CHARCOAL,
+              }}
+              formatter={(value: number) => [`${value} / 100`, "Score"]}
+              labelFormatter={(_label: number, payload: Array<{ payload?: { fullName?: string } }>) => payload?.[0]?.payload?.fullName ?? ""}
+            />
+            <Bar dataKey="score" radius={[0, 4, 4, 0]} maxBarSize={28}>
+              {barData.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={entry.name === sortedRows.find((r) => r.id === topPerformerId)?.initials ? SAGE : SAGE_DIM}
+                  fillOpacity={entry.name === sortedRows.find((r) => r.id === topPerformerId)?.initials ? 1 : 0.65}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <AiCommentary
+        text={`Performance moyenne équipe : ${avgScore}/100. Top performeur : ${rows.find((r) => r.id === topPerformerId)?.name ?? "—"}. ${avgResponse}h de temps réponse moyen. Cliquez « Évaluer » pour ouvrir la revue détaillée d'un membre.`}
+      />
+
+      {/* Evaluation modal */}
+      {evalMember && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Revue de performance"
+        >
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(10,10,10,0.5)" }}
+            onClick={() => setEvalId(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 280, damping: 28 }}
+            className="relative w-full max-w-2xl rounded-xl overflow-hidden"
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: `1px solid ${BORDER_STRONG}`,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              maxHeight: "92vh",
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-md"
+                  style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700 }}
+                >
+                  {evalMember.initials}
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+                    {evalMember.name}
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                    {evalMember.role} · {evalMember.email}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEvalId(null)}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5]"
+                aria-label="Fermer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 overflow-y-auto" style={{ maxHeight: "calc(92vh - 60px)" }}>
+              {/* Score block */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: SAGE_BG }}>
+                  <div style={FONT_HEADER}>Score perf.</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+                    {evalMember.score}<span style={{ fontSize: 11, color: TEXT_MUTED }}> /100</span>
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+                  <div style={FONT_HEADER}>Clients</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                    {evalMember.assignedClientIds.length}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+                  <div style={FONT_HEADER}>Santé moy.</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                    {evalMember.avgHealth}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+                  <div style={FONT_HEADER}>Temps rép.</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                    {evalMember.responseTimeHours}<span style={{ fontSize: 11, color: TEXT_MUTED }}> h</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Activity breakdown */}
+              <div style={FONT_HEADER} className="mb-2">Activité du mois</div>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-between p-2.5 rounded-md" style={{ backgroundColor: "#FCFCFC", border: `1px solid ${BORDER}` }}>
+                  <div className="flex items-center gap-2">
+                    <FileBarChart size={14} style={{ color: SAGE }} />
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>Rapports générés</span>
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{evalMember.reportsThisMonth}</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-md" style={{ backgroundColor: "#FCFCFC", border: `1px solid ${BORDER}` }}>
+                  <div className="flex items-center gap-2">
+                    <Brain size={14} style={{ color: SAGE }} />
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>Questions HarchIQ</span>
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{evalMember.harchiqQuestionsUsed}</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-md" style={{ backgroundColor: "#FCFCFC", border: `1px solid ${BORDER}` }}>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} style={{ color: SAGE }} />
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>Temps réponse alerte</span>
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{evalMember.responseTimeHours} h (moy.)</span>
+                </div>
+              </div>
+
+              {/* Assigned clients */}
+              <div style={FONT_HEADER} className="mb-2">Clients assignés ({evalMember.assignedClients.length})</div>
+              {evalMember.assignedClients.length === 0 ? (
+                <div className="p-2.5 rounded-md text-center" style={{ border: `1px dashed ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}>
+                  Aucun client assigné — capacité disponible.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {evalMember.assignedClients.map((c) => {
+                    const score = computeClientHealth(c).score;
+                    const band = healthBandFor(score);
+                    const style = healthBandStyle(band);
+                    return (
+                      <span
+                        key={c.id}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                        style={{ backgroundColor: style.bg, border: `1px solid ${BORDER}`, fontFamily: FONT_MONO, fontSize: 9, color: style.color }}
+                      >
+                        <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", backgroundColor: style.color }} />
+                        {c.displayName} · {score}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Score override */}
+              <div style={FONT_HEADER} className="mb-2">Ajustement manuel du score</div>
+              <div className="flex items-center gap-2 p-3 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                  onClick={() => handleAdjustScore(evalMember.id, -5)}
+                >
+                  <Minus size={11} /> -5
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                  onClick={() => handleAdjustScore(evalMember.id, 5)}
+                >
+                  <Plus size={11} /> +5
+                </Button>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginLeft: "auto" }}>
+                  {evalMember.manualScoreAdjust !== undefined ? "Score manuel" : "Score calculé"}
+                </span>
+                {evalMember.manualScoreAdjust !== undefined && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+                    onClick={() => handleClearOverride(evalMember.id)}
+                  >
+                    <RotateCcw size={11} /> Calculé
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="px-5 py-3 flex items-center justify-end gap-2" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                onClick={() => setEvalId(null)}
+              >
+                Fermer
+              </Button>
+              <Button
+                size="sm"
+                className="h-8"
+                style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10 }}
+                onClick={() => {
+                  onToast(`Revue de performance enregistrée pour ${evalMember.name}.`, "success");
+                  setEvalId(null);
+                }}
+              >
+                <Check size={12} /> Enregistrer
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R2-AGENCY-B · FEATURE 2 — PITCH DECK ANALYTICS (full-width card)
+// Conversion funnel: Prospects → Propositions envoyées → Meetings → Won.
+// Custom CSS trapezoid funnel with conversion rates between stages.
+// Metrics strip: total pipeline value, win rate, avg deal cycle (days),
+// avg deal size (MAD). Monthly trend LineChart (wins per month, last 6
+// months). "Pipeline par source" donut: LinkedIn / Referral / Cold
+// outreach / Inbound (deterministic from prospect name hash). Reads
+// pipeline from "agency:pitch-pipeline" (shared with Pitch Pipeline
+// Kanban). Empty state with CTA when no prospects. Analytics cache
+// persisted in "agency:pitch-analytics".
+// ════════════════════════════════════════════════════════════════════
+
+const PITCH_SOURCES: Array<{ source: PitchSourceRow["source"]; color: string }> = [
+  { source: "LinkedIn", color: "#1E3A5F" },
+  { source: "Referral", color: SAGE },
+  { source: "Cold outreach", color: "#A0524B" },
+  { source: "Inbound", color: "#8B6914" },
+];
+
+function derivePitchSource(name: string): PitchSourceRow["source"] {
+  const h = hashStr(name);
+  return PITCH_SOURCES[h % PITCH_SOURCES.length].source;
+}
+
+function readPipelineFromLS(): PitchPipelineItem[] {
+  try {
+    const raw = window.localStorage.getItem("agency:pitch-pipeline");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as PitchPipelineItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function computePitchAnalytics(items: PitchPipelineItem[]): PitchAnalyticsCache {
+  const totalPipelineValue = items.reduce((s, i) => s + i.estimatedValue, 0);
+  const wonItems = items.filter((i) => i.stage === "won");
+  const wonValue = wonItems.reduce((s, i) => s + i.estimatedValue, 0);
+
+  // Funnel: cumulative count + value moving forward through stages.
+  // Stage 1 (Prospects) = all items.
+  // Stage 2 (Propositions envoyées) = proposition + won.
+  // Stage 3 (Meetings) = proposition with probability ≥ 60 + won.
+  // Stage 4 (Won) = won only.
+  const prospects = items;
+  const propositions = items.filter((i) => i.stage === "proposition" || i.stage === "won");
+  const meetings = items.filter(
+    (i) => i.stage === "won" || (i.stage === "proposition" && i.probability >= 60),
+  );
+  const won = wonItems;
+
+  const funnel: PitchFunnelStage[] = [
+    { key: "prospects", label: "Prospects", count: prospects.length, value: prospects.reduce((s, i) => s + i.estimatedValue, 0) },
+    { key: "propositions", label: "Propositions envoyées", count: propositions.length, value: propositions.reduce((s, i) => s + i.estimatedValue, 0) },
+    { key: "meetings", label: "Meetings", count: meetings.length, value: meetings.reduce((s, i) => s + i.estimatedValue, 0) },
+    { key: "won", label: "Won", count: won.length, value: wonValue },
+  ];
+
+  const winRatePct = prospects.length > 0 ? Math.round((won.length / prospects.length) * 100) : 0;
+
+  // Avg deal cycle: days between prospect creation (estimated from
+  // nextActionDate minus ~14d) and won date (nextActionDate for won items).
+  // Simplification: cycle ≈ 14 + days since the won item's nextActionDate.
+  // Deterministic, representative.
+  const cycleDays = wonItems.map((i) => {
+    const d = new Date(i.nextActionDate);
+    if (isNaN(d.getTime())) return 21;
+    const diff = (Date.now() - d.getTime()) / 86400000;
+    return 14 + Math.max(0, Math.round(diff));
+  });
+  const avgDealCycleDays = cycleDays.length > 0 ? Math.round(cycleDays.reduce((s, v) => s + v, 0) / cycleDays.length) : 0;
+
+  const avgDealSize = won.length > 0 ? Math.round(wonValue / won.length) : 0;
+
+  // Sources breakdown (deterministic from prospect name hash).
+  const sourceMap: Record<PitchSourceRow["source"], { count: number; value: number }> = {
+    LinkedIn: { count: 0, value: 0 },
+    Referral: { count: 0, value: 0 },
+    "Cold outreach": { count: 0, value: 0 },
+    Inbound: { count: 0, value: 0 },
+  };
+  items.forEach((i) => {
+    const src = derivePitchSource(i.prospectName);
+    sourceMap[src].count += 1;
+    sourceMap[src].value += i.estimatedValue;
+  });
+  const sources: PitchSourceRow[] = PITCH_SOURCES.map((p) => ({
+    source: p.source,
+    color: p.color,
+    count: sourceMap[p.source].count,
+    value: sourceMap[p.source].value,
+  }));
+
+  // Monthly wins for last 6 months.
+  const monthlyWins: Array<{ month: string; wins: number; value: number }> = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = format(d, "MMM", { locale: fr });
+    // Deterministic win count from hash of month label + count of won items.
+    const wonThisMonth = wonItems.filter((w) => {
+      const wd = new Date(w.nextActionDate);
+      return wd.getMonth() === d.getMonth() && wd.getFullYear() === d.getFullYear();
+    });
+    // Fallback: deterministic distribution if no dates match.
+    const seed = hashStr(`${label}-${i}`);
+    const syntheticWins = (seed % 3) + (i === 5 ? 0 : 1);
+    const wins = wonThisMonth.length > 0 ? wonThisMonth.length : syntheticWins;
+    const value = wonThisMonth.length > 0
+      ? wonThisMonth.reduce((s, w) => s + w.estimatedValue, 0)
+      : wins * (avgDealSize || 12000);
+    monthlyWins.push({ month: label, wins, value });
+  }
+
+  return {
+    computedAt: Date.now(),
+    totalPipelineValue,
+    winRatePct,
+    avgDealCycleDays,
+    avgDealSize,
+    funnel,
+    sources,
+    monthlyWins,
+  };
+}
+
+function PitchDeckAnalyticsCard() {
+  // Read pipeline from localStorage on mount + on refresh click.
+  const [items, setItems] = useState<PitchPipelineItem[]>([]);
+  const [cache, setCache] = usePersistentState<PitchAnalyticsCache | null>(
+    "agency:pitch-analytics",
+    null,
+  );
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const pipeline = readPipelineFromLS();
+    setItems(pipeline);
+    if (pipeline.length > 0) {
+      const computed = computePitchAnalytics(pipeline);
+      setCache(computed);
+    } else {
+      setCache(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
+
+  // Cross-tab storage listener (refreshes when PitchPipelineCard in
+  // another tab updates the pipeline).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "agency:pitch-pipeline") {
+        setRefreshKey((k) => k + 1);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const handleRefresh = () => setRefreshKey((k) => k + 1);
+
+  if (items.length === 0 || !cache) {
+    return (
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="Analytics Pitch Deck"
+          right={
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: "#FAFAFA", color: TEXT_MUTED, fontWeight: 700 }}
+            >
+              <Activity size={10} /> 0 prospects
+            </span>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div
+          className="text-center py-10 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <KanbanSquare size={28} style={{ color: TEXT_MUTED, margin: "0 auto 8px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL, fontWeight: 600 }}>
+            Aucun prospect dans le pipeline
+          </p>
+          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+            Ajoutez des prospects au pipeline pour activer les analytics de conversion.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4 h-8"
+            style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+            onClick={handleRefresh}
+          >
+            <RefreshCw size={11} /> Rafraîchir
+          </Button>
+        </div>
+      </CardShell>
+    );
+  }
+
+  const funnelMax = cache.funnel[0].count || 1;
+  const funnelColors = [TEXT_BODY, "#B45309", SAGE_DIM, SAGE_DEEP];
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Analytics Pitch Deck"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE, fontWeight: 700 }}
+            >
+              <Activity size={10} /> {items.length} prospects
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={handleRefresh}
+            >
+              <RefreshCw size={11} /> Rafraîchir
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {/* Metrics strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Pipeline total</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {fmtMAD(cache.totalPipelineValue)}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: SAGE_BG }}>
+          <div style={FONT_HEADER}>Taux de victoire</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+            {cache.winRatePct}%
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Cycle moyen</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {cache.avgDealCycleDays}<span style={{ fontSize: 11, color: TEXT_MUTED }}> jours</span>
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Deal moyen</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {fmtMAD(cache.avgDealSize)}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Funnel */}
+        <div>
+          <div style={FONT_HEADER} className="mb-3">Funnel de conversion</div>
+          <div className="space-y-2">
+            {cache.funnel.map((stage, i) => {
+              const widthPct = Math.max(20, Math.round((stage.count / funnelMax) * 100));
+              const prevCount = i > 0 ? cache.funnel[i - 1].count : null;
+              const convRate = prevCount && prevCount > 0 ? Math.round((stage.count / prevCount) * 100) : null;
+              return (
+                <div key={stage.key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: funnelColors[i] }} />
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: CHARCOAL, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                        {stage.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY }}>
+                        {stage.count} · {fmtMAD(stage.value)}
+                      </span>
+                      {convRate !== null && (
+                        <span
+                          className="inline-flex px-1.5 py-0.5 rounded-full"
+                          style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, backgroundColor: convRate >= 50 ? SAGE_BG : "rgba(245,158,11,0.10)", color: convRate >= 50 ? SAGE_DEEP : "#B45309" }}
+                        >
+                          {convRate}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Trapezoid-style funnel bar */}
+                  <div
+                    style={{
+                      width: `${widthPct}%`,
+                      height: 28,
+                      backgroundColor: funnelColors[i],
+                      opacity: 0.85,
+                      borderRadius: 4,
+                      clipPath: i === 0 ? "none" : "polygon(0 0, 100% 0, calc(100% - 8px) 100%, 8px 100%)",
+                      margin: "0 auto",
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Source donut */}
+        <div>
+          <div style={FONT_HEADER} className="mb-3">Pipeline par source</div>
+          <div style={{ height: 180, width: "100%" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={cache.sources.filter((s) => s.count > 0)}
+                  dataKey="count"
+                  nameKey="source"
+                  innerRadius={42}
+                  outerRadius={70}
+                  paddingAngle={2}
+                >
+                  {cache.sources.filter((s) => s.count > 0).map((s) => (
+                    <Cell key={s.source} fill={s.color} />
+                  ))}
+                </Pie>
+                <RTooltip
+                  contentStyle={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, borderRadius: 8, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                  formatter={(value: number, _name: string, entry: { payload?: PitchSourceRow }) => [
+                    `${value} prospects · ${fmtMAD(entry?.payload?.value ?? 0)}`,
+                    entry?.payload?.source ?? "",
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 mt-2">
+            {cache.sources.map((s) => (
+              <div key={s.source} className="flex items-center gap-1.5">
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: s.color }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>{s.source}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginLeft: "auto" }}>{s.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly trend */}
+      <div style={FONT_HEADER} className="mt-4 mb-2">Tendance mensuelle · victoires (6 mois)</div>
+      <div style={{ height: 180, width: "100%" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={cache.monthlyWins} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+            <XAxis dataKey="month" tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} stroke={BORDER} />
+            <YAxis tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} stroke={BORDER} allowDecimals={false} />
+            <RTooltip
+              contentStyle={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, borderRadius: 8, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+              formatter={(value: number) => [`${value} victoire(s)`, "Wins"]}
+            />
+            <Line
+              type="monotone"
+              dataKey="wins"
+              stroke={SAGE}
+              strokeWidth={2}
+              dot={{ r: 4, fill: SAGE, stroke: "#FFFFFF", strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: SAGE_DEEP }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <AiCommentary
+        text={`${items.length} prospects · ${cache.winRatePct}% de taux de victoire · cycle moyen ${cache.avgDealCycleDays} jours · deal moyen ${fmtMAD(cache.avgDealSize)}. ${cache.funnel[2].count > 0 ? `${cache.funnel[2].count} meetings en cours — priorisez la conversion.` : "Ajoutez des propositions pour activer le funnel de conversion."}`}
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R2-AGENCY-B · FEATURE 3 — WHITE-LABEL THEME EDITOR (full-width card)
+// Per-client branded portal theme editor: primary color picker (6 sage
+// presets), logo upload (simulated), font family selector, border radius
+// slider, "Masquer le badge Harch" toggle, custom login title, favicon
+// color picker. Live preview panel (mini dashboard mockup that updates
+// in real-time). "Sauvegarder le thème" / "Réinitialiser" / "Aperçu en
+// plein écran" buttons. Export theme as JSON config. Persisted per-
+// client in "agency:wlabel-themes" (Record<clientId, Theme>).
+// ════════════════════════════════════════════════════════════════════
+
+const SAGE_PRESETS = [
+  { label: "Sage", value: SAGE },
+  { label: "Sage foncé", value: SAGE_DEEP },
+  { label: "Sage pâle", value: SAGE_DIM },
+  { label: "Terracotta", value: CLIENT_B },
+  { label: "Ocre", value: CLIENT_C },
+  { label: "Ardoise", value: CLIENT_D },
+];
+
+const WLABEL_DEFAULT_THEME: WLabelTheme = {
+  primaryColor: SAGE,
+  logoDataUrl: null,
+  fontFamily: "inter",
+  borderRadius: 8,
+  hideHarchBadge: false,
+  loginTitle: "Bienvenue sur votre console",
+  faviconColor: SAGE,
+};
+
+function fontStackForTheme(f: WLabelTheme["fontFamily"]): string {
+  switch (f) {
+    case "space-mono":
+      return FONT_MONO;
+    case "system":
+      return "system-ui, -apple-system, sans-serif";
+    case "inter":
+    default:
+      return FONT_SANS;
+  }
+}
+
+function WhiteLabelThemeEditorCard({
+  clients,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  onToast: (msg: string, kind?: "info" | "success") => void;
+}) {
+  const [themes, setThemes] = usePersistentState<Record<string, WLabelTheme>>(
+    "agency:wlabel-themes",
+    {},
+  );
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(
+    clients[0]?.id ?? null,
+  );
+  const [fullscreen, setFullscreen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Sync selected client when clients list loads.
+  useEffect(() => {
+    if (!selectedClientId && clients.length > 0) {
+      setSelectedClientId(clients[0].id);
+    }
+    if (selectedClientId && !clients.find((c) => c.id === selectedClientId) && clients.length > 0) {
+      setSelectedClientId(clients[0].id);
+    }
+  }, [clients, selectedClientId]);
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
+  const theme: WLabelTheme = selectedClientId && themes[selectedClientId]
+    ? themes[selectedClientId]
+    : WLABEL_DEFAULT_THEME;
+
+  const updateTheme = (patch: Partial<WLabelTheme>) => {
+    if (!selectedClientId) return;
+    setThemes((prev) => ({
+      ...prev,
+      [selectedClientId]: { ...theme, ...patch },
+    }));
+  };
+
+  const handleSave = () => {
+    onToast(`Thème sauvegardé pour ${selectedClient?.displayName ?? "le client"}.`, "success");
+  };
+
+  const handleReset = () => {
+    if (!selectedClientId) return;
+    setThemes((prev) => {
+      const copy: Record<string, WLabelTheme> = {};
+      Object.keys(prev).forEach((k) => {
+        if (k !== selectedClientId) copy[k] = prev[k];
+      });
+      return copy;
+    });
+    onToast("Thème réinitialisé aux valeurs par défaut (sage).", "info");
+  };
+
+  const handleExportJSON = () => {
+    if (!selectedClientId) return;
+    const payload = {
+      clientId: selectedClientId,
+      clientName: selectedClient?.displayName ?? null,
+      theme,
+      exportedAt: new Date().toISOString(),
+    };
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `theme-${selectedClient?.company?.slug ?? selectedClientId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      onToast("Configuration thème exportée en JSON.", "success");
+    } catch {
+      onToast("Échec de l'export JSON — réessayez.", "info");
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 600 * 1024) {
+      onToast("Logo trop volumineux (max 600 Ko).", "info");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : null;
+      updateTheme({ logoDataUrl: result });
+      onToast("Logo chargé — aperçu en direct mis à jour.", "success");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const fontStack = fontStackForTheme(theme.fontFamily);
+  const primary = theme.primaryColor;
+
+  // Live preview mini-dashboard mockup.
+  const PreviewPanel = ({ scale = 1 }: { scale?: number }) => (
+    <div
+      style={{
+        fontFamily: fontStack,
+        borderRadius: theme.borderRadius,
+        border: `1px solid ${BORDER_STRONG}`,
+        backgroundColor: "#FFFFFF",
+        overflow: "hidden",
+        transform: `scale(${scale})`,
+        transformOrigin: "top left",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center gap-2 px-3 py-2"
+        style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+      >
+        {theme.logoDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={theme.logoDataUrl} alt="Logo" className="h-5 w-auto" style={{ objectFit: "contain" }} />
+        ) : (
+          <div
+            className="inline-flex items-center justify-center px-2 py-1"
+            style={{ backgroundColor: primary, color: "#FFFFFF", borderRadius: Math.max(2, theme.borderRadius - 4) }}
+          >
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}>
+              {(selectedClient?.displayName ?? "CL")
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((w) => w[0]?.toUpperCase() ?? "")
+                .join("")}
+            </span>
+          </div>
+        )}
+        <span style={{ fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+          {selectedClient?.displayName ?? "Client"}
+        </span>
+        {!theme.hideHarchBadge && (
+          <span style={{ marginLeft: "auto", fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+            Propulsé par Harch
+          </span>
+        )}
+      </div>
+      {/* Body */}
+      <div className="p-3">
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: CHARCOAL,
+            marginBottom: 8,
+          }}
+        >
+          {theme.loginTitle}
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { label: "Score", value: "78" },
+            { label: "Mentions", value: "142" },
+            { label: "Sentiment", value: "+12%" },
+          ].map((kpi) => (
+            <div
+              key={kpi.label}
+              style={{
+                padding: 8,
+                border: `1px solid ${BORDER}`,
+                borderRadius: Math.max(2, theme.borderRadius - 4),
+                backgroundColor: "#FCFCFC",
+              }}
+            >
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                {kpi.label}
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {kpi.value}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Primary button preview */}
+        <button
+          type="button"
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            backgroundColor: primary,
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: theme.borderRadius,
+            fontFamily: fontStack,
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: "default",
+          }}
+        >
+          Se connecter
+        </button>
+        {/* Mini chart placeholder */}
+        <div className="mt-3 flex items-end gap-1" style={{ height: 32 }}>
+          {Array.from({ length: 14 }).map((_, i) => {
+            const h = 12 + Math.abs(Math.sin(i * 0.6)) * 18;
+            return (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  height: h,
+                  backgroundColor: primary,
+                  opacity: 0.4 + (i / 14) * 0.6,
+                  borderRadius: 2,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      {/* Favicon preview */}
+      <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+        <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, backgroundColor: theme.faviconColor }} />
+        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+          favicon · {theme.faviconColor}
+        </span>
+      </div>
+    </div>
+  );
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Éditeur Thème White-Label"
+        right={
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+            style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE, fontWeight: 700 }}
+          >
+            <Palette size={10} /> {Object.keys(themes).length} thème(s) personnalisé(s)
+          </span>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {clients.length === 0 ? (
+        <div
+          className="text-center py-8 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <Palette size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+            Aucun client dans le portefeuille — ajoutez un client pour activer l'éditeur de thème.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left: editor controls */}
+          <div className="space-y-3">
+            {/* Client selector */}
+            <div>
+              <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Client</label>
+              <div className="relative">
+                <select
+                  value={selectedClientId ?? ""}
+                  onChange={(e) => setSelectedClientId(e.target.value || null)}
+                  className="w-full px-3 py-2 pr-8 rounded-md outline-none appearance-none"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                >
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.displayName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }} />
+              </div>
+            </div>
+
+            {/* Primary color */}
+            <div>
+              <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Couleur primaire</label>
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="color"
+                  value={theme.primaryColor}
+                  onChange={(e) => updateTheme({ primaryColor: e.target.value })}
+                  className="h-8 w-12 rounded cursor-pointer"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", padding: 0 }}
+                />
+                <input
+                  type="text"
+                  value={theme.primaryColor}
+                  onChange={(e) => updateTheme({ primaryColor: e.target.value })}
+                  className="px-2 py-1.5 rounded-md outline-none flex-1"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SAGE_PRESETS.map((preset) => {
+                  const active = theme.primaryColor.toLowerCase() === preset.value.toLowerCase();
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => updateTheme({ primaryColor: preset.value })}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-all"
+                      style={{
+                        border: `1px solid ${active ? preset.value : BORDER}`,
+                        backgroundColor: active ? preset.value + "14" : "#FFFFFF",
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        color: active ? preset.value : TEXT_BODY,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: preset.value }} />
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Logo upload */}
+            <div>
+              <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Logo</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                onChange={handleLogoUpload}
+                style={{ display: "none" }}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC", fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL }}
+                >
+                  <Upload size={12} /> Choisir un fichier
+                </button>
+                {theme.logoDataUrl && (
+                  <button
+                    type="button"
+                    onClick={() => updateTheme({ logoDataUrl: null })}
+                    className="inline-flex items-center gap-1 px-2 py-2 rounded-md"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                  >
+                    <X size={12} /> Retirer
+                  </button>
+                )}
+                {theme.logoDataUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={theme.logoDataUrl} alt="Logo preview" className="h-7 w-auto" style={{ objectFit: "contain" }} />
+                )}
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                PNG / JPG / SVG · max 600 Ko · simulé côté client
+              </div>
+            </div>
+
+            {/* Font family */}
+            <div>
+              <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Famille de police</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { key: "inter" as const, label: "Inter", font: FONT_SANS },
+                  { key: "space-mono" as const, label: "Space Mono", font: FONT_MONO },
+                  { key: "system" as const, label: "System", font: "system-ui, sans-serif" },
+                ]).map((opt) => {
+                  const active = theme.fontFamily === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => updateTheme({ fontFamily: opt.key })}
+                      className="px-2 py-1.5 rounded-md transition-all"
+                      style={{
+                        border: `1px solid ${active ? SAGE_DIM : BORDER}`,
+                        backgroundColor: active ? SAGE_BG : "#FFFFFF",
+                        fontFamily: opt.font,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: active ? SAGE_DEEP : TEXT_BODY,
+                      }}
+                    >
+                      <Type size={11} style={{ display: "inline", marginRight: 4 }} />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Border radius slider */}
+            <div>
+              <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>
+                Rayon des bordures · {theme.borderRadius}px
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={16}
+                step={1}
+                value={theme.borderRadius}
+                onChange={(e) => updateTheme({ borderRadius: Number(e.target.value) })}
+                className="w-full"
+                style={{ accentColor: SAGE }}
+              />
+            </div>
+
+            {/* Login title */}
+            <div>
+              <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Titre de connexion</label>
+              <input
+                type="text"
+                value={theme.loginTitle}
+                onChange={(e) => updateTheme({ loginTitle: e.target.value })}
+                placeholder="Bienvenue sur votre console"
+                className="w-full px-3 py-2 rounded-md outline-none"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+              />
+            </div>
+
+            {/* Favicon color + hide badge toggle */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Couleur favicon</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={theme.faviconColor}
+                    onChange={(e) => updateTheme({ faviconColor: e.target.value })}
+                    className="h-8 w-12 rounded cursor-pointer"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={theme.faviconColor}
+                    onChange={(e) => updateTheme({ faviconColor: e.target.value })}
+                    className="px-2 py-1.5 rounded-md outline-none flex-1"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Badge Harch</label>
+                <label
+                  className="flex items-center justify-between p-2 rounded-md cursor-pointer"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC", height: 38 }}
+                >
+                  <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>
+                    {theme.hideHarchBadge ? "Masqué" : "Visible"}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={theme.hideHarchBadge}
+                    onClick={() => updateTheme({ hideHarchBadge: !theme.hideHarchBadge })}
+                    className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+                    style={{ backgroundColor: theme.hideHarchBadge ? SAGE : BORDER_STRONG }}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                      style={{ transform: theme.hideHarchBadge ? "translateX(18px)" : "translateX(2px)" }}
+                    />
+                  </button>
+                </label>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button
+                size="sm"
+                className="h-8"
+                style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10 }}
+                onClick={handleSave}
+              >
+                <Check size={12} /> Sauvegarder le thème
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                onClick={handleReset}
+              >
+                <RotateCcw size={12} /> Réinitialiser
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                onClick={() => setFullscreen(true)}
+              >
+                <Maximize2 size={12} /> Aperçu plein écran
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+                onClick={handleExportJSON}
+              >
+                <Download size={12} /> Export JSON
+              </Button>
+            </div>
+          </div>
+
+          {/* Right: live preview */}
+          <div>
+            <div style={FONT_HEADER} className="mb-2">Aperçu en direct</div>
+            <div
+              className="p-3 rounded-lg"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+            >
+              <div className="mb-2 flex items-center gap-1.5">
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: theme.faviconColor }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.04em" }}>
+                  {selectedClient?.subdomain ?? "console"} .harch.ma · {theme.fontFamily}
+                </span>
+              </div>
+              <PreviewPanel />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AiCommentary
+        text={`Thème white-label pour ${selectedClient?.displayName ?? "—"}. Couleur primaire ${theme.primaryColor}, police ${theme.fontFamily}, rayon ${theme.borderRadius}px. ${theme.hideHarchBadge ? "Badge Harch masqué." : "Badge Harch visible."} Exportez la configuration JSON pour l'intégration backend.`}
+      />
+
+      {/* Fullscreen preview modal */}
+      {fullscreen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aperçu plein écran du thème"
+        >
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(10,10,10,0.7)" }}
+            onClick={() => setFullscreen(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 280, damping: 28 }}
+            className="relative w-full max-w-3xl rounded-xl overflow-hidden"
+            style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+          >
+            <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <div className="flex items-center gap-2.5">
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-md" style={{ backgroundColor: SAGE_BG, color: SAGE_DEEP }}>
+                  <Eye size={15} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+                    Aperçu plein écran · {selectedClient?.displayName ?? "—"}
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                    Aperçu simulé du portail client tel que vu par le client final
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFullscreen(false)}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5]"
+                aria-label="Fermer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: "calc(92vh - 70px)", backgroundColor: "#FAFAFA" }}>
+              <div style={{ maxWidth: 480, margin: "0 auto" }}>
+                <PreviewPanel />
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, textAlign: "center", marginTop: 12 }}>
+                  Aperçu simulé — aucune donnée réelle n'est chargée. Le thème est appliqué en temps réel.
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // R2-AGENCY-A · FEATURE 1 — CLIENT HEALTH SCORING (full-width card)
 // Each client gets a 0-100 health score computed from sentiment trend,
 // mention velocity, crisis alerts, engagement, retention months. Health
@@ -11419,6 +13114,17 @@ export default function AgencyDashboard({
                 <PitchPipelineCard activeClientName={activeClient?.displayName ?? null} />
               </motion.div>
 
+              {/* R2-AGENCY-B · FEATURE 2 — Pitch Deck Analytics (full width, after pitch pipeline) */}
+              <motion.div
+                id="pitch-analytics"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(15)}
+                className="lg:col-span-12"
+              >
+                <PitchDeckAnalyticsCard />
+              </motion.div>
+
               {/* ENV-AGENCY · FEATURE 4 — Client Portal Preview (full width, after white-label) */}
               <motion.div
                 id="portal-preview"
@@ -11428,6 +13134,17 @@ export default function AgencyDashboard({
                 className="lg:col-span-12"
               >
                 <ClientPortalPreviewCard activeClient={activeClient} agency={agency} />
+              </motion.div>
+
+              {/* R2-AGENCY-B · FEATURE 3 — White-Label Theme Editor (full width, after portal preview) */}
+              <motion.div
+                id="wlabel-editor"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(16)}
+                className="lg:col-span-12"
+              >
+                <WhiteLabelThemeEditorCard clients={clients} onToast={pushToast} />
               </motion.div>
 
               {/* Row 7 — Team + Assignment Matrix */}
@@ -11457,6 +13174,17 @@ export default function AgencyDashboard({
                   loading={usersLoading}
                   onInvite={handleInvite}
                 />
+              </motion.div>
+
+              {/* R2-AGENCY-B · FEATURE 1 — Team Performance Dashboard (full width, after workload balancer) */}
+              <motion.div
+                id="team-perf"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(17)}
+                className="lg:col-span-12"
+              >
+                <TeamPerformanceDashboardCard clients={clients} onToast={pushToast} />
               </motion.div>
 
               {/* Row 8 — Sentiment + Sources */}
@@ -11544,7 +13272,7 @@ export default function AgencyDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Agences · 25 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · Multi-clients · White-label ·
+              Harch Atelier · Console Agences · 28 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · Multi-clients · White-label ·
               Commission {agency?.commissionPct ?? 20}% · Tier {activeTier.label}
               {pendingClients.length > 0 ? ` · ${pendingClients.length} client(s) en attente` : ""}
               {userEmail ? ` · ${userEmail}` : ""}

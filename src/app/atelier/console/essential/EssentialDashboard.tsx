@@ -59,7 +59,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDown,
@@ -76,6 +76,8 @@ import {
   ClipboardList,
   Cloud,
   CloudRain,
+  Command,
+  CornerDownLeft,
   Download,
   ExternalLink,
   FileText,
@@ -96,6 +98,7 @@ import {
   Newspaper,
   RefreshCw,
   Rocket,
+  Search,
   Send,
   Settings,
   Share2,
@@ -778,6 +781,48 @@ function CardShell({
   );
 }
 
+// ─── R2-ESSENTIEL-B — A11y helpers ─────────────────────────────────────
+// LiveSkeleton wraps shadcn Skeleton with role="status" + aria-live so
+// screen readers announce loading state. SkipLink is a keyboard-only
+// shortcut to bypass repetitive nav and jump straight to main content.
+
+function LiveSkeleton({
+  className,
+  label = "Chargement en cours",
+}: {
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <Skeleton
+      className={className}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    />
+  );
+}
+
+/** Skip-link — visible only when focused via keyboard. */
+function SkipLink({ href = "#main-content", children = "Aller au contenu principal" }: { href?: string; children?: string }) {
+  return (
+    <a
+      href={href}
+      className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:px-3 focus:py-2 focus:rounded-md focus:outline-2 focus:outline-[#4A7B5F] focus:outline-offset-2"
+      style={{
+        backgroundColor: "#FFFFFF",
+        border: `1px solid ${SAGE}`,
+        color: SAGE,
+        fontFamily: FONT_SANS,
+        fontSize: 12,
+        fontWeight: 600,
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 function Delta({ value, suffix = "" }: { value: number; suffix?: string }) {
   if (value === 0 || isNaN(value)) {
     return (
@@ -1003,7 +1048,7 @@ function SidebarContent({
               key={id}
               type="button"
               onClick={() => handleClick(id)}
-              className="w-full flex items-center gap-3 text-left transition-colors group"
+              className="w-full flex items-center gap-3 text-left transition-colors group focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
               style={{
                 padding: "10px 12px",
                 borderRadius: 8,
@@ -1166,6 +1211,7 @@ function Header({
   onToggleNotifs,
   onMarkAllNotifsRead,
   onClickNotif,
+  onOpenCmd,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1180,6 +1226,8 @@ function Header({
   onToggleNotifs: () => void;
   onMarkAllNotifsRead: () => void;
   onClickNotif: (n: NotificationItem) => void;
+  /** R2-ESSENTIEL-B — open the Cmd+K command palette */
+  onOpenCmd: () => void;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -1196,7 +1244,7 @@ function Header({
         <button
           type="button"
           onClick={onMenuClick}
-          className="lg:hidden inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+          className="lg:hidden inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
           style={{ width: 32, height: 32 }}
           aria-label="Ouvrir le menu"
         >
@@ -1245,6 +1293,42 @@ function Header({
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* R2-ESSENTIEL-B — Command Palette (Cmd+K) trigger */}
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onOpenCmd}
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+                aria-label="Ouvrir la palette de commandes (Cmd+K)"
+              >
+                <Command size={14} style={{ color: TEXT_BODY }} />
+                <kbd
+                  className="hidden md:inline-flex items-center"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    borderRadius: 4,
+                    padding: "1px 5px",
+                    backgroundColor: "#FAFAFA",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  ⌘K
+                </kbd>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+                Palette de commandes (Cmd+K / Ctrl+K)
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         {/* ENV-ESSENTIAL — Milestone badge (header, gamification) */}
         <MilestoneBadge
           progress={milestoneProgress}
@@ -1277,7 +1361,7 @@ function Header({
               <button
                 type="button"
                 onClick={() => scrollToSection("alertes")}
-                className="relative inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                className="relative inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
                 style={{ width: 32, height: 32 }}
                 aria-label="Alertes crise"
               >
@@ -1308,7 +1392,7 @@ function Header({
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-full"
+          className="inline-flex items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
           style={{
             width: 32,
             height: 32,
@@ -1695,7 +1779,9 @@ function HarchIQWorkspace({
                   placeholder="Posez votre question à HarchIQ…"
                   rows={1}
                   disabled={sending}
-                  className="flex-1 resize-none outline-none disabled:opacity-50"
+                  lang="fr"
+                  id="harchiq-input"
+                  className="flex-1 resize-none outline-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
                   style={{
                     fontFamily: FONT_SANS,
                     fontSize: 13,
@@ -2099,7 +2185,7 @@ function ScoreReputationCard({
           onDismissHelp={onDismissHelp}
           right={
             <>
-              {loading && <Skeleton className="h-3 w-16" />}
+              {loading && <LiveSkeleton className="h-3 w-16" />}
               {!loading && (
                 <span
                   style={{
@@ -2161,7 +2247,7 @@ function ScoreReputationCard({
                 }}
               >
                 {loading ? (
-                  <Skeleton className="h-10 w-16" />
+                  <LiveSkeleton className="h-10 w-16" />
                 ) : (
                   <span
                     style={{
@@ -2263,7 +2349,7 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <LiveSkeleton className="h-7 w-16" />
             ) : (
               <span
                 style={{
@@ -2323,7 +2409,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <LiveSkeleton className="h-7 w-16" />
             ) : (
               <span
                 style={{
@@ -2405,7 +2491,7 @@ function CitationsIaKpi({ ai, loading }: { ai: AiVisibilityResp | null; loading:
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <LiveSkeleton className="h-7 w-16" />
             ) : (
               <span
                 style={{
@@ -2507,7 +2593,7 @@ function AlertesActivesKpi({
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <LiveSkeleton className="h-7 w-16" />
             ) : (
               <span
                 style={{
@@ -2613,7 +2699,7 @@ function TendanceSentimentCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[260px] w-full" />
+          <LiveSkeleton className="h-[260px] w-full" />
         ) : data.length === 0 ? (
           <div className="h-[260px] flex items-center justify-center">
             <EmptyDash label="Aucune donnée" />
@@ -2685,6 +2771,68 @@ function TendanceSentimentCard({
               </ResponsiveContainer>
             </div>
             <AiCommentary text={aiCommentary} />
+
+            {/* R2-ESSENTIEL-B — Progressive Disclosure on daily sentiment breakdown */}
+            <ProgressiveList
+              sectionKey="sentiment-trend"
+              items={data}
+              limit={5}
+              threshold={10}
+              title="Décomposition quotidienne"
+              renderItem={(d) => (
+                <div
+                  className="flex items-center justify-between rounded-md px-2 py-1.5"
+                  style={{
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: d.isAnomaly ? "#FEF2F2" : "#FFFFFF",
+                  }}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {d.isAnomaly && (
+                      <span
+                        title="Anomalie détectée"
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          backgroundColor: NEGATIVE,
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 11,
+                        color: CHARCOAL,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {fmtDayShort(d.date)}
+                    </span>
+                  </div>
+                  <div
+                    className="flex items-center gap-2"
+                    style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                  >
+                    <span style={{ color: POSITIVE, fontWeight: 700 }}>+{d.Positif}</span>
+                    <span style={{ color: NEUTRAL_GRAY }}>·</span>
+                    <span style={{ color: TEXT_MUTED }}>{d.Neutre}</span>
+                    <span style={{ color: NEUTRAL_GRAY }}>·</span>
+                    <span style={{ color: NEGATIVE, fontWeight: 700 }}>-{d.Négatif}</span>
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        color: SAGE,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {d.count} mentions
+                    </span>
+                  </div>
+                </div>
+              )}
+            />
           </>
         )}
       </CardShell>
@@ -2752,7 +2900,7 @@ function DiversiteSourcesCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[260px] w-full" />
+          <LiveSkeleton className="h-[260px] w-full" />
         ) : data.length === 0 ? (
           <div className="h-[260px] flex items-center justify-center">
             <EmptyDash label="Aucune source" />
@@ -2839,14 +2987,63 @@ function DiversiteSourcesCard({
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="rounded p-0.5 hover:bg-[#F0F0F0]"
-              aria-label="Fermer"
+              className="rounded p-0.5 hover:bg-[#F0F0F0] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+              aria-label="Fermer la sélection de source"
             >
               <X size={12} />
             </button>
           </div>
         )}
         <AiCommentary text={insight} />
+
+        {/* R2-ESSENTIAL-B — Progressive Disclosure on sources list */}
+        {!loading && data.length > 0 && (
+          <ProgressiveList
+            sectionKey="sources"
+            items={sources?.sources ?? []}
+            limit={5}
+            threshold={10}
+            title="Toutes les sources"
+            renderItem={(s) => (
+              <div
+                className="flex items-center justify-between rounded-md px-2 py-1.5"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span
+                    className="inline-flex items-center justify-center rounded shrink-0"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      backgroundColor: s.type === "social" ? SAGE_BG : "#FEF3C7",
+                      color: s.type === "social" ? SAGE : "#92400E",
+                    }}
+                  >
+                    {s.type === "social" ? <MessageCircle size={10} /> : <Newspaper size={10} />}
+                  </span>
+                  <span
+                    className="truncate"
+                    style={{ fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, fontWeight: 600 }}
+                  >
+                    {s.name}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: SAGE,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    marginLeft: 8,
+                  }}
+                >
+                  {s.count}
+                </span>
+              </div>
+            )}
+          />
+        )}
       </CardShell>
     </motion.div>
   );
@@ -2905,7 +3102,7 @@ function DernieresMentionsCard({ alerts, loading }: { alerts: CrisisAlertsResp |
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <div className="space-y-2">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+            {[...Array(6)].map((_, i) => <LiveSkeleton key={i} className="h-12 w-full" />)}
           </div>
         ) : filtered.length === 0 ? (
           <div className="h-[400px] flex items-center justify-center">
@@ -3082,6 +3279,7 @@ function ResumeHebdoCard({ insights, loading, onRegenerate }: { insights: Insigh
                 style={{ fontFamily: FONT_MONO, fontSize: 10 }}
                 onClick={handleRegenerate}
                 disabled={regenerating}
+                aria-label="Régénérer le résumé hebdomadaire"
               >
                 <RefreshCw size={11} className={regenerating ? "animate-spin" : ""} />
               </Button>
@@ -3091,10 +3289,10 @@ function ResumeHebdoCard({ insights, loading, onRegenerate }: { insights: Insigh
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading || regenerating ? (
           <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-5/6" />
+            <LiveSkeleton className="h-4 w-full" />
+            <LiveSkeleton className="h-4 w-5/6" />
+            <LiveSkeleton className="h-4 w-3/4" />
+            <LiveSkeleton className="h-4 w-5/6" />
           </div>
         ) : !insight ? (
           <div className="h-[180px] flex items-center justify-center">
@@ -3221,7 +3419,7 @@ function SnapshotVisibiliteCard({ ai, loading }: { ai: AiVisibilityResp | null; 
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <div className="grid grid-cols-3 gap-3">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28" />)}
+            {[...Array(3)].map((_, i) => <LiveSkeleton key={i} className="h-28" />)}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3">
@@ -3363,7 +3561,7 @@ function TopSujetsCard({ topics, loading }: { topics: TopicsResp | null; loading
         <SectionHeader title="12 · Top 5 Sujets" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[200px] w-full" />
+          <LiveSkeleton className="h-[200px] w-full" />
         ) : data.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center">
             <EmptyDash label="Aucun sujet" />
@@ -3469,10 +3667,63 @@ function TopSujetsCard({ topics, loading }: { topics: TopicsResp | null; loading
               </div>
             )}
             <AiCommentary text={insight} />
+
+            {/* R2-ESSENTIEL-B — Progressive Disclosure on all topics */}
+            <ProgressiveList
+              sectionKey="topics"
+              items={topics?.topics ?? []}
+              limit={5}
+              threshold={10}
+              title="Tous les sujets"
+              renderItem={(t) => (
+                <div
+                  className="flex items-center justify-between rounded-md px-2 py-1.5"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span
+                      className="inline-flex items-center justify-center rounded shrink-0"
+                      style={{
+                        minWidth: 32,
+                        height: 16,
+                        padding: "0 5px",
+                        backgroundColor: t.type === "risk" ? "#FEF2F2" : SAGE_BG,
+                        color: t.type === "risk" ? NEGATIVE : SAGE,
+                        fontFamily: FONT_MONO,
+                        fontSize: 8,
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {t.type === "risk" ? "RISQUE" : "SOURCE"}
+                    </span>
+                    <span
+                      className="truncate"
+                      style={{ fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, fontWeight: 600 }}
+                    >
+                      {t.label}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      color: SAGE,
+                      fontWeight: 700,
+                      flexShrink: 0,
+                      marginLeft: 8,
+                    }}
+                  >
+                    {t.count}
+                  </span>
+                </div>
+              )}
+            />
+
             <div className="mt-2 text-right">
               <Link
                 href="#"
-                className="inline-flex items-center gap-1 text-[11px]"
+                className="inline-flex items-center gap-1 text-[11px] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
                 style={{ fontFamily: FONT_MONO, color: SAGE }}
               >
                 Voir tous les sujets <ChevronRight size={11} />
@@ -3530,7 +3781,7 @@ function IndicateurCriseCard({ health, alerts, loading }: { health: BrandHealth 
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[120px] w-full" />
+          <LiveSkeleton className="h-[120px] w-full" />
         ) : (
           <>
             {/* DEFCON bar */}
@@ -3647,7 +3898,7 @@ function CarteChaleurGeoCard({ health, loading }: { health: BrandHealth | null; 
         <SectionHeader title="14 · Carte de Chaleur Géo" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[240px] w-full" />
+          <LiveSkeleton className="h-[240px] w-full" />
         ) : (
           <>
             <div style={{ width: "100%", height: 220 }}>
@@ -3788,7 +4039,7 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[180px] w-full" />
+          <LiveSkeleton className="h-[180px] w-full" />
         ) : (
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col justify-center">
@@ -3937,7 +4188,7 @@ function ActiviteReseauSocialCard({ loading }: { loading: boolean }) {
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[220px] w-full" />
+          <LiveSkeleton className="h-[220px] w-full" />
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>
@@ -4032,7 +4283,7 @@ function MeteoSentimentsLangueCard({ loading }: { loading: boolean }) {
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[220px] w-full" />
+          <LiveSkeleton className="h-[220px] w-full" />
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>
@@ -4126,7 +4377,7 @@ function EvolutionScoreCard({ health, loading }: { health: BrandHealth | null; l
         <SectionHeader title="18 · Évolution du Score 30j" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[220px] w-full" />
+          <LiveSkeleton className="h-[220px] w-full" />
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>
@@ -4255,7 +4506,7 @@ function VolumeMentionsCard({ trend, loading }: { trend: SentimentTrendResp | nu
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-[220px] w-full" />
+          <LiveSkeleton className="h-[220px] w-full" />
         ) : data.length === 0 ? (
           <div className="h-[220px] flex items-center justify-center">
             <EmptyDash label="Aucune donnée" />
@@ -5860,6 +6111,447 @@ function GuidedTour({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R2-ESSENTIEL-B — Command Palette (Cmd+K) + Progressive Disclosure
+// All persisted via usePersistentState (localStorage-backed, SSR-safe).
+// WCAG 2.1 AA — focus-visible outlines, aria-live skeletons, sr-only labels.
+// ════════════════════════════════════════════════════════════════════
+
+/** Command Palette action — id, label, optional hint, Lucide icon, run callback. */
+interface CmdAction {
+  id: string;
+  label: string;
+  hint?: string;
+  Icon: typeof Command;
+  run: () => void;
+}
+
+/** 10. Command Palette — Cmd+K / Ctrl+K overlay with fuzzy filter + recents. */
+function CommandPalette({
+  open,
+  onClose,
+  actions,
+  recents,
+  onPushRecent,
+}: {
+  open: boolean;
+  onClose: () => void;
+  actions: CmdAction[];
+  recents: string[];
+  onPushRecent: (id: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Reset query + selection on open, then focus input after fade-in.
+  useEffect(() => {
+    if (!open) return;
+    // Canonical reset pattern — when the palette opens, clear the local
+    // state. Effect deps = [open] only, so this runs once per open.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuery("");
+    setSelected(0);
+    const t = setTimeout(() => inputRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Filter actions — recent first, then all (no duplicates).
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const match = (a: CmdAction) =>
+      !q ||
+      a.label.toLowerCase().includes(q) ||
+      a.hint?.toLowerCase().includes(q);
+    const recentActions = recents
+      .map((id) => actions.find((a) => a.id === id))
+      .filter((a): a is CmdAction => a !== undefined)
+      .filter(match);
+    const recentIds = new Set(recentActions.map((a) => a.id));
+    const allActions = actions
+      .filter((a) => !recentIds.has(a.id))
+      .filter(match);
+    return { recent: recentActions, all: allActions };
+  }, [query, actions, recents]);
+
+  const flat = useMemo(
+    () => [...filtered.recent, ...filtered.all],
+    [filtered],
+  );
+
+  // Keep selection in range when the list shrinks.
+  useEffect(() => {
+    // Clamp selection — canonical use case for setState in effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (selected > flat.length - 1) setSelected(Math.max(0, flat.length - 1));
+  }, [flat, selected]);
+
+  const execute = useCallback(
+    (action: CmdAction | undefined) => {
+      if (!action) return;
+      action.run();
+      onPushRecent(action.id);
+      onClose();
+    },
+    [onPushRecent, onClose],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelected((s) => Math.min(s + 1, flat.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelected((s) => Math.max(s - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      execute(flat[selected]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[150] flex items-start justify-center pt-[12vh] px-4"
+          style={{
+            backgroundColor: "rgba(10,10,10,0.45)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] as const }}
+            className="w-full max-w-[560px] rounded-xl shadow-2xl overflow-hidden"
+            style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}` }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Palette de commandes"
+          >
+            {/* Search input row */}
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              style={{ borderBottom: `1px solid ${BORDER}` }}
+            >
+              <Search size={16} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setSelected(0); }}
+                onKeyDown={handleKeyDown}
+                placeholder="Rechercher une action…"
+                lang="fr"
+                className="flex-1 outline-none bg-transparent focus-visible:outline-none"
+                style={{ fontFamily: FONT_SANS, fontSize: 14, color: CHARCOAL }}
+                aria-label="Rechercher une action"
+                aria-expanded={open}
+                aria-controls="cmd-list"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-activedescendant={flat[selected] ? `cmd-item-${flat[selected].id}` : undefined}
+              />
+              <kbd
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  border: `1px solid ${BORDER_STRONG}`,
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  backgroundColor: "#FAFAFA",
+                }}
+              >
+                ESC
+              </kbd>
+            </div>
+
+            {/* Action list */}
+            <div
+              id="cmd-list"
+              role="listbox"
+              aria-label="Actions disponibles"
+              className="max-h-[400px] overflow-y-auto py-1.5"
+            >
+              {flat.length === 0 ? (
+                <div
+                  className="px-4 py-6 text-center"
+                  style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}
+                >
+                  Aucune action ne correspond à « {query} »
+                </div>
+              ) : (
+                <>
+                  {filtered.recent.length > 0 && (
+                    <>
+                      <div style={{ ...FONT_HEADER, padding: "6px 16px 4px" }}>Récents</div>
+                      {filtered.recent.map((a, i) => (
+                        <CmdRow
+                          key={`rec-${a.id}`}
+                          action={a}
+                          selected={i === selected}
+                          onSelect={execute}
+                          onHover={() => setSelected(i)}
+                        />
+                      ))}
+                      <div style={{ borderTop: `1px solid ${BORDER}`, margin: "6px 0" }} />
+                    </>
+                  )}
+                  <div style={{ ...FONT_HEADER, padding: "6px 16px 4px" }}>
+                    {filtered.recent.length > 0 ? "Toutes les actions" : "Actions"}
+                  </div>
+                  {filtered.all.map((a, idx) => {
+                    const i = filtered.recent.length + idx;
+                    return (
+                      <CmdRow
+                        key={`all-${a.id}`}
+                        action={a}
+                        selected={i === selected}
+                        onSelect={execute}
+                        onHover={() => setSelected(i)}
+                      />
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            {/* Footer hint */}
+            <div
+              className="flex items-center justify-between px-4 py-2"
+              style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+            >
+              <div
+                className="flex items-center gap-3"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <CornerDownLeft size={10} /> Entrée pour exécuter
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <kbd
+                    style={{
+                      border: `1px solid ${BORDER_STRONG}`,
+                      borderRadius: 3,
+                      padding: "1px 5px",
+                      backgroundColor: "#FFFFFF",
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                    }}
+                  >
+                    ↑
+                  </kbd>
+                  <kbd
+                    style={{
+                      border: `1px solid ${BORDER_STRONG}`,
+                      borderRadius: 3,
+                      padding: "1px 5px",
+                      backgroundColor: "#FFFFFF",
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                    }}
+                  >
+                    ↓
+                  </kbd>
+                  Naviguer
+                </span>
+              </div>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}>
+                Harch Atelier
+              </span>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/** Single command palette row — sage background when selected. */
+function CmdRow({
+  action,
+  selected,
+  onSelect,
+  onHover,
+}: {
+  action: CmdAction;
+  selected: boolean;
+  onSelect: (a: CmdAction) => void;
+  onHover: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      id={`cmd-item-${action.id}`}
+      aria-selected={selected}
+      onClick={() => onSelect(action)}
+      onMouseEnter={onHover}
+      className="w-full text-left px-4 py-2.5 transition-colors flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+      style={{
+        backgroundColor: selected ? SAGE_BG : "transparent",
+        borderLeft: selected ? `2px solid ${SAGE}` : "2px solid transparent",
+      }}
+    >
+      <div
+        className="flex items-center justify-center rounded-md shrink-0"
+        style={{
+          width: 24,
+          height: 24,
+          backgroundColor: selected ? SAGE : "#FAFAFA",
+          color: selected ? "#FFFFFF" : SAGE,
+        }}
+      >
+        <action.Icon size={12} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 13,
+            fontWeight: selected ? 700 : 500,
+            color: CHARCOAL,
+            lineHeight: 1.3,
+          }}
+        >
+          {action.label}
+        </div>
+        {action.hint && (
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: TEXT_MUTED,
+              marginTop: 2,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {action.hint}
+          </div>
+        )}
+      </div>
+      {selected && <CornerDownLeft size={12} style={{ color: SAGE, flexShrink: 0 }} />}
+    </button>
+  );
+}
+
+/** 11. Progressive List — top N visible, expand to all with smooth animation. */
+function ProgressiveList<T>({
+  sectionKey,
+  items,
+  limit = 5,
+  threshold = 10,
+  renderItem,
+  title = "Détails",
+}: {
+  sectionKey: string;
+  items: T[];
+  limit?: number;
+  threshold?: number;
+  renderItem: (item: T, index: number) => React.ReactNode;
+  title?: string;
+}) {
+  // Persisted expand state — single object so all sections share one localStorage key.
+  const [disclosure, setDisclosure] = usePersistentState<Record<string, boolean>>(
+    "essential:disclosure",
+    {},
+  );
+  const expanded = disclosure[sectionKey] ?? false;
+  const hasToggle = items.length > threshold;
+  const initial = items.slice(0, limit);
+  const rest = items.slice(limit);
+  const hiddenCount = items.length - limit;
+
+  const toggle = useCallback(() => {
+    setDisclosure((prev) => ({ ...prev, [sectionKey]: !expanded }));
+  }, [sectionKey, expanded, setDisclosure]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mt-3" style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10 }}>
+      <div
+        className="flex items-center justify-between mb-2"
+        style={{ ...FONT_HEADER }}
+      >
+        <span>{title}</span>
+        <span style={{ color: TEXT_MUTED }}>{items.length} éléments</span>
+      </div>
+      <div className="space-y-1.5">
+        {initial.map((item, i) => (
+          <div key={`init-${i}`}>{renderItem(item, i)}</div>
+        ))}
+        <AnimatePresence initial={false}>
+          {expanded && rest.length > 0 && (
+            <motion.div
+              key="rest"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as const }}
+              style={{ overflow: "hidden" }}
+            >
+              <div className="space-y-1.5 pt-1.5">
+                {rest.map((item, i) => (
+                  <div key={`rest-${i}`}>{renderItem(item, i + limit)}</div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {hasToggle && (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={expanded}
+          aria-controls={`prog-list-${sectionKey}`}
+          id={`prog-toggle-${sectionKey}`}
+          className="mt-2.5 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            color: SAGE,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            border: `1px solid ${SAGE_DIM}`,
+          }}
+        >
+          {expanded ? (
+            <>
+              <ChevronRight size={10} style={{ transform: "rotate(90deg)" }} />
+              Voir moins
+            </>
+          ) : (
+            <>
+              <ChevronRight size={10} />
+              Voir plus
+              {hiddenCount > 0 && (
+                <span style={{ color: TEXT_MUTED, marginLeft: 2 }}>
+                  · {hiddenCount} autres
+                </span>
+              )}
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EssentialDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -5903,6 +6595,11 @@ export default function EssentialDashboard() {
     "essential:briefing-date",
     "",
   );
+  // ─── R2-ESSENTIAL-B — Command Palette recents (last 5 action IDs) ────
+  const [cmdRecents, setCmdRecents] = usePersistentState<string[]>(
+    "essential:cmd-recent",
+    [],
+  );
   // Transient state for the sage-pulse animation on recently-unlocked milestone.
   const [recentlyUnlockedKey, setRecentlyUnlockedKey] = useState<string | null>(null);
   // ─── R2-ESSENTIAL-A — Round 2 transient state ──────────────────────
@@ -5912,6 +6609,8 @@ export default function EssentialDashboard() {
   const [notifExpanded, setNotifExpanded] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+  // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   const helpDismissedSet = useMemo(() => new Set(helpDismissedArr), [helpDismissedArr]);
   const dismissHelp = useCallback(
@@ -6175,8 +6874,131 @@ export default function EssentialDashboard() {
     return () => observer.disconnect();
   }, []);
 
+  // ─── R2-ESSENTIAL-B — Command Palette: Cmd+K / Ctrl+K global shortcut ─
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // ─── R2-ESSENTIAL-B — Push to recents (keep last 5, dedupe) ──────────
+  const handlePushRecent = useCallback(
+    (id: string) => {
+      setCmdRecents((prev) => {
+        const next = [id, ...prev.filter((x) => x !== id)];
+        return next.slice(0, 5);
+      });
+    },
+    [setCmdRecents],
+  );
+
+  // ─── R2-ESSENTIAL-B — CSV export helper (shared with QuickStart) ─────
+  const handleCmdExport = useCallback(async () => {
+    try {
+      toast.info("Export CSV en cours…");
+      const r = await fetch("/api/console/export-csv?type=articles&days=90");
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `harch-articles-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Export CSV téléchargé");
+      handleReportDownload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast.error(`Export CSV échoué: ${msg}`);
+    }
+  }, [handleReportDownload]);
+
+  // ─── R2-ESSENTIAL-B — Scroll to AI workspace + focus the input ──────
+  const handleCmdAskHarchIQ = useCallback(() => {
+    scrollToSection("ai-workspace");
+    setTimeout(() => {
+      const el = document.getElementById("harchiq-input") as HTMLTextAreaElement | null;
+      el?.focus();
+    }, 500);
+  }, []);
+
+  // ─── R2-ESSENTIAL-B — Refresh all data feeds ────────────────────────
+  const handleCmdRefresh = useCallback(() => {
+    refetchHealth();
+    refetchAlerts();
+    refetchInsights();
+    toast.success("Données rafraîchies");
+  }, [refetchHealth, refetchAlerts, refetchInsights]);
+
+  // ─── R2-ESSENTIAL-B — Command palette actions (7 actions, French) ───
+  const cmdActions = useMemo<CmdAction[]>(
+    () => [
+      {
+        id: "goto-score",
+        label: "Aller au Score de réputation",
+        hint: "Tableau de bord principal · section 02",
+        Icon: TrendingUp,
+        run: () => scrollToSection("score"),
+      },
+      {
+        id: "ask-harchiq",
+        label: "Poser une question à HarchIQ",
+        hint: "AI Workspace · focus le champ de saisie",
+        Icon: Sparkles,
+        run: handleCmdAskHarchIQ,
+      },
+      {
+        id: "view-alertes",
+        label: "Voir mes alertes",
+        hint: "Indicateur de crise · section 13",
+        Icon: AlertTriangle,
+        run: () => scrollToSection("alertes"),
+      },
+      {
+        id: "download-report",
+        label: "Télécharger mon rapport",
+        hint: "Export CSV des 90 derniers jours",
+        Icon: Download,
+        run: handleCmdExport,
+      },
+      {
+        id: "redo-tour",
+        label: "Refaire le tour guidé",
+        hint: "5 étapes · 2 minutes",
+        Icon: Map,
+        run: () => handleStartTour(),
+      },
+      {
+        id: "toggle-theme",
+        label: "Basculer le thème",
+        hint: "Mode clair (le mode sombre arrive bientôt)",
+        Icon: Sun,
+        run: () => toast.info("Le mode sombre n'est pas encore disponible sur le plan Essentiel"),
+      },
+      {
+        id: "refresh-data",
+        label: "Rafraîchir les données",
+        hint: "Recharge les APIs en arrière-plan",
+        Icon: RefreshCw,
+        run: handleCmdRefresh,
+      },
+    ],
+    [handleCmdAskHarchIQ, handleCmdExport, handleCmdRefresh, handleStartTour],
+  );
+
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: "#FFFFFF", fontFamily: FONT_SANS }}>
+      {/* R2-ESSENTIAL-B — Skip-link (a11y, keyboard-only) */}
+      <SkipLink />
+
       {/* ENV-ESSENTIAL — sage pulse keyframe + scoped global helper */}
       <style>{`
         @keyframes sage-pulse-kf {
@@ -6184,6 +7006,30 @@ export default function EssentialDashboard() {
           50% { box-shadow: 0 0 0 6px rgba(74,123,95,0); }
         }
         .sage-pulse { animation: sage-pulse-kf 1.6s ease-out 2; border-radius: 10px; }
+        /* R2-ESSENTIEL-B — global focus-visible outline (WCAG 2.1 AA).
+           Sage outline on every interactive element via :focus-visible so
+           mouse users don't see it but keyboard users do. */
+        .min-h-screen button:focus-visible,
+        .min-h-screen a:focus-visible,
+        .min-h-screen [role="option"]:focus-visible,
+        .min-h-screen [role="combobox"]:focus-visible,
+        .min-h-screen [role="listbox"]:focus-visible,
+        .min-h-screen textarea:focus-visible,
+        .min-h-screen input:focus-visible,
+        .min-h-screen select:focus-visible,
+        .min-h-screen [tabindex]:focus-visible {
+          outline: 2px solid #4A7B5F;
+          outline-offset: 2px;
+          border-radius: 4px;
+        }
+        /* sr-only utility (Tailwind v4 ships one but we declare locally for safety) */
+        .sr-only:not(:focus):not(:focus-within) {
+          position: absolute;
+          width: 1px; height: 1px;
+          padding: 0; margin: -1px;
+          overflow: hidden; clip: rect(0, 0, 0, 0);
+          white-space: nowrap; border: 0;
+        }
       `}</style>
 
       {/* Sidebar — desktop sticky aside */}
@@ -6235,9 +7081,10 @@ export default function EssentialDashboard() {
           onToggleNotifs={handleToggleNotifs}
           onMarkAllNotifsRead={handleMarkAllNotifsRead}
           onClickNotif={handleClickNotif}
+          onOpenCmd={() => setCmdOpen(true)}
         />
 
-        <main className="flex-1 px-4 lg:px-6 py-6">
+        <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
           {/* ENV-ESSENTIAL — Welcome onboarding banner (dismissible, persisted) */}
           {!onboardingDismissed && (
             <div className="mb-4 lg:mb-6">
@@ -6454,7 +7301,7 @@ export default function EssentialDashboard() {
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A
+              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A · R2-ESSENTIAL-B
             </div>
             <div
               style={{
@@ -6475,6 +7322,15 @@ export default function EssentialDashboard() {
         step={tourStep}
         onNext={handleTourNext}
         onSkip={handleTourSkip}
+      />
+
+      {/* R2-ESSENTIAL-B — Command Palette (Cmd+K / Ctrl+K) */}
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        actions={cmdActions}
+        recents={cmdRecents}
+        onPushRecent={handlePushRecent}
       />
     </div>
   );
