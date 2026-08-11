@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import BrandBadge from "@/components/BrandBadge";
 import { ATELIER_FOOTER_LINKS, ATELIER_COUNTRIES } from "./tokens";
 import { C } from "./tokens";
@@ -7,6 +8,72 @@ import { C } from "./tokens";
 // ─── ATELIER FOOTER — DESIGN SYSTEM V2 (light, mobile-first) ────
 // White background, neutral borders, stone-500 accent, Space Mono.
 // Per DS V2: padding 48px 16px on mobile, 64px 32px on desktop.
+
+// ─── SystemStatus — live health indicator (fetches /api/health) ───
+function SystemStatus() {
+  const [status, setStatus] = useState<"ok" | "degraded" | "checking">("checking");
+  const [lastCheck, setLastCheck] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const r = await fetch("/api/health", { signal: AbortSignal.timeout(4000) });
+        if (cancelled) return;
+        setStatus(r.ok ? "ok" : "degraded");
+        setLastCheck(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
+      } catch {
+        if (!cancelled) setStatus("degraded");
+      }
+    };
+    check();
+    const id = setInterval(check, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const dotColor = status === "ok" ? "#10B981" : status === "degraded" ? "#EF4444" : "#9CA3AF";
+  const label = status === "ok" ? "Système opérationnel" : status === "degraded" ? "Système dégradé" : "Vérification…";
+
+  return (
+    <div
+      style={{
+        maxWidth: "1280px",
+        margin: "0 auto 24px",
+        padding: "10px 14px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "8px",
+        background: C.bgSubtle,
+        border: `1px solid ${C.border}`,
+        borderRadius: "6px",
+        fontFamily: C.fontMono,
+        fontSize: "11px",
+        letterSpacing: "0.04em",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span
+          style={{
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            backgroundColor: dotColor,
+            boxShadow: status === "ok" ? `0 0 0 3px rgba(16,185,129,0.18)` : "none",
+            animation: status === "ok" ? "pulse-dot 2s ease-in-out infinite" : "none",
+          }}
+        />
+        <span style={{ color: C.text, fontWeight: 600 }}>{label}</span>
+      </div>
+      <span style={{ color: C.textMuted }}>
+        {lastCheck ? `Dernière vérif · ${lastCheck}` : "Initialisation…"}
+      </span>
+      <style>{`@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }`}</style>
+    </div>
+  );
+}
 
 export function AtelierFooter() {
   return (
@@ -19,6 +86,7 @@ export function AtelierFooter() {
         zIndex: 1,
       }}
     >
+      <SystemStatus />
       <div
         style={{
           maxWidth: "1280px",
