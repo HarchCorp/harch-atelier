@@ -1,0 +1,49 @@
+{
+  "$comment": "FULL cron config — restore this file as vercel.json when upgrading to Vercel Pro plan. Pro allows cron jobs every minute. On Hobby, only daily/monthly crons are allowed.",
+  "crons": [
+    {
+      "path": "/api/cron/refresh",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-alerts",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/generate-reports",
+      "schedule": "0 1 1 * *"
+    },
+    {
+      "path": "/api/cron/generate-briefings",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-rss",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-bvc-prices",
+      "schedule": "*/15 9-16 * * 1-5"
+    },
+    {
+      "path": "/api/cron/refresh-sanctions",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-regulatory",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/audit-sentinel",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/auto-surgical",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/harch100/auto-publish",
+      "schedule": "0 6 1 * *"
+    }
+  ]
+}
