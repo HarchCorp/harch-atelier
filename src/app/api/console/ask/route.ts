@@ -8,6 +8,7 @@ import {
 } from "@/lib/harchiq/company-session";
 import ZAI from "z-ai-web-dev-sdk";
 import { logError } from "@/lib/logger";
+import { checkHarchIQQuota, recordHarchIQQuestion } from "@/lib/harchiq/quota";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/console/ask
@@ -125,6 +126,28 @@ export async function POST(req: NextRequest) {
 
   if (!userId) {
     return NextResponse.json({ error: "No user id on session" }, { status: 401 });
+  }
+
+  // 2b. QUOTA CHECK — P1-4 FIX (KAEL): server-side enforcement
+  //     Quotas: essential=50/j, pro=200/j, enterprise=illimité, agency=200/j
+  //     Admins bypass. Tracked via AuditLog (action="harchiq_ask").
+  const quotaCheck = await checkHarchIQQuota(
+    userId,
+    accountType,
+    session.user?.role,
+  );
+  if (!quotaCheck.allowed) {
+    return NextResponse.json(
+      {
+        error: "Quota quotidien atteint",
+        quota: {
+          used: quotaCheck.used,
+          limit: quotaCheck.limit === Number.MAX_SAFE_INTEGER ? "illimité" : quotaCheck.limit,
+          resetAt: quotaCheck.resetAt.toISOString(),
+        },
+      },
+      { status: 429 },
+    );
   }
 
   try {
@@ -514,6 +537,16 @@ Answer concisely (max 3 paragraphs). Cite specific alerts/topics/AI engines/comp
       sources,
       generatedAt: new Date().toISOString(),
     };
+
+    // Record successful question for quota tracking (P1-4 FIX)
+    // Fire-and-forget — must not block the response.
+    void recordHarchIQQuestion({
+      userId,
+      question,
+      accountType,
+      ipAddress: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
+      userAgent: req.headers.get("user-agent"),
+    });
 
     return NextResponse.json(response);
   } catch (err) {
