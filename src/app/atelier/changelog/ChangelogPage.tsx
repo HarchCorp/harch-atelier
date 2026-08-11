@@ -23,6 +23,32 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.1.0",
+    date: "August 11, 2026",
+    type: "minor",
+    title: "UX hardening — persistence, accessibility, system status",
+    changes: [
+      { category: "Added", items: [
+        "SystemStatus indicator dans le footer global — fetch /api/health toutes les 60s, pulsing dot vert/rouge, timestamp fr-FR",
+        "Hook usePersistentState<T> — localStorage-backed state pour HarchIQ history (Agency, Pro, Enterprise)",
+        "Char counter sur le chat HarchIQ Agency (textarea) — 'N / 2000' avec couleur amber si >1800",
+        "Tooltip Recharts sur le gauge RadialBarChart Score de Réputation (Agency)",
+        "Bouton Copy sur les résultats du Pitch Deck Generator (Agency)",
+      ]},
+      { category: "Fixed", items: [
+        "HarchIQ Agency Section 13 : <input> single-line → <textarea> auto-grow avec Shift+Enter pour newline (parité restaurée vs Section 1)",
+        "Historique des conversations HarchIQ : cap 5/10 → 50, persistance localStorage (survit refresh/switch client) sur Agency, Pro, Enterprise",
+        "Pitch Deck Generator : serial-lock supprimé (3 outils en parallèle au lieu de séquentiel)",
+        "Pitch Deck Generator : fake empty state 'Pitch deck généré pour prospect [X]' remplacé par un message conditionnel contextuel",
+        "Portfolio Clients table (Agency) : keyboard a11y — tabIndex, onKeyDown (Enter/Space), aria-label, focus-visible ring (WCAG 2.1 Level A)",
+        "Footer 'Dernière maj' (Agency Score hero) : span non-cliquable → button cliquable qui déclenche handleRefresh",
+      ]},
+      { category: "Security", items: [
+        "AbortSignal.timeout(4s) sur le fetch SystemStatus — empêche les requêtes pendantes",
+      ]},
+    ],
+  },
+  {
     version: "3.0.0",
     date: "July 21, 2026",
     type: "major",
