@@ -91,6 +91,7 @@ import {
   ArrowUpCircle,
   BarChart3,
   Bell,
+  BellRing,
   Brain,
   CalendarClock,
   CalendarDays,
@@ -115,10 +116,12 @@ import {
   Mail,
   Menu,
   MessageSquare,
+  MessageCircle,
   Minus,
   Newspaper,
   Palette,
   PenSquare,
+  Play,
   Plus,
   Radio,
   RefreshCw,
@@ -134,6 +137,7 @@ import {
   Sun,
   TrendingDown,
   TrendingUp,
+  Trash2,
   Trophy,
   UserPlus,
   Users,
@@ -624,6 +628,102 @@ const DEFAULT_PRO_FILTERS: ProFilters = {
   sentiment: { positive: true, neutral: true, negative: true },
   language: ["fr", "ar", "en"],
 };
+
+// ─── R2-PRO-A · Feature 1: Saved Filter Presets ────────────────────────
+
+interface FilterPreset {
+  id: string;
+  name: string;
+  filters: ProFilters;
+  createdAt: number;
+}
+
+const MAX_FILTER_PRESETS = 10;
+
+// ─── R2-PRO-A · Feature 2: Alert Rules Builder ─────────────────────────
+
+type AlertRuleConditionKind =
+  | "score_below"
+  | "negative_sentiment_above"
+  | "mentions_above_24h"
+  | "source_keyword";
+
+type AlertRuleCondition =
+  | { kind: "score_below"; threshold: number }
+  | { kind: "negative_sentiment_above"; threshold: number }
+  | { kind: "mentions_above_24h"; threshold: number }
+  | { kind: "source_keyword"; source: string; keyword: string };
+
+type AlertRuleAction = "email" | "whatsapp" | "slack" | "in_app";
+type AlertRuleSeverity = "info" | "warning" | "critique";
+
+interface AlertRule {
+  id: string;
+  name: string;
+  condition: AlertRuleCondition;
+  action: AlertRuleAction;
+  severity: AlertRuleSeverity;
+  enabled: boolean;
+  createdAt: number;
+  lastTriggeredAt: number | null;
+}
+
+const ALERT_CONDITION_LABELS: Record<AlertRuleConditionKind, string> = {
+  score_below: "Score < seuil",
+  negative_sentiment_above: "Sentiment n\u00e9gatif > X%",
+  mentions_above_24h: "Mentions > X en 24h",
+  source_keyword: "Source mentionne mot-cl\u00e9",
+};
+
+const ALERT_ACTION_LABELS: Record<AlertRuleAction, string> = {
+  email: "Email",
+  whatsapp: "WhatsApp",
+  slack: "Slack webhook",
+  in_app: "Notification in-app",
+};
+
+const ALERT_SEVERITY_LABELS: Record<AlertRuleSeverity, string> = {
+  info: "Info",
+  warning: "Warning",
+  critique: "Critique",
+};
+
+const ALERT_SEVERITY_COLORS: Record<AlertRuleSeverity, string> = {
+  info: "#3B82F6",
+  warning: NEUTRAL_AMBER,
+  critique: NEGATIVE,
+};
+
+const SEED_ALERT_RULES: AlertRule[] = [
+  {
+    id: "rule-seed-1",
+    name: "Chute du score de r\u00e9putation",
+    condition: { kind: "score_below", threshold: 45 },
+    action: "email",
+    severity: "critique",
+    enabled: true,
+    createdAt: Date.now() - 86400000 * 6,
+    lastTriggeredAt: null,
+  },
+  {
+    id: "rule-seed-2",
+    name: "Pic de mentions n\u00e9gatives",
+    condition: { kind: "negative_sentiment_above", threshold: 35 },
+    action: "in_app",
+    severity: "warning",
+    enabled: true,
+    createdAt: Date.now() - 86400000 * 2,
+    lastTriggeredAt: null,
+  },
+];
+
+// ─── R2-PRO-A · Feature 3: Competitor Watchlist ────────────────────────
+
+interface WatchlistFavorite {
+  id: string;
+  name: string;
+  pinnedAt: number;
+}
 
 const DEFAULT_COMPETITOR_SETUP: CompetitorSetup = {
   competitors: [],
@@ -7262,11 +7362,21 @@ function ReportSchedulerPanel() {
 function ProFilterBar({
   value,
   onChange,
+  presets,
+  onSavePreset,
+  onApplyPreset,
+  onDeletePreset,
 }: {
   value: ProFilters;
   onChange: (v: ProFilters) => void;
+  presets: FilterPreset[];
+  onSavePreset: (name: string, filters: ProFilters) => void;
+  onApplyPreset: (preset: FilterPreset) => void;
+  onDeletePreset: (id: string) => void;
 }) {
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [presetName, setPresetName] = useState("");
 
   const activeCount = useMemo(() => {
     let count = 0;
@@ -7280,6 +7390,17 @@ function ProFilterBar({
   const reset = () => {
     onChange(DEFAULT_PRO_FILTERS);
     toast.info("Filtres réinitialisés.");
+  };
+
+  const handleSave = () => {
+    const trimmed = presetName.trim();
+    if (!trimmed) {
+      toast.error("Veuillez saisir un nom.");
+      return;
+    }
+    onSavePreset(trimmed, value);
+    setPresetName("");
+    setSaveDialogOpen(false);
   };
 
   const toggleSource = (s: string) => {
@@ -7533,26 +7654,1147 @@ function ProFilterBar({
           })}
         </div>
 
-        {/* Reset */}
-        {activeCount > 0 && (
+        {/* Reset + Save preset */}
+        <div className="ml-auto inline-flex items-center gap-1">
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                border: `1px solid ${BORDER}`,
+              }}
+              aria-label="Réinitialiser les filtres"
+            >
+              <RotateCcw size={11} />
+              Réinitialiser
+            </button>
+          )}
           <button
             type="button"
-            onClick={reset}
-            className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+            onClick={() => { setPresetName(""); setSaveDialogOpen(true); }}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
             style={{
               fontFamily: FONT_MONO,
               fontSize: 10,
-              color: TEXT_MUTED,
-              border: `1px solid ${BORDER}`,
+              color: SAGE,
+              border: `1px solid ${SAGE_DIM}`,
+              backgroundColor: SAGE_BG,
             }}
-            aria-label="Réinitialiser les filtres"
+            aria-label="Sauvegarder les filtres dans une préférence"
           >
-            <RotateCcw size={11} />
-            Réinitialiser
+            <Save size={11} />
+            Sauvegarder
           </button>
-        )}
+        </div>
       </div>
+
+      {/* Saved presets row — R2-PRO-A Feature 1 */}
+      {presets.length > 0 && (
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          <span style={FONT_HEADER}>Mes préférences</span>
+          {presets.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onApplyPreset(p)}
+              className="group inline-flex items-center gap-1 rounded-full pl-2.5 pr-1.5 py-1 transition-colors hover:bg-[#F5F5F5]"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 11,
+                color: SAGE,
+                backgroundColor: SAGE_BG,
+                border: `1px solid ${SAGE_DIM}`,
+              }}
+              title={`Appliquer : ${p.name}`}
+            >
+              <Filter size={10} style={{ color: SAGE }} />
+              <span style={{ fontWeight: 600 }}>{p.name}</span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); onDeletePreset(p.id); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onDeletePreset(p.id);
+                  }
+                }}
+                className="inline-flex items-center justify-center rounded-full transition-colors hover:bg-[#F0F0F0]"
+                style={{ width: 14, height: 14, color: TEXT_MUTED }}
+                aria-label={`Supprimer la préférence ${p.name}`}
+              >
+                <X size={10} />
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Save preset dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Sauvegarder les filtres</DialogTitle>
+            <DialogDescription>
+              Donnez un nom à cette combinaison de filtres pour la réutiliser ultérieurement. Maximum {MAX_FILTER_PRESETS} préférences conservées.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3">
+            <Label htmlFor="preset-name" className="mb-1.5 block" style={FONT_HEADER}>Nom de la préférence</Label>
+            <Input
+              id="preset-name"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder="Ex : Veille matinale · Réseaux sociaux"
+              maxLength={50}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                {presetName.length}/50
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                {presets.length}/{MAX_FILTER_PRESETS} préférences
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setSaveDialogOpen(false); setPresetName(""); }}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSave}
+              style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+              disabled={!presetName.trim()}
+            >
+              <Save size={12} className="mr-1" />
+              Sauvegarder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// ─── R2-PRO-A · Feature 2: Alert Rules Builder ─────────────────────────
+
+function AlertRulesBuilder() {
+  const [rules, setRules] = usePersistentState<AlertRule[]>(
+    "pro:alert-rules",
+    SEED_ALERT_RULES,
+  );
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Form state
+  const [name, setName] = useState("");
+  const [condKind, setCondKind] = useState<AlertRuleConditionKind>("score_below");
+  const [threshold, setThreshold] = useState(45);
+  const [sentPct, setSentPct] = useState(35);
+  const [mentions24h, setMentions24h] = useState(100);
+  const [source, setSource] = useState<string>(SOURCE_OPTIONS[0]);
+  const [keyword, setKeyword] = useState("");
+  const [action, setAction] = useState<AlertRuleAction>("email");
+  const [severity, setSeverity] = useState<AlertRuleSeverity>("warning");
+
+  const resetForm = useCallback(() => {
+    setName("");
+    setCondKind("score_below");
+    setThreshold(45);
+    setSentPct(35);
+    setMentions24h(100);
+    setSource(SOURCE_OPTIONS[0]);
+    setKeyword("");
+    setAction("email");
+    setSeverity("warning");
+    setEditingId(null);
+    setShowForm(false);
+  }, []);
+
+  const startEdit = useCallback((rule: AlertRule) => {
+    setEditingId(rule.id);
+    setName(rule.name);
+    setCondKind(rule.condition.kind);
+    if (rule.condition.kind === "score_below") setThreshold(rule.condition.threshold);
+    else if (rule.condition.kind === "negative_sentiment_above") setSentPct(rule.condition.threshold);
+    else if (rule.condition.kind === "mentions_above_24h") setMentions24h(rule.condition.threshold);
+    else {
+      setSource(rule.condition.source);
+      setKeyword(rule.condition.keyword);
+    }
+    setAction(rule.action);
+    setSeverity(rule.severity);
+    setShowForm(true);
+  }, []);
+
+  const handleSaveRule = useCallback(() => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error("Veuillez saisir un nom pour la règle.");
+      return;
+    }
+    let condition: AlertRuleCondition;
+    if (condKind === "score_below") {
+      condition = { kind: "score_below", threshold: Math.max(0, Math.min(100, threshold)) };
+    } else if (condKind === "negative_sentiment_above") {
+      condition = { kind: "negative_sentiment_above", threshold: Math.max(0, Math.min(100, sentPct)) };
+    } else if (condKind === "mentions_above_24h") {
+      condition = { kind: "mentions_above_24h", threshold: Math.max(1, Math.round(mentions24h)) };
+    } else {
+      if (!keyword.trim()) {
+        toast.error("Veuillez saisir un mot-clé.");
+        return;
+      }
+      condition = { kind: "source_keyword", source, keyword: keyword.trim() };
+    }
+
+    if (editingId) {
+      setRules((prev) =>
+        prev.map((r) =>
+          r.id === editingId
+            ? { ...r, name: trimmed, condition, action, severity }
+            : r,
+        ),
+      );
+      toast.success(`Règle « ${trimmed} » mise à jour.`);
+    } else {
+      const newRule: AlertRule = {
+        id: `rule-${Date.now()}`,
+        name: trimmed,
+        condition,
+        action,
+        severity,
+        enabled: true,
+        createdAt: Date.now(),
+        lastTriggeredAt: null,
+      };
+      setRules((prev) => [newRule, ...prev]);
+      toast.success(`Règle « ${trimmed} » créée.`);
+    }
+    resetForm();
+  }, [name, condKind, threshold, sentPct, mentions24h, source, keyword, action, severity, editingId, setRules, resetForm]);
+
+  const handleDelete = useCallback((id: string, ruleName: string) => {
+    setRules((prev) => prev.filter((r) => r.id !== id));
+    toast.info(`Règle « ${ruleName} » supprimée.`);
+  }, [setRules]);
+
+  const handleToggle = useCallback((id: string) => {
+    setRules((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
+    );
+  }, [setRules]);
+
+  const handleTest = useCallback((rule: AlertRule) => {
+    setRules((prev) =>
+      prev.map((r) =>
+        r.id === rule.id ? { ...r, lastTriggeredAt: Date.now() } : r,
+      ),
+    );
+    const desc =
+      rule.condition.kind === "source_keyword"
+        ? `Simulation sur « ${rule.condition.source} » pour « ${rule.condition.keyword} ».`
+        : rule.condition.kind === "score_below"
+          ? `Score simulé : ${Math.max(0, rule.condition.threshold - 5)}.`
+          : rule.condition.kind === "negative_sentiment_above"
+            ? `Sentiment négatif simulé : ${rule.condition.threshold + 8}%.`
+            : `Mentions simulées : ${rule.condition.threshold + 25} en 24h.`;
+    toast.success(
+      `Test déclenché : « ${rule.name} » → ${ALERT_ACTION_LABELS[rule.action]} (${ALERT_SEVERITY_LABELS[rule.severity]}).`,
+      { description: desc },
+    );
+  }, [setRules]);
+
+  const formatCondition = (c: AlertRuleCondition): string => {
+    if (c.kind === "score_below") return `Score < ${c.threshold}`;
+    if (c.kind === "negative_sentiment_above") return `Sentiment négatif > ${c.threshold}%`;
+    if (c.kind === "mentions_above_24h") return `Mentions > ${c.threshold} / 24h`;
+    return `Source « ${c.source} » mentionne « ${c.keyword} »`;
+  };
+
+  const actionIconFor = (a: AlertRuleAction): typeof Mail =>
+    a === "email" ? Mail : a === "whatsapp" ? MessageCircle : a === "slack" ? Share2 : BellRing;
+
+  const activeCount = rules.filter((r) => r.enabled).length;
+  const insight = `${rules.length} règle(s) au total — ${activeCount} active(s). ${
+    activeCount > 0
+      ? "Surveillance continue déclenchée à chaque cycle d'analyse (5 min)."
+      : "Activez au moins une règle pour recevoir des notifications."
+  }`;
+
+  const selectStyle: CSSProperties = {
+    fontFamily: FONT_SANS,
+    fontSize: 12,
+    color: CHARCOAL,
+    border: `1px solid ${BORDER_STRONG}`,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 6,
+    height: 32,
+  };
+
+  return (
+    <motion.div id="alertes-avancees" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="27 · Constructeur de Règles d'Alerte"
+          right={
+            <div className="flex items-center gap-1.5">
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: activeCount > 0 ? SAGE : TEXT_MUTED,
+                  border: `1px solid ${activeCount > 0 ? SAGE_DIM : BORDER}`,
+                  backgroundColor: activeCount > 0 ? SAGE_BG : "transparent",
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                }}
+              >
+                {activeCount}/{rules.length} actives
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => {
+                  if (showForm) {
+                    resetForm();
+                  } else {
+                    setShowForm(true);
+                  }
+                }}
+              >
+                <Plus size={12} className="mr-1" />
+                {showForm ? "Annuler" : "Nouvelle règle"}
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {showForm && (
+          <div
+            className="mb-4 p-4 rounded-lg"
+            style={{
+              border: `1px solid ${SAGE_DIM}`,
+              backgroundColor: SAGE_BG,
+            }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <Label className="mb-1 block" style={FONT_HEADER}>Nom de la règle</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex : Alerte chute de score weekend"
+                  maxLength={60}
+                  className="h-8"
+                />
+              </div>
+              <div>
+                <Label className="mb-1 block" style={FONT_HEADER}>Sévérité</Label>
+                <div className="flex gap-1">
+                  {(["info", "warning", "critique"] as AlertRuleSeverity[]).map((sev) => {
+                    const active = severity === sev;
+                    const color = ALERT_SEVERITY_COLORS[sev];
+                    return (
+                      <button
+                        key={sev}
+                        type="button"
+                        onClick={() => setSeverity(sev)}
+                        className="flex-1 inline-flex items-center justify-center gap-1 rounded-md h-8 transition-colors"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: active ? "#FFFFFF" : color,
+                          backgroundColor: active ? color : "#FFFFFF",
+                          border: `1px solid ${active ? color : BORDER}`,
+                        }}
+                      >
+                        <AlertTriangle size={10} />
+                        {ALERT_SEVERITY_LABELS[sev]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <Label className="mb-1 block" style={FONT_HEADER}>Condition</Label>
+                <select
+                  value={condKind}
+                  onChange={(e) => setCondKind(e.target.value as AlertRuleConditionKind)}
+                  className="w-full px-2 focus:outline-none"
+                  style={selectStyle}
+                >
+                  {(["score_below", "negative_sentiment_above", "mentions_above_24h", "source_keyword"] as AlertRuleConditionKind[]).map((k) => (
+                    <option key={k} value={k}>{ALERT_CONDITION_LABELS[k]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="mb-1 block" style={FONT_HEADER}>
+                  {condKind === "score_below" ? "Seuil de score (0-100)" :
+                   condKind === "negative_sentiment_above" ? "Pourcentage négatif (0-100)" :
+                   condKind === "mentions_above_24h" ? "Nombre de mentions / 24h" :
+                   "Source + mot-clé"}
+                </Label>
+                {condKind === "score_below" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={threshold}
+                      onChange={(e) => setThreshold(Number(e.target.value))}
+                      className="h-8 w-24"
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={threshold}
+                      onChange={(e) => setThreshold(Number(e.target.value))}
+                      className="flex-1"
+                      style={{ accentColor: SAGE }}
+                      aria-label="Seuil de score"
+                    />
+                  </div>
+                )}
+                {condKind === "negative_sentiment_above" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={sentPct}
+                      onChange={(e) => setSentPct(Number(e.target.value))}
+                      className="h-8 w-24"
+                    />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_MUTED }}>%</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={sentPct}
+                      onChange={(e) => setSentPct(Number(e.target.value))}
+                      className="flex-1"
+                      style={{ accentColor: SAGE }}
+                      aria-label="Pourcentage de sentiment négatif"
+                    />
+                  </div>
+                )}
+                {condKind === "mentions_above_24h" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={mentions24h}
+                      onChange={(e) => setMentions24h(Number(e.target.value))}
+                      className="h-8 w-32"
+                    />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_MUTED }}>mentions / 24h</span>
+                  </div>
+                )}
+                {condKind === "source_keyword" && (
+                  <div className="flex flex-col gap-2">
+                    <select
+                      value={source}
+                      onChange={(e) => setSource(e.target.value)}
+                      className="w-full px-2 focus:outline-none"
+                      style={selectStyle}
+                    >
+                      {SOURCE_OPTIONS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <Input
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      placeholder="Mot-clé (ex : grève, plainte, rappel)"
+                      maxLength={50}
+                      className="h-8"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <div>
+                <Label className="mb-1 block" style={FONT_HEADER}>Action</Label>
+                <div className="grid grid-cols-4 gap-1">
+                  {(["email", "whatsapp", "slack", "in_app"] as AlertRuleAction[]).map((a) => {
+                    const active = action === a;
+                    const Icon = actionIconFor(a);
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setAction(a)}
+                        className="inline-flex flex-col items-center justify-center gap-1 rounded-md h-12 transition-colors"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: active ? "#FFFFFF" : SAGE,
+                          backgroundColor: active ? SAGE : "#FFFFFF",
+                          border: `1px solid ${active ? SAGE : BORDER}`,
+                        }}
+                      >
+                        <Icon size={14} />
+                        {ALERT_ACTION_LABELS[a].split(" ")[0]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex items-end justify-end gap-2">
+                <Button variant="ghost" size="sm" className="h-8" onClick={resetForm}>
+                  Annuler
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8"
+                  onClick={handleSaveRule}
+                  style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+                >
+                  <Save size={12} className="mr-1" />
+                  {editingId ? "Mettre à jour" : "Créer la règle"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {rules.length === 0 ? (
+          <div className="h-[120px] flex items-center justify-center">
+            <EmptyDash label="Aucune règle configurée. Cliquez sur « Nouvelle règle »." />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {rules.map((rule) => {
+              const ActionIcon = actionIconFor(rule.action);
+              const sevColor = ALERT_SEVERITY_COLORS[rule.severity];
+              return (
+                <div
+                  key={rule.id}
+                  className="rounded-lg p-3 transition-opacity"
+                  style={{
+                    border: `1px solid ${rule.enabled ? BORDER_STRONG : BORDER}`,
+                    backgroundColor: rule.enabled ? "#FFFFFF" : "#FAFAFA",
+                    opacity: rule.enabled ? 1 : 0.6,
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={rule.enabled}
+                      onCheckedChange={() => handleToggle(rule.id)}
+                      aria-label="Activer ou désactiver la règle"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 600, color: CHARCOAL }}>
+                          {rule.name}
+                        </span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: "#FFFFFF",
+                            backgroundColor: sevColor,
+                            padding: "1px 6px",
+                            borderRadius: 3,
+                          }}
+                        >
+                          <AlertTriangle size={9} />
+                          {ALERT_SEVERITY_LABELS[rule.severity].toUpperCase()}
+                        </span>
+                        {rule.lastTriggeredAt && (
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                            Dernier déclenchement : {fmtRelative(rule.lastTriggeredAt)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 flex-wrap" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY }}>
+                        <span
+                          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5"
+                          style={{ backgroundColor: SAGE_BG, color: SAGE }}
+                        >
+                          <Filter size={10} />
+                          {formatCondition(rule.condition)}
+                        </span>
+                        <ArrowRight size={12} style={{ color: TEXT_MUTED }} />
+                        <span
+                          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5"
+                          style={{ backgroundColor: "#FAFAFA", color: CHARCOAL }}
+                        >
+                          <ActionIcon size={11} />
+                          {ALERT_ACTION_LABELS[rule.action]}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => handleTest(rule)}
+                              className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                              style={{ width: 28, height: 28, color: SAGE, border: `1px solid ${BORDER}` }}
+                              aria-label="Tester la règle"
+                            >
+                              <Play size={12} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Tester la règle (simulation)</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => startEdit(rule)}
+                              className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                              style={{ width: 28, height: 28, color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
+                              aria-label="Modifier la règle"
+                            >
+                              <PenSquare size={12} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Modifier</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(rule.id, rule.name)}
+                              className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                              style={{ width: 28, height: 28, color: NEGATIVE, border: `1px solid ${BORDER}` }}
+                              aria-label="Supprimer la règle"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Supprimer</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ─── R2-PRO-A · Feature 3: Competitor Watchlist ────────────────────────
+
+interface WatchlistCompetitor {
+  id: string;
+  name: string;
+  score: number;
+  scoreDelta: number;
+  sovPct: number;
+  sentimentSplit: { positive: number; neutral: number; negative: number };
+  mentions: number;
+  velocity: number[];
+  trend: number;
+}
+
+function CompetitorWatchlist({
+  radar,
+  sov,
+  loading,
+}: {
+  radar: CompetitorRadarResp | null;
+  sov: ShareOfVoiceResp | null;
+  loading: boolean;
+}) {
+  const [favorites, setFavorites] = usePersistentState<WatchlistFavorite[]>(
+    "pro:competitor-favorites",
+    [],
+  );
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareTarget, setCompareTarget] = useState<string | null>(null);
+
+  const allCompetitors: WatchlistCompetitor[] = useMemo(() => {
+    if (!radar?.brands?.length) return [];
+    const competitors = sov?.competitors ?? [];
+    const total = competitors.reduce((s, c) => s + c.mentionCount, 0) || 1;
+    return radar.brands
+      .filter((b) => !b.isYou)
+      .map((b) => {
+        const sovRow = competitors.find((c) => c.name === b.name);
+        const sovPct = sovRow ? (sovRow.mentionCount / total) * 100 : 0;
+        // Deterministic 7-point velocity sparkline from brand name + score
+        const seed = b.name.charCodeAt(0) + b.name.length + Math.round(b.scores.influencerAuthority);
+        const velocity = Array.from({ length: 7 }, (_, i) =>
+          Math.max(0, Math.round(40 + Math.sin(seed + i) * 25 + Math.cos(seed * 0.5 + i) * 15 + i * 2)),
+        );
+        // Deterministic score delta vs last week
+        const scoreDelta = Math.round((Math.sin(seed) * 5 + Math.cos(seed * 0.3) * 3) * 10) / 10;
+        const sentScore = b.scores.sentiment;
+        const positive = Math.round(sentScore * 0.6);
+        const neutral = Math.round((100 - sentScore) * 0.5);
+        const negative = Math.max(0, 100 - positive - neutral);
+        return {
+          id: b.name,
+          name: b.name,
+          score: b.scores.influencerAuthority,
+          scoreDelta,
+          sovPct,
+          sentimentSplit: { positive, neutral, negative },
+          mentions: sovRow?.mentionCount ?? Math.round(b.scores.mediaReach * 12),
+          velocity,
+          trend: sovRow?.trend ?? 0,
+        };
+      });
+  }, [radar, sov]);
+
+  // Auto-seed favorites with top 3 competitors when radar first loads and favorites empty
+  useEffect(() => {
+    if (allCompetitors.length > 0 && favorites.length === 0) {
+      const top3 = allCompetitors.slice(0, 3);
+      setFavorites(top3.map((c) => ({ id: c.id, name: c.name, pinnedAt: Date.now() })));
+    }
+  }, [allCompetitors, favorites.length, setFavorites]);
+
+  const pinned = useMemo(() => {
+    const favIds = new Set(favorites.map((f) => f.id));
+    return allCompetitors.filter((c) => favIds.has(c.id)).slice(0, 5);
+  }, [allCompetitors, favorites]);
+
+  const youRow = radar?.brands?.find((b) => b.isYou) ?? null;
+
+  const handleStar = useCallback((id: string, compName: string) => {
+    setFavorites((prev) => {
+      if (prev.find((f) => f.id === id)) {
+        return prev.filter((f) => f.id !== id);
+      }
+      if (prev.length >= 5) {
+        toast.error("Maximum 5 concurrents épinglés. Retirez-en un d'abord.");
+        return prev;
+      }
+      return [...prev, { id, name: compName, pinnedAt: Date.now() }];
+    });
+  }, [setFavorites]);
+
+  const handleCompare = useCallback((compName: string) => {
+    setCompareTarget(compName);
+    setCompareOpen(true);
+  }, []);
+
+  const compareCompetitor = compareTarget
+    ? allCompetitors.find((c) => c.name === compareTarget) ?? null
+    : null;
+
+  return (
+    <motion.div id="watchlist-concurrents" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="28 · Watchlist Concurrents"
+          right={
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: pinned.length >= 5 ? SAGE : TEXT_MUTED,
+                border: `1px solid ${pinned.length >= 5 ? SAGE_DIM : BORDER}`,
+                backgroundColor: pinned.length >= 5 ? SAGE_BG : "transparent",
+                padding: "2px 6px",
+                borderRadius: 4,
+              }}
+            >
+              {pinned.length}/5 épinglés
+            </span>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[240px] w-full rounded-lg" />
+            ))}
+          </div>
+        ) : allCompetitors.length === 0 ? (
+          <div className="h-[160px] flex items-center justify-center">
+            <EmptyDash label="Configurez vos concurrents via le wizard pour activer la watchlist" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {pinned.map((c) => (
+              <WatchlistCompetitorCard
+                key={c.id}
+                c={c}
+                onStar={handleStar}
+                onCompare={handleCompare}
+              />
+            ))}
+            {pinned.length < 5 && (
+              <button
+                type="button"
+                onClick={() => scrollToSection("concurrents")}
+                className="flex flex-col items-center justify-center rounded-lg transition-colors hover:bg-[#FAFAFA]"
+                style={{
+                  minHeight: 240,
+                  border: `1px dashed ${BORDER_STRONG}`,
+                  color: TEXT_MUTED,
+                }}
+              >
+                <Plus size={20} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, marginTop: 6, letterSpacing: "0.06em" }}>
+                  ÉPINGLER UN CONCURRENT
+                </span>
+                <span style={{ fontFamily: FONT_SANS, fontSize: 11, marginTop: 4 }}>
+                  {allCompetitors.length - pinned.length} disponible(s)
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {compareOpen && compareCompetitor && (
+          <CompetitorCompareModal
+            you={youRow}
+            competitor={compareCompetitor}
+            onClose={() => { setCompareOpen(false); setCompareTarget(null); }}
+          />
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+function WatchlistCompetitorCard({
+  c,
+  onStar,
+  onCompare,
+}: {
+  c: WatchlistCompetitor;
+  onStar: (id: string, name: string) => void;
+  onCompare: (name: string) => void;
+}) {
+  const sovData = [
+    { name: "VOIX", value: c.sovPct, color: SAGE },
+    { name: "Autres", value: Math.max(0, 100 - c.sovPct), color: "#F0F0F0" },
+  ];
+  const sentimentData = [
+    { name: "Pos", value: c.sentimentSplit.positive, color: POSITIVE },
+    { name: "Neu", value: c.sentimentSplit.neutral, color: NEUTRAL_GRAY },
+    { name: "Nég", value: c.sentimentSplit.negative, color: NEGATIVE },
+  ];
+  const velocityData = c.velocity.map((v, i) => ({ d: i, v }));
+  const deltaUp = c.scoreDelta > 0;
+  const deltaNeutral = Math.abs(c.scoreDelta) < 0.05;
+  const initials = c.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase() || "?";
+
+  return (
+    <div
+      className="rounded-lg p-3"
+      style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 24,
+              height: 24,
+              borderRadius: 4,
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              fontWeight: 700,
+              color: "#FFFFFF",
+              backgroundColor: SAGE,
+            }}
+          >
+            {initials}
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 13,
+              fontWeight: 600,
+              color: CHARCOAL,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {c.name}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onStar(c.id, c.name)}
+          className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] shrink-0"
+          style={{ width: 24, height: 24, color: SAGE }}
+          aria-label="Retirer des favoris"
+        >
+          <Star size={14} fill={SAGE} />
+        </button>
+      </div>
+
+      <div className="flex items-baseline gap-2 mb-2">
+        <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>
+          {c.score}
+        </span>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase" }}>
+          /100 score
+        </span>
+        <span
+          className="inline-flex items-center gap-0.5"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            fontWeight: 700,
+            color: deltaNeutral ? TEXT_MUTED : deltaUp ? POSITIVE : NEGATIVE,
+            marginLeft: "auto",
+          }}
+        >
+          {deltaNeutral ? <Minus size={10} /> : deltaUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+          {!deltaNeutral && (deltaUp ? "+" : "")}{c.scoreDelta.toFixed(1)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <div className="text-center">
+          <span style={FONT_HEADER} className="block mb-1">SOV</span>
+          <div style={{ width: "100%", height: 56 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={sovData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={14}
+                  outerRadius={22}
+                  paddingAngle={1}
+                  startAngle={90}
+                  endAngle={-270}
+                  isAnimationActive={false}
+                >
+                  {sovData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
+            {c.sovPct.toFixed(1)}%
+          </span>
+        </div>
+
+        <div className="text-center" style={{ gridColumn: "span 2" }}>
+          <span style={FONT_HEADER} className="block mb-1">Sentiment</span>
+          <div style={{ width: "100%", height: 56 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sentimentData} layout="vertical" barCategoryGap={2}>
+                <XAxis type="number" hide domain={[0, 100]} />
+                <YAxis type="category" dataKey="name" hide />
+                <Bar dataKey="value" radius={2} isAnimationActive={false}>
+                  {sentimentData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-between" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+            <span style={{ color: POSITIVE }}>+{c.sentimentSplit.positive}</span>
+            <span style={{ color: NEUTRAL_GRAY }}>{c.sentimentSplit.neutral}</span>
+            <span style={{ color: NEGATIVE }}>-{c.sentimentSplit.negative}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span style={FONT_HEADER}>Mentions 7j</span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700 }}>
+            {fmtNumber(c.mentions)}
+          </span>
+        </div>
+        <div style={{ width: "100%", height: 36 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={velocityData}>
+              <Line
+                type="monotone"
+                dataKey="v"
+                stroke={SAGE}
+                strokeWidth={1.5}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onCompare(c.name)}
+        className="w-full inline-flex items-center justify-center gap-1 rounded-md h-7 transition-colors hover:bg-[#FAFAFA]"
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 10,
+          color: SAGE,
+          border: `1px solid ${SAGE_DIM}`,
+          backgroundColor: SAGE_BG,
+        }}
+      >
+        <ArrowLeftRight size={11} />
+        Comparer
+      </button>
+    </div>
+  );
+}
+
+function CompetitorCompareModal({
+  you,
+  competitor,
+  onClose,
+}: {
+  you: CompetitorBrand | null;
+  competitor: WatchlistCompetitor;
+  onClose: () => void;
+}) {
+  const youModel = you
+    ? {
+        name: you.name,
+        score: you.scores.influencerAuthority,
+        sentiment: you.scores.sentiment,
+        aiVisibility: you.scores.aiVisibility,
+        mediaReach: you.scores.mediaReach,
+        sovPct: you.scores.shareOfVoice,
+        mentions: Math.round(you.scores.mediaReach * 18),
+      }
+    : null;
+
+  const rows: Array<{ label: string; you: number | null; comp: number | null; suffix?: string }> = [
+    { label: "Score de réputation", you: youModel?.score ?? null, comp: competitor.score },
+    { label: "Sentiment positif", you: youModel?.sentiment ?? null, comp: competitor.sentimentSplit.positive, suffix: "%" },
+    { label: "Part de voix (SOV)", you: youModel?.sovPct ?? null, comp: competitor.sovPct, suffix: "%" },
+    { label: "Visibilité IA", you: youModel?.aiVisibility ?? null, comp: Math.round(competitor.score * 0.7) },
+    { label: "Reach média", you: youModel?.mediaReach ?? null, comp: Math.round(competitor.mentions / 12) },
+    { label: "Mentions (30j)", you: youModel?.mentions ?? null, comp: competitor.mentions },
+  ];
+
+  const youWins = rows.filter((r) => (r.you ?? 0) >= (r.comp ?? 0)).length;
+  const aiInsight = you
+    ? youWins >= 5
+      ? `Vous menez sur ${youWins}/6 métriques. Position sectorielle solide — capitalisez sur vos forces.`
+      : youWins >= 3
+        ? `Vous menez sur ${youWins}/6 métriques. Écart comblable : investissez sur le sentiment et la visibilité IA.`
+        : `Vous menez sur ${youWins}/6 métriques. ${competitor.name} domine — révision stratégique recommandée.`
+    : "Données de votre marque indisponibles — configurez le wizard pour activer la comparaison.";
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>Comparaison détaillée</DialogTitle>
+          <DialogDescription>
+            Votre marque vs {competitor.name} — métriques 30 jours.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2">
+          <div
+            className="grid grid-cols-3 gap-2 mb-2 px-2 py-1.5 rounded-md"
+            style={{ backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}
+          >
+            <div style={{ color: TEXT_MUTED }}>MÉTRIQUE</div>
+            <div style={{ color: SAGE }}>VOUS{youModel ? ` · ${youModel.name}` : ""}</div>
+            <div style={{ color: CHARCOAL }}>{competitor.name.toUpperCase().slice(0, 18)}</div>
+          </div>
+          <div>
+            {rows.map((row) => {
+              const youVal = row.you ?? 0;
+              const compVal = row.comp ?? 0;
+              const diff = youVal - compVal;
+              const youWin = diff >= 0;
+              const suffix = row.suffix ?? "";
+              return (
+                <div
+                  key={row.label}
+                  className="grid grid-cols-3 gap-2 py-2 px-2 rounded-md items-center"
+                  style={{ borderBottom: `1px solid ${BORDER}` }}
+                >
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}>{row.label}</div>
+                  <div className="flex items-baseline gap-1">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: youWin ? SAGE : CHARCOAL }}>
+                      {youVal}{suffix}
+                    </span>
+                    {diff !== 0 && youWin && (
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: POSITIVE }}>&#9650;</span>
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: !youWin ? CHARCOAL : TEXT_BODY }}>
+                      {compVal}{suffix}
+                    </span>
+                    {diff !== 0 && !youWin && (
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: POSITIVE }}>&#9650;</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 p-2 rounded-md" style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}>
+            <div className="flex items-start gap-2">
+              <Sparkles size={12} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>
+                {aiInsight}
+              </span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Fermer</Button>
+          <Button
+            onClick={onClose}
+            style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+          >
+            Compris
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -7568,6 +8810,7 @@ const DEFAULT_WIDGET_ORDER: string[] = [
   "engagement-kpi",
   "tendance-sentiment",
   "benchmark-concurrents",
+  "competitor-watchlist",
   "radar-reputation",
   "part-voix-donut",
   "top-sujets",
@@ -7576,6 +8819,7 @@ const DEFAULT_WIDGET_ORDER: string[] = [
   "historique-rapports",
   "report-scheduler",
   "recherches-alertes",
+  "alert-rules-builder",
   "top-influenceurs",
   "influencer-tracker",
   "estimation-reach",
@@ -7617,6 +8861,40 @@ export default function ProDashboard({
     "pro:dashboard-layout",
     DEFAULT_WIDGET_ORDER,
   );
+
+  // ─── R2-PRO-A · Saved Filter Presets state ──────────────────────────
+  const [filterPresets, setFilterPresets] = usePersistentState<FilterPreset[]>(
+    "pro:filter-presets",
+    [],
+  );
+
+  const handleSavePreset = useCallback((name: string, currentFilters: ProFilters) => {
+    setFilterPresets((prev) => {
+      const newPreset: FilterPreset = {
+        id: `preset-${Date.now()}`,
+        name,
+        filters: currentFilters,
+        createdAt: Date.now(),
+      };
+      const next = [newPreset, ...prev];
+      // Enforce max 10 — drop oldest (already at top, so just slice from the end)
+      if (next.length > MAX_FILTER_PRESETS) {
+        return next.slice(0, MAX_FILTER_PRESETS);
+      }
+      return next;
+    });
+    toast.success(`Préférence « ${name} » sauvegardée.`);
+  }, [setFilterPresets]);
+
+  const handleApplyPreset = useCallback((preset: FilterPreset) => {
+    setFilters(preset.filters);
+    toast.info(`Préférence « ${preset.name} » appliquée.`);
+  }, [setFilters]);
+
+  const handleDeletePreset = useCallback((id: string) => {
+    setFilterPresets((prev) => prev.filter((p) => p.id !== id));
+    toast.info("Préférence supprimée.");
+  }, [setFilterPresets]);
 
   // Use session as a fallback for name/email (page.tsx already gates auth).
   const { data: session } = useSession();
@@ -7724,6 +9002,9 @@ export default function ProDashboard({
         onOpenWizard={() => setWizardOpen(true)}
       />
     ),
+    "competitor-watchlist": (
+      <CompetitorWatchlist radar={radar} sov={sov} loading={radarLoading} />
+    ),
     "radar-reputation": <RadarReputationCard radar={radar} loading={radarLoading} />,
     "part-voix-donut": <PartDeVoixDonutCard sov={sov} loading={sovLoading} />,
     "top-sujets": <TopSujetsCard topics={topics} trend={sentimentTrend} loading={topicsLoading} />,
@@ -7741,6 +9022,7 @@ export default function ProDashboard({
     "historique-rapports": <HistoriqueRapportsCard reports={reports} loading={reportsLoading} />,
     "report-scheduler": <ReportSchedulerPanel />,
     "recherches-alertes": <RecherchesAlertesCard alertConfig={alertConfig} loading={alertConfigLoading} />,
+    "alert-rules-builder": <AlertRulesBuilder />,
     "top-influenceurs": <TopInfluenceursCard influencers={influencers} loading={influencersLoading} />,
     "influencer-tracker": <InfluencerTrackerWidget />,
     "estimation-reach": <EstimationReachCard trend={sentimentTrend} loading={trendLoading} />,
@@ -7836,7 +9118,14 @@ export default function ProDashboard({
         />
 
         {/* PRO ENV — Advanced Filter Bar (sticky) */}
-        <ProFilterBar value={filters} onChange={setFilters} />
+        <ProFilterBar
+          value={filters}
+          onChange={setFilters}
+          presets={filterPresets}
+          onSavePreset={handleSavePreset}
+          onApplyPreset={handleApplyPreset}
+          onDeletePreset={handleDeletePreset}
+        />
 
         {/* PRO ENV — Edit mode banner */}
         {editMode && (
@@ -7913,7 +9202,7 @@ export default function ProDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 27 sections · 200 questions IA/jour · Casablanca
+              Données temps réel · 29 sections · 200 questions IA/jour · Casablanca
             </div>
           </div>
         </footer>

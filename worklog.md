@@ -3523,3 +3523,215 @@ Stage Summary:
 - Code quality : tsc 0 errors, eslint 0 errors (+1 warning pré-existant TanStack Table)
 - 7 localStorage keys au total : harchiq:pro:chat-history (pré-existant) + pro:competitor-setup + pro:influencer-tracker + pro:report-schedule + pro:period-compare + pro:filters + pro:dashboard-layout (6 nouvelles clés, toutes usePersistentState-backed, SSR-safe, ~5MB budget)
 - 27 sections affichées (25 originales + 2 nouvelles : report-scheduler après historique-rapports, influencer-tracker après top-influenceurs), ordre réorganisable via drag-drop
+
+---
+Task ID: R2-ENTERPRISE-A
+Agent: AURA — Enterprise Round 2
+Task: Add 3 level-2 features to EnterpriseDashboard
+Work Log:
+- Read tail of worklog.md + baseline tsc --noEmit (EXIT 0) on 8039-line EnterpriseDashboard.tsx.
+- Audited existing structure: 6 ENV-ENTERPRISE cards (sections 26-30) all `lg:col-span-12`, usePersistentState hook at line 718, COMPLIANCE_INITIAL with 4 regulators (CNDP/AMMC/BAM/ESG), existing design tokens (SAGE #4A7B5F, NEGATIVE #EF4444, NEUTRAL_AMBER #F59E0B), cardMotion + containerStagger presets, AiCommentary + SectionHeader + CardShell shared atoms.
+- Updated date-fns import (line 150): added addDays, eachDayOfInterval, endOfMonth, endOfWeek, isSameDay, isSameMonth, startOfMonth, startOfWeek (all 8 needed for monthly calendar grid).
+- Added ChevronLeft to lucide-react imports (ChevronRight already present).
+- Inserted 3 new component blocks before MAIN (line 7716 → expanded to ~8740):
+  • SECTION 31 — RiskHeatmapMatrixCard: 5×5 CSS-grid matrix (Probability × Impact, score 1-25), risk dots per cell colored by category, click-to-select detail panel (name/description/probability/impact/owner/deadline/mitigation/delete), summary strip (total/critiques/élevés/par-catégorie), category key, "Ajouter un risque" inline form (name/desc/probability/impact/category/owner/deadline/mitigation), RISK_MATRIX_INITIAL seed with 5 risks (1 per category: geopolitical sanctions, regulatory CNDP/AMMC, reputational bad-buzz, operational cloud outage, ESG Scope 3).
+  • SECTION 32 — RegulatoryCalendarCard: monthly calendar (Lun→Dim), prev/next month navigation, days with per-regulator color dots (CNDP=sage #4A7B5F, AMMC=slate #475569, BAM=amber #F59E0B, ESG=green #10B981, GDPR=red #EF4444), today indicator (sage filled circle), click-day-with-deadline → detail panel (regulator badge/title/date/exigence/documents/team/status/delete), "Ajouter une échéance" inline form, sidebar with next-3 upcoming deadlines + overdue alert, REG_CALENDAR_INITIAL seed with 4 deadlines (1 per existing regulator AMMC/CNDP/BAM/ESG).
+  • SECTION 0 — KpiExecutiveSummaryRow: 4 board-ready KPI cards (120px min-height, 8px radius, subtle shadow) at top of dashboard — (1) Score Réputation (big number + Delta + sparkline from sentimentTrend last 7d), (2) Coverage Médiatique (mentions count + reach estimate + top 3 sources), (3) Conformité (overall label Conforme/Surveillance/Non-conforme + 4 regulator status badges with tooltip), (4) Risk Index (X critiques + Y élevés + trend arrow maîtrisé/pressurisé/stable). Each card has "DÉTAILS →" link calling scrollToSection.
+- Added 2 new usePersistentState hooks in MAIN (line 8764-8765): risksState ("enterprise:risk-matrix"), regCalendarState ("enterprise:reg-calendar").
+- Rendered KpiExecutiveSummaryRow at top of <main> (line 8922) BEFORE the existing motion.div grid (uses its own motion.div grid container with mb-4 + containerStagger).
+- Rendered RegulatoryCalendarCard after ComplianceCockpitCard (line 9023) — places it in the compliance section as requested.
+- Rendered RiskHeatmapMatrixCard after MultiMarketReputationMapCard (line 9038) — places it after the market map as requested.
+- Updated footer count "30 sections" → "33 sections" (line 9085).
+- Re-ran NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT CODE 0 (0 errors).
+- Verified both new localStorage keys present (lines 8764-8765) and 3 new component references rendered (lines 8923, 9023, 9038).
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (8039 → 9100 lines, +1061 net)
+- 3 new level-2 features added: (1) Risk Heatmap Matrix 5×5 with click-to-detail + add-risk form, (2) Regulatory Calendar with monthly view + per-regulator colors + next-3 sidebar, (3) KPI Executive Summary row (4 board-ready cards) at top of dashboard.
+- 2 new localStorage keys: enterprise:risk-matrix (5 seeded risks, 1 per category), enterprise:reg-calendar (4 seeded deadlines, 1 per regulator AMMC/CNDP/BAM/ESG).
+- 1 new lucide icon imported (ChevronLeft); 8 new date-fns functions imported (addDays, eachDayOfInterval, endOfMonth, endOfWeek, isSameDay, isSameMonth, startOfMonth, startOfWeek).
+- Design parity preserved: white bg, sage accents, charcoal text, Space Mono headers (10px uppercase 0.08em), Inter body, 1px borders #F0F0F0, 8-12px radius, Lucide icons 13-16px, NO emojis, French throughout, executive tone.
+- TypeScript: tsc --noEmit → 0 errors.
+- No other dashboard files touched. Existing 6 ENV-ENTERPRISE features and 25 base sections unchanged.
+
+---
+Task ID: R2-PRO-A
+Agent: AURA — Pro Round 2
+Task: Add 3 level-2 features to ProDashboard
+
+Work Log:
+- Lu worklog.md tail (300 lignes) — confirmé ENV-PRO livré sur ProDashboard.tsx (7931 lignes, 6 features, 27 sections, usePersistentState hook, 7 localStorage keys). Fichier cible operationnel.
+- Lu ProDashboard.tsx en chunks: header (1-230), types/constants (555-728), usePersistentState hook (928-958), UI atoms (960-1140), Sidebar/Header (1144-1580), HarchIQWorkspace (1696-2295), BenchmarkConcurrentielTable (3469-3697), PeriodCompareToggle/DeltaBadge/SortableWidget (6299-6443), InfluencerTrackerWidget (6447-6830), ReportSchedulerPanel (6832-7260), ProFilterBar (7262-7557), DEFAULT_WIDGET_ORDER + main ProDashboard (7559-7931).
+- Confirmé imports existants (146 Lucide icons, @dnd-kit/core + sortable + utilities, shadcn Dialog/Input/Label/Checkbox/Card/Badge/Button/Progress/Switch/Tabs/Separator/Skeleton/Tooltip, recharts complet, framer-motion, sonner). 'use client' directive present.
+- Étape 1 — Imports : ajouté 4 nouveaux icônes Lucide en ordre alphabétique : BellRing (après Bell), MessageCircle (après MessageSquare), Play (après Palette), Trash2 (après TrendingUp). Tous utilisés au moins 2 fois (import + usage).
+- Étape 2 — Types & constantes : inséré après DEFAULT_PRO_FILTERS (line 626) — FilterPreset interface + MAX_FILTER_PRESETS=10 const ; AlertRuleConditionKind (4 kinds) + AlertRuleCondition union discriminée + AlertRuleAction (4) + AlertRuleSeverity (3) + AlertRule interface + ALERT_CONDITION_LABELS/ACTION_LABELS/SEVERITY_LABELS/SEVERITY_COLORS records + SEED_ALERT_RULES (2 règles seed : "Chute du score de réputation" score<45 email critique + "Pic de mentions négatives" sent>35% in_app warning) ; WatchlistFavorite interface.
+- Étape 3 — Feature 1: Saved Filter Presets (extension ProFilterBar) :
+  • Modifié signature ProFilterBar — ajouté props presets/onSavePreset/onApplyPreset/onDeletePreset + 2 useState (saveDialogOpen, presetName) + handleSave callback (trim+validate+onSavePreset+reset)
+  • Remplacé section Reset (lignes 7536-7557) par bloc Reset+Save preset (ml-auto wrapper avec Réinitialiser conditionnel sur activeCount>0 + Sauvegarder bouton sage) + Saved presets row (Mes préférences label + chips clicables sage-bg avec Filter icon + name + X delete button stopPropagation) + Dialog save (name Input maxLength 50 autoFocus Enter-to-save + char counter + presets count + Annuler/Sauvegarder buttons sage)
+  • Footer ProFilterBar fermé proprement, Dialog inclus dans le sticky container
+- Étape 4 — Feature 2: AlertRulesBuilder component (avant DEFAULT_WIDGET_ORDER, lg:col-span-12) :
+  • State persistant via usePersistentState<AlertRule[]>("pro:alert-rules", SEED_ALERT_RULES) — SSR-safe
+  • Form state local : name, condKind (4 kinds), threshold/sentPct/mentions24h/source/keyword (dynamique selon condKind), action (4), severity (3)
+  • resetForm (useCallback), startEdit (pré-remplit form depuis règle existante), handleSaveRule (valide, construit condition typée, update si editingId sinon unshift new rule), handleDelete, handleToggle, handleTest (set lastTriggeredAt + toast.success avec description simulée)
+  • Visual form (collapsible) : grid 2-col (Nom + Sévérité 3-button toggle colorée) + grid 2-col (Condition select + Threshold input dynamique avec range slider sage pour score/sentiment, number input pour mentions, source select + keyword input pour source_keyword) + grid 2-col (Action 4-button grid avec icônes Mail/MessageCircle/Share2/BellRing + Annuler/Sauvegarder sage)
+  • Rules list : carte par règle avec Switch toggle + nom + severity badge coloré (info bleu/warning amber/critique rouge) + lastTriggeredAt relatif + condition→action flow avec ArrowRight entre chips sage-bg/gray-bg + boutons Tester (Play sage)/Modifier (PenSquare)/Supprimer (Trash2 rouge) avec Tooltips
+  • Active count badge (X/Y actives) en header + AiCommentary insight en footer
+  • Carte opacity 0.6 + bg #FAFAFA quand règle disabled
+- Étape 5 — Feature 3: CompetitorWatchlist + WatchlistCompetitorCard + CompetitorCompareModal (avant DEFAULT_WIDGET_ORDER) :
+  • CompetitorWatchlist (lg:col-span-12) : usePersistentState<WatchlistFavorite[]>("pro:competitor-favorites", []) + useMemo allCompetitors (filtre radar.brands non-you, calcule sovPct depuis sov.competitors total, velocity 7 points déterministe depuis seed name+score, scoreDelta déterministe, sentimentSplit pos/neu/neg) + useEffect auto-seed top 3 favoris quand radar load et favorites vides + useMemo pinned (filtre allCompetitors par favorites set, slice 5)
+  • handleStar (toggle favori, bloque à 5 max avec toast.error), handleCompare (set compareTarget+open)
+  • Header : title "28 · Watchlist Concurrents" + compteur X/5 épinglés (sage-bg si 5 atteint)
+  • Grid 3-col responsive de WatchlistCompetitorCard + slot "ÉPINGLER UN CONCURRENT" dashed si <5 (scrollToSection concurrents)
+  • Compare modal déclenché sur clic Comparer
+  • WatchlistCompetitorCard : header (initials badge sage + nom ellipsis + star fill sage pour unpin) + score bloc (/100 + delta ArrowUp/Down/Minus coloré pos/neg/gray) + grid 3-col (SOV PieChart donut innerRadius 14 outerRadius 22 + valeur % ; Sentiment BarChart vertical 3 bars Pos/Neu/Nég avec couleurs + légende +x/-y) + Mentions 7j LineChart sparkline 36px sage + bouton Comparer (ArrowLeftRight sage-bg full-width)
+  • CompetitorCompareModal (Dialog 560px) : header "Comparaison détaillée" + grid 3-col header (MÉTRIQUE/VOUS/NOM) + 6 rows (Score/Sentiment/SOV/Visibilité IA/Reach média/Mentions) avec winner en sage + ▲ pos + AiInsight contextualisé (youWins/6 → capitalise vs investis vs révision stratégique) + Fermer/Compris buttons
+- Étape 6 — Wiring main ProDashboard :
+  • Ajouté state filterPresets via usePersistentState<FilterPreset[]>("pro:filter-presets", [])
+  • Ajouté 3 useCallback : handleSavePreset (unshift newPreset + slice MAX_FILTER_PRESETS si dépasse), handleApplyPreset (setFilters + toast.info), handleDeletePreset (filter + toast.info)
+  • Ajouté 2 entrées au widgets map : "competitor-watchlist" → <CompetitorWatchlist radar sov loading={radarLoading} /> après benchmark-concurrents, "alert-rules-builder" → <AlertRulesBuilder /> après recherches-alertes
+  • Ajouté 2 IDs au DEFAULT_WIDGET_ORDER : "competitor-watchlist" après "benchmark-concurrents" (section 11), "alert-rules-builder" après "recherches-alertes" (section 18)
+  • Modifié appel <ProFilterBar> : passé presets={filterPresets} onSavePreset={handleSavePreset} onApplyPreset={handleApplyPreset} onDeletePreset={handleDeletePreset}
+  • Updated footer text : "27 sections" → "29 sections"
+- Étape 7 — Quality checks :
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → 0 erreurs sur ProDashboard.tsx (vérifié via filtre rg "ProDashboard" → aucun match). 1 erreur pré-existante dans EssentialDashboard.tsx (ligne 6245, R2-ESSENTIEL-A WIP d'un autre agent — onRedoTour prop ajouté à call site sans update signature QuickStartCard — NON mon fichier, règle "Do NOT touch other dashboard files" respectée).
+  • bunx eslint src/app/atelier/console/pro/ProDashboard.tsx → EXIT_CODE=0, 0 errors, 1 warning pré-existant (TanStack Table useReactTable incompatible-library à ligne 3668 — pré-existant de ENV-PRO, non introduit par cette task).
+  • Vérifié 3 nouvelles localStorage keys présentes : pro:filter-presets, pro:alert-rules, pro:competitor-favorites — toutes usePersistentState-backed (SSR-safe, quota-safe).
+  • Vérifié design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px (BellRing/MessageCircle/Play/Trash2/Save/Star/Filter/ArrowRight/ArrowLeftRight/AlertTriangle/PenSquare/Plus/Minus/ArrowUp/ArrowDown/X/Sparkles/Mail/Share2), no emojis, French throughout.
+
+Stage Summary:
+- Fichier cible : /home/z/my-project/src/app/atelier/console/pro/ProDashboard.tsx (7931 → 9220 lignes, +1289 lignes net)
+- 3 level-2 features livrées (toutes persisted localStorage via usePersistentState hook, SSR-safe, quota-safe) :
+  1. Saved Filter Presets — extension ProFilterBar avec bouton "Sauvegarder" sage à côté de "Réinitialiser", modal Dialog avec Input nom (maxLength 50, autoFocus, Enter-to-save, char counter, presets count), preset chips clicables (sage-bg, Filter icon, name, X delete stopPropagation) sous label "Mes préférences", click chip applique tous les filtres instantanément, max 10 presets (oldest deleted via slice quand dépasse), persistance "pro:filter-presets", 3 handlers dans main (handleSavePreset/ApplyPreset/DeletePreset)
+  2. Alert Rules Builder — nouvelle section 27 full-width (lg:col-span-12), rule builder form collapsible (Nom + Sévérité 3-toggle + Condition select 4 types avec input dynamique threshold/slider/source+keyword + Action 4-button grid Mail/WhatsApp/Slack/In-app + Save/Cancel), active rules list (Switch toggle + nom + severity badge coloré + lastTriggeredAt relatif + condition→action flow avec ArrowRight entre chips + boutons Tester/Modifier/Supprimer avec Tooltips), "Tester la règle" simule déclenchement avec toast.success description, persistance "pro:alert-rules", seed 2 règles ("Chute du score" critique email + "Pic mentions négatives" warning in-app), AiCommentary insight en footer
+  3. Competitor Watchlist — nouvelle section 28 full-width (lg:col-span-12), pinned competitors max 5 (auto-seed top 3 au premier load radar), par carte : score /100 + delta vs last week (ArrowUp/Down/Minus coloré), SOV PieChart donut + valeur %, sentiment BarChart vertical 3 bars Pos/Neu/Nég + légende, mention velocity LineChart sparkline 7 points sage, bouton "Comparer" + star toggle fill sage par carte, slot "ÉPINGLER UN CONCURRENT" dashed si <5 (scroll to concurrents), Comparer modal Dialog 560px side-by-side (6 métriques : Score/Sentiment/SOV/Visibilité IA/Reach/Mentions, winner en sage + ▲, AiInsight contextualisé selon youWins/6), persistance "pro:competitor-favorites"
+- Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, no dark mode
+- Tone Pro respecté : analyse avancée (alert rules builder), benchmarking concurrentiel (watchlist + compare modal), customisation (saved filter presets), ROI mesurable (alertes testables, comparaison chiffrée)
+- 0 régression sur les 27 sections existantes (toutes préservées, juste 2 nouvelles insérées dans DEFAULT_WIDGET_ORDER — competitor-watchlist après benchmark-concurrents, alert-rules-builder après recherches-alertes — et ProFilterBar étendue avec props optionnelles additionnelles)
+- Code quality : tsc 0 erreurs sur ProDashboard (1 erreur pré-existante dans EssentialDashboard.tsx R2-ESSENTIEL-A WIP non mon fichier, non touchée), eslint 0 errors 1 warning pré-existant TanStack Table
+- 3 nouvelles localStorage keys : pro:filter-presets, pro:alert-rules, pro:competitor-favorites — toutes usePersistentState-backed (SSR-safe, quota-safe). Total Pro dashboard localStorage keys : 10 (7 pré-existantes + 3 nouvelles).
+- 29 sections affichées (27 originales + 2 nouvelles : competitor-watchlist section 11 après benchmark-concurrents, alert-rules-builder section 18 après recherches-alertes), ordre réorganisable via drag-drop existant
+- 4 nouveaux icônes Lucide ajoutés (BellRing, MessageCircle, Play, Trash2) — tous utilisés au moins 2 fois (import + usage)
+
+---
+Task ID: R2-AGENCY-A
+Agent: AURA — Agency Round 2
+Task: Add 3 level-2 features to AgencyDashboard
+
+Work Log:
+- Lu worklog.md tail (ENV-AGENCY, KAEL-1/2, AURA-AUDIT-1, R2-ENTERPRISE) — fichier cible AgencyDashboard.tsx (10309 lignes, déjà 6 features ENV-AGENCY: tier badge, onboarding wizard, commission calc, portal preview, pitch pipeline, workload balancer + usePersistentState hook + 25 sections existantes).
+- Lu AgencyDashboard.tsx en chunks : header + imports (1-220), design tokens + types (220-580), usePersistentState hook (842-875), shared UI atoms (877-1050), CommissionCalculatorCard pattern (7815-8034), PitchPipelineCard pattern (8336-8615), root AgencyDashboard render tree (9495-10309).
+- Étape 1 — Imports Lucide : 10 nouveaux icônes ajoutés en ordre alphabétique — Activity, CalendarClock, Flag, HeartPulse, Hourglass, LifeBuoy, Lightbulb, SlidersHorizontal, Target, Wallet. MultiEdit atomique sur le bloc lucide-react (7 edits ciblés) — pas de régression sur les 47 icônes existants.
+- Étape 2 — Types : 6 nouveaux types ajoutés après WorkloadMember (l. 587-633) — HealthFactor, ClientHealth, HealthBand, ChurnRiskEntry, ChurnBand, ChurnRiskState, RevenueForecastInput. Tous persisted via usePersistentState (même pattern que ENV-AGENCY).
+- Étape 3 — Helpers partagés : 4 nouvelles fonctions pures (hashStr FNV-1a pour sparklines déterministes, monthsSince pour rétention, healthBandFor + healthBandStyle pour 4 bands Excellent/Bon/À surveiller/À risque, churnBandFor + churnBandStyle pour 4 bands Fidèle/Stable/Volatile/Churn imminent). Aucune collision avec helpers existants.
+- Étape 4 — FEATURE 1 · ClientHealthScoringCard (l. 9207-9505, ~298 lignes) :
+  • Score 0-100 par client calculé depuis 5 facteurs pondérés : Tendance sentiment (30%, depuis derivedClientSentiment), Velocity des mentions (15%, depuis bars.apiRequests.pct), Alertes crisis (25%, depuis usage.whatsappAlerts — 100 - alerts×15), Engagement (15%, depuis usage.apiRequests/5000), Rétention mois (15%, depuis createdAt/24 mois cap).
+  • Aggregate strip 5 colonnes en haut : Santé moyenne + 4 bandes colorées (sage/sage-dim/amber/red) avec compteurs.
+  • Per-client rows : avatar 44×44 avec score, nom + rétention + bande, sparkline AreaChart 80×32 (6 mois déterministes depuis hashStr(clientId), drift baissier si score<60, haussier si >80), chevron expand.
+  • Expandable : Top 3 facteurs de risque (triés par impact desc, barres de progression colorées sage/amber/red selon impact) + ajustement manuel ±5 + bouton "Plan d'action" qui affiche 4 actions contextuelles (audit/brief/renforcement/plan pour <40, monitoring/brief/plan/review pour 40-59, optimisation/couverture/review/cross-sell pour 60-79, excellence/case study/cross-sell/upscale pour 80+).
+  • Manual overrides persistés dans localStorage "agency:client-health-overrides" (Record<string, number>) — badge "N ajustement(s) manuel(s)" dans header, bouton Réinitialiser par client.
+  • States : loading (3 Skeleton), empty (HeartPulse + message), populated (aggregate + rows).
+- Étape 5 — FEATURE 2 · ChurnRiskIndicatorCard (l. 9592-9882, ~290 lignes) :
+  • Risk 0-100% par client calculé depuis 4 facteurs pondérés : Baisse d'usage (30%, 100 - apiPct), Chute sentiment (30%, negative×2 cap 100), Tickets support (20%, whatsappAlerts×20 cap 100), Proximité échéance (20%, cycleMonth%12 / 11 × 100).
+  • 4 bandes : Fidèle (0-25%, sage, sans pulse), Stable (26-50%, sage-dim), Volatile (51-75%, amber), Churn imminent (76-100%, red, pulse-dot animation 1.4s).
+  • Aggregate strip 4 colonnes en haut : compteurs par bande avec dot pulse si imminent.
+  • 2 metrics cards : Prévision churn mensuel (count risk≥76, red si >0) + Revenu menacé (sum monthlyRevenueMAD pour risk≥51, amber si >0, format MAD).
+  • Campaign status banner (si campaignLaunchedAt !== null) : CheckCircle2 + "Campagne active · lancée il y a N jour(s) · X/Y traité(s)".
+  • Top 3 at-risk clients (filter !fidele, slice 3, sort desc) : rank badge 36×36, displayName + risk% avec pulse dot si imminent, échéance contrat (createdAt + 12 mois renouvelable) + revenu mensuel, action recommandée contextuelle (Renégocier/Plan rétention/Quarterly review/Cross-sell), 4 chips facteurs avec pct coloré, bouton Reconnaître → Traité.
+  • Bouton "Lancer campagne de rétention" (disabled si topRisk.length === 0) — set campaignLaunchedAt=now + toast success "Campagne lancée · N client(s) ciblé(s) · M MAD/mois menacés".
+  • State persisté dans "agency:churn-risk" (ChurnRiskState : campaignLaunchedAt + acknowledgedClientIds[]).
+- Étape 6 — FEATURE 3 · RevenueForecastingCard (l. 9936-10287, ~351 lignes) :
+  • 12-month projection LineChart avec 3 scenarios : Conservateur (gray dashed, MRR×(1-churn) récursif, no growth), Réaliste (sage solid 2.5px, MRR×(1-churn) + pipeline×winRate/12 chaque mois), Optimiste (sage-dim dashed, Réaliste + MRR×upsell composé).
+  • 5 sliders range éditables : currentMRR (0-300k, step 1k, default 52000), pipelineValue (0-200k, step 1k, default 47000), churnRatePct (0-30%, step 1, default 5%), winRatePct (0-100%, step 5, default 30%), upsellPct (0-30%, step 1, default 15%). Auto-sync one-shot du MRR depuis clients (sum quota.monthlyPriceMAD) si user n'a pas ajusté manuellement.
+  • ReferenceLine horizontale sur le chart au seuil MRR du tier supérieur (nextTier.minClients × avgRetainer) — label "Tier {next} · {MRR}" position insideTopRight, dashed sage.
+  • 4 output metrics cards en bas : MRR M+12 Réaliste (sage-deep), ARR Réaliste (charcoal, MRR×12), ARR Optimiste (sage-dim), Tier {next} dans X mois (sage-bg si threshold atteint, >12 mois sinon, "Atteint" si pas de nextTier).
+  • Milestone marker "Tier {next} dans X mois" en haut à droite (badge sage-bg avec Flag icon) — calculé en trouvant le 1er mois où realiste >= thresholdMRR.
+  • Inputs persistés dans "agency:revenue-forecast" (RevenueForecastInput : 5 champs). useEffect one-shot avec eslint-disable-next-line react-hooks/set-state-in-effect pour sync initial MRR (même pattern canonique que usePersistentState).
+  • Quarterly gridlines via CartesianGrid strokeDasharray="3 3", month labels M+1..M+12 avec interval={0}.
+- Étape 7 — Render tree wiring :
+  • 3 motion.div wrappers insérés dans le grid principal (lg:col-span-12 chacun) avec id="client-health", id="churn-risk", id="revenue-forecast" pour anchor nav.
+  • ClientHealthScoringCard + ChurnRiskIndicatorCard après Row 3 (Portfolio + Campaign, l. 11294) — placement "dans la section portefeuille" conforme au brief.
+  • RevenueForecastingCard après CommissionCalculatorCard (l. 11353) — conforme au brief "after commission calculator".
+  • Props : clients + clientsLoading (health), clients + clientsLoading + onToast=pushToast (churn), tier=activeTier + clients (forecast).
+  • Footer mis à jour : "6 ENV-AGENCY features · 3 R2-AGENCY features" (était "6 ENV-AGENCY features").
+- Étape 8 — Quality checks :
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT=0, 0 errors dans AgencyDashboard.tsx (vérifié via grep "AgencyDashboard|R2-AGENCY" → 0 lignes).
+  • 0 régression sur les 25 sections existantes et les 6 features ENV-AGENCY (aucune motion.div existante modifiée — seulement 3 nouveaux insérés + 1 ligne footer).
+  • Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px, no emojis, French throughout, tone agency/commercial (focus revenu/churn/rétention).
+  • localStorage keys : agency:client-health-overrides, agency:churn-risk, agency:revenue-forecast — 3 nouvelles clés, toutes usePersistentState-backed (SSR-safe, ~5MB budget).
+  • Aucun autre fichier dashboard touché (constraint respectée : EssentialDashboard, ProDashboard, EnterpriseDashboard intacts).
+
+Stage Summary:
+- Fichier cible : /home/z/my-project/src/app/atelier/console/agency/AgencyDashboard.tsx (10309 → 11566 lignes, +1257 lignes net).
+- 3 features R2-AGENCY-A livrées (toutes persisted localStorage via usePersistentState, toutes client-side, aucune API backend requise) :
+  1. Client Health Scoring — score 0-100 par client (5 facteurs pondérés : sentiment 30%, velocity 15%, crisis 25%, engagement 15%, rétention 15%), 4 bands (Excellent/Bon/À surveiller/À risque), aggregate strip 5 colonnes, per-client rows avec sparkline AreaChart 6 mois déterministe, expandable top-3 facteurs de risque + ajustement manuel ±5 + plan d'action contextuel 4 items selon bande. Persisté dans "agency:client-health-overrides".
+  2. Churn Risk Indicator — risk 0-100% par client (4 facteurs pondérés : usage decline 30%, sentiment drop 30%, support tickets 20%, contract end proximity 20%), 4 bands (Fidèle/Stable/Volatile/Churn imminent avec pulse-dot animation), aggregate strip 4 colonnes, prévision churn mensuel + revenu menacé MAD/mois, top-3 at-risk avec rank badge + échéance contrat + action recommandée + 4 chips facteurs, bouton "Lancer campagne de rétention" + acknowledge "Traité". Persisté dans "agency:churn-risk".
+  3. Revenue Forecasting Chart — LineChart 12 mois 3 scenarios (Conservateur gray dashed, Réaliste sage solid, Optimiste sage-dim dashed), 5 sliders éditables (MRR, pipeline, churn, win rate, upsell), ReferenceLine seuil tier supérieur, 4 output metrics (MRR M+12, ARR Réaliste, ARR Optimiste, mois vers tier suivant), milestone marker "Tier X dans Y mois". Persisté dans "agency:revenue-forecast".
+- Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, tone agency/commercial (focus revenu, client-facing polish).
+- 10 nouveaux icônes Lucide importés en ordre alphabétique (Activity, CalendarClock, Flag, HeartPulse, Hourglass, LifeBuoy, Lightbulb, SlidersHorizontal, Target, Wallet) — préservé les 57 icônes existants.
+- 6 nouveaux types TypeScript (HealthFactor, ClientHealth, HealthBand, ChurnRiskEntry, ChurnBand, ChurnRiskState, RevenueForecastInput) + 8 nouvelles fonctions helpers (hashStr, monthsSince, healthBandFor, healthBandStyle, computeClientHealth, actionPlanFor, churnBandFor, churnBandStyle, computeChurnRisk, simulateForecast).
+- 0 régression sur les 25 sections existantes + 6 features ENV-AGENCY (aucune motion.div existante modifiée, seulement 3 nouveaux insérés + 1 ligne footer).
+- Code quality : tsc --noEmit → 0 errors dans AgencyDashboard.tsx (vérifié via grep filtré).
+- 3 nouvelles localStorage keys : agency:client-health-overrides, agency:churn-risk, agency:revenue-forecast — toutes usePersistentState-backed (SSR-safe, quota-safe). Total Agency dashboard localStorage keys : 9 (6 ENV-AGENCY + 3 R2-AGENCY-A).
+
+---
+Task ID: R2-ESSENTIEL-A
+Agent: AURA — Essentiel Round 2
+Task: Add 3 level-2 features to EssentialDashboard
+
+Work Log:
+- Lu worklog.md tail (ENV-ESSENTIAL, ENV-PRO, ENV-AGENCY, ENV-ENTERPRISE) — fichier cible EssentialDashboard.tsx (5647 lignes, déjà ENV-ESSENTIAL avec 6 features: onboarding banner, quota widget, quick start, help tooltips, empty states, milestones)
+- Lu EssentialDashboard.tsx en chunks: imports (1-160), types (180-380), usePersistentState (566-605), Header (1132-1328), QuickStartCard (4834-4932), BoiteOutilsCard (4301-4490), MAIN (5161-5647), constants (5129-5178)
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter), usePersistentState hook (line 572), framer-motion + shadcn/ui + recharts + lucide-react tous présents
+- Confirmé IDs sections existants: ai-workspace (1564), score (2092), sources (2730), sujets (3361), alertes (3512), jalons (5077) — manque "rapports" pour le tour (à ajouter à BoiteOutilsCard)
+- Étape 1 — Imports: ajouté 2 nouveaux icônes Lucide (Volume2 pour bouton Écouter, CheckCheck pour bouton Tout marquer comme lu), placés en ordre alphabétique. Bell toujours utilisé (NAV_ITEMS + AlertesActivesKpi + QuickStartCard + NotificationBell), AlertTriangle conservé (Header alertes bell + IndicateurCriseCard + Rappel Dircom).
+- Étape 2 — Types: ajouté interface NotificationItem après MilestoneState (id, type crise|rapport|quota, title, body, createdAt epoch ms, read bool, target section ID pour scroll-to)
+- Étape 3 — Constantes R2-ESSENTIEL-A (insérées après INITIAL_MILESTONES, avant MAIN):
+  • NOTIF_DOT_COLOR: Record<type, string> — crise=NEGATIVE #EF4444 (red), rapport=SAGE #4A7B5F (sage), quota=NEUTRAL_AMBER #F59E0B (amber)
+  • makeSeedNotifications(): factory 3 notifications seedées (Pic d'activité négative 35min / Rapport hebdo prêt 3h / Quota 80% 6h), factory pattern pour timestamps frais à chaque mount (évite hydration mismatch)
+  • TOUR_STEPS: 5 étapes (score → ai-workspace → sources → alertes → rapports), chacune avec target ID + title + description
+- Étape 4 — 3 nouveaux composants (insérés avant MAIN, après TOUR_STEPS):
+  • DailyBriefingCard (composant #7) — prend userName, health, sources, briefingDate, onViewed. Calcule briefing text dynamique: "Bonjour [firstName]. Aujourd'hui: X article(s), sentiment Y%, [source] dominant, [crisis label]." à partir de health.mentionCount24h + health.sentiment.positive + sources.sources[0].name + health.crisisLevel (map safe→"aucune crise détectée", watch→"vigilance crise modérée", warning→"alerte crise élevée", critical→"crise critique en cours"). Bouton "Écouter" → window.speechSynthesis (guard typeof window + 'speechSynthesis' in window), SpeechSynthesisUtterance avec lang='fr-FR', rate=1, pitch=1, recherche voice française via getVoices().find(v => v.lang.toLowerCase().startsWith('fr')), cancel() avant speak() pour éviter overlap, toast.success + onViewed(). Bouton "Recevoir sur WhatsApp" → toast.success simulé + onViewed(). Badge "NOUVEAU" quand briefingDate !== today (persisté essential:briefing-date). Timestamp monospace "Généré à HH:mm". Sage accent border + SAGE_BG block avec borderLeft 3px sage pour le briefing text. Header avec Sun icon (déjà importé) + label "Briefing du jour" + date format EEEE d MMMM (date-fns locale fr).
+  • NotificationBell (composant #8) — prend notifications, expanded, onToggle, onMarkAllRead, onClickNotification. Bell icon (18px) avec badge unread count (number, red bg, white border, max "9+"). Tooltip hover. Dropdown panel (340px width, absolute right-0 top-full) avec motion.div animation (opacity+y). Header "NOTIFICATIONS" + bouton "Tout marquer comme lu" (CheckCheck icon, sage uppercase, visible seulement si unread > 0). Empty state "Aucune notification. Vous êtes à jour." avec CheckCircle2 icon dans dashed sage circle (36px). Liste scrollable (max-h 360px) avec chaque notif: dot color (6px circle, NOTIF_DOT_COLOR), icon (AlertTriangle/FileText/KeyRound selon type), title (bold si unread, medium si read), body, timestamp relatif via fmtRelative (il y a X min/h/j). Click-outside overlay (fixed inset-0 z-40) pour fermer.
+  • GuidedTour (composant #9) — prend active, step, onNext, onSkip. State local rect (DOMRect | null). useEffect sur [active, step]: si !active, setRect(null) (eslint-disable react-hooks/set-state-in-effect, canonical reset pattern) + return; sinon scrollIntoView smooth center sur target, setTimeout 400ms pour measure rect après smooth scroll, addEventListener scroll+resize (capture true pour scroll) pour re-measure. Cleanup clearTimeout + removeEventListener. Si !active || !rect → return null. Spotlight overlay: fixed div positionné à rect (left-8, top-8, width+16, height+16), boxShadow "0 0 0 9999px rgba(10,10,10,0.65)" pour créer masque dark avec trou transparent, border 2px sage, borderRadius 12, transition 0.3s cubic-bezier(0.16,1,0.3,1), pointerEvents none. Tooltip card (320px, fixed position): positionnement dynamique (tooltipBelow si rect.bottom + 220 < innerHeight, sinon above), left clampé entre 16 et innerWidth-336. motion.div animation (opacity+y delay 0.1). Progress dots (5 dots, sage plein pour step courant 20px wide, SAGE_DIM pour passé 6px, BORDER_STRONG pour futur 6px), compteur "X/5". Title 14px bold + description 12px TEXT_BODY. Actions: bouton "Suivant" (sage bg, ArrowRight icon, devient "Terminer" sur dernière étape) + bouton "Passer le tour" (TEXT_MUTED uppercase).
+- Étape 5 — Modified Header signature: ajouté 5 props (notifications, notifExpanded, onToggleNotifs, onMarkAllNotifsRead, onClickNotif). Rendu <NotificationBell> entre QuotaUsageWidget et bell alertes existant. Modifié bell alertes existant: icon Bell → AlertTriangle (sémantique plus claire pour crise), aria-label "Notifications" → "Alertes crise", tooltip "X alerte(s)" → "X alerte(s) crise" — pour désambiguïser le bell alertes du bell notifications. NotificationBell utilise Bell icon (nombre badge), alertes bell utilise AlertTriangle (dot badge seulement). Les deux bells sont visuellement distincts.
+- Étape 6 — Modified QuickStartCard signature: ajouté prop onRedoTour. Ajouté "Refaire le tour" link en bas de la card (borderTop SAGE_DIM, Sparkles icon 11px, sage uppercase 10px, hover opacity-80).
+- Étape 7 — Modified BoiteOutilsCard motion.div: ajouté id="rapports" (pour target du tour step 5)
+- Étape 8 — Modified MAIN EssentialDashboard:
+  • 3 nouveaux hooks usePersistentState: notifications ("essential:notifications", []), tourCompleted ("essential:tour-completed", false), briefingDate ("essential:briefing-date", "")
+  • 4 nouveaux useState: hydrated (false), notifExpanded (false), tourActive (false), tourStep (0)
+  • 3 nouveaux useEffect: (1) setHydrated(true) sur mount — flag pour attendre hydration usePersistentState avant de lancer le tour ou seeder les notifs, (2) seed notifications si !hydrated return + setNotifications(prev => prev.length === 0 ? makeSeedNotifications() : prev) — seeder seulement si array vide après hydration (première visite), (3) auto-launch tour si !hydrated return + if (!tourCompleted) setTourActive(true) — déclenche le tour sur première visite si non complété
+  • 7 nouveaux useCallback handlers:
+    - handleToggleNotifs: setNotifExpanded(v => !v)
+    - handleMarkAllNotifsRead: setNotifications(prev => prev.map(n => ({...n, read: true})))
+    - handleClickNotif(n): setNotifications(prev => prev.map(item => item.id === n.id ? {...item, read: true} : item)) + setNotifExpanded(false) + scrollToSection(n.target)
+    - handleStartTour: setTourStep(0) + setTourActive(true) — re-trigger manuel depuis QuickStart "Refaire le tour"
+    - handleTourNext: setTourStep(s => { if (s+1 >= TOUR_STEPS.length) { setTourActive(false); setTourCompleted(true); toast.success("Tour guidé terminé"); return s; } return s+1; }) — avance ou termine
+    - handleTourSkip: setTourActive(false) + setTourCompleted(true) — "Passer le tour" marque comme complété pour éviter re-auto-launch
+    - handleBriefingViewed: setBriefingDate(todayISO()) — persiste la date de dernière consultation
+  • Header call: ajouté 5 props (notifications, notifExpanded, onToggleNotifs, onMarkAllNotifsRead, onClickNotif)
+  • QuickStartCard call: ajouté prop onRedoTour={handleStartTour}
+  • Nouveau <DailyBriefingCard> rendu après QuickStartCard (avant ScoreReputationCard) avec userName, health, sources, briefingDate, onViewed
+  • Nouveau <GuidedTour> rendu à la fin du root div (portal-level overlay, après main column closing div, avant root closing div) avec active, step, onNext, onSkip
+  • Footer text updated: "v10X · ENV-ESSENTIEL" → "v10X · ENV-ESSENTIEL · R2-ESSENTIEL-A"
+- Étape 9 — Quality checks:
+  • Ajouté eslint-disable-next-line react-hooks/set-state-in-effect sur setRect(null) dans GuidedTour useEffect (pattern canonique cleanup, false positive du rule React Compiler — même pattern que usePersistentState existant)
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors)
+  • bunx eslint EssentialDashboard.tsx → EXIT_CODE=0 (0 errors, 0 warnings)
+  • Vérifié tous les 9 localStorage keys présents: essential:onboarding-dismissed, essential:quickstart-dismissed, essential:visits, essential:quota, essential:milestones, essential:help-dismissed (6 ENV-ESSENTIAL) + essential:notifications, essential:tour-completed, essential:briefing-date (3 R2-ESSENTIAL-A)
+  • Vérifié tous les IDs sections présents pour le tour: ai-workspace (1564), score (2092), sources (2730), alertes (3512), rapports (4399, nouveau), jalons (5077)
+  • Vérifié Web Speech API guards: typeof window === "undefined" || !("speechSynthesis" in window) → toast.error "Synthèse vocale non disponible" + return. SpeechSynthesisUtterance avec lang="fr-FR" + recherche voice française via getVoices().find(v => v.lang.toLowerCase().startsWith("fr")). window.speechSynthesis.cancel() avant speak() pour éviter overlap.
+  • Vérifié imports Volume2 + CheckCheck utilisés (DailyBriefingCard Écouter button + NotificationBell Tout marquer comme lu button)
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/essential/EssentialDashboard.tsx (5647 → 6481 lines, +834 net)
+- 3 features R2-ESSENTIEL-A livrées (toutes persisted localStorage via usePersistentState hook, SSR-safe, hydrated pattern pour éviter race conditions):
+  1. Daily Briefing Widget — première carte après Quick Start, briefing auto-généré dynamique depuis health/sources data, format exact "Bonjour [name]. Aujourd'hui: X articles, sentiment Y%, [source dominante], [statut crise].", bouton "Écouter" via Web Speech API (speechSynthesis + SpeechSynthesisUtterance lang fr-FR + recherche voice française + guard typeof window), bouton "Recevoir sur WhatsApp" simulé toast.success, "NOUVEAU" badge quand briefingDate !== today, persisted essential:briefing-date, refresh daily (computed from current data each render), sage accent border + SAGE_BG briefing block avec borderLeft 3px sage, monospace timestamp "Généré à HH:mm", date format EEEE d MMMM (date-fns locale fr)
+  2. Notification Center — bell icon dans header (entre QuotaUsageWidget et alertes bell existant), dropdown panel 340px, 3 types notifications (crise red dot + AlertTriangle / rapport sage dot + FileText / quota amber dot + KeyRound), chaque notif: dot color + icon + title (bold si unread) + body + timestamp relatif (fmtRelative "il y a X min/h/j"), bouton "Tout marquer comme lu" (CheckCheck icon, visible si unread > 0), empty state "Aucune notification. Vous êtes à jour." avec CheckCircle2 dans dashed sage circle, click-outside overlay pour fermer, unread count badge sur bell (number red bg max "9+"), click notif → mark read + close dropdown + scrollToSection(target), persisted essential:notifications, seed 3 notifications sur première visite (via hydrated flag pour éviter race avec usePersistentState hydration)
+  3. Guided Interactive Tour — 5 étapes (score → ai-workspace → sources → alertes → rapports), spotlight overlay CSS-only (fixed div avec boxShadow "0 0 0 9999px rgba(10,10,10,0.65)" pour créer masque dark avec trou transparent, border 2px sage, transition 0.3s cubic-bezier), tooltip card 320px avec positionnement dynamique (below ou above selon espace), progress dots (5 dots, sage plein 20px pour courant, SAGE_DIM 6px pour passé, BORDER_STRONG 6px pour futur) + compteur "X/5", boutons "Suivant" (sage bg + ArrowRight, devient "Terminer" sur dernière étape) + "Passer le tour" (TEXT_MUTED uppercase), scrollIntoView smooth center sur target + setTimeout 400ms pour measure rect après smooth scroll + addEventListener scroll/resize pour re-measure, auto-launch sur première visite si !tour-completed (via hydrated flag), re-trigger manuel depuis "Refaire le tour" link dans QuickStartCard, "Passer le tour" et "Terminer" set tourCompleted=true (évite re-auto-launch), persisted essential:tour-completed
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px, no emojis, French throughout
+- Tone Essentiel respecté: simplicité (briefing en 1 phrase), guidance (tour 5 étapes), time-to-value court (briefing auto + tour auto-launch), surveillance continue (notifications crise)
+- 0 régression sur les 21 sections existantes (toutes préservées, seul BoiteOutilsCard motion.div a gagné id="rapports", Header a gagné NotificationBell + alertes bell icon changé Bell → AlertTriangle pour désambiguïsation sémantique)
+- Code quality: tsc 0 errors, eslint 0 errors + 0 warnings
+- localStorage keys (9 total): 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIEL-A (notifications, tour-completed, briefing-date) — toutes usePersistentState-backed (SSR-safe, quota-safe, hydrated pattern pour éviter race)
+- Web Speech API: guard typeof window + 'speechSynthesis' in window, SpeechSynthesisUtterance lang fr-FR, recherche voice française best-effort, cancel() avant speak() pour éviter overlap
+- Hydrated flag pattern: useState(false) + useEffect(() => setHydrated(true), []) — utilisé pour gate les effects de seed notifications et auto-launch tour, évite que usePersistentState lise localStorage APRÈS ces effects (race condition qui causerait re-seed ou re-launch pour returning users)

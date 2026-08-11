@@ -102,6 +102,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Copy,
   Database,
@@ -147,7 +148,18 @@ import {
   Lock,
   Trash2,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import {
+  addDays,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  parseISO,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   createColumnHelper,
@@ -7702,6 +7714,1031 @@ function ExecutiveMilestoneTrackerCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// SECTION 31 — RISK HEATMAP MATRIX (R2-ENTERPRISE-A)
+// 5x5 matrix (Probability x Impact) · risk dots · click-to-detail ·
+// add-risk form · localStorage "enterprise:risk-matrix"
+// ════════════════════════════════════════════════════════════════════
+
+type RiskCategory = "geopolitical" | "regulatory" | "reputational" | "operational" | "esg";
+type RiskAxis = 1 | 2 | 3 | 4 | 5;
+
+interface RiskItem {
+  id: string;
+  name: string;
+  description: string;
+  probability: RiskAxis;
+  impact: RiskAxis;
+  category: RiskCategory;
+  owner: string;
+  mitigation: string;
+  deadline: number;
+  createdAt: number;
+}
+
+const RISK_CATEGORY_LABEL: Record<RiskCategory, string> = {
+  geopolitical: "Géopolitique",
+  regulatory: "Réglementaire",
+  reputational: "Réputationnel",
+  operational: "Opérationnel",
+  esg: "ESG",
+};
+
+const RISK_CATEGORY_COLOR: Record<RiskCategory, string> = {
+  geopolitical: "#1E3A5F",
+  regulatory: "#4A7B5F",
+  reputational: "#A0524B",
+  operational: "#78716C",
+  esg: "#10B981",
+};
+
+const RISK_AXIS_LABELS: { prob: string[]; impact: string[] } = {
+  prob: ["Très faible", "Faible", "Modérée", "Élevée", "Très élevée"],
+  impact: ["Négligeable", "Mineur", "Modéré", "Majeur", "Critique"],
+};
+
+const RISK_LEGEND: { label: string; color: string }[] = [
+  { label: "Faible", color: "#4A7B5F" },
+  { label: "Modéré", color: "#F59E0B" },
+  { label: "Élevé", color: "#F97316" },
+  { label: "Critique", color: "#EF4444" },
+];
+
+function riskScore(p: RiskAxis, i: RiskAxis): number {
+  return p * i;
+}
+
+function riskLevelColor(score: number): { bg: string; text: string } {
+  if (score >= 16) return { bg: "#EF4444", text: "#FFFFFF" };
+  if (score >= 10) return { bg: "#F97316", text: "#FFFFFF" };
+  if (score >= 5) return { bg: "#F59E0B", text: "#0A0A0A" };
+  return { bg: "#4A7B5F", text: "#FFFFFF" };
+}
+
+const RISK_MATRIX_INITIAL: RiskItem[] = [
+  {
+    id: "RISK-001",
+    name: "Sanctions extra-territoriales UE/US",
+    description: "Exposition aux sanctions secondaires touchant les correspondants bancaires en USD et les flux commerciaux sensibles.",
+    probability: 3, impact: 5, category: "geopolitical",
+    owner: "Karim B.",
+    mitigation: "Diversification des correspondants bancaires, cellule de veille sanctions, hedging USD trimestriel.",
+    deadline: Date.now() + 86400_000 * 60,
+    createdAt: Date.now() - 86400_000 * 30,
+  },
+  {
+    id: "RISK-002",
+    name: "Évolution réglementaire CNDP/AMMC",
+    description: "Révision des obligations de déclaration des traitements et information privilégiée — impact sur le cycle de conformité.",
+    probability: 4, impact: 4, category: "regulatory",
+    owner: "Sophie M.",
+    mitigation: "Audit registre CNDP, mise à jour procédure insider, formation COMEX Q1 prochain.",
+    deadline: Date.now() + 86400_000 * 21,
+    createdAt: Date.now() - 86400_000 * 14,
+  },
+  {
+    id: "RISK-003",
+    name: "Bad buzz réseau social — fausse information",
+    description: "Risque de viralité d'une publication diffamatoire ou erronée sur LinkedIn/X — déclenchement d'une crise réputationnelle.",
+    probability: 4, impact: 5, category: "reputational",
+    owner: "Leila R.",
+    mitigation: "Veille 24/7, cellule crise DEFCON 3, protocole de réponse < 2h, briefings juridiques pré-publication.",
+    deadline: Date.now() + 86400_000 * 7,
+    createdAt: Date.now() - 86400_000 * 5,
+  },
+  {
+    id: "RISK-004",
+    name: "Indisponibilité plateforme Harch — incident cloud",
+    description: "Risque opérationnel d'indisponibilité prolongée du SI de veille lors d'une crise médiatique majeure.",
+    probability: 2, impact: 4, category: "operational",
+    owner: "Youssef E.",
+    mitigation: "SLA 99,9 % contractuel, plan de reprise PRA testé semestriellement, backup multi-cloud.",
+    deadline: Date.now() + 86400_000 * 90,
+    createdAt: Date.now() - 86400_000 * 45,
+  },
+  {
+    id: "RISK-005",
+    name: "Empreinte carbone Scope 3 — retard reporting CSRD",
+    description: "Dépendance aux données fournisseurs pour le calcul Scope 3 — risque de non-respect des échéances CSRD.",
+    probability: 3, impact: 3, category: "esg",
+    owner: "Yasmine T.",
+    mitigation: "Plateforme de collecte fournisseurs, audit externe annuel, liaison directe commissaire aux comptes RSE.",
+    deadline: Date.now() + 86400_000 * 45,
+    createdAt: Date.now() - 86400_000 * 22,
+  },
+];
+
+interface RiskDraft {
+  name: string;
+  description: string;
+  probability: RiskAxis;
+  impact: RiskAxis;
+  category: RiskCategory;
+  owner: string;
+  mitigation: string;
+  deadline: string;
+}
+
+const RISK_DRAFT_EMPTY: RiskDraft = {
+  name: "",
+  description: "",
+  probability: 3,
+  impact: 3,
+  category: "reputational",
+  owner: "",
+  mitigation: "",
+  deadline: format(addDays(new Date(), 30), "yyyy-MM-dd"),
+};
+
+function RiskHeatmapMatrixCard({
+  risks,
+  onRisksChange,
+}: {
+  risks: RiskItem[];
+  onRisksChange: (r: RiskItem[]) => void;
+}) {
+  const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState<RiskDraft>(RISK_DRAFT_EMPTY);
+
+  const selected = risks.find((r) => r.id === selectedRiskId) ?? null;
+  const criticalCount = risks.filter((r) => riskScore(r.probability, r.impact) >= 16).length;
+  const eleveCount = risks.filter((r) => {
+    const s = riskScore(r.probability, r.impact);
+    return s >= 10 && s < 16;
+  }).length;
+  const byCategory = (Object.keys(RISK_CATEGORY_LABEL) as RiskCategory[]).map((cat) => ({
+    cat,
+    label: RISK_CATEGORY_LABEL[cat],
+    color: RISK_CATEGORY_COLOR[cat],
+    count: risks.filter((r) => r.category === cat).length,
+  }));
+
+  const handleAdd = () => {
+    if (!draft.name.trim() || !draft.owner.trim()) {
+      toast.error("Nom et responsable requis pour créer un risque.");
+      return;
+    }
+    const newItem: RiskItem = {
+      id: `RISK-${String(risks.length + 1).padStart(3, "0")}-${Math.random().toString(36).slice(2, 6)}`,
+      name: draft.name.trim(),
+      description: draft.description.trim() || "—",
+      probability: draft.probability,
+      impact: draft.impact,
+      category: draft.category,
+      owner: draft.owner.trim(),
+      mitigation: draft.mitigation.trim() || "—",
+      deadline: new Date(draft.deadline).getTime(),
+      createdAt: Date.now(),
+    };
+    onRisksChange([...risks, newItem]);
+    toast.success(`Risque « ${newItem.name} » ajouté à la matrice.`);
+    setShowForm(false);
+    setDraft(RISK_DRAFT_EMPTY);
+  };
+
+  const handleDelete = (id: string) => {
+    onRisksChange(risks.filter((r) => r.id !== id));
+    if (selectedRiskId === id) setSelectedRiskId(null);
+    toast.info("Risque retiré de la matrice.");
+  };
+
+  return (
+    <motion.div id="risk-matrix" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="30 · Matrice des Risques — Heatmap 5×5"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: criticalCount > 0 ? `${NEGATIVE}15` : SAGE_BG, color: criticalCount > 0 ? NEGATIVE : SAGE }}>
+                {risks.length} RISQUES · {criticalCount} CRITIQUES
+              </Badge>
+              <Button type="button" variant="outline" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={() => setShowForm(!showForm)}>
+                <Plus size={12} className="mr-1" />
+                AJOUTER UN RISQUE
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Summary strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>TOTAL RISQUES</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>{risks.length}</div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: `${NEGATIVE}08` }}>
+            <div style={FONT_HEADER}>CRITIQUES</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: NEGATIVE, marginTop: 2 }}>{criticalCount}</div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>ÉLEVÉS</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: "#F97316", marginTop: 2 }}>{eleveCount}</div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>PAR CATÉGORIE</div>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {byCategory.filter((c) => c.count > 0).map((c) => (
+                <span key={c.cat} style={{ fontFamily: FONT_MONO, fontSize: 9, color: c.color, fontWeight: 700, letterSpacing: "0.04em" }}>
+                  {c.label.slice(0, 4).toUpperCase()} {c.count}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Matrix grid */}
+          <div className="lg:col-span-2">
+            <div style={{ display: "grid", gridTemplateColumns: "34px repeat(5, 1fr)", gridTemplateRows: "repeat(5, 1fr) 22px", gap: 3 }}>
+              {[5, 4, 3, 2, 1].map((imp) => {
+                const impA = imp as RiskAxis;
+                return (
+                  <Fragment key={`row-${imp}`}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 4, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {RISK_AXIS_LABELS.impact[imp - 1].slice(0, 5)}
+                    </div>
+                    {[1, 2, 3, 4, 5].map((prob) => {
+                      const probA = prob as RiskAxis;
+                      const score = riskScore(probA, impA);
+                      const color = riskLevelColor(score);
+                      const cellRisks = risks.filter((r) => r.probability === probA && r.impact === impA);
+                      return (
+                        <div
+                          key={`cell-${imp}-${prob}`}
+                          style={{
+                            position: "relative",
+                            height: 64,
+                            borderRadius: 6,
+                            backgroundColor: color.bg,
+                            opacity: cellRisks.length > 0 ? 1 : 0.78,
+                            border: cellRisks.length > 0 ? `1.5px solid ${CHARCOAL}` : "1px solid rgba(255,255,255,0.35)",
+                            padding: 4,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <span style={{ position: "absolute", top: 3, right: 4, fontFamily: FONT_MONO, fontSize: 8, color: color.text, opacity: 0.55 }}>
+                            {score}
+                          </span>
+                          {cellRisks.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, height: "100%", alignItems: "center", justifyContent: "center" }}>
+                              {cellRisks.map((r) => {
+                                const catColor = RISK_CATEGORY_COLOR[r.category];
+                                const isSelected = selectedRiskId === r.id;
+                                return (
+                                  <button
+                                    key={r.id}
+                                    type="button"
+                                    onClick={() => setSelectedRiskId(isSelected ? null : r.id)}
+                                    title={r.name}
+                                    aria-label={`Risque ${r.name}`}
+                                    style={{
+                                      width: 16, height: 16, borderRadius: "50%",
+                                      backgroundColor: catColor,
+                                      border: isSelected ? `2px solid ${CHARCOAL}` : `1.5px solid #FFFFFF`,
+                                      cursor: "pointer",
+                                      boxShadow: isSelected ? `0 0 0 2px ${CHARCOAL}` : "none",
+                                      padding: 0,
+                                    }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+              {/* Bottom row: empty corner + probability labels */}
+              <div />
+              {[1, 2, 3, 4, 5].map((prob) => (
+                <div key={`x-${prob}`} style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.04em", paddingTop: 2 }}>
+                  {RISK_AXIS_LABELS.prob[prob - 1].slice(0, 6)}
+                </div>
+              ))}
+            </div>
+
+            {/* Axis labels + legend */}
+            <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_HEADER, letterSpacing: "0.08em" }}>
+                X · PROBABILITÉ →   |   ↑ Y · IMPACT
+              </div>
+              <div className="flex items-center gap-3">
+                {RISK_LEGEND.map((l) => (
+                  <div key={l.label} className="flex items-center gap-1">
+                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: l.color }} />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Category color key */}
+            <div className="flex flex-wrap gap-3 mt-2">
+              {(Object.keys(RISK_CATEGORY_LABEL) as RiskCategory[]).map((cat) => (
+                <div key={cat} className="flex items-center gap-1">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", backgroundColor: RISK_CATEGORY_COLOR[cat] }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>{RISK_CATEGORY_LABEL[cat]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Detail panel / Form / Empty state */}
+          <div className="lg:col-span-1">
+            {showForm ? (
+              <div className="rounded-lg p-3" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span style={FONT_HEADER}>NOUVEAU RISQUE</span>
+                  <button type="button" onClick={() => setShowForm(false)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-white" style={{ width: 22, height: 22 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Nom du risque" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Description" rows={2} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block">
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>PROBABILITÉ</span>
+                      <select value={draft.probability} onChange={(e) => setDraft({ ...draft, probability: Number(e.target.value) as RiskAxis })} className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>
+                        {RISK_AXIS_LABELS.prob.map((l, i) => <option key={l} value={i + 1}>{i + 1} · {l}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>IMPACT</span>
+                      <select value={draft.impact} onChange={(e) => setDraft({ ...draft, impact: Number(e.target.value) as RiskAxis })} className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>
+                        {RISK_AXIS_LABELS.impact.map((l, i) => <option key={l} value={i + 1}>{i + 1} · {l}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <label className="block">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>CATÉGORIE</span>
+                    <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value as RiskCategory })} className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>
+                      {(Object.keys(RISK_CATEGORY_LABEL) as RiskCategory[]).map((c) => <option key={c} value={c}>{RISK_CATEGORY_LABEL[c]}</option>)}
+                    </select>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={draft.owner} onChange={(e) => setDraft({ ...draft, owner: e.target.value })} placeholder="Responsable" className="rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                    <input type="date" value={draft.deadline} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} className="rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  </div>
+                  <textarea value={draft.mitigation} onChange={(e) => setDraft({ ...draft, mitigation: e.target.value })} placeholder="Plan de mitigation" rows={2} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <Button type="button" size="sm" className="w-full h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={handleAdd}>
+                    <Plus size={12} className="mr-1" /> ENREGISTRER LE RISQUE
+                  </Button>
+                </div>
+              </div>
+            ) : selected ? (
+              <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", backgroundColor: RISK_CATEGORY_COLOR[selected.category] }} />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      {RISK_CATEGORY_LABEL[selected.category]}
+                    </span>
+                  </div>
+                  <button type="button" onClick={() => setSelectedRiskId(null)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 22, height: 22 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginBottom: 6 }}>
+                  {selected.name}
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, marginBottom: 8 }}>
+                  {selected.description}
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="rounded-md p-1.5" style={{ backgroundColor: "#FAFAFA" }}>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.08em" }}>PROBABILITÉ</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{selected.probability} · {RISK_AXIS_LABELS.prob[selected.probability - 1]}</div>
+                  </div>
+                  <div className="rounded-md p-1.5" style={{ backgroundColor: "#FAFAFA" }}>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.08em" }}>IMPACT</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{selected.impact} · {RISK_AXIS_LABELS.impact[selected.impact - 1]}</div>
+                  </div>
+                </div>
+                <div className="space-y-1" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                  <div className="flex items-center justify-between">
+                    <span style={{ color: TEXT_MUTED }}>RESPONSABLE</span>
+                    <span style={{ color: CHARCOAL }}>{selected.owner}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span style={{ color: TEXT_MUTED }}>ÉCHÉANCE</span>
+                    <span style={{ color: selected.deadline < Date.now() ? NEGATIVE : CHARCOAL, fontWeight: 700 }}>
+                      {format(selected.deadline, "d MMM yyyy", { locale: fr })}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 4 }}>PLAN DE MITIGATION</div>
+                  <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selected.mitigation}</p>
+                </div>
+                <button type="button" onClick={() => handleDelete(selected.id)} className="mt-2 w-full inline-flex items-center justify-center gap-1 rounded-md py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, letterSpacing: "0.08em" }}>
+                  <Trash2 size={11} /> RETIRER LE RISQUE
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg p-3 h-full" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <AlertTriangle size={13} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>DÉTAIL RISQUE</span>
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: 0 }}>
+                  Cliquez sur un point de la matrice pour afficher le détail du risque — description, responsable, échéance et plan de mitigation.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <AiCommentary text={`Matrice 5×5 — ${risks.length} risque(s) cartographié(s) · ${criticalCount} critique(s) · ${eleveCount} élevé(s). ${criticalCount > 0 ? "Activez le comité de risque et engagez un plan de mitigation immédiat sur les risques critiques." : "Exposition maîtrisée — maintenez la revue trimestrielle des risques avec le COMEX."}`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 32 — REGULATORY CALENDAR (R2-ENTERPRISE-A)
+// Monthly calendar · regulatory deadlines · per-regulator color ·
+// next-3 sidebar · localStorage "enterprise:reg-calendar"
+// ════════════════════════════════════════════════════════════════════
+
+type RegCalendarRegulator = "CNDP" | "AMMC" | "BAM" | "ESG" | "GDPR";
+type RegDeadlineStatus = "à venir" | "échéance" | "dépassé";
+
+interface RegDeadline {
+  id: string;
+  date: number;
+  regulator: RegCalendarRegulator;
+  title: string;
+  requirement: string;
+  documents: string;
+  team: string;
+  createdAt: number;
+}
+
+const REG_REGULATOR_COLOR: Record<RegCalendarRegulator, string> = {
+  CNDP: "#4A7B5F",
+  AMMC: "#475569",
+  BAM: "#F59E0B",
+  ESG: "#10B981",
+  GDPR: "#EF4444",
+};
+
+function regStatus(date: number): RegDeadlineStatus {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((d.getTime() - today.getTime()) / 86400_000);
+  if (diffDays < 0) return "dépassé";
+  if (diffDays <= 3) return "échéance";
+  return "à venir";
+}
+
+const REG_CALENDAR_INITIAL: RegDeadline[] = [
+  {
+    id: "REG-001",
+    date: Date.now() + 86400_000 * 12,
+    regulator: "AMMC",
+    title: "Déclaration Q4 — opérations dirigées",
+    requirement: "Déclaration trimestrielle des opérations sur titres effectuées par les dirigeants et personnes apparentées.",
+    documents: "Form AMMC-DIR-04 · attestation du commissaire aux comptes · registre des opérations.",
+    team: "Direction Juridique · Sophie M.",
+    createdAt: Date.now() - 86400_000 * 30,
+  },
+  {
+    id: "REG-002",
+    date: Date.now() + 86400_000 * 25,
+    regulator: "CNDP",
+    title: "Renouvellement autorisation traitement RH",
+    requirement: "Renouvellement annuel de l'autorisation CDP pour le traitement des données RH et paie.",
+    documents: "Demande CNDP-AUT-08 · registre des traitements mis à jour · DPIA · attestation CIL.",
+    team: "DPO · Leila R.",
+    createdAt: Date.now() - 86400_000 * 14,
+  },
+  {
+    id: "REG-003",
+    date: Date.now() + 86400_000 * 38,
+    regulator: "BAM",
+    title: "Reporting prudentiel mensuel",
+    requirement: "Transmission du reporting prudentiel Bâle III à Bank Al-Maghrib (ratios de solvabilité, liquidité, levier).",
+    documents: "Tableur BAM-PRU-M · états financiers consolidés · note prudentielle.",
+    team: "Direction Financière · Youssef E.",
+    createdAt: Date.now() - 86400_000 * 22,
+  },
+  {
+    id: "REG-004",
+    date: Date.now() + 86400_000 * 50,
+    regulator: "ESG",
+    title: "Publication rapport CSRD 2024",
+    requirement: "Publication du rapport de durabilité CSRD — Scope 1/2/3, diversité conseil, taxonomie verte UE.",
+    documents: "Rapport RSE audité · matrice de matérialité · assurance externe · déclaration de conformité.",
+    team: "Direction RSE · Yasmine T.",
+    createdAt: Date.now() - 86400_000 * 45,
+  },
+];
+
+interface RegDraft {
+  date: string;
+  regulator: RegCalendarRegulator;
+  title: string;
+  requirement: string;
+  documents: string;
+  team: string;
+}
+
+const REG_DRAFT_EMPTY: RegDraft = {
+  date: format(addDays(new Date(), 14), "yyyy-MM-dd"),
+  regulator: "CNDP",
+  title: "",
+  requirement: "",
+  documents: "",
+  team: "",
+};
+
+const CAL_DOW_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+function RegulatoryCalendarCard({
+  deadlines,
+  onDeadlinesChange,
+}: {
+  deadlines: RegDeadline[];
+  onDeadlinesChange: (d: RegDeadline[]) => void;
+}) {
+  const [cursor, setCursor] = useState<Date>(new Date());
+  const [showForm, setShowForm] = useState(false);
+  const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<RegDraft>(REG_DRAFT_EMPTY);
+
+  const monthStart = startOfMonth(cursor);
+  const monthEnd = endOfMonth(cursor);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const days = eachDayOfInterval({ start: calStart, end: calEnd });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadlinesOnDay = (day: Date) => deadlines.filter((d) => isSameDay(new Date(d.date), day));
+  const upcoming = [...deadlines].filter((d) => new Date(d.date).getTime() >= today.getTime()).sort((a, b) => a.date - b.date);
+  const next3 = upcoming.slice(0, 3);
+  const overdue = deadlines.filter((d) => regStatus(d.date) === "dépassé");
+  const selectedDeadline = deadlines.find((d) => d.id === selectedDeadlineId) ?? null;
+
+  const handleAdd = () => {
+    if (!draft.title.trim()) {
+      toast.error("Intitulé de l'échéance requis.");
+      return;
+    }
+    const newItem: RegDeadline = {
+      id: `REG-${String(deadlines.length + 1).padStart(3, "0")}-${Math.random().toString(36).slice(2, 6)}`,
+      date: new Date(draft.date).getTime(),
+      regulator: draft.regulator,
+      title: draft.title.trim(),
+      requirement: draft.requirement.trim() || "—",
+      documents: draft.documents.trim() || "—",
+      team: draft.team.trim() || "—",
+      createdAt: Date.now(),
+    };
+    onDeadlinesChange([...deadlines, newItem]);
+    toast.success(`Échéance « ${newItem.title} » ajoutée au calendrier.`);
+    setShowForm(false);
+    setDraft(REG_DRAFT_EMPTY);
+  };
+
+  const handleDelete = (id: string) => {
+    onDeadlinesChange(deadlines.filter((d) => d.id !== id));
+    if (selectedDeadlineId === id) setSelectedDeadlineId(null);
+    toast.info("Échéance retirée du calendrier.");
+  };
+
+  return (
+    <motion.div id="reg-calendar" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="31 · Calendrier Réglementaire — Échéances & Conformité"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: overdue.length > 0 ? `${NEGATIVE}15` : SAGE_BG, color: overdue.length > 0 ? NEGATIVE : SAGE }}>
+                {deadlines.length} ÉCHÉANCES · {overdue.length} DÉPASSÉES
+              </Badge>
+              <Button type="button" variant="outline" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={() => setShowForm(!showForm)}>
+                <Plus size={12} className="mr-1" />
+                AJOUTER UNE ÉCHÉANCE
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Calendar grid */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-2">
+              <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }} aria-label="Mois précédent">
+                <ChevronLeft size={14} />
+              </button>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                {format(cursor, "MMMM yyyy", { locale: fr })}
+              </div>
+              <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }} aria-label="Mois suivant">
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            {/* DOW header */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+              {CAL_DOW_FR.map((d) => (
+                <div key={d} style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_HEADER, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: 2 }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+            {/* Days grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+              {days.map((day) => {
+                const inMonth = isSameMonth(day, cursor);
+                const isToday = isSameDay(day, today);
+                const dayDeadlines = deadlinesOnDay(day);
+                const hasDeadline = dayDeadlines.length > 0;
+                return (
+                  <button
+                    key={day.toISOString()}
+                    type="button"
+                    onClick={() => {
+                      if (dayDeadlines.length > 0) {
+                        setSelectedDeadlineId(dayDeadlines[0].id === selectedDeadlineId ? null : dayDeadlines[0].id);
+                      }
+                    }}
+                    className="text-left rounded-md transition-all"
+                    style={{
+                      height: 56,
+                      padding: 4,
+                      border: `1px solid ${hasDeadline ? BORDER_STRONG : BORDER}`,
+                      backgroundColor: hasDeadline ? "#FAFAFA" : "#FFFFFF",
+                      opacity: inMonth ? 1 : 0.35,
+                      cursor: hasDeadline ? "pointer" : "default",
+                      position: "relative",
+                    }}
+                  >
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 18, height: 18, borderRadius: "50%",
+                      fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
+                      color: isToday ? "#FFFFFF" : CHARCOAL,
+                      backgroundColor: isToday ? SAGE : "transparent",
+                      border: isToday ? "none" : `1px solid ${isToday ? SAGE : "transparent"}`,
+                    }}>
+                      {format(day, "d")}
+                    </div>
+                    {hasDeadline && (
+                      <div className="flex flex-wrap gap-0.5 mt-1">
+                        {dayDeadlines.slice(0, 4).map((dd) => (
+                          <span key={dd.id} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", backgroundColor: REG_REGULATOR_COLOR[dd.regulator] }} />
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Regulator color legend */}
+            <div className="flex flex-wrap gap-3 mt-3">
+              {(Object.keys(REG_REGULATOR_COLOR) as RegCalendarRegulator[]).map((reg) => (
+                <div key={reg} className="flex items-center gap-1">
+                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: REG_REGULATOR_COLOR[reg] }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{reg}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sidebar: next 3 deadlines + selected/form panel */}
+          <div className="lg:col-span-1 space-y-3">
+            {showForm ? (
+              <div className="rounded-lg p-3" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span style={FONT_HEADER}>NOUVELLE ÉCHÉANCE</span>
+                  <button type="button" onClick={() => setShowForm(false)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-white" style={{ width: 22, height: 22 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <input type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <select value={draft.regulator} onChange={(e) => setDraft({ ...draft, regulator: e.target.value as RegCalendarRegulator })} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>
+                    {(Object.keys(REG_REGULATOR_COLOR) as RegCalendarRegulator[]).map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Intitulé de l'échéance" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <textarea value={draft.requirement} onChange={(e) => setDraft({ ...draft, requirement: e.target.value })} placeholder="Exigence réglementaire" rows={2} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <input value={draft.documents} onChange={(e) => setDraft({ ...draft, documents: e.target.value })} placeholder="Documents requis" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <input value={draft.team} onChange={(e) => setDraft({ ...draft, team: e.target.value })} placeholder="Équipe assignée" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                  <Button type="button" size="sm" className="w-full h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={handleAdd}>
+                    <Plus size={12} className="mr-1" /> ENREGISTRER
+                  </Button>
+                </div>
+              </div>
+            ) : selectedDeadline ? (
+              <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: REG_REGULATOR_COLOR[selectedDeadline.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                    {selectedDeadline.regulator}
+                  </span>
+                  <button type="button" onClick={() => setSelectedDeadlineId(null)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 22, height: 22 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginBottom: 4 }}>{selectedDeadline.title}</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginBottom: 8, textTransform: "capitalize" }}>
+                  {format(selectedDeadline.date, "EEEE d MMMM yyyy", { locale: fr })}
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>EXIGENCE</div>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selectedDeadline.requirement}</p>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>DOCUMENTS REQUIS</div>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selectedDeadline.documents}</p>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>ÉQUIPE ASSIGNÉE</div>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, margin: 0 }}>{selectedDeadline.team}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: regStatus(selectedDeadline.date) === "dépassé" ? NEGATIVE : regStatus(selectedDeadline.date) === "échéance" ? NEUTRAL_AMBER : SAGE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    {regStatus(selectedDeadline.date).toUpperCase()}
+                  </span>
+                  <button type="button" onClick={() => handleDelete(selectedDeadline.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, letterSpacing: "0.08em" }}>
+                    <Trash2 size={10} /> RETIRER
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Next 3 deadlines */}
+                <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Clock size={13} style={{ color: SAGE }} />
+                    <span style={FONT_HEADER}>PROCHAINES 3 ÉCHÉANCES</span>
+                  </div>
+                  {next3.length === 0 ? (
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, margin: 0 }}>Aucune échéance à venir — calendrier à jour.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {next3.map((d) => {
+                        const st = regStatus(d.date);
+                        const stColor = st === "dépassé" ? NEGATIVE : st === "échéance" ? NEUTRAL_AMBER : SAGE;
+                        return (
+                          <button key={d.id} type="button" onClick={() => setSelectedDeadlineId(d.id)} className="w-full text-left rounded-md p-2 transition-all hover:bg-white" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 2, backgroundColor: REG_REGULATOR_COLOR[d.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                                {d.regulator}
+                              </span>
+                              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: stColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{st}</span>
+                            </div>
+                            <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL, marginBottom: 2 }}>{d.title}</div>
+                            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{format(d.date, "d MMM yyyy", { locale: fr })}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Overdue alert */}
+                {overdue.length > 0 && (
+                  <div className="rounded-lg p-3" style={{ border: `1px solid ${NEGATIVE}`, backgroundColor: `${NEGATIVE}08` }}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <AlertTriangle size={13} style={{ color: NEGATIVE }} />
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, fontWeight: 700, letterSpacing: "0.08em" }}>ÉCHÉANCES DÉPASSÉES · {overdue.length}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {overdue.map((d) => (
+                        <button key={d.id} type="button" onClick={() => setSelectedDeadlineId(d.id)} className="w-full text-left">
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>{d.title}</span>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, marginLeft: 6 }}>· {format(d.date, "d MMM", { locale: fr })}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <AiCommentary text={`${deadlines.length} échéance(s) suivie(s) · ${format(cursor, "MMMM yyyy", { locale: fr })}. ${overdue.length > 0 ? `${overdue.length} échéance(s) dépassée(s) — notifiez immédiatement le juridique et engagez la régularisation.` : next3.length > 0 ? `Prochaine échéance : ${next3[0].title} (${format(next3[0].date, "d MMM", { locale: fr })}, ${next3[0].regulator}).` : "Calendrier à jour — continuez la veille réglementaire hebdomadaire."}`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 0 — KPI EXECUTIVE SUMMARY ROW (R2-ENTERPRISE-A)
+// 4 board-ready KPI cards at top of dashboard — aggregates from existing state
+// ════════════════════════════════════════════════════════════════════
+
+function KpiExecutiveSummaryRow({
+  health,
+  sentimentTrend,
+  sources,
+  complianceState,
+  risks,
+  onNavigate,
+}: {
+  health: BrandHealth | null;
+  sentimentTrend: SentimentTrendResp | null;
+  sources: SourceDistResp | null;
+  complianceState: ComplianceState;
+  risks: RiskItem[];
+  onNavigate: (id: string) => void;
+}) {
+  // Card 1 — Score de réputation global
+  const score = health?.score ?? 0;
+  const scoreTrend = health?.trend ?? 0;
+  const scoreColor = score >= 70 ? SAGE : score >= 50 ? NEUTRAL_AMBER : NEGATIVE;
+  const scoreSpark = useMemo(() => {
+    if (!sentimentTrend?.data?.length) return [];
+    return sentimentTrend.data.slice(-7).map((d) => ({ d: d.date, v: (d.positive / Math.max(1, d.count)) * 100 }));
+  }, [sentimentTrend]);
+
+  // Card 2 — Coverage médiatique
+  const mentionCount = sources?.total ?? health?.mentionCount24h ?? 0;
+  const reachEstimate = mentionCount * 12500;
+  const top3Sources = (sources?.sources ?? []).slice().sort((a, b) => b.count - a.count).slice(0, 3);
+
+  // Card 3 — Conformité
+  const panels = complianceState.panels;
+  const nonConf = panels.filter((p) => p.status === "non-conforme").length;
+  const surv = panels.filter((p) => p.status === "surveillance").length;
+  const overallCompliance: { label: string; color: string } = nonConf > 0
+    ? { label: "Non-conforme", color: NEGATIVE }
+    : surv > 0
+      ? { label: "Surveillance", color: NEUTRAL_AMBER }
+      : { label: "Conforme", color: POSITIVE };
+
+  // Card 4 — Risk Index
+  const criticalCount = risks.filter((r) => riskScore(r.probability, r.impact) >= 16).length;
+  const eleveCount = risks.filter((r) => {
+    const s = riskScore(r.probability, r.impact);
+    return s >= 10 && s < 16;
+  }).length;
+  const riskColor = criticalCount > 0 ? NEGATIVE : eleveCount > 0 ? NEUTRAL_AMBER : SAGE;
+  const riskTrend = criticalCount > 0 ? -1 : eleveCount > 0 ? 0 : 1;
+
+  const cardStyle: CSSProperties = {
+    padding: 16,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    boxShadow: "0 1px 2px rgba(10,10,10,0.04)",
+    minHeight: 120,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+  };
+
+  return (
+    <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4" variants={containerStagger} initial="initial" animate="animate">
+      {/* Card 1 — Score de réputation global */}
+      <motion.div {...cardMotion}>
+        <div style={cardStyle}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Activity size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>SCORE RÉPUTATION</span>
+            </div>
+            <Delta value={scoreTrend} suffix="pts" />
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="flex items-baseline gap-1">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 34, fontWeight: 700, color: scoreColor, lineHeight: 1 }}>
+                {health ? score : "—"}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/100</span>
+            </div>
+            {scoreSpark.length > 0 && (
+              <div style={{ width: 70, height: 28 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={scoreSpark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <Line type="monotone" dataKey="v" stroke={scoreColor} strokeWidth={1.5} dot={false} isAnimationActive />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+          <button type="button" onClick={() => onNavigate("score")} className="self-start inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
+            DÉTAILS <ArrowRight size={10} />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Card 2 — Coverage médiatique */}
+      <motion.div {...cardMotion}>
+        <div style={cardStyle}>
+          <div className="flex items-center gap-1.5">
+            <Newspaper size={13} style={{ color: SAGE }} />
+            <span style={FONT_HEADER}>COVERAGE MÉDIATIQUE</span>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 32, fontWeight: 700, color: CHARCOAL, lineHeight: 1 }}>
+                {fmtNumber(mentionCount)}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>mentions</span>
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+              ≈ {fmtNumber(reachEstimate)} portée
+            </div>
+          </div>
+          <div className="flex items-end justify-between gap-2">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              {top3Sources.length === 0 ? (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>—</span>
+              ) : (
+                top3Sources.map((s) => (
+                  <span key={s.name} style={{ fontFamily: FONT_MONO, fontSize: 9, color: CHARCOAL, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    · {s.name} <span style={{ color: TEXT_MUTED }}>{fmtNumber(s.count)}</span>
+                  </span>
+                ))
+              )}
+            </div>
+            <button type="button" onClick={() => onNavigate("sentiment")} className="shrink-0 inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
+              DÉTAILS <ArrowRight size={10} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Card 3 — Conformité */}
+      <motion.div {...cardMotion}>
+        <div style={cardStyle}>
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck size={13} style={{ color: SAGE }} />
+            <span style={FONT_HEADER}>CONFORMITÉ</span>
+          </div>
+          <div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: overallCompliance.color, lineHeight: 1.1, display: "block" }}>
+              {overallCompliance.label}
+            </span>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              {panels.map((p) => {
+                const c = COMPLIANCE_STATUS_COLOR[p.status];
+                return (
+                  <TooltipProvider key={p.regulator}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 2, backgroundColor: c, color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                          {p.regulator}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p className="text-xs">{p.regulator} · {COMPLIANCE_STATUS_LABEL[p.status]}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })}
+            </div>
+          </div>
+          <button type="button" onClick={() => onNavigate("compliance-cockpit")} className="self-start inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
+            DÉTAILS <ArrowRight size={10} />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Card 4 — Risk Index */}
+      <motion.div {...cardMotion}>
+        <div style={cardStyle}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>RISK INDEX</span>
+            </div>
+            <span className="inline-flex items-center gap-0.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: riskTrend > 0 ? POSITIVE : riskTrend < 0 ? NEGATIVE : TEXT_MUTED, fontWeight: 700, letterSpacing: "0.04em" }}>
+              {riskTrend > 0 ? <ArrowUp size={11} /> : riskTrend < 0 ? <ArrowDown size={11} /> : <Minus size={11} />}
+              {riskTrend > 0 ? "MAÎTRISÉ" : riskTrend < 0 ? "PRESSURISÉ" : "STABLE"}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 34, fontWeight: 700, color: riskColor, lineHeight: 1 }}>
+              {criticalCount}
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>critiques</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: NEUTRAL_AMBER, marginLeft: 4 }}>{eleveCount}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>élevés</span>
+          </div>
+          <button type="button" onClick={() => onNavigate("risk-matrix")} className="self-start inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
+            DÉTAILS <ArrowRight size={10} />
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EnterpriseDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -7724,6 +8761,8 @@ export function EnterpriseDashboard({
   const [complianceState, setComplianceState] = usePersistentState<ComplianceState>("enterprise:compliance", COMPLIANCE_INITIAL);
   const [integrationsState, setIntegrationsState] = usePersistentState<IntegrationState>("enterprise:integrations", INTEGRATION_INITIAL);
   const [milestonesState, setMilestonesState] = usePersistentState<Milestone[]>("enterprise:milestones", EXECUTIVE_MILESTONES_INITIAL);
+  const [risksState, setRisksState] = usePersistentState<RiskItem[]>("enterprise:risk-matrix", RISK_MATRIX_INITIAL);
+  const [regCalendarState, setRegCalendarState] = usePersistentState<RegDeadline[]>("enterprise:reg-calendar", REG_CALENDAR_INITIAL);
   const [approvals, setApprovals] = useState<ApprovalItem[]>(DEFAULT_APPROVALS);
   const currentUserRole: UserRole = "comms"; // Karim B., VP Comms
 
@@ -7880,6 +8919,16 @@ export function EnterpriseDashboard({
         />
 
         <main className="flex-1 px-4 lg:px-6 py-6">
+          {/* SECTION 0 — KPI Executive Summary Row (R2-ENTERPRISE-A) — board-ready aggregates */}
+          <KpiExecutiveSummaryRow
+            health={health}
+            sentimentTrend={sentimentTrend}
+            sources={sources}
+            complianceState={complianceState}
+            risks={risksState}
+            onNavigate={scrollToSection}
+          />
+
           <motion.div
             className="grid grid-cols-12 gap-4 lg:gap-6"
             variants={containerStagger}
@@ -7970,6 +9019,12 @@ export function EnterpriseDashboard({
               onStateChange={setComplianceState}
             />
 
+            {/* SECTION 31 — Regulatory Calendar (R2-ENTERPRISE-A) */}
+            <RegulatoryCalendarCard
+              deadlines={regCalendarState}
+              onDeadlinesChange={setRegCalendarState}
+            />
+
             {/* SECTION 28 — API & Integration Hub (keys, webhooks, MCP) */}
             <ApiIntegrationHubCard
               state={integrationsState}
@@ -7979,7 +9034,13 @@ export function EnterpriseDashboard({
             {/* SECTION 29 — Multi-Market Reputation Map (8 francophone markets) */}
             <MultiMarketReputationMapCard />
 
-            {/* SECTION 30 — Executive Milestone Tracker (board-ready badge) */}
+            {/* SECTION 30 — Risk Heatmap Matrix 5×5 (R2-ENTERPRISE-A) */}
+            <RiskHeatmapMatrixCard
+              risks={risksState}
+              onRisksChange={setRisksState}
+            />
+
+            {/* SECTION 32 — Executive Milestone Tracker (board-ready badge) */}
             <ExecutiveMilestoneTrackerCard
               milestones={milestonesState}
               onToggle={handleToggleMilestone}
@@ -8021,7 +9082,7 @@ export function EnterpriseDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 30 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
+              Données temps réel · 33 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
             </div>
           </div>
         </footer>

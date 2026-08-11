@@ -69,6 +69,7 @@ import {
   Bell,
   Brain,
   CalendarDays,
+  CheckCheck,
   CheckCircle2,
   ChevronRight,
   Circle,
@@ -104,6 +105,7 @@ import {
   TrendingUp,
   Trophy,
   Users,
+  Volume2,
   X,
   Zap,
 } from "lucide-react";
@@ -351,6 +353,27 @@ interface MilestoneState {
   firstVisitDate: string;
   /** ISO timestamp of last milestone unlocked (for sage pulse animation). */
   lastUnlockedAt: number | null;
+}
+
+// ─── R2-ESSENTIEL-A — Round 2 client-side environment types ────────────
+// Persisted in localStorage via usePersistentState. SSR-safe.
+
+/** Notification center item — 3 types (crise / rapport / quota). */
+interface NotificationItem {
+  /** Stable unique ID (used as React key + for read/unread toggle). */
+  id: string;
+  /** Notification category — drives icon + dot color. */
+  type: "crise" | "rapport" | "quota";
+  /** Short title (one line). */
+  title: string;
+  /** Body description (1-2 sentences). */
+  body: string;
+  /** Creation timestamp (epoch ms) — used for relative time formatting. */
+  createdAt: number;
+  /** Read state — false shows unread dot + bold title. */
+  read: boolean;
+  /** Section ID to scroll to on click (e.g. "alertes", "rapports"). */
+  target: string;
 }
 
 // ─── HarchIQ AI Workspace types ────────────────────────────────────────
@@ -1138,6 +1161,11 @@ function Header({
   milestoneTotal,
   milestoneRecentlyUnlocked,
   onMilestoneClick,
+  notifications,
+  notifExpanded,
+  onToggleNotifs,
+  onMarkAllNotifsRead,
+  onClickNotif,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1147,6 +1175,11 @@ function Header({
   milestoneTotal: number;
   milestoneRecentlyUnlocked: boolean;
   onMilestoneClick: () => void;
+  notifications: NotificationItem[];
+  notifExpanded: boolean;
+  onToggleNotifs: () => void;
+  onMarkAllNotifsRead: () => void;
+  onClickNotif: (n: NotificationItem) => void;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -1228,6 +1261,16 @@ function Header({
           onToggle={() => setQuotaExpanded((v) => !v)}
         />
 
+        {/* R2-ESSENTIEL-A — Notification Center bell (dropdown panel) */}
+        <NotificationBell
+          notifications={notifications}
+          expanded={notifExpanded}
+          onToggle={onToggleNotifs}
+          onMarkAllRead={onMarkAllNotifsRead}
+          onClickNotification={onClickNotif}
+        />
+
+        {/* Alertes bell — scrolls to alertes section (crisis alerts KPI) */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1236,9 +1279,9 @@ function Header({
                 onClick={() => scrollToSection("alertes")}
                 className="relative inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
                 style={{ width: 32, height: 32 }}
-                aria-label="Notifications"
+                aria-label="Alertes crise"
               >
-                <Bell size={18} style={{ color: TEXT_BODY }} />
+                <AlertTriangle size={18} style={{ color: TEXT_BODY }} />
                 {alertCount > 0 && (
                   <span
                     style={{
@@ -1257,7 +1300,7 @@ function Header({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
-                {alertCount > 0 ? `${alertCount} alerte(s)` : "Aucune alerte"}
+                {alertCount > 0 ? `${alertCount} alerte(s) crise` : "Aucune alerte crise"}
               </span>
             </TooltipContent>
           </Tooltip>
@@ -4353,7 +4396,7 @@ function BoiteOutilsCard() {
   ];
 
   return (
-    <motion.div {...cardMotion}>
+    <motion.div id="rapports" {...cardMotion}>
       <CardShell className="lg:col-span-12">
         <SectionHeader title="20 · Boîte à Outils Dircom" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
@@ -4834,9 +4877,11 @@ function MilestoneBadge({
 function QuickStartCard({
   onAction,
   onDismiss,
+  onRedoTour,
 }: {
   onAction: (id: string) => void;
   onDismiss: () => void;
+  onRedoTour: () => void;
 }) {
   const actions = [
     { id: "score", label: "Voir mon score de réputation", desc: "Tableau de bord principal et tendances 30 jours.", Icon: TrendingUp },
@@ -4901,6 +4946,28 @@ function QuickStartCard({
               </div>
             </button>
           ))}
+        </div>
+
+        {/* R2-ESSENTIAL-A — "Refaire le tour" link (re-trigger guided tour) */}
+        <div
+          className="mt-3 flex items-center justify-end"
+          style={{ borderTop: `1px solid ${SAGE_DIM}`, paddingTop: 8 }}
+        >
+          <button
+            type="button"
+            onClick={onRedoTour}
+            className="inline-flex items-center gap-1 transition-colors hover:opacity-80"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: SAGE,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Sparkles size={11} />
+            Refaire le tour
+          </button>
         </div>
       </CardShell>
     </motion.div>
@@ -5154,6 +5221,644 @@ const INITIAL_MILESTONES: MilestoneState = {
   lastUnlockedAt: null,
 };
 
+// ─── R2-ESSENTIEL-A — Notification + Tour constants ────────────────────
+
+/** Dot color per notification type — red for crise, sage for rapport, amber for quota. */
+const NOTIF_DOT_COLOR: Record<NotificationItem["type"], string> = {
+  crise: NEGATIVE,
+  rapport: SAGE,
+  quota: NEUTRAL_AMBER,
+};
+
+/** Factory: 3 seed notifications for first-time visit (crise + rapport + quota). */
+function makeSeedNotifications(): NotificationItem[] {
+  const now = Date.now();
+  return [
+    {
+      id: "seed-crise-1",
+      type: "crise",
+      title: "Pic d'activité négative détecté",
+      body: "Harch surveille un pic de mentions négatives sur les réseaux sociaux dans les dernières 24h.",
+      createdAt: now - 1000 * 60 * 35, // 35 min ago
+      read: false,
+      target: "alertes",
+    },
+    {
+      id: "seed-rapport-1",
+      type: "rapport",
+      title: "Votre rapport hebdomadaire est prêt",
+      body: "Synthèse des 7 derniers jours disponible en téléchargement CSV dans la Boîte à Outils.",
+      createdAt: now - 1000 * 60 * 60 * 3, // 3 h ago
+      read: false,
+      target: "rapports",
+    },
+    {
+      id: "seed-quota-1",
+      type: "quota",
+      title: "Quota HarchIQ à 80%",
+      body: "Vous avez posé 40 questions sur 50 aujourd'hui. Le quota se réinitialise à minuit.",
+      createdAt: now - 1000 * 60 * 60 * 6, // 6 h ago
+      read: true,
+      target: "ai-workspace",
+    },
+  ];
+}
+
+/** 5-step interactive tour — spotlight target + title + description. */
+const TOUR_STEPS: { target: string; title: string; description: string }[] = [
+  {
+    target: "score",
+    title: "Votre score de réputation",
+    description: "Score agrégé 0-100 basé sur le sentiment, le volume de mentions et la part de voix. C'est votre indicateur de santé global.",
+  },
+  {
+    target: "ai-workspace",
+    title: "HarchIQ AI",
+    description: "Posez vos questions en langage naturel. 50 questions par jour incluses dans votre plan Essentiel.",
+  },
+  {
+    target: "sources",
+    title: "Sources",
+    description: "Répartition de vos mentions par source médiatique et sociale. Identifiez les canaux qui parlent de vous.",
+  },
+  {
+    target: "alertes",
+    title: "Alertes WhatsApp",
+    description: "Harch détecte automatiquement les pics d'activité négative. Recevez une alerte WhatsApp dès qu'une crise émerge.",
+  },
+  {
+    target: "rapports",
+    title: "Rapports",
+    description: "Exportez vos données en CSV pour partage interne. Rapports hebdomadaires et mensuels disponibles.",
+  },
+];
+
+// ════════════════════════════════════════════════════════════════════
+// R2-ESSENTIEL-A — Round 2 client-side environment components
+// Daily Briefing · Notification Center · Guided Tour
+// All persisted via usePersistentState (localStorage-backed, SSR-safe).
+// ════════════════════════════════════════════════════════════════════
+
+/** 7. Daily Briefing Card — auto-generated morning summary with TTS + WhatsApp. */
+function DailyBriefingCard({
+  userName,
+  health,
+  sources,
+  briefingDate,
+  onViewed,
+}: {
+  userName: string;
+  health: BrandHealth | null;
+  sources: SourceDistResp | null;
+  briefingDate: string;
+  onViewed: () => void;
+}) {
+  const today = todayISO();
+  const isNew = briefingDate !== today;
+
+  const mentionCount = health?.mentionCount24h ?? 0;
+  const sentimentPct = health ? Math.round(health.sentiment.positive) : null;
+  const topSource = sources?.sources?.[0]?.name ?? null;
+  const crisisLevel = health?.crisisLevel ?? "safe";
+
+  const crisisLabel: Record<BrandHealth["crisisLevel"], string> = {
+    safe: "aucune crise détectée",
+    watch: "vigilance crise modérée",
+    warning: "alerte crise élevée",
+    critical: "crise critique en cours",
+  };
+
+  const firstName = (userName.split(" ")[0] || userName).trim();
+  const articlesStr = `${mentionCount} article${mentionCount > 1 ? "s" : ""}`;
+  const sentimentStr = sentimentPct !== null ? `sentiment ${sentimentPct}%` : "sentiment —";
+  const sourceStr = topSource ? `${topSource} dominant` : "aucune source dominante";
+  const crisisStr = crisisLabel[crisisLevel];
+
+  const briefingText = `Bonjour ${firstName}. Aujourd'hui : ${articlesStr}, ${sentimentStr}, ${sourceStr}, ${crisisStr}.`;
+
+  // ─── Web Speech API — French TTS (guarded for SSR + browser support) ──
+  const handleListen = useCallback(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast.error("Synthèse vocale non disponible sur ce navigateur");
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(briefingText);
+      utter.lang = "fr-FR";
+      utter.rate = 1;
+      utter.pitch = 1;
+      // Try to find a French voice (best-effort — getVoices may be empty
+      // on first call, in which case the browser default is used).
+      const voices = window.speechSynthesis.getVoices();
+      const frVoice = voices.find((v) => v.lang.toLowerCase().startsWith("fr"));
+      if (frVoice) utter.voice = frVoice;
+      window.speechSynthesis.speak(utter);
+      toast.success("Lecture du briefing en cours", {
+        description: "Cliquez à nouveau pour réécouter.",
+      });
+      onViewed();
+    } catch {
+      toast.error("Erreur lors de la lecture audio");
+    }
+  }, [briefingText, onViewed]);
+
+  const handleWhatsApp = useCallback(() => {
+    toast.success("Briefing envoyé sur WhatsApp", {
+      description: "Vous recevrez le résumé quotidien sur votre numéro enregistré.",
+    });
+    onViewed();
+  }, [onViewed]);
+
+  const lastViewedLabel = briefingDate
+    ? `Vu le ${format(parseISO(briefingDate), "dd MMM", { locale: fr })}`
+    : "Nouveau briefing";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12" style={{ border: `1px solid ${SAGE}` }}>
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-md shrink-0"
+              style={{ width: 28, height: 28, backgroundColor: SAGE, color: "#FFFFFF" }}
+            >
+              <Sun size={14} />
+            </div>
+            <div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+                Briefing du jour
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: SAGE,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {format(new Date(), "EEEE d MMMM", { locale: fr })} · {lastViewedLabel}
+              </div>
+            </div>
+          </div>
+          {isNew && (
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE,
+              }}
+            >
+              NOUVEAU
+            </Badge>
+          )}
+        </div>
+
+        {/* Briefing text */}
+        <div
+          className="rounded-md p-3"
+          style={{ backgroundColor: SAGE_BG, borderLeft: `3px solid ${SAGE}` }}
+        >
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 14,
+              lineHeight: 1.55,
+              color: CHARCOAL,
+              margin: 0,
+            }}
+          >
+            {briefingText}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={handleListen}
+            style={{ fontFamily: FONT_MONO, fontSize: 11, backgroundColor: SAGE, color: "#FFFFFF" }}
+          >
+            <Volume2 size={12} className="mr-1.5" />
+            Écouter
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8"
+            onClick={handleWhatsApp}
+            style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+          >
+            <Send size={12} className="mr-1.5" />
+            Recevoir sur WhatsApp
+          </Button>
+          <span
+            className="ml-auto"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: TEXT_MUTED,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Généré à {format(new Date(), "HH:mm", { locale: fr })}
+          </span>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+/** 8. Notification Bell — header dropdown panel with 3 notif types. */
+function NotificationBell({
+  notifications,
+  expanded,
+  onToggle,
+  onMarkAllRead,
+  onClickNotification,
+}: {
+  notifications: NotificationItem[];
+  expanded: boolean;
+  onToggle: () => void;
+  onMarkAllRead: () => void;
+  onClickNotification: (n: NotificationItem) => void;
+}) {
+  const unread = notifications.filter((n) => !n.read).length;
+
+  return (
+    <div className="relative">
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onToggle}
+              className="relative inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+              style={{ width: 32, height: 32 }}
+              aria-label={`Notifications${unread > 0 ? `, ${unread} non lues` : ""}`}
+              aria-expanded={expanded}
+            >
+              <Bell size={18} style={{ color: TEXT_BODY }} />
+              {unread > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 3,
+                    right: 3,
+                    minWidth: 14,
+                    height: 14,
+                    padding: "0 3px",
+                    borderRadius: 7,
+                    backgroundColor: NEGATIVE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px solid #FFFFFF",
+                  }}
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+              {unread > 0 ? `${unread} notification(s) non lue(s)` : "Aucune notification non lue"}
+            </span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      {expanded && (
+        <>
+          {/* Click-outside overlay */}
+          <div className="fixed inset-0 z-40" onClick={onToggle} aria-hidden="true" />
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg"
+            style={{
+              width: 340,
+              backgroundColor: "#FFFFFF",
+              border: `1px solid ${BORDER}`,
+            }}
+          >
+            {/* Panel header */}
+            <div
+              className="flex items-center justify-between px-3 py-2.5"
+              style={{ borderBottom: `1px solid ${BORDER}` }}
+            >
+              <span style={FONT_HEADER}>Notifications</span>
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={onMarkAllRead}
+                  className="inline-flex items-center gap-1"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: SAGE,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  <CheckCheck size={11} />
+                  Tout marquer comme lu
+                </button>
+              )}
+            </div>
+
+            {/* Empty state */}
+            {notifications.length === 0 ? (
+              <div className="px-3 py-8 text-center">
+                <div
+                  className="flex items-center justify-center rounded-full mx-auto mb-2"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: SAGE_BG,
+                    border: `1px dashed ${SAGE_DIM}`,
+                  }}
+                >
+                  <CheckCircle2 size={16} style={{ color: SAGE }} />
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+                  Aucune notification
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
+                  Vous êtes à jour.
+                </p>
+              </div>
+            ) : (
+              <div className="max-h-[360px] overflow-y-auto">
+                {notifications.map((n) => {
+                  const Icon =
+                    n.type === "crise" ? AlertTriangle : n.type === "rapport" ? FileText : KeyRound;
+                  const dotColor = NOTIF_DOT_COLOR[n.type];
+                  return (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => onClickNotification(n)}
+                      className="w-full text-left px-3 py-2.5 transition-colors hover:bg-[#FAFAFA]"
+                      style={{ borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          style={{
+                            marginTop: 5,
+                            width: 6,
+                            height: 6,
+                            borderRadius: "50%",
+                            backgroundColor: dotColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Icon size={12} style={{ color: dotColor, flexShrink: 0 }} />
+                            <span
+                              style={{
+                                fontFamily: FONT_SANS,
+                                fontSize: 12,
+                                fontWeight: n.read ? 500 : 700,
+                                color: CHARCOAL,
+                              }}
+                            >
+                              {n.title}
+                            </span>
+                          </div>
+                          <p
+                            style={{
+                              fontFamily: FONT_SANS,
+                              fontSize: 11,
+                              color: TEXT_BODY,
+                              marginTop: 2,
+                              lineHeight: 1.45,
+                            }}
+                          >
+                            {n.body}
+                          </p>
+                          <div
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              color: TEXT_MUTED,
+                              marginTop: 4,
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            {fmtRelative(n.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 9. Guided Tour — 5-step spotlight overlay, CSS-only via box-shadow. */
+function GuidedTour({
+  active,
+  step,
+  onNext,
+  onSkip,
+}: {
+  active: boolean;
+  step: number;
+  onNext: () => void;
+  onSkip: () => void;
+}) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  // Scroll target into view + measure rect; update on scroll/resize.
+  useEffect(() => {
+    if (!active) {
+      // Clear spotlight rect when tour is inactive — canonical reset pattern.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRect(null);
+      return;
+    }
+    const stepData = TOUR_STEPS[step];
+    if (!stepData) return;
+    const el = document.getElementById(stepData.target);
+    if (!el) return;
+
+    // Scroll target into view first (smooth, centered).
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const updateRect = () => setRect(el.getBoundingClientRect());
+
+    // Initial measurement after smooth scroll settles (~400ms).
+    const t = setTimeout(updateRect, 400);
+
+    // Track scroll/resize to keep spotlight aligned.
+    window.addEventListener("scroll", updateRect, true);
+    window.addEventListener("resize", updateRect);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("scroll", updateRect, true);
+      window.removeEventListener("resize", updateRect);
+    };
+  }, [active, step]);
+
+  if (!active || !rect) return null;
+  const stepData = TOUR_STEPS[step];
+  if (!stepData) return null;
+
+  const isLast = step === TOUR_STEPS.length - 1;
+
+  // Tooltip position — below spotlight by default, above if no space below.
+  const tooltipBelow = rect.bottom + 220 < window.innerHeight;
+  const tooltipLeft = Math.max(
+    16,
+    Math.min(rect.left, window.innerWidth - 336),
+  );
+  const tooltipTop = tooltipBelow ? rect.bottom + 16 : Math.max(16, rect.top - 200);
+
+  return (
+    <>
+      {/* Spotlight overlay — fixed div with inset box-shadow creates dark mask
+          with a transparent hole around the target element. */}
+      <div
+        style={{
+          position: "fixed",
+          left: rect.left - 8,
+          top: rect.top - 8,
+          width: rect.width + 16,
+          height: rect.height + 16,
+          borderRadius: 12,
+          boxShadow: "0 0 0 9999px rgba(10,10,10,0.65)",
+          border: `2px solid ${SAGE}`,
+          zIndex: 100,
+          transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Tooltip card */}
+      <div
+        style={{
+          position: "fixed",
+          left: tooltipLeft,
+          top: tooltipTop,
+          width: 320,
+          zIndex: 110,
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.1 }}
+          className="rounded-lg shadow-xl"
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: `1px solid ${SAGE}`,
+            padding: 16,
+          }}
+        >
+          {/* Progress dots */}
+          <div className="flex items-center gap-1.5 mb-3">
+            {TOUR_STEPS.map((_, i) => (
+              <span
+                key={i}
+                style={{
+                  width: i === step ? 20 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor:
+                    i === step ? SAGE : i < step ? SAGE_DIM : BORDER_STRONG,
+                  transition: "all 0.2s",
+                }}
+              />
+            ))}
+            <span
+              className="ml-auto"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+              }}
+            >
+              {step + 1}/{TOUR_STEPS.length}
+            </span>
+          </div>
+
+          {/* Title + description */}
+          <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+            {stepData.title}
+          </div>
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: TEXT_BODY,
+              marginTop: 4,
+              lineHeight: 1.5,
+            }}
+          >
+            {stepData.description}
+          </p>
+
+          {/* Actions */}
+          <div className="mt-4 flex items-center gap-2">
+            <Button
+              size="sm"
+              className="h-8"
+              onClick={onNext}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+              }}
+            >
+              {isLast ? "Terminer" : "Suivant"}
+              {!isLast && <ArrowRight size={12} className="ml-1.5" />}
+            </Button>
+            <button
+              type="button"
+              onClick={onSkip}
+              className="inline-flex items-center"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              Passer le tour
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </>
+  );
+}
+
 // ════════════════════════════════════════════════════════════════════
 // MAIN — EssentialDashboard
 // ════════════════════════════════════════════════════════════════════
@@ -5184,8 +5889,29 @@ export default function EssentialDashboard() {
     "essential:help-dismissed",
     [],
   );
+  // ─── R2-ESSENTIAL-A — Round 2 persisted client-side state ───────────
+  // Notification center, guided tour completion, daily briefing last-viewed.
+  const [notifications, setNotifications] = usePersistentState<NotificationItem[]>(
+    "essential:notifications",
+    [],
+  );
+  const [tourCompleted, setTourCompleted] = usePersistentState<boolean>(
+    "essential:tour-completed",
+    false,
+  );
+  const [briefingDate, setBriefingDate] = usePersistentState<string>(
+    "essential:briefing-date",
+    "",
+  );
   // Transient state for the sage-pulse animation on recently-unlocked milestone.
   const [recentlyUnlockedKey, setRecentlyUnlockedKey] = useState<string | null>(null);
+  // ─── R2-ESSENTIAL-A — Round 2 transient state ──────────────────────
+  // Hydration flag (waits for usePersistentState to read localStorage),
+  // notification dropdown open state, guided tour active + current step.
+  const [hydrated, setHydrated] = useState(false);
+  const [notifExpanded, setNotifExpanded] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
 
   const helpDismissedSet = useMemo(() => new Set(helpDismissedArr), [helpDismissedArr]);
   const dismissHelp = useCallback(
@@ -5233,6 +5959,37 @@ export default function EssentialDashboard() {
   useEffect(() => {
     setVisits((v) => v + 1);
   }, [setVisits]);
+
+  // ─── R2-ESSENTIAL-A — Hydration flag (runs after usePersistentState) ──
+  // Set to true on mount; subsequent effects gate on this to ensure they
+  // see hydrated values from localStorage (avoids auto-launching the tour
+  // or re-seeding notifications for returning users on initial render).
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  // ─── R2-ESSENTIAL-A — Seed sample notifications on first visit ──────
+  // After hydration: if notifications array is empty (first visit, no
+  // localStorage data), populate with 3 sample notifications (crise +
+  // rapport + quota). Returning users see their persisted notifications.
+  useEffect(() => {
+    if (!hydrated) return;
+    setNotifications((prev) =>
+      prev.length === 0 ? makeSeedNotifications() : prev,
+    );
+  }, [hydrated, setNotifications]);
+
+  // ─── R2-ESSENTIAL-A — Auto-launch guided tour on first visit ────────
+  // After hydration: if tour has not been completed yet, launch it.
+  // "Passer le tour" / "Terminer" both set tourCompleted=true to prevent
+  // re-launch on subsequent visits. "Refaire le tour" link bypasses this
+  // by setting tourActive=true directly (manual re-trigger).
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!tourCompleted) {
+      setTourActive(true);
+    }
+  }, [hydrated, tourCompleted]);
 
   // ─── Milestone: firstArticle (mentionCount24h > 0) ─────────────────
   useEffect(() => {
@@ -5331,6 +6088,60 @@ export default function EssentialDashboard() {
     [handleReportDownload],
   );
 
+  // ─── R2-ESSENTIAL-A — Notification Center handlers ─────────────────
+  // Toggle dropdown, mark all as read, click single notification (marks
+  // as read + closes dropdown + scrolls to relevant section).
+  const handleToggleNotifs = useCallback(() => {
+    setNotifExpanded((v) => !v);
+  }, []);
+
+  const handleMarkAllNotifsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, [setNotifications]);
+
+  const handleClickNotif = useCallback(
+    (n: NotificationItem) => {
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)),
+      );
+      setNotifExpanded(false);
+      scrollToSection(n.target);
+    },
+    [setNotifications],
+  );
+
+  // ─── R2-ESSENTIAL-A — Guided Tour handlers ─────────────────────────
+  // Manual re-trigger from Quick Start link, advance to next step, skip.
+  const handleStartTour = useCallback(() => {
+    setTourStep(0);
+    setTourActive(true);
+  }, []);
+
+  const handleTourNext = useCallback(() => {
+    setTourStep((s) => {
+      if (s + 1 >= TOUR_STEPS.length) {
+        setTourActive(false);
+        setTourCompleted(true);
+        toast.success("Tour guidé terminé", {
+          description: "Vous êtes prêt à utiliser votre atelier de veille.",
+        });
+        return s;
+      }
+      return s + 1;
+    });
+  }, [setTourCompleted]);
+
+  const handleTourSkip = useCallback(() => {
+    setTourActive(false);
+    setTourCompleted(true);
+  }, [setTourCompleted]);
+
+  // ─── R2-ESSENTIAL-A — Daily Briefing handlers ──────────────────────
+  // Marks today's briefing as viewed (persisted in essential:briefing-date).
+  const handleBriefingViewed = useCallback(() => {
+    setBriefingDate(todayISO());
+  }, [setBriefingDate]);
+
   const milestoneProgress = useMemo(() => {
     return (["firstArticle", "firstQuestion", "firstReport", "firstWeek"] as const).filter(
       (k) => milestones[k],
@@ -5419,6 +6230,11 @@ export default function EssentialDashboard() {
           milestoneTotal={4}
           milestoneRecentlyUnlocked={milestoneRecentlyUnlocked}
           onMilestoneClick={() => scrollToSection("jalons")}
+          notifications={notifications}
+          notifExpanded={notifExpanded}
+          onToggleNotifs={handleToggleNotifs}
+          onMarkAllNotifsRead={handleMarkAllNotifsRead}
+          onClickNotif={handleClickNotif}
         />
 
         <main className="flex-1 px-4 lg:px-6 py-6">
@@ -5452,8 +6268,18 @@ export default function EssentialDashboard() {
               <QuickStartCard
                 onAction={handleQuickAction}
                 onDismiss={() => setQuickStartDismissed(true)}
+                onRedoTour={handleStartTour}
               />
             )}
+
+            {/* R2-ESSENTIAL-A — Daily Briefing (auto-generated, TTS + WhatsApp) */}
+            <DailyBriefingCard
+              userName={userName}
+              health={health}
+              sources={sources}
+              briefingDate={briefingDate}
+              onViewed={handleBriefingViewed}
+            />
 
             {/* SECTION 2 — Score de Réputation */}
             <ScoreReputationCard
@@ -5628,7 +6454,7 @@ export default function EssentialDashboard() {
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL
+              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A
             </div>
             <div
               style={{
@@ -5642,6 +6468,14 @@ export default function EssentialDashboard() {
           </div>
         </footer>
       </div>
+
+      {/* R2-ESSENTIAL-A — Guided Tour overlay (portal-level, fixed position) */}
+      <GuidedTour
+        active={tourActive}
+        step={tourStep}
+        onNext={handleTourNext}
+        onSkip={handleTourSkip}
+      />
     </div>
   );
 }

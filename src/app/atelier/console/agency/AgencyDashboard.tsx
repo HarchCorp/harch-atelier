@@ -98,6 +98,7 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
+  Activity,
   AlertTriangle,
   ArrowDown,
   ArrowLeft,
@@ -108,6 +109,7 @@ import {
   Brain,
   Building2,
   Calculator,
+  CalendarClock,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -124,14 +126,19 @@ import {
   FileBarChart,
   FileText,
   Filter,
+  Flag,
   Gauge,
   Globe,
   Globe2,
   GripVertical,
   Heart,
+  HeartPulse,
+  Hourglass,
   KanbanSquare,
   Layers,
   LayoutGrid,
+  LifeBuoy,
+  Lightbulb,
   LineChart as LineChartIcon,
   LogOut,
   Mail,
@@ -148,13 +155,16 @@ import {
   Send,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
+  Target,
   TrendingDown,
   TrendingUp,
   Trophy,
   Upload,
   UserPlus,
   Users,
+  Wallet,
   X,
   Zap,
 } from "lucide-react";
@@ -572,6 +582,54 @@ interface WorkloadMember {
   email: string;
   assignedClientIds: string[];
   capacity: number;
+}
+
+// ─── AGENCY R2 FEATURES TYPES (Task ID: R2-AGENCY-A) ──────────────────
+// Drives 3 new client-side features: client health scoring, churn risk
+// indicator, revenue forecasting chart. All persisted in localStorage via
+// usePersistentState hook (same pattern as ENV-AGENCY features).
+
+interface HealthFactor {
+  label: string;
+  value: number;        // 0-100 (component score, higher = healthier)
+  weight: number;       // 0-1 (relative weight in aggregate score)
+  impact: number;       // 0-100 (negative contribution — drives risk list)
+}
+
+interface ClientHealth {
+  clientId: string;
+  displayName: string;
+  score: number;        // 0-100
+  factors: HealthFactor[];
+  trend: number[];      // 6 months of scores (0-100 each)
+  retentionMonths: number;
+}
+
+type HealthBand = "excellent" | "bon" | "surveiller" | "risque";
+
+interface ChurnRiskEntry {
+  clientId: string;
+  displayName: string;
+  riskPct: number;          // 0-100
+  contractEndDate: string;  // ISO date
+  recommendedAction: string;
+  monthlyRevenueMAD: number;
+  factors: { label: string; pct: number }[];
+}
+
+type ChurnBand = "fidele" | "stable" | "volatile" | "imminent";
+
+interface ChurnRiskState {
+  campaignLaunchedAt: number | null;
+  acknowledgedClientIds: string[];
+}
+
+interface RevenueForecastInput {
+  currentMRR: number;
+  pipelineValue: number;
+  churnRatePct: number;
+  winRatePct: number;
+  upsellPct: number;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
@@ -9024,6 +9082,1165 @@ function TeamWorkloadBalancerCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R2-AGENCY-A · FEATURE 1 — CLIENT HEALTH SCORING (full-width card)
+// Each client gets a 0-100 health score computed from sentiment trend,
+// mention velocity, crisis alerts, engagement, retention months. Health
+// band: Excellent (80-100, sage) / Bon (60-79, sage-dim) / À surveiller
+// (40-59, amber) / À risque (<40, red). Per-client sparkline (6 mois),
+// "Facteurs de risque" expandable list (top 3 contributing factors),
+// "Plan d'action" button → suggested actions based on score. Aggregate
+// health strip at top. Manual overrides persisted in localStorage
+// "agency:client-health-overrides".
+// ════════════════════════════════════════════════════════════════════
+
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h | 0);
+}
+
+function monthsSince(iso: string): number {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 0;
+  const ms = Date.now() - d.getTime();
+  return Math.max(0, Math.floor(ms / (30 * 24 * 60 * 60 * 1000)));
+}
+
+function healthBandFor(score: number): HealthBand {
+  if (score >= 80) return "excellent";
+  if (score >= 60) return "bon";
+  if (score >= 40) return "surveiller";
+  return "risque";
+}
+
+function healthBandStyle(band: HealthBand): { label: string; color: string; bg: string } {
+  switch (band) {
+    case "excellent":
+      return { label: "Excellent", color: SAGE_DEEP, bg: SAGE_BG };
+    case "bon":
+      return { label: "Bon", color: SAGE, bg: "rgba(74,123,95,0.05)" };
+    case "surveiller":
+      return { label: "À surveiller", color: "#B45309", bg: "rgba(245,158,11,0.10)" };
+    case "risque":
+      return { label: "À risque", color: NEGATIVE, bg: "rgba(239,68,68,0.08)" };
+  }
+}
+
+function computeClientHealth(client: AgencyClient): ClientHealth {
+  const sentiment = derivedClientSentiment(client);
+  const apiPct = client.bars?.apiRequests?.pct ?? 0;
+  const alerts = client.usage.whatsappAlerts ?? 0;
+  const apiReq = client.usage.apiRequests ?? 0;
+  const retention = monthsSince(client.createdAt);
+
+  const sentimentScore = Math.round(sentiment.positive * 0.7 + sentiment.neutral * 0.3);
+  const velocityScore = Math.min(100, Math.max(0, Math.round(apiPct)));
+  const crisisScore = Math.max(0, 100 - alerts * 15);
+  const engagementScore = Math.min(100, Math.round((apiReq / 5000) * 100));
+  const retentionScore = Math.min(100, Math.round((retention / 24) * 100));
+
+  const factors: HealthFactor[] = [
+    { label: "Tendance sentiment", value: sentimentScore, weight: 0.3, impact: 100 - sentimentScore },
+    { label: "Velocity des mentions", value: velocityScore, weight: 0.15, impact: 100 - velocityScore },
+    { label: "Alertes crisis", value: crisisScore, weight: 0.25, impact: 100 - crisisScore },
+    { label: "Engagement", value: engagementScore, weight: 0.15, impact: 100 - engagementScore },
+    { label: "Rétention (mois)", value: retentionScore, weight: 0.15, impact: 100 - retentionScore },
+  ];
+
+  const score = Math.round(factors.reduce((s, f) => s + f.value * f.weight, 0));
+
+  // 6-month trend: deterministic from clientId hash. Lower score → slight downtrend.
+  const seed = hashStr(client.id);
+  const trend: number[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const wobble = ((seed >> (i * 2)) & 0x0f) - 8;
+    const drift = score < 60 ? -i * 2 : score > 80 ? i * 1 : 0;
+    trend.push(Math.max(0, Math.min(100, score + wobble + drift)));
+  }
+
+  return {
+    clientId: client.id,
+    displayName: client.displayName,
+    score,
+    factors,
+    trend,
+    retentionMonths: retention,
+  };
+}
+
+function actionPlanFor(score: number): string[] {
+  if (score < 40) {
+    return [
+      "Audit urgent du compte sous 48h",
+      "Brief crise avec le directeur de clientèle",
+      "Renforcement équipe dédiée (+2 ressources)",
+      "Plan de redressement 30 jours adressé au client",
+    ];
+  }
+  if (score < 60) {
+    return [
+      "Renforcer le monitoring (scan temps réel)",
+      "Brief client hebdomadaire obligatoire",
+      "Plan de redressement réputation 60 jours",
+      "Revue trimestrielle anticipée à 30 jours",
+    ];
+  }
+  if (score < 80) {
+    return [
+      "Optimiser les narratifs gagnants",
+      "Étendre la couverture éditoriale (+2 sources)",
+      "Quarterly review avec recommandations",
+      "Identifier opportunité de cross-sell",
+    ];
+  }
+  return [
+    "Maintenir le niveau d'excellence",
+    "Proposer un case study public",
+    "Cross-sell module Visibilité IA",
+    "Envisager l'upscale vers tier supérieur",
+  ];
+}
+
+function ClientHealthScoringCard({
+  clients,
+  loading,
+}: {
+  clients: AgencyClient[];
+  loading: boolean;
+}) {
+  const [overrides, setOverrides] = usePersistentState<Record<string, number>>(
+    "agency:client-health-overrides",
+    {},
+  );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [planClientId, setPlanClientId] = useState<string | null>(null);
+
+  const healthRows = useMemo(() => {
+    return clients.map((c) => {
+      const computed = computeClientHealth(c);
+      const override = overrides[c.id];
+      const score = override ?? computed.score;
+      return { ...computed, score, overridden: override !== undefined };
+    });
+  }, [clients, overrides]);
+
+  const bandCounts = useMemo(() => {
+    const counts: Record<HealthBand, number> = { excellent: 0, bon: 0, surveiller: 0, risque: 0 };
+    healthRows.forEach((r) => {
+      counts[healthBandFor(r.score)]++;
+    });
+    return counts;
+  }, [healthRows]);
+
+  const avgScore = healthRows.length
+    ? Math.round(healthRows.reduce((s, r) => s + r.score, 0) / healthRows.length)
+    : 0;
+
+  const adjustOverride = (clientId: string, delta: number) => {
+    const current = healthRows.find((r) => r.clientId === clientId)?.score ?? 50;
+    const next = Math.max(0, Math.min(100, current + delta));
+    setOverrides((prev) => ({ ...prev, [clientId]: next }));
+  };
+
+  const clearOverride = (clientId: string) => {
+    setOverrides((prev) => {
+      const copy: Record<string, number> = {};
+      Object.keys(prev).forEach((k) => {
+        if (k !== clientId) copy[k] = prev[k];
+      });
+      return copy;
+    });
+  };
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Scoring Santé Client"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE_DEEP,
+                fontWeight: 700,
+              }}
+            >
+              <HeartPulse size={10} /> {healthRows.length} clients
+            </span>
+            {Object.keys(overrides).length > 0 && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  backgroundColor: "#FAFAFA",
+                  color: TEXT_MUTED,
+                  fontWeight: 700,
+                }}
+              >
+                {Object.keys(overrides).length} ajustement(s) manuel(s)
+              </span>
+            )}
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
+          ))}
+        </div>
+      ) : healthRows.length === 0 ? (
+        <div
+          className="text-center py-8 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <HeartPulse size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+            Aucun client dans le portefeuille — ajoutez un client pour activer le scoring santé.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Aggregate strip */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+            <div
+              className="p-2.5 rounded-md"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+            >
+              <div style={FONT_HEADER}>Santé moyenne</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {avgScore}<span style={{ fontSize: 11, color: TEXT_MUTED }}> /100</span>
+              </div>
+            </div>
+            {(["excellent", "bon", "surveiller", "risque"] as HealthBand[]).map((band) => {
+              const style = healthBandStyle(band);
+              return (
+                <div
+                  key={band}
+                  className="p-2.5 rounded-md"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: style.bg }}
+                >
+                  <div style={{ ...FONT_HEADER, color: style.color }}>{style.label}</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: style.color, marginTop: 2 }}>
+                    {bandCounts[band]}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Per-client rows */}
+          <div className="space-y-1.5">
+            {healthRows.map((row) => {
+              const band = healthBandFor(row.score);
+              const style = healthBandStyle(band);
+              const isExpanded = expandedId === row.clientId;
+              const topFactors = [...row.factors].sort((a, b) => b.impact - a.impact).slice(0, 3);
+              const sparkData = row.trend.map((v, i) => ({ m: i + 1, v }));
+              return (
+                <div
+                  key={row.clientId}
+                  className="rounded-md transition-colors"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : row.clientId)}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left"
+                  >
+                    <div
+                      className="flex items-center justify-center shrink-0 rounded-md"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        backgroundColor: style.bg,
+                        border: `1px solid ${style.color}`,
+                      }}
+                    >
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: style.color }}>
+                        {row.score}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }} className="truncate">
+                        {row.displayName}
+                        {row.overridden && (
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: 6 }}>(manuel)</span>
+                        )}
+                      </div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 1 }}>
+                        {row.retentionMonths} mois · {style.label}
+                      </div>
+                    </div>
+                    <div style={{ width: 80, height: 32, flexShrink: 0 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={sparkData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id={`hs-${row.clientId}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={style.color} stopOpacity={0.4} />
+                              <stop offset="100%" stopColor={style.color} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <Area
+                            type="monotone"
+                            dataKey="v"
+                            stroke={style.color}
+                            strokeWidth={1.5}
+                            fill={`url(#hs-${row.clientId})`}
+                            isAnimationActive={false}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ChevronRight
+                      size={14}
+                      style={{
+                        color: TEXT_MUTED,
+                        flexShrink: 0,
+                        transform: isExpanded ? "rotate(90deg)" : "none",
+                        transition: "transform 0.15s",
+                      }}
+                    />
+                  </button>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="px-3 pb-3 pt-1 border-t"
+                      style={{ borderColor: BORDER }}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                        <div>
+                          <div style={FONT_HEADER}>Facteurs de risque · Top 3</div>
+                          <div className="space-y-1.5 mt-2">
+                            {topFactors.map((f) => (
+                              <div key={f.label}>
+                                <div className="flex items-center justify-between">
+                                  <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>{f.label}</span>
+                                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: f.impact > 50 ? NEGATIVE : f.impact > 30 ? "#B45309" : SAGE_DEEP, fontWeight: 700 }}>
+                                    {f.impact}%
+                                  </span>
+                                </div>
+                                <div style={{ width: "100%", height: 4, backgroundColor: BORDER, borderRadius: 2, marginTop: 3 }}>
+                                  <div style={{ width: `${f.impact}%`, height: "100%", backgroundColor: f.impact > 50 ? NEGATIVE : f.impact > 30 ? NEUTRAL_AMBER : SAGE, borderRadius: 2 }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-1 mt-3">
+                            <span style={{ ...FONT_HEADER, marginRight: 4 }}>Ajuster</span>
+                            <Button variant="outline" size="sm" className="h-6 px-2" style={{ fontFamily: FONT_MONO, fontSize: 10 }} onClick={() => adjustOverride(row.clientId, -5)}>
+                              −5
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-6 px-2" style={{ fontFamily: FONT_MONO, fontSize: 10 }} onClick={() => adjustOverride(row.clientId, 5)}>
+                              +5
+                            </Button>
+                            {row.overridden && (
+                              <Button variant="ghost" size="sm" className="h-6 px-2" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }} onClick={() => clearOverride(row.clientId)}>
+                                Réinitialiser
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <div style={FONT_HEADER}>Plan d'action</div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2"
+                              style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE, color: SAGE_DEEP }}
+                              onClick={() => setPlanClientId(planClientId === row.clientId ? null : row.clientId)}
+                            >
+                              <Lightbulb size={11} /> {planClientId === row.clientId ? "Masquer" : "Voir"}
+                            </Button>
+                          </div>
+                          {planClientId === row.clientId ? (
+                            <motion.ul
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="space-y-1 mt-2"
+                            >
+                              {actionPlanFor(row.score).map((action, i) => (
+                                <li key={i} className="flex items-start gap-1.5">
+                                  <Check size={11} style={{ color: SAGE, flexShrink: 0, marginTop: 2 }} />
+                                  <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.4 }}>{action}</span>
+                                </li>
+                              ))}
+                            </motion.ul>
+                          ) : (
+                            <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                              Score {row.score}/100 — cliquez « Voir » pour afficher les {actionPlanFor(row.score).length} actions recommandées.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      <AiCommentary
+        text={
+          healthRows.length === 0
+            ? "Le scoring santé s'active dès l'ajout du premier client au portefeuille."
+            : `Portefeuille: ${bandCounts.excellent} excellent(s), ${bandCounts.bon} bon(s), ${bandCounts.surveiller} à surveiller, ${bandCounts.risque} à risque. Santé moyenne ${avgScore}/100. ${bandCounts.risque > 0 ? `${bandCounts.risque} client(s) nécessitent un plan d'action immédiat.` : "Aucun client en zone de risque — maintenez le rythme."}`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R2-AGENCY-A · FEATURE 2 — CHURN RISK INDICATOR (full-width card)
+// Predictive churn risk per client (0-100%): based on usage decline,
+// sentiment drop, support tickets, contract end date proximity. 4 risk
+// levels: Fidèle (0-25%, sage) / Stable (26-50%, sage-dim) / Volatile
+// (51-75%, amber) / Churn imminent (76-100%, red, pulsing). Top 3 at-
+// risk clients list with: name, risk %, contract end date, recommended
+// action. "Lancer campagne de rétention" button (simulated). Monthly
+// churn forecast + revenue at risk. Persisted in localStorage
+// "agency:churn-risk". Seeded with realistic data derived from existing
+// client list.
+// ════════════════════════════════════════════════════════════════════
+
+function churnBandFor(risk: number): ChurnBand {
+  if (risk <= 25) return "fidele";
+  if (risk <= 50) return "stable";
+  if (risk <= 75) return "volatile";
+  return "imminent";
+}
+
+function churnBandStyle(band: ChurnBand): { label: string; color: string; bg: string; pulse: boolean } {
+  switch (band) {
+    case "fidele":
+      return { label: "Fidèle", color: SAGE_DEEP, bg: SAGE_BG, pulse: false };
+    case "stable":
+      return { label: "Stable", color: SAGE, bg: "rgba(74,123,95,0.05)", pulse: false };
+    case "volatile":
+      return { label: "Volatile", color: "#B45309", bg: "rgba(245,158,11,0.10)", pulse: false };
+    case "imminent":
+      return { label: "Churn imminent", color: NEGATIVE, bg: "rgba(239,68,68,0.08)", pulse: true };
+  }
+}
+
+function computeChurnRisk(client: AgencyClient): ChurnRiskEntry {
+  const sentiment = derivedClientSentiment(client);
+  const apiPct = client.bars?.apiRequests?.pct ?? 0;
+  const alerts = client.usage.whatsappAlerts ?? 0;
+  const retention = monthsSince(client.createdAt);
+  const monthlyRevenue = client.quota?.monthlyPriceMAD ?? 6500;
+
+  const declineRisk = Math.max(0, Math.min(100, 100 - apiPct));
+  const dropRisk = Math.min(100, sentiment.negative * 2);
+  const ticketRisk = Math.min(100, alerts * 20);
+  const cycleMonth = retention % 12;
+  const proxRisk = Math.round((cycleMonth / 11) * 100);
+
+  const riskPct = Math.round(declineRisk * 0.3 + dropRisk * 0.3 + ticketRisk * 0.2 + proxRisk * 0.2);
+
+  const created = new Date(client.createdAt);
+  const contractEnd = new Date(created);
+  contractEnd.setMonth(contractEnd.getMonth() + 12 + Math.floor(retention / 12) * 12);
+
+  const band = churnBandFor(riskPct);
+  let action: string;
+  switch (band) {
+    case "imminent":
+      action = "Renégocier contrat · appel CEO sous 48h";
+      break;
+    case "volatile":
+      action = "Plan rétention · upgrade proposé";
+      break;
+    case "stable":
+      action = "Quarterly review · NPS à mesurer";
+      break;
+    case "fidele":
+      action = "Cross-sell · case study à publier";
+      break;
+  }
+
+  return {
+    clientId: client.id,
+    displayName: client.displayName,
+    riskPct,
+    contractEndDate: contractEnd.toISOString(),
+    recommendedAction: action,
+    monthlyRevenueMAD: monthlyRevenue,
+    factors: [
+      { label: "Baisse d'usage", pct: Math.round(declineRisk) },
+      { label: "Chute sentiment", pct: Math.round(dropRisk) },
+      { label: "Tickets support", pct: Math.round(ticketRisk) },
+      { label: "Proximité échéance", pct: Math.round(proxRisk) },
+    ],
+  };
+}
+
+function ChurnRiskIndicatorCard({
+  clients,
+  loading,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  loading: boolean;
+  onToast: (msg: string, type?: "success" | "info") => void;
+}) {
+  const [churnState, setChurnState] = usePersistentState<ChurnRiskState>(
+    "agency:churn-risk",
+    { campaignLaunchedAt: null, acknowledgedClientIds: [] },
+  );
+
+  const entries = useMemo(() => {
+    return clients
+      .map(computeChurnRisk)
+      .sort((a, b) => b.riskPct - a.riskPct);
+  }, [clients]);
+
+  const topRisk = entries.filter((e) => churnBandFor(e.riskPct) !== "fidele").slice(0, 3);
+  const monthlyForecast = entries.filter((e) => e.riskPct >= 76).length;
+  const revenueAtRisk = entries
+    .filter((e) => e.riskPct >= 51)
+    .reduce((s, e) => s + e.monthlyRevenueMAD, 0);
+
+  const bandCounts = useMemo(() => {
+    const counts: Record<ChurnBand, number> = { fidele: 0, stable: 0, volatile: 0, imminent: 0 };
+    entries.forEach((e) => {
+      counts[churnBandFor(e.riskPct)]++;
+    });
+    return counts;
+  }, [entries]);
+
+  const launchCampaign = () => {
+    setChurnState((prev) => ({ ...prev, campaignLaunchedAt: Date.now() }));
+    onToast(
+      `Campagne de rétention lancée · ${topRisk.length} client(s) ciblé(s) · ${fmtMAD(revenueAtRisk)}/mois menacés.`,
+      "success",
+    );
+  };
+
+  const acknowledge = (clientId: string) => {
+    setChurnState((prev) =>
+      prev.acknowledgedClientIds.includes(clientId)
+        ? prev
+        : { ...prev, acknowledgedClientIds: [...prev.acknowledgedClientIds, clientId] },
+    );
+  };
+
+  const campaignDaysAgo = churnState.campaignLaunchedAt
+    ? Math.floor((Date.now() - churnState.campaignLaunchedAt) / (24 * 60 * 60 * 1000))
+    : null;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Indicateur de Risque de Churn"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: monthlyForecast > 0 ? "rgba(239,68,68,0.10)" : SAGE_BG,
+                color: monthlyForecast > 0 ? NEGATIVE : SAGE_DEEP,
+                fontWeight: 700,
+              }}
+            >
+              <LifeBuoy size={10} /> {monthlyForecast} churn ce mois
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE, color: SAGE_DEEP }}
+              onClick={launchCampaign}
+              disabled={topRisk.length === 0}
+            >
+              <ShieldCheck size={11} /> Lancer campagne de rétention
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
+        <div
+          className="text-center py-8 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <LifeBuoy size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+            Aucun client — l'indicateur de churn s'active dès le premier client du portefeuille.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Aggregate strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            {(["fidele", "stable", "volatile", "imminent"] as ChurnBand[]).map((band) => {
+              const style = churnBandStyle(band);
+              return (
+                <div
+                  key={band}
+                  className="p-2.5 rounded-md flex items-center gap-2"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: style.bg }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      backgroundColor: style.color,
+                      animation: style.pulse ? "pulse-dot 1.4s ease-in-out infinite" : undefined,
+                    }}
+                  />
+                  <div>
+                    <div style={{ ...FONT_HEADER, color: style.color }}>{style.label}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: style.color }}>
+                      {bandCounts[band]} <span style={{ fontSize: 10, color: TEXT_MUTED }}>clients</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Forecast + revenue at risk */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+            <div
+              className="p-3 rounded-md flex items-center gap-3"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: monthlyForecast > 0 ? "rgba(239,68,68,0.04)" : "#FCFCFC" }}
+            >
+              <Hourglass size={18} style={{ color: monthlyForecast > 0 ? NEGATIVE : SAGE_DEEP }} />
+              <div>
+                <div style={FONT_HEADER}>Prévision churn mensuel</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: monthlyForecast > 0 ? NEGATIVE : CHARCOAL, marginTop: 2 }}>
+                  {monthlyForecast} client(s) à risque de churn ce mois
+                </div>
+              </div>
+            </div>
+            <div
+              className="p-3 rounded-md flex items-center gap-3"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: revenueAtRisk > 0 ? "rgba(245,158,11,0.04)" : "#FCFCFC" }}
+            >
+              <Wallet size={18} style={{ color: revenueAtRisk > 0 ? "#B45309" : SAGE_DEEP }} />
+              <div>
+                <div style={FONT_HEADER}>Revenu menacé</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: revenueAtRisk > 0 ? "#B45309" : CHARCOAL, marginTop: 2 }}>
+                  {fmtMAD(revenueAtRisk)} / mois menacés
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Campaign status banner */}
+          {campaignDaysAgo !== null && (
+            <div
+              className="p-2.5 rounded-md mb-3 flex items-center gap-2"
+              style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+            >
+              <CheckCircle2 size={14} style={{ color: SAGE_DEEP }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE_DEEP }}>
+                Campagne de rétention active · lancée il y a {campaignDaysAgo} jour(s) · {churnState.acknowledgedClientIds.length}/{topRisk.length} client(s) traité(s).
+              </span>
+            </div>
+          )}
+
+          {/* Top 3 at-risk clients */}
+          <div style={FONT_HEADER} className="mb-2">Top 3 · clients à risque</div>
+          {topRisk.length === 0 ? (
+            <div
+              className="text-center py-6 rounded-md"
+              style={{ border: `1px dashed ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}
+            >
+              Aucun client au-dessus du seuil « Fidèle » — portefeuille sain.
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {topRisk.map((entry, idx) => {
+                const band = churnBandFor(entry.riskPct);
+                const style = churnBandStyle(band);
+                const acknowledged = churnState.acknowledgedClientIds.includes(entry.clientId);
+                return (
+                  <div
+                    key={entry.clientId}
+                    className="rounded-md p-3"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="flex items-center justify-center shrink-0 rounded-md"
+                        style={{ width: 36, height: 36, backgroundColor: style.bg, border: `1px solid ${style.color}` }}
+                      >
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: style.color }}>
+                          {idx + 1}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }} className="truncate">
+                            {entry.displayName}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {style.pulse && (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: "50%",
+                                  backgroundColor: NEGATIVE,
+                                  animation: "pulse-dot 1.4s ease-in-out infinite",
+                                }}
+                              />
+                            )}
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: style.color }}>
+                              {entry.riskPct}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }} className="inline-flex items-center gap-1">
+                            <CalendarClock size={10} /> Échéance: {fmtDate(entry.contractEndDate)}
+                          </span>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }} className="inline-flex items-center gap-1">
+                            <Wallet size={10} /> {fmtMAD(entry.monthlyRevenueMAD)}/mois
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, marginTop: 4 }} className="flex items-start gap-1">
+                          <Lightbulb size={11} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+                          <span>{entry.recommendedAction}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {entry.factors.map((f) => (
+                            <span
+                              key={f.label}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 9,
+                                backgroundColor: f.pct > 60 ? "rgba(239,68,68,0.08)" : f.pct > 30 ? "rgba(245,158,11,0.08)" : "#FAFAFA",
+                                color: f.pct > 60 ? NEGATIVE : f.pct > 30 ? "#B45309" : TEXT_BODY,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {f.label} · {f.pct}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <Button
+                        variant={acknowledged ? "ghost" : "outline"}
+                        size="sm"
+                        className="h-7 shrink-0"
+                        style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                        onClick={() => acknowledge(entry.clientId)}
+                      >
+                        {acknowledged ? (
+                          <><Check size={11} /> Traité</>
+                        ) : (
+                          "Reconnaître"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+      <AiCommentary
+        text={
+          entries.length === 0
+            ? "L'indicateur de churn s'active dès le premier client du portefeuille."
+            : `Portefeuille: ${bandCounts.fidele} fidèle(s), ${bandCounts.stable} stable(s), ${bandCounts.volatile} volatile(s), ${bandCounts.imminent} churn imminent. ${monthlyForecast > 0 ? `${monthlyForecast} client(s) en zone critique ce mois — renégociation prioritaire.` : "Aucun churn imminent — portefeuille sain."} ${revenueAtRisk > 0 ? `${fmtMAD(revenueAtRisk)}/mois menacés.` : ""}`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R2-AGENCY-A · FEATURE 3 — REVENUE FORECASTING CHART (full-width card)
+// 12-month projection LineChart with 3 scenarios:
+//   • Conservateur (gray dashed): current clients, no growth, 5% churn
+//   • Réaliste (sage solid): current + pipeline prospects at win rate
+//   • Optimiste (sage-bright dashed): réaliste + upsell (compounding)
+// Inputs: current MRR, pipeline value, churn rate, win rate, upsell %.
+// Outputs: 12-month MRR projection, annual ARR, tier upgrade threshold
+// indicator + milestone marker. Quarterly gridlines, month labels.
+// Persisted scenario inputs in localStorage "agency:revenue-forecast".
+// ════════════════════════════════════════════════════════════════════
+
+const FORECAST_MONTHS = 12;
+
+function simulateForecast(inputs: RevenueForecastInput): {
+  data: Array<{ month: string; conservateur: number; realiste: number; optimiste: number }>;
+  finalConservative: number;
+  finalRealiste: number;
+  finalOptimiste: number;
+} {
+  const churn = Math.max(0, Math.min(100, inputs.churnRatePct)) / 100;
+  const win = Math.max(0, Math.min(100, inputs.winRatePct)) / 100;
+  const upsell = Math.max(0, Math.min(100, inputs.upsellPct)) / 100;
+  const monthlyPipeline = (inputs.pipelineValue * win) / FORECAST_MONTHS;
+
+  let cons = inputs.currentMRR;
+  let real = inputs.currentMRR;
+  let opt = inputs.currentMRR;
+
+  const monthLabels = ["M+1", "M+2", "M+3", "M+4", "M+5", "M+6", "M+7", "M+8", "M+9", "M+10", "M+11", "M+12"];
+  const data: Array<{ month: string; conservateur: number; realiste: number; optimiste: number }> = [];
+
+  for (let i = 0; i < FORECAST_MONTHS; i++) {
+    cons = Math.round(cons * (1 - churn));
+    real = Math.round(real * (1 - churn) + monthlyPipeline);
+    opt = Math.round(opt * (1 - churn) + monthlyPipeline + opt * upsell);
+    data.push({
+      month: monthLabels[i],
+      conservateur: cons,
+      realiste: real,
+      optimiste: opt,
+    });
+  }
+
+  return {
+    data,
+    finalConservative: cons,
+    finalRealiste: real,
+    finalOptimiste: opt,
+  };
+}
+
+function RevenueForecastingCard({
+  tier,
+  clients,
+}: {
+  tier: AgencyTierInfo;
+  clients: AgencyClient[];
+}) {
+  const derivedMRR = useMemo(() => {
+    const sum = clients.reduce((s, c) => s + (c.quota?.monthlyPriceMAD ?? 6500), 0);
+    return sum > 0 ? sum : 52000;
+  }, [clients]);
+
+  const [inputs, setInputs] = usePersistentState<RevenueForecastInput>(
+    "agency:revenue-forecast",
+    { currentMRR: 52000, pipelineValue: 47000, churnRatePct: 5, winRatePct: 30, upsellPct: 15 },
+  );
+
+  const [syncedFromClients, setSyncedFromClients] = useState(false);
+
+  // One-shot sync of derivedMRR into inputs.currentMRR after clients load
+  // (only if the user hasn't manually adjusted MRR since mount).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (syncedFromClients) return;
+    if (derivedMRR !== 52000 && inputs.currentMRR === 52000) {
+      setInputs((prev) => ({ ...prev, currentMRR: derivedMRR }));
+      setSyncedFromClients(true);
+    }
+  }, [derivedMRR, inputs.currentMRR, syncedFromClients, setInputs]);
+
+  const forecast = useMemo(() => simulateForecast(inputs), [inputs]);
+
+  const arrRealiste = forecast.finalRealiste * 12;
+  const arrOptimiste = forecast.finalOptimiste * 12;
+
+  const avgRetainer = inputs.currentMRR > 0 && clients.length > 0
+    ? inputs.currentMRR / clients.length
+    : 6500;
+
+  const nextTier = tier.nextTier ? getTierInfo(tier.nextTier) : null;
+  const thresholdMRR = nextTier ? nextTier.minClients * avgRetainer : null;
+
+  const monthsToUpgrade = useMemo(() => {
+    if (!thresholdMRR) return null;
+    const idx = forecast.data.findIndex((d) => d.realiste >= thresholdMRR);
+    return idx === -1 ? null : idx + 1;
+  }, [forecast, thresholdMRR]);
+
+  const updateInput = <K extends keyof RevenueForecastInput>(key: K, value: RevenueForecastInput[K]) => {
+    setInputs((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const sliderStyle: CSSProperties = {
+    width: "100%",
+    height: 4,
+    appearance: "none",
+    backgroundColor: BORDER,
+    borderRadius: 2,
+    outline: "none",
+    cursor: "pointer",
+  };
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Projection Revenu · 12 Mois"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: tier.accentBg,
+                color: tier.accentColor,
+                fontWeight: 700,
+              }}
+            >
+              <LineChartIcon size={10} /> Tier {tier.label}
+            </span>
+            {nextTier && monthsToUpgrade !== null && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  backgroundColor: SAGE_BG,
+                  color: SAGE_DEEP,
+                  fontWeight: 700,
+                }}
+              >
+                <Flag size={10} /> Tier {nextTier.label} dans {monthsToUpgrade} mois
+              </span>
+            )}
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Inputs */}
+        <div className="space-y-4">
+          <div style={FONT_HEADER}>Paramètres du scénario</div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>MRR actuel (MAD)</label>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{fmtMAD(inputs.currentMRR)}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={300000}
+              step={1000}
+              value={inputs.currentMRR}
+              onChange={(e) => updateInput("currentMRR", Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>Valeur pipeline (MAD)</label>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{fmtMAD(inputs.pipelineValue)}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={200000}
+              step={1000}
+              value={inputs.pipelineValue}
+              onChange={(e) => updateInput("pipelineValue", Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>Taux de churn (%)</label>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: inputs.churnRatePct > 10 ? NEGATIVE : CHARCOAL }}>{inputs.churnRatePct}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={30}
+              step={1}
+              value={inputs.churnRatePct}
+              onChange={(e) => updateInput("churnRatePct", Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>Taux de conversion pipeline (%)</label>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{inputs.winRatePct}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={inputs.winRatePct}
+              onChange={(e) => updateInput("winRatePct", Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>Upsell mensuel (%)</label>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{inputs.upsellPct}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={30}
+              step={1}
+              value={inputs.upsellPct}
+              onChange={(e) => updateInput("upsellPct", Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div
+            className="p-2.5 rounded-md flex items-center gap-2"
+            style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}
+          >
+            <SlidersHorizontal size={12} style={{ color: TEXT_MUTED }} />
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+              {clients.length} clients actifs · retainer moyen {fmtMAD(Math.round(avgRetainer))}
+            </span>
+          </div>
+        </div>
+
+        {/* Chart */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div style={FONT_HEADER}>Projection MRR · 12 mois</div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span style={{ display: "inline-block", width: 12, height: 2, backgroundColor: NEUTRAL_GRAY }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Conservateur</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span style={{ display: "inline-block", width: 12, height: 2, backgroundColor: SAGE }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Réaliste</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span style={{ display: "inline-block", width: 12, height: 0, borderTop: `2px dashed ${SAGE_DIM}` }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Optimiste</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ width: "100%", height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={forecast.data} margin={{ top: 8, right: 12, left: -4, bottom: 0 }}>
+                <CartesianGrid stroke="#F4F4F5" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={{ stroke: BORDER_STRONG }}
+                  interval={0}
+                />
+                <YAxis
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                  tickFormatter={(v) => fmtNumber(v)}
+                />
+                <RTooltip
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                  }}
+                  formatter={(v: number, n) => [fmtMAD(v), n === "conservateur" ? "Conservateur" : n === "realiste" ? "Réaliste" : "Optimiste"]}
+                  labelStyle={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                />
+                {thresholdMRR !== null && (
+                  <ReferenceLine
+                    y={thresholdMRR}
+                    stroke={tier.accentColor}
+                    strokeDasharray="6 4"
+                    label={{
+                      value: `Tier ${nextTier?.label ?? ""} · ${fmtNumber(thresholdMRR)}`,
+                      position: "insideTopRight",
+                      fill: tier.accentColor,
+                      fontSize: 9,
+                      fontFamily: FONT_MONO,
+                    }}
+                  />
+                )}
+                <Line type="monotone" dataKey="conservateur" stroke={NEUTRAL_GRAY} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="realiste" stroke={SAGE} strokeWidth={2.5} dot={{ r: 2, fill: SAGE }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="optimiste" stroke={SAGE_DIM} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Output metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>MRR M+12 · Réaliste</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+                {fmtMAD(forecast.finalRealiste)}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>ARR projeté · Réaliste</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {fmtMAD(arrRealiste)}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>ARR Optimiste</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DIM, marginTop: 2 }}>
+                {fmtMAD(arrOptimiste)}
+              </div>
+            </div>
+            <div
+              className="p-2.5 rounded-md"
+              style={{ border: `1px solid ${thresholdMRR ? SAGE_DIM : BORDER}`, backgroundColor: thresholdMRR ? SAGE_BG : "#FCFCFC" }}
+            >
+              <div style={FONT_HEADER}>{nextTier ? `Tier ${nextTier.label}` : "Tier max"}</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+                {monthsToUpgrade !== null ? `${monthsToUpgrade} mois` : nextTier ? ">12 mois" : "Atteint"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <AiCommentary
+        text={
+          nextTier
+            ? `Scénario réaliste: MRR ${fmtMAD(inputs.currentMRR)} → ${fmtMAD(forecast.finalRealiste)} en 12 mois (ARR ${fmtMAD(arrRealiste)}). ${monthsToUpgrade !== null ? `Tier ${nextTier.label} atteint en ${monthsToUpgrade} mois.` : `Tier ${nextTier.label} non atteint sous 12 mois — augmenter win rate ou pipeline.`}`
+            : `Tier maximum atteint. Scénario réaliste: ARR ${fmtMAD(arrRealiste)} (MRR ×12). Optimiste: ${fmtMAD(arrOptimiste)}.`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // SIDEBAR NAV (plan-aware — Agences)
 // 10 items: 5 shared with Essentiel/Pro/Enterprise + 3 Agency exclusives
 // (Clients, Campagnes, White-Label) + Visibilité IA + Harch 100 (external).
@@ -10076,6 +11293,35 @@ export default function AgencyDashboard({
                 />
               </motion.div>
 
+              {/* R2-AGENCY-A · FEATURE 1 — Client Health Scoring (full width, after portfolio) */}
+              <motion.div
+                id="client-health"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(9)}
+                className="lg:col-span-12"
+              >
+                <ClientHealthScoringCard
+                  clients={clients}
+                  loading={clientsLoading}
+                />
+              </motion.div>
+
+              {/* R2-AGENCY-A · FEATURE 2 — Churn Risk Indicator (full width, after client health) */}
+              <motion.div
+                id="churn-risk"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(9)}
+                className="lg:col-span-12"
+              >
+                <ChurnRiskIndicatorCard
+                  clients={clients}
+                  loading={clientsLoading}
+                  onToast={pushToast}
+                />
+              </motion.div>
+
               {/* Row 4 — Revenue + Comparison */}
               <motion.div {...cardMotion} transition={d(10)} className="lg:col-span-7">
                 <RevenueTrackerCard
@@ -10104,6 +11350,17 @@ export default function AgencyDashboard({
                 className="lg:col-span-12"
               >
                 <CommissionCalculatorCard tier={activeTier} />
+              </motion.div>
+
+              {/* R2-AGENCY-A · FEATURE 3 — Revenue Forecasting (full width, after commission calc) */}
+              <motion.div
+                id="revenue-forecast"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(12)}
+                className="lg:col-span-12"
+              >
+                <RevenueForecastingCard tier={activeTier} clients={clients} />
               </motion.div>
 
               {/* Row 5 — HarchIQ + Reports */}
@@ -10287,7 +11544,7 @@ export default function AgencyDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Agences · 25 sections · 6 ENV-AGENCY features · Multi-clients · White-label ·
+              Harch Atelier · Console Agences · 25 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · Multi-clients · White-label ·
               Commission {agency?.commissionPct ?? 20}% · Tier {activeTier.label}
               {pendingClients.length > 0 ? ` · ${pendingClients.length} client(s) en attente` : ""}
               {userEmail ? ` · ${userEmail}` : ""}
