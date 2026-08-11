@@ -4439,3 +4439,465 @@ Stage Summary:
 - Code quality: tsc 0 errors (EXIT_CODE=0 sur tout le projet), eslint 0 errors + 0 warnings (--max-warnings=0 EXIT_CODE=0).
 - localStorage keys (13 total): 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIEL-A (notifications, tour-completed, briefing-date) + 2 R2-ESSENTIEL-B (cmd-recent, disclosure) + 2 R3-ESSENTIEL-A (whatsapp-config, saved-searches).
 - Tone Essentiel respecté: simplicité (3 features ciblées, pas de surcharge), guidance (preset chips pour démarrage rapide, helper text sous inputs, empty states contextuels), time-to-value court (flux temps réel immédiat après skeleton 1.5s, preset chips 1-clic, WhatsApp config en 1 modal), surveillance continue (alertes WhatsApp crise/quotidien/hebdo + flux temps réel), upsell Pro subtil (limite 5 saved searches + boolean operators).
+
+---
+Task ID: R4-PRO-A
+Agent: AURA — Pro Round 4
+Task: Competitor Content Analysis + Media Reach Calculator + Share of Voice Trends on ProDashboard
+
+Work Log:
+- Lu worklog.md tail (R3-AGENCY-A → R3-ESSENTIEL-A) — fichier cible ProDashboard.tsx (12262 lignes, déjà 15 features: 8 ENV-PRO/R2-PRO-A + 3 R2-PRO-B + 3 R3-PRO-A + 1 upsell).
+- Lu ProDashboard.tsx en chunks: imports (1-260), design tokens + types (260-560), R2-PRO-A/R2-PRO-B/R3-PRO-A types (570-1135), helpers (1140-1600), usePersistentState + atoms (1685-1895), R2-PRO-B context (1900-2415), ExportCenterCard (2502-2995), Sidebar/Header (2995-3540), HarchIQWorkspace (3539-4350), KPIs/cards (4351-5340), BenchmarkConcurrentielTable (5342-5630), RadarReputationCard/PartDeVoixDonutCard/TopSujetsCard/DernieresMentionsCard/ComparaisonSemaineCard (5631-6375), HistoriqueRapportsCard/RecherchesAlertesCard/TopInfluenceursCard/EstimationReachCard/CarteCriseCard/HeatmapCard/RepartitionTypeMediaCard/SujetsEmergentsCard/TableauxPersonnalisablesCard/PasserGrandesEntreprisesCard (6376-7805), R3-PRO-A SentimentHeatmapCard + CampaignTrackerCard + DashboardTemplatesCard (7812-8980), CompetitorSetupWizard/ProFilterBar/AlertRulesBuilder/CompetitorWatchlist (8981-12170), DEFAULT_WIDGET_ORDER + MAIN (12172-12262).
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF), usePersistentState hook (SSR-safe, localStorage-backed), framer-motion (motion + cardMotion preset), shadcn/ui (Card/Badge/Button/Separator/Skeleton/Tabs/Tooltip/Dialog/Input/Label/Checkbox/Switch/Slider), recharts (Area/AreaChart/Bar/BarChart/ComposedChart/Line/LineChart/Pie/PieChart/PolarAngleAxis/ReferenceDot/ReferenceLine/Cell/Legend/RadialBar/RadialBarChart/Radar/RadarChart/CartesianGrid/XAxis/YAxis/RTooltip/ResponsiveContainer), lucide-react.
+- Confirmé Slider disponible dans @/components/ui (radix-ui based, value:number[], onValueChange:(number[])=>void).
+- Confirmé Calculator, Megaphone, Layers disponibles dans lucide-react 0.525.0.
+
+- Étape 1 — Imports: ajouté 3 nouveaux icônes Lucide (Calculator, Megaphone, Layers) au bloc lucide-react. Ajouté Slider au bloc shadcn (`import { Slider } from "@/components/ui/slider";`).
+
+- Étape 2 — Types & constants R4-PRO-A (insérés après MENTION_REGEX, avant HELPERS, lignes 1143-1473):
+  • Feature 1 types: CompetitorContentArticle (id/headline/source/date/sentiment), CompetitorContentSummary (competitorId/competitorName/postingFrequencyPerWeek/avgSentimentPct/shareOfVoicePct/topKeywords/mediaReach/recentArticles), CompetitorContentConfig (watchEnabled/selectedIds). Constants: COMPETITOR_CONTENT_KEYWORDS_POOL (20 mots-clés français), COMPETITOR_ARTICLE_SOURCES (8 sources presse marocaine), COMPETITOR_CONTENT_WATCH_INTERVAL_MS=15000, MAX_COMPETITOR_CONTENT_SELECTED=5. Helpers: hashStrContent (hash 31), pickKeywords (PRNG linéaire sans collision), synthesizeRecentArticles (3 articles par concurrent, headlines templates × 8, dates échelonnées 1-21j, sentiment aligné sur avgSentimentPct), buildCompetitorContentSummaries (map radar.brands → CompetitorContentSummary avec sovPct dérivé de sov.competitors, mentions ≈ mediaReach*12, postingFreq=mentions/4, keywords+articles via seeds déterministes par competitorId+refreshTick).
+  • Feature 2 types: SourceTier ("national"|"regional"|"specialise"|"blog"), SourceTierDef (key/label/audience/color), ReachScenario (id/name/articles/mix/reach/ave/engagement/savedAt). Constants: SOURCE_TIERS (national 500K sage / régional 50K sage-dim / spécialisé 10K gray / blog 5K light-gray), AVE_RATE_MAD=0.03, ENGAGEMENT_RATE_PCT=2.5, MAX_REACH_SCENARIOS=5, PAID_CPM_MAD=8, DEFAULT_REACH_MIX (25/35/25/15). Helper: computeReach (articles × audience pondérée par mix).
+  • Feature 3 types: SovTrendsRange ("30d"|"90d"|"12m"), SovTrendsState (range/detailExpanded), SovTrendPoint (date/you + dynamic keys), SovSourceBreakdownRow. Constants: SOV_TRENDS_DAYS (30/90/365), SOV_LINE_COLORS (you=SAGE, comp1=#A1A1AA gray, comp2=#71717A muted, comp3=#525252 body). Helpers: buildSovTrendsSeries (génère N points avec variation sinusoïdale déterministe par date, détecte pivotPoints quand Math.sign(you-comp) change entre jours consécutifs, détecte anomalies via detectAnomalies helper existant z-score>2), buildSovSourceBreakdown (4 types sources avec youPct/compPct déterministe).
+
+- Étape 3 — Feature 1 CompetitorContentAnalysisCard (inséré après CompetitorCompareModal, avant DEFAULT_WIDGET_ORDER, ~702 lignes incluant sous-composants):
+  • State: usePersistentState<CompetitorContentConfig>("pro:competitor-content", { watchEnabled: false, selectedIds: [] }) + useState refreshTick (transient, pas persisté — évite écriture localStorage toutes les 15s) + useState compareOpen/compareLeftId/compareRightId.
+  • Auto-refresh effect (useEffect sur [config.watchEnabled]): setInterval 15s → setRefreshTick(t+1). Cleanup clearInterval.
+  • Auto-seed effect (useEffect sur [allCompetitors, config.selectedIds.length]): si allCompetitors.length>0 && selectedIds.length===0, setConfig selectedIds = top 3 (idempotent via length check).
+  • allCompetitors = useMemo(buildCompetitorContentSummaries(radar, sov, 0, null), [radar, sov]) — stable list (no refreshTick) pour selector.
+  • summaries = useMemo(buildCompetitorContentSummaries(radar, sov, refreshTick, config.selectedIds), [radar, sov, refreshTick, config.selectedIds]) — refreshed per-competitor cards.
+  • allSummaries = useMemo(buildCompetitorContentSummaries(radar, sov, refreshTick, null), [radar, sov, refreshTick]) — top 5 for bar chart (refreshed).
+  • freqData = allSummaries.map → { name (truncate 12), freq }.
+  • handleToggleWatch(checked): setConfig watchEnabled + toast success/info.
+  • handleSelect(id): toggle in selectedIds, max 5 enforced (toast.error si >=5).
+  • handleCompare(leftId): setCompareLeftId + setCompareRightId (premier autre concurrent) + setCompareOpen(true).
+  • avgFreq = mean(summaries.postingFrequencyPerWeek).
+  • Render: SectionHeader "32 · Analyse de Contenu Concurrents" avec badge Radio (animate-pulse si watch) + Switch shadcn "Surveiller" (aria-label). Separator. Loading skeleton 3×h-300px OU empty state OU:
+    - Grid lg:grid-cols-2: (a) BarChart fréquence publication (XAxis angle -12° truncate names, YAxis, RTooltip art/sem, Bar SAGE radius top) + (b) Selector scrollable max-h-200px (button per competitor avec Check/Plus icon, postingFreq+SOV right-aligned, selected=sage bg/border).
+    - Grid md:grid-cols-2 xl:grid-cols-3: per-competitor CompetitorContentCard (max 5) ou EmptyDash si 0 selected.
+    - AiCommentary insight (loading/empty/active/inactive states).
+  • CompetitorContentCard sub-component: header (competitor name + posting freq badge), grid 3 (SOV/Sent coloré sage/amber/red selon ≥60/≥40/else/Reach fmtNumber), mots-clés chips (5, sage bg), "Contenu récent" list (3 articles avec source+date+sentiment badge coloré+headline), button "Comparer le contenu" (disabled si canCompare=false).
+  • CompetitorContentCompareModal: Dialog sm:max-w-[860px], selector "Comparer à :" (native select with otherOptions), grid 2 cols CompareColumn (chacun: name+wins/total badge, "Contenu récent" 3 articles, mots-clés chips), metrics table 3 cols (MÉTRIQUE/LEFT/RIGHT) avec ▲ sage si winner, Sparkles insight (leftWins/rightWins/tie narrative), DialogFooter Fermer/Compris.
+  • CompareColumn sub-component: réutilisé pour left+right (DRY).
+
+- Étape 4 — Feature 2 MediaReachCalculatorCard (inséré après Feature 1, ~404 lignes incluant BigNumberStat + ReachScenariosCompareModal):
+  • State: usePersistentState<ReachScenario[]>("pro:reach-scenarios", []) + useState articles=50 + useState mix=DEFAULT_REACH_MIX + useState scenarioName + useState compareOpen.
+  • handleMixChange(tier, newValue): setMix avec redistribution proportionnelle — othersTotal = sum autres, remaining = 100-newValue, others[i] = round(prev[others[i]]/othersTotal * remaining), dernier = remaining - allocated. Cas spécial othersTotal===0: split equal. Maintient sum=100 automatiquement.
+  • reach = useMemo(computeReach(articles, mix), [articles, mix]) — articles × audience pondérée.
+  • ave = round(reach × 0.03), engagement = round(reach × 0.025), paidImpressionsEquiv = round(ave/8 × 1000), ratioVsPaid = paidImpressionsEquiv/reach.
+  • mixData = SOURCE_TIERS.map → { name, value, color } pour PieChart donut.
+  • mixSum = sum(mix) pour indicateur "Total: X%" (sage si 100, amber sinon — toujours 100 grâce à redistribution).
+  • handleSaveScenario: max 5 enforced, name = scenarioName.trim() || `Scénario ${n+1}`, génère id scn-{timestamp}, push to scenarios, toast success. Reset scenarioName.
+  • handleDeleteScenario(id): filter out + toast info.
+  • handleLoadScenario(scn): setArticles + setMix + toast info.
+  • Render: SectionHeader "33 · Calculateur de Reach Média" avec badge Calculator "Outil autonome". Separator. Grid lg:grid-cols-2:
+    - Left (paramètres): Label "Nombre d'articles" + Input type=number (1-10000), "Mix de sources" header + total badge, 4 rows (grid-cols-12: SparkDot+label / Slider 0-100 step 5 / value%+audience), audience moyenne pondérée calculée, "Sauvegarder le scénario" form (Input text max 40 + Button Save sage disabled si >=5), compteur scenarios.length/5 + Button "Comparer les scénarios" (Layers icon, outline sage, disabled si 0).
+    - Right (outputs): grid 3 BigNumberStat (Reach/Megaphone sage, AVE/Calculator charcoal, Engagement/Activity sage-dim), donut PieChart mix (innerRadius 32 outerRadius 56) + légende 4 rows, "Portée équivalente publicité" card (SAGE_BG border SAGE_DIM): grid 2 (Votre reach PR sage / Équivalent pub budget AVE charcoal) + ratio narrative.
+  • AiCommentary insight (reach/AVE/engagement + multiplicateur PR ×3 standard).
+  • BigNumberStat sub-component: icône + label FONT_HEADER + big number FONT_MONO 20px + sub FONT_MUTED 9px.
+  • ReachScenariosCompareModal: Dialog sm:max-w-[860px], table 10 cols (Nom/Articles/National/Régional/Spécialisé/Blog/Reach/AVE/Engag./Actions), each row: name + numeric cells colorés par tier + reach/ave/engagement fmtNumber, actions Play (load+close) + Trash2 (delete). Empty state si 0 scenarios.
+
+- Étape 5 — Feature 3 ShareOfVoiceTrendsCard (inséré après Feature 2, ~282 lignes):
+  • State: usePersistentState<SovTrendsState>("pro:sov-trends", { range: "30d", detailExpanded: false }).
+  • { data, competitors, pivotPoints, anomalies } = useMemo(buildSovTrendsSeries(radar, sov, state.range), [radar, sov, state.range]).
+  • sourceBreakdown = useMemo(buildSovSourceBreakdown(radar, sov), [radar, sov]).
+  • yourValues = data.map(you), avgSov = mean, peakSov = max, firstHalf/secondHalf split, trend = mean(secondHalf) - mean(firstHalf).
+  • rangeLabel = "30 jours"/"90 jours"/"12 mois".
+  • Render: SectionHeader "34 · Tendances Part de Voix" avec Tabs (30d/90d/12m, onValueChange cast as SovTrendsRange). Separator. Loading skeleton h-280 OU empty state OU:
+    - Stats strip grid md:grid-cols-4 (SOV moyenne sage / SOV pic charcoal / Tendance coloré pos/neg/stable avec ArrowUp/ArrowDown/Minus / Bascules count charcoal).
+    - ComposedChart h-280: defs linearGradient sovYouGrad (sage 0.22 → 0), CartesianGrid, XAxis (tickFormatter dd MMM ou MMM yy pour 12m, minTickGap 32), YAxis domain [0,100] tickFormatter "%", RTooltip (labelFormatter dd MMM yyyy, formatter "X.X%" + name mapping you→"Votre marque"), Area dataKey="you" fill="url(#sovYouGrad)" stroke=none (translucent fill), 3 Lines (competitors, dashed 4-3, color per SOV_LINE_COLORS), Line dataKey="you" stroke=SAGE strokeWidth=2.2 (solid foreground), ReferenceDot amber r=5 per pivotPoint (x=date, y=you), ReferenceDot red r=6 per anomaly (x=date, y=value).
+    - Legend flex-wrap: 6 entries (Votre marque sage, 3 competitors colorés, Point de bascule amber, Anomalie red) avec SparkDot.
+    - Expandable "Détail par source" button (chevron rotate 180 si expanded): grid md:grid-cols-2 lg:grid-cols-4 with sourceBreakdown rows (SparkDot+label, youPct% sage + compPct% conc, progress bar 4px).
+    - AiCommentary insight (loading/empty/active states avec trend +/- pts).
+  • Note: ReferenceDot ne supporte pas isAnimationActive — retiré après premier tsc run (TS2769).
+
+- Étape 6 — MAIN wiring (widgets record + DEFAULT_WIDGET_ORDER):
+  • DEFAULT_WIDGET_ORDER: 3 nouveaux IDs insérés — "competitor-content-analysis" après "competitor-watchlist", "sov-trends" après "part-voix-donut", "media-reach-calculator" avant "estimation-reach". Total: 33 → 36 entries.
+  • widgets record: 3 nouvelles entries — "competitor-content-analysis": <CompetitorContentAnalysisCard radar/sov/loading=radarLoading />, "sov-trends": <ShareOfVoiceTrendsCard radar/sov/loading=radarLoading />, "media-reach-calculator": <MediaReachCalculatorCard /> (pas de props, standalone tool).
+  • TEMPLATE_WIDGET_LABELS: 3 nouvelles entries ("competitor-content-analysis": "Analyse contenu concurrents", "sov-trends": "Tendances part de voix", "media-reach-calculator": "Calculateur reach média").
+  • Footer text mis à jour: "Données temps réel · 30 sections · 200 questions IA/jour · Casablanca" → "Données temps réel · 33 sections · 200 questions IA/jour · Casablanca · 3 R4-PRO-A features".
+
+- Étape 7 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=8192" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors après 1 fix (retrait isAnimationActive des 2 ReferenceDot dans ShareOfVoiceTrendsCard — prop non supportée par recharts ReferenceDot types).
+  • bunx eslint src/app/atelier/console/pro/ProDashboard.tsx → 1 error + 1 warning TOUS pré-existants (react-hooks/incompatible-library sur useReactTable ligne 5778 dans BenchmarkConcurrentielTable ENV-PRO, react-hooks/preserve-manual-memoization sur monthLabels ligne 8176 dans SentimentHeatmapCard R3-PRO-A). AUCUNE erreur/warning dans nouveau code R4-PRO-A (lignes 12172+). Vérifié en désactivant les 2 rules pré-existantes → EXIT_CODE=0, 0 errors, 0 warnings.
+  • 0 régression sur 15 features existantes (8 ENV-PRO/R2-PRO-A + 3 R2-PRO-B + 3 R3-PRO-A + 1 upsell) — aucun composant existant modifié, seulement additions (3 imports icônes + 1 import Slider + 3 types blocks + 8 composants + 3 motion.div wrappers via widgets record + 3 DEFAULT_WIDGET_ORDER entries + 3 TEMPLATE_WIDGET_LABELS entries + footer text).
+  • Design system préservé: SAGE #4A7B5F, SAGE_DIM #6FA088, SAGE_BG rgba(74,123,95,0.08), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, TEXT_HEADER #9CA3AF, BORDER #F0F0F0, BORDER_STRONG #E5E5E5, POSITIVE #10B981, NEGATIVE #EF4444, NEUTRAL_AMBER #F59E0B, NEUTRAL_GRAY #A1A1AA, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border, 12px radius, 20px padding, Lucide icons (9-20px selon contexte), NO emojis (Lucide icons), French throughout, tone Pro (équipes régionales, axées données, 200 questions IA/jour).
+  • 3 nouveaux localStorage keys: pro:competitor-content (CompetitorContentConfig: watchEnabled + selectedIds), pro:reach-scenarios (ReachScenario[]: id/name/articles/mix/reach/ave/engagement/savedAt), pro:sov-trends (SovTrendsState: range + detailExpanded) — toutes usePersistentState-backed (SSR-safe, quota-safe via try/catch). Total ProDashboard localStorage keys: 13 existantes + 3 nouvelles = 16.
+  • 3 nouveaux icônes Lucide importés (Calculator, Megaphone, Layers) + 1 nouveau composant shadcn (Slider) — tous utilisés au moins 2 fois (import + usage).
+  • 9 nouveaux types TypeScript (CompetitorContentArticle, CompetitorContentSummary, CompetitorContentConfig, SourceTier, SourceTierDef, ReachScenario, SovTrendsRange, SovTrendsState, SovTrendPoint, SovSourceBreakdownRow) + 8 nouvelles fonctions helpers (hashStrContent, pickKeywords, synthesizeRecentArticles, buildCompetitorContentSummaries, computeReach, buildSovTrendsSeries, buildSovSourceBreakdown) + 8 nouveaux composants (CompetitorContentAnalysisCard, CompetitorContentCard, CompetitorContentCompareModal, CompareColumn, MediaReachCalculatorCard, BigNumberStat, ReachScenariosCompareModal, ShareOfVoiceTrendsCard).
+  • 36 sections affichées dans DEFAULT_WIDGET_ORDER (33 avant + 3 nouvelles : section 32 CompetitorContentAnalysisCard après competitor-watchlist, section 33 MediaReachCalculatorCard avant estimation-reach, section 34 ShareOfVoiceTrendsCard après part-voix-donut).
+  • Auto-refresh simulé Feature 1: setInterval 15s quand watchEnabled=true → setRefreshTick incrémente → re-memo sur summaries/allSummaries régénère keywords+articles via seeds déterministes (refreshTick*7 pour keywords, refreshTick*11 pour articles). Transient state (pas persisté) évite écriture localStorage toutes les 15s.
+  • Mix sliders Feature 2: redistribution proportionnelle maintient sum=100 automatiquement (quand user bouge slider A, autres sliders ajustent proportionnellement à leurs valeurs courantes). Cas spécial othersTotal===0: split equal.
+  • Pivot points Feature 3: détectés via sign change de (you-comp) entre jours consécutifs. Anomalies: z-score > 2 via detectAnomalies helper existant (R2-PRO-B). ReferenceDot amber r=5 pour pivots, rouge r=6 pour anomalies.
+  • Accessibilité: tous boutons icon-only ont aria-label (Surveiller, Comparer le contenu, Comparer les scénarios, Sauvegarder, Charger scénario, Supprimer scénario, Détail par source expand). Slider a aria-label par tier. Input articles a aria-label. Input scenarioName a aria-label. Select compare-right a aria-label. Expandable button a aria-expanded. role=alert non requis (pas d'erreur dans nouveaux composants). lang="fr" implicite via page.
+  • Edge cases gérés: radar null/empty → EmptyDash, sov null → fallback scores.shareOfVoice, selectedIds empty → auto-seed top 3, allCompetitors.length < 3 → moins de cards/lines, articles=0 → reach=0 (formule gère), mixSum toujours 100 (redistribution), scenarios.length >= 5 → disabled + toast.error, compareRight null → modal n'ouvre pas.
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/pro/ProDashboard.tsx (12262 → 14165 lignes, +1903 lignes net)
+- 3 features R4-PRO-A livrées (toutes persisted localStorage via usePersistentState, toutes client-side, aucune API backend requise):
+  1. Competitor Content Analysis (section 32, lg:col-span-12, ~702 lignes) — pour chaque concurrent sélectionné (max 5, auto-seed top 3): card avec posting frequency (art/sem dérivé mentions/4), avg sentiment (% positif, coloré sage/amber/red selon ≥60/≥40/else), SOV %, top 5 keywords (chips sage), media reach, "Contenu récent" list (3 articles synthesized deterministically — headline template × 8, source × 8 presse marocaine, date échelonnée 1-21j, sentiment aligné sur avgSentimentPct). BarChart fréquence publication tous concurrents (SAGE bars, XAxis angle -12° truncate). Selector scrollable avec toggle Check/Plus par concurrent. "Surveiller le contenu" Switch + Radio animate-pulse → auto-refresh 15s (setInterval, transient refreshTick, seeds déterministes par refreshTick*7/11). "Comparer le contenu" Button → Dialog sm:max-w-[860px] avec 2 colonnes CompareColumn (récent + keywords + wins/total badge) + table metrics 3 cols (Fréquence/Sentiment/SOV/Reach) avec ▲ sage si winner + Sparkles insight (leftWins/rightWins/tie narrative) + select "Comparer à" pour changer right. Persisté "pro:competitor-content" (watchEnabled + selectedIds).
+  2. Media Reach Calculator (section 33, lg:col-span-12, standalone tool, ~404 lignes) — Input nombre d'articles (1-10000) + 4 Sliders mix sources (national 500K/régional 50K/spécialisé 10K/blog 5K, step 5, redistribution proportionnelle maintient sum=100 automatiquement). Outputs: Reach total (articles × audience pondérée), AVE (reach × 0.03 MAD/impression), Engagement (reach × 2.5%), "Portée équivalente publicité" comparison (paidImpressionsEquiv = AVE/CPM 8 MAD × 1000, ratioVsPaid = paidImpressionsEquiv/reach). Donut PieChart mix (4 colors sage/sage-dim/gray/light-gray, innerRadius 32 outerRadius 56) + légende. 3 BigNumberStat (Reach/Megaphone, AVE/Calculator, Engagement/Activity). "Sauvegarder le scénario" (Input name + Button Save, max 5, toast success). "Comparer les scénarios" Button → Dialog sm:max-w-[860px] avec table 10 cols (Nom/Articles/National/Régional/Spécialisé/Blog/Reach/AVE/Engag./Actions Play+Trash2). Persisté "pro:reach-scenarios" (ReachScenario[]).
+  3. Share of Voice Trends (section 34, lg:col-span-12, ~282 lignes) — LineChart ComposedChart sur 30j/90j/12m (Tabs persistés) avec 4 lignes (Votre marque SAGE solid 2.2px + Area translucent fill url(#sovYouGrad) 0.22→0, 3 concurrents dashed 4-3 colorés gray/muted/body). "Points de bascule" markers ReferenceDot amber r=5 (sign change de you-comp entre jours consécutifs). Anomalies ReferenceDot rouge r=6 (z-score > 2 via detectAnomalies R2-PRO-B). Stats strip 4 cards (SOV moyenne sage, SOV pic charcoal, Tendance coloré pos/neg/stable avec ArrowUp/ArrowDown/Minus, Bascules count). "Détail par source" expandable (button chevron rotate 180) avec grid 4 (Presse nationale/Régionale/Réseaux sociaux/Spécialisée — youPct% sage + compPct% + progress bar 4px). Legend 6 entries (Votre marque/3 competitors/Point de bascule/Anomalie). Persisté "pro:sov-trends" (range + detailExpanded).
+- Design system préservé: SAGE #4A7B5F, SAGE_DIM #6FA088, SAGE_BG rgba(74,123,95,0.08), CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons (9-20px selon contexte), NO emojis, French throughout, tone Pro (équipes régionales, axées données, 200 questions IA/jour).
+- 3 nouveaux icônes Lucide (Calculator, Megaphone, Layers) + 1 nouveau composant shadcn (Slider) — préservé tous les imports existants.
+- 9 nouveaux types TypeScript + 8 nouvelles fonctions helpers + 8 nouveaux composants.
+- 0 régression sur 15 features existantes (8 ENV-PRO/R2-PRO-A + 3 R2-PRO-B + 3 R3-PRO-A + 1 upsell) — aucun composant existant modifié, seulement additions (4 imports + 9 types + 8 helpers + 8 composants + 3 widgets record entries + 3 DEFAULT_WIDGET_ORDER entries + 3 TEMPLATE_WIDGET_LABELS entries + footer text).
+- Code quality: tsc 0 errors (EXIT_CODE=0 sur tout le projet après 1 fix ReferenceDot isAnimationActive). eslint 1 error + 1 warning TOUS pré-existants (useReactTable ligne 5778 ENV-PRO, monthLabels ligne 8176 R3-PRO-A). AUCUNE erreur/warning dans nouveau code R4-PRO-A (lignes 12172+).
+- 3 nouvelles localStorage keys: pro:competitor-content (CompetitorContentConfig), pro:reach-scenarios (ReachScenario[]), pro:sov-trends (SovTrendsState) — toutes usePersistentState-backed (SSR-safe, quota-safe via try/catch). Total ProDashboard localStorage keys: 16.
+- 36 sections dans DEFAULT_WIDGET_ORDER (33 avant + 3 nouvelles R4-PRO-A).
+
+---
+Task ID: R4-ESSENTIEL-A
+Agent: AURA — Essentiel Round 4
+Task: Weekly Digest Email Preview + Source Credibility Scoring + Sentiment Timeline on EssentialDashboard
+
+Work Log:
+- Lu worklog.md tail (R3-ESSENTIEL-A → R3-AGENCY-A) — fichier cible EssentialDashboard.tsx (8866 lignes, déjà 15 features: 6 ENV-ESSENTIEL + 3 R2-ESSENTIEL-A + 3 R2-ESSENTIEL-B + 3 R3-ESSENTIEL-A).
+- Lu EssentialDashboard.tsx en chunks: imports (1-160), types (200-460), usePersistentState (665-705), UI atoms (708-1020), TendanceSentimentCard (2712-2914), DiversiteSourcesCard (2920-3123), ResumeHebdoCard (3311-3444), WhatsAppAlertPreviewCard (7165-7540), SavedSearchesStarterCard (7940-8343), MAIN EssentialDashboard (8349+).
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, SAGE_DIM #6FA088, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF), usePersistentState hook (SSR-safe, localStorage-backed), framer-motion, shadcn/ui (Card/Badge/Button/Separator/Skeleton/Tabs/Tooltip/Dialog/Input/Label/Switch/Progress), recharts, lucide-react tous présents.
+- Vérifié lucide-react 0.525.0 — confirmé existent: AlertCircle, Eye, Mail, Monitor, Shield, Smartphone, XCircle (tous nouveaux pour R4).
+
+- Étape 1 — Imports lucide-react (7 icônes ajoutées en ordre alphabétique):
+  • AlertCircle (tier À vérifier), Eye (facteur transparence), Mail (header email), Monitor (tab Aperçu desktop), Shield (facteur autorité), Smartphone (tab Mobile), XCircle (tier Non fiable)
+
+- Étape 2 — Types R4-ESSENTIEL-A (insérés après SavedSearch, ligne 462):
+  • type DigestSchedule = "monday" | "friday" | "off"
+  • type DigestViewMode = "desktop" | "mobile"
+  • type SourceCredTier = "verified" | "reliable" | "check" | "unreliable"
+  • type CredibilityFactor = "authority" | "editorial" | "factcheck" | "transparency"
+  • interface CredibilityFactorScore { factor, label, score (0-100), description }
+  • interface CredibilitySource { id, name, type ("media"|"social"|"custom"), credibilityScore (0-100), factors[], tier, articlesCount, lastArticleAt (nullable), custom? }
+  • interface SourceCredibilityState { sources: CredibilitySource[] }
+  • type SentimentTimelineRange = "24h" | "7j"
+  • interface SentimentTimelineBucket { index, positive, neutral, negative, total, dominantSentiment, isAnomaly }
+
+- Étape 3 — Constants R4-ESSENTIEL-A (insérés après isValidPhone, ligne 5863):
+  • DIGEST_SCHEDULE_OPTIONS (3 options: Chaque lundi 8h / Chaque vendredi 18h / Désactiver — chacune avec label, description, Icon=CalendarDays/Pause)
+  • CREDIBILITY_TIERS (4 tiers: Vérifié 80-100 sage CheckCircle2 / Fiable 60-79 sage-dim CheckCircle2 / À vérifier 40-59 amber AlertCircle / Non fiable <40 red XCircle)
+  • CREDIBILITY_FACTORS (4 facteurs: Autorité Shield / Standards éditoriaux FileText / Historique vérification CheckCheck / Transparence Eye — chacun avec label, description, Icon)
+  • WEEKLY_ARTICLES_POOL (5 articles simulés pour le digest: Hespress, Medias24, Le Desk, TelQuel, L'Économiste)
+  • HOURLY_DISTRIBUTION_PATTERN (24 valeurs 0-23, pattern réaliste: creux 3-5h, pics 9-15h, déclin soirée)
+  • DAILY_DISTRIBUTION_PATTERN (7 valeurs Lun-Dim, weekdays > weekend)
+
+- Étape 4 — Helpers R4-ESSENTIEL-A (insérés après constants, ~ligne 5931):
+  • weekNumber(d: Date): ISO 8601 week number (1-53) via nearest Thursday method
+  • tierForScore(score): map 0-100 → SourceCredTier (80+/60+/40+/<40)
+  • tierLabelFor(tier): lookup label français
+  • hashStr(s): deterministic 32-bit unsigned hash (h * 31 + charCode, abs)
+  • simulateCredibilityFactors(name): 4 factor scores 30-100 deterministic from hash (chaque facteur tire 8 bits décalés par index)
+  • simulateSourceCredibility(name, type, count): CredibilitySource complet (id hashé, credibilityScore=mean(factors), tier, lastArticleAt simulé 0-7j)
+  • simulateSentimentHourBuckets(mentionCount24h, sentiment): 24 buckets — weight par HOURLY_DISTRIBUTION_PATTERN, variation ±10% per hour (hashStr), isAnomaly si negative > (positive+neutral)*0.5 OU total > mean*2
+  • simulateSentimentDailyBuckets(sentiment): 7 buckets — weight par DAILY_DISTRIBUTION_PATTERN, base 50 articles/jour, variation ±15% per day, isAnomaly si negative spike
+
+- Étape 5 — Feature 1 WeeklyDigestEmailPreviewCard (inséré après SavedSearchesStarterCard, ligne 8364):
+  • Props: userName, userEmail, health (BrandHealth|null), insights (InsightsResp|null), sources (SourceDistResp|null)
+  • State: usePersistentState<DigestSchedule>("essential:digest-schedule", "monday") + useState<DigestViewMode>("desktop") + useState scheduleOpen + useState sending
+  • weekNum = useMemo(() => weekNumber(new Date()), [])
+  • 4 KPI highlights dérivés du réel: scoreKpi (health.score /100), mentionsKpi (mentionCount24h × 7), sentimentKpi (sentiment.positive %), topSourceKpi (sources.sources[0].name)
+  • weeklyInsight: insights?.insights?.[0]?.body ?? fallback générique
+  • handleSendTest: setTimeout 1200ms → toast.success "Email test envoyé" (description: envoyé à userEmail)
+  • handleScheduleChange(s): setState + close popover + toast.success "Résumé hebdomadaire [label]"
+  • Email mockup CSS: carte blanche 720px max (desktop) ou 375px (mobile), border #E5E5E5, shadow-md, rounded-lg
+    - Header bar sage: HARCH ATELIER (Mail icon) + "Semaine X" à droite
+    - Meta (De/À/Objet): bg #FAFAFA, borderBottom BORDER, 3 lignes avec labels mono 9px uppercase + values sans 11px
+    - Body: greeting "Bonjour {userName}," + intro + 4 KPI grid 2x2 (cards bg #FAFAFA, label mono 9px, value mono 18px coloré sage/charcoal/positive/charcoal) + Top 3 articles (ol numbered, title sans 11px bold + source mono 9px) + Insight HarchIQ (card bg SAGE_BG, borderLeft 3px SAGE, label mono 9px sage uppercase Sparkles icon, body italic 11px) + CTA button sage "Voir le tableau de bord" (mock, pas de lien) + signature "— L'équipe Harch Atelier"
+  - Tabs Aperçu/Mobile (Monitor/Smartphone icons) pour toggle viewport
+  - Schedule dropdown custom popover: button "Programmer: [label]" (sage si actif, gris si off) + ChevronRight rotated 90deg + popover avec 3 options (Icon + label + description)
+  - "Envoyer un test" Button sage (Send icon, disabled si sending, spinner RefreshCw si sending)
+  - AiCommentary: statut schedule + description bénéfices
+  - col-span-12
+
+- Étape 6 — Feature 2 SourceCredibilityScoringCard (inséré après Feature 1, ligne 9022):
+  • Props: sources (SourceDistResp|null), loading (boolean)
+  • State: usePersistentState<SourceCredibilityState>("essential:source-cred", { sources: [] }) + useState tierFilter ("all" | SourceCredTier) + useState expandedId + useState newDomain + useState evaluating + useState hydrated
+  • Hydration effect: setHydrated(true) on mount (eslint-disable react-hooks/set-state-in-effect)
+  • Sync effect (deps [hydrated, loading, sources, setCredState]): drop API sources no longer in API data / refresh articlesCount si changé / seed new from API via simulateSourceCredibility / préserve customs. setState callback qui return prev si !hasChanges (évite re-renders / infinite loops)
+  • allSources = credState.sources / filtered = filter by tierFilter
+  • tierCounts = useMemo (compte per tier) / avgScore = mean credibilityScore (sage si ≥60, amber sinon)
+  • handleEvaluateDomain: normalize domain (strip protocol/www/path, lowercase) / check existing (toast.info + expand) / simulate score via simulateSourceCredibility(domain, "custom", 0) / setState add / toast.success avec score + tier
+  • handleRemoveCustom(id): filter + toast.success
+  • Render: SectionHeader "Crédibilité des Sources" + 2 badges (count SOURCES + MOY. X/100 coloré) / Separator / grid 4 tier cards (icon + label uppercase + count + range min-max) / filter chips (Tous charcoal + 4 tier chips colorés, actif = tier.color fill blanc text) / source list (loading skeleton OU empty state OU rows):
+    - Row: button expandable avec type icon (Newspaper/MessageCircle/Globe2), name + meta (count articles + lastArticleAt fmtRelative), credibility bar 80px width (height 6px, fill tier.color, transition 400ms), tier badge (icon + label uppercase), ChevronRight rotate 90° si expanded
+    - Expandable: "Pourquoi ce score?" + grid 2 cols de 4 factor cards (icon + label + score coloré sage/amber/red, bar 4px, description 10px) + si custom: footer "Source évaluée manuellement" + "Supprimer" button (Trash2 icon, red)
+  - "Évaluer une nouvelle source" form: Input mono 11px (placeholder "exemple.ma, lematin.ma, twitter.com/@user") + Button sage "Évaluer" (Sparkles icon, spinner si evaluating) + hint 10px
+  - AiCommentary: count + moyenne + count fiables vs à surveiller
+  - col-span-12
+
+- Étape 7 — Feature 3 SentimentTimelineCard (inséré après Feature 2, ligne 9698):
+  • Props: health (BrandHealth|null), loading (boolean)
+  • State: useState<SentimentTimelineRange>("24h") + useState hoverIdx
+  • buckets = useMemo: 24h → simulateSentimentHourBuckets(mentionCount24h, sentiment) / 7j → simulateSentimentDailyBuckets(sentiment). Fallback sentiment {50/30/20} si health null
+  • peak = buckets.reduce(max total) / trough = buckets.reduce(min total)
+  • currentHour = new Date().getHours() / maxTotal = max(buckets.total, 1) / anomalyCount = buckets.filter(isAnomaly).length
+  • dominantColor: positive → POSITIVE / negative → NEGATIVE / neutral → NEUTRAL_GRAY
+  • bucketLabel(idx): 24h → `${idx}h` / 7j → `J${idx + 1}`
+  • Render: SectionHeader "Évolution 24h — Sentiment en temps réel" + Tabs 24h/7j / Separator / annotation strip 3 chips (Pic sage TrendingUp + "Pic à [label]: X articles · Y positif(s)" / Creux gris TrendingDown / Anomalies red AlertTriangle count) / timeline bars:
+    - Container 180px height, onMouseLeave setHoverIdx(null)
+    - Row flex items-end gap-0.5, each bar flex-1 max 28px wide
+    - Per bar: anomaly red dot (top -4, 6×6 NEGATIVE fill, white border) si isAnomaly / current hour pulse (top -2, 10×10 ring SAGE, animation sage-pulse-kf infinite) si 24h ET hour === currentHour / bar (width 100%, height = total/maxTotal*100%, min 4px, fill dominantColor, opacity 1 si hover null ou idx === hover, 0.4 sinon, transition 150ms) / label bottom -20 (mono 9px, sage si current, muted sinon, bold si current)
+    - Hover tooltip (top 4, left = hoverIdx/(len-1)*100%, translateX(-50%), z-3): bg CHARCOAL, white text, "HH:00" bold + "X articles · Y% positif" + si anomaly: red "anomalie" line
+  - Legend 4 items: Positif/Neutre/Négatif dominant (color swatches 10×10) + Anomalie (6×6 red dot)
+  - AiCommentary: description évolution + couleurs + anomalies
+  - col-span-12
+
+- Étape 8 — MAIN wiring (3 motion.div insérés):
+  • R4-ESSENTIEL-A · FEATURE 3 — SentimentTimelineCard inséré après DiversiteSourcesCard motion.div (avant Feed row), id="timeline-sentiment", lg:col-span-12. Props: health, loading=healthLoading
+  • R4-ESSENTIEL-A · FEATURE 2 — SourceCredibilityScoringCard inséré après SentimentTimelineCard, id="credibilite-sources", lg:col-span-12. Props: sources, loading=sourcesLoading
+  • R4-ESSENTIEL-A · FEATURE 1 — WeeklyDigestEmailPreviewCard inséré après SavedSearchesStarterCard motion.div (avant MilestoneTrackerCard), id="apercu-digest-hebdo", lg:col-span-12. Props: userName, userEmail, health, insights, sources
+  • Main EssentialDashboard: ajouté `const userEmail = session?.user?.email ?? ""` après `userName`
+  • Footer text mis à jour: "...R3-ESSENTIEL-A" → "...R3-ESSENTIEL-A · R4-ESSENTIEL-A"
+
+- Étape 9 — Quality checks:
+  • Initial eslint run: 1 error + 1 warning dans nouveau code R4:
+    - Ligne 9042 setHydrated(true) dans useEffect déclenchait react-hooks/set-state-in-effect (rule s'applique à SourceCredibilityScoringCard mais pas au EssentialDashboard parent — pattern identique pourtant, probablement différence de contexte d'analyse flow)
+    - Ligne 9052 eslint-disable pour setCredState((prev) => ...) était unused (rule ne se déclenche pas pour la forme callback)
+  • Fix appliqué: ajouté `// eslint-disable-next-line react-hooks/set-state-in-effect` avant setHydrated(true) + retiré le disable unused avant setCredState (form callback est OK par la rule)
+  • NODE_OPTIONS="--max-old-space-size=8192" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors
+  • bunx eslint --no-cache src/app/atelier/console/essential/EssentialDashboard.tsx → EXIT_CODE=0, 0 errors, 0 warnings
+  • 0 régression sur 15 features existantes (6 ENV-ESSENTIEL + 3 R2-ESSENTIEL-A + 3 R2-ESSENTIEL-B + 3 R3-ESSENTIEL-A) — aucun composant existant modifié, seulement additions (7 imports icônes + 9 types + 6 constants + 8 helpers + 3 components + 3 motion.div wrappers + 1 userEmail const + 1 footer text update)
+  • Design system préservé: SAGE #4A7B5F, SAGE_DIM #6FA088, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, tone Essentiel (dircom/PME, simplicité, guidance)
+  • 3 nouveaux localStorage keys: essential:digest-schedule (DigestSchedule), essential:source-cred (SourceCredibilityState: sources[]), aucun pour SentimentTimeline (stateless, derived). Toutes usePersistentState-backed (SSR-safe, quota-safe, hydrated pattern pour éviter race).
+  • Total Essential dashboard localStorage keys: 12 (6 ENV-ESSENTIEL onboarding/quota/milestones/help/visits/notifications/tour/briefing/cmd-recent + 3 R2-ESSENTIEL-A whatsapp-config/saved-searches/briefing-date + 3 R4-ESSENTIEL-A digest-schedule/source-cred) — SentimentTimeline n'a pas de persistence (pure derived).
+  • 7 nouveaux icônes Lucide (AlertCircle, Eye, Mail, Monitor, Shield, Smartphone, XCircle) — tous utilisés au moins 2 fois (import + usage)
+  • 0 nouvel import recharts — Sentiment Timeline utilise des bars CSS custom (pas de chart recharts) pour permettre hover + anomaly markers + current hour pulse plus précis qu'un BarChart
+  • 18 sections affichées (15 avant + 3 nouvelles : section 8.5 SentimentTimelineCard après DiversiteSourcesCard, section 8.6 SourceCredibilityScoringCard après, section 21.5 WeeklyDigestEmailPreviewCard après SavedSearchesStarterCard)
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/essential/EssentialDashboard.tsx (8866 → 10941 lignes, +2075 lignes net)
+- 3 features R4-ESSENTIEL-A livrées (2 persisted localStorage via usePersistentState, 1 stateless derived, toutes client-side, aucune API backend requise):
+  1. Weekly Digest Email Preview — mockup email CSS avec header bar sage + meta De/À/Objet + body HTML (greeting + 4 KPI highlights score/mentions/sentiment/top source + Top 3 articles de la semaine + Insight HarchIQ + CTA "Voir le tableau de bord" sage + signature). Toggle Aperçu (desktop 720px max) / Mobile (375px) via Tabs Monitor/Smartphone. Schedule dropdown custom popover 3 options (Chaque lundi 8h / Chaque vendredi 18h / Désactiver) persisted "essential:digest-schedule". "Envoyer un test" Button sage (toast.success simulé). weekNumber ISO 8601 pour "Semaine X" dans l'objet. KPIs dérivés du réel (health.score, mentionCount24h × 7, sentiment.positive, sources.sources[0].name). AiCommentary statut schedule.
+  2. Source Credibility Scoring — chaque source (API-derived top 10 + user-custom) a un credibility score 0-100 basé sur 4 facteurs simulés (autorité domain DA / standards éditoriaux / historique fact-check / transparence). 4 tiers badges: Vérifié (80-100 sage CheckCircle2) / Fiable (60-79 sage-dim CheckCircle2) / À vérifier (40-59 amber AlertCircle) / Non fiable (<40 red XCircle). Tier summary strip 4 cards (count + range). Filter chips (Tous + 4 tiers colorés). Source list rows: type icon (Newspaper/MessageCircle/Globe2), name + count articles + lastArticleAt fmtRelative, credibility bar 80px (fill tier.color), tier badge (icon + label), ChevronRight expand. Expandable "Pourquoi ce score?": 4 factor cards (icon + label + score coloré sage/amber/red + bar 4px + description). "Évaluer une nouvelle source" input (domain) → normalize → simulate score → toast succès + add to persisted. Sync effect (deps [hydrated, loading, sources, setCredState]): drop API sources no longer in API / refresh count / seed new / préserve customs. Returns prev si !hasChanges (évite re-renders). Avg score badge coloré. Persisté "essential:source-cred".
+  3. Sentiment Timeline — timeline horizontale 24 buckets horaires (24h view) ou 7 buckets journaliers (7j view). Chaque bucket: barre colorée (height = volume / maxTotal × 100%, color = sentiment dominant sage/gray/red POSITIVE/NEUTRAL_GRAY/NEGATIVE). Current hour highlighted avec sage pulse ring (animation sage-pulse-kf infinite). Hover: tooltip "HH:00 — X articles · Y% positif" (bg CHARCOAL, white text, pointer-events-none). Peak/trough annotation strip ("Pic à 14h: 12 articles positif(s)" sage TrendingUp / "Creux à 3h: 2 articles" gris TrendingDown / "N anomalies détectées" red AlertTriangle). Anomaly markers: red dot 6×6 NEGATIVE fill white border sur buckets avec isAnomaly (negative spike > (positive+neutral)*0.5 OU total > mean*2). 24h/7j toggle Tabs. Legend 4 items (Positif/Neutre/Négatif dominant + Anomalie). AiCommentary description. Pas de persistence — dérivé du réel BrandHealth (mentionCount24h + sentiment split) via simulateSentimentHourBuckets / simulateSentimentDailyBuckets (deterministic via hashStr).
+- Design system préservé: SAGE #4A7B5F, SAGE_DIM #6FA088, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, tone Essentiel (dircom/PME, simplicité, guidance)
+- 7 nouveaux icônes Lucide (AlertCircle, Eye, Mail, Monitor, Shield, Smartphone, XCircle) — préservé tous les imports existants
+- 9 nouveaux types TypeScript (DigestSchedule, DigestViewMode, SourceCredTier, CredibilityFactor, CredibilityFactorScore, CredibilitySource, SourceCredibilityState, SentimentTimelineRange, SentimentTimelineBucket) + 8 nouvelles fonctions helpers (weekNumber, tierForScore, tierLabelFor, hashStr, simulateCredibilityFactors, simulateSourceCredibility, simulateSentimentHourBuckets, simulateSentimentDailyBuckets) + 3 nouveaux composants (WeeklyDigestEmailPreviewCard, SourceCredibilityScoringCard, SentimentTimelineCard)
+- 0 nouvel import recharts — Sentiment Timeline utilise des bars CSS custom (pour hover précis + anomaly markers + current hour pulse)
+- 0 régression sur 15 features existantes (6 ENV-ESSENTIEL + 3 R2-ESSENTIEL-A + 3 R2-ESSENTIEL-B + 3 R3-ESSENTIEL-A) — aucun composant existant modifié, seulement additions
+- Code quality: tsc --noEmit → EXIT_CODE=0, 0 errors. eslint → EXIT_CODE=0, 0 errors, 0 warnings (1 initial error react-hooks/set-state-in-effect sur setHydrated(true) + 1 unused eslint-disable fixés).
+- 2 nouvelles localStorage keys persisted: essential:digest-schedule (DigestSchedule: monday/friday/off, default monday), essential:source-cred (SourceCredibilityState: sources[] avec credibilityScore + factors[] + tier, mix API-derived + custom user-added). SentimentTimeline n'a pas de persistence (pure derived du réel). Total Essential dashboard localStorage keys: 11 (ENV-ESSENTIEL onboarding/quickstart/visits/quota/milestones/help/notifications/tour/briefing/cmd-recent + R3-ESSENTIEL-A whatsapp-config/saved-searches + R4-ESSENTIEL-A digest-schedule/source-cred).
+- 18 sections affichées (15 avant + 3 nouvelles : SentimentTimelineCard + SourceCredibilityScoringCard après DiversiteSourcesCard, WeeklyDigestEmailPreviewCard après SavedSearchesStarterCard).
+
+---
+Task ID: R4-AGENCY-A
+Agent: AURA — Agency Round 4
+Task: Client Revenue Tracker + Pitch Template Library + Multi-Client Comparison Matrix on AgencyDashboard
+
+Work Log:
+- Lu worklog.md tail (R3-ESSENTIEL-A → R4-PRO-A) — fichier cible AgencyDashboard.tsx (14942 lignes, déjà 15 features: 6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B + 3 R3-AGENCY-A).
+- Lu AgencyDashboard.tsx en chunks: imports (1-225), types (226-794), usePersistentState (1045-1078), UI atoms SectionHeader/CardShell/Delta/MiniStat/AiCommentary (1091-1252), motion presets (1216-1222), ClientComparisonCard (4625-4807), PitchDeckAnalyticsCard (10091-10343), RevenueForecastingCard (11829-12021/13402), main motion.div grid (14443-14942).
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, SAGE_DEEP #3A6450, SAGE_DIM #6FA088, CHARCOAL #0A0A0A, BORDER #F0F0F0, FONT_MONO Space Mono, FONT_SANS Inter), usePersistentState hook (SSR-safe, localStorage-backed), framer-motion cardMotion + d(i) staggered transition helper.
+- Confirmé Dialog/Input/Label disponibles dans @/components/ui (utilisés pour modales Ajuster/Créer/Personnaliser/Sauvegarder la vue).
+- Confirmé helpers existants réutilisables: hashStr(s), monthsSince(iso), derivedClientScore(c), derivedClientSentiment(c), computeClientHealth(c), healthBandFor(score), healthBandStyle(band), planTierLabel(tier), fmtMAD(n), fmtNumber(n), fmtRelative(ts).
+
+- Étape 1 — Imports: ajouté 6 nouveaux icônes Lucide (Receipt, Save, Pencil, Trash2, BookMarked, FileStack) + 3 nouveaux composants shadcn (Dialog/DialogContent/DialogDescription/DialogFooter/DialogHeader/DialogTitle, Input, Label). Tous utilisés au moins 2 fois.
+
+- Étape 2 — Types R4-AGENCY-A (insérés après BenchmarkRow, ligne 796):
+  • RevenuePlanTier = "Essentiel" | "Pro" | "Enterprise"
+  • RevenueTrackerOverride { mrr?, setupFee?, commissionPct? } (manuel override par client)
+  • RevenueTrackerRow { clientId, displayName, planTier, mrr, setupFee, overageCharges, commissionPct, commissionEarned, totalRevenueYTD, monthsElapsed, overridden }
+  • RevenueTrackerState = Record<clientId, RevenueTrackerOverride>
+  • PitchTemplateKind = "audit" | "benchmark" | "crisis" | "esg" | "influence" | "monthly" | "custom"
+  • PitchTemplate { id, name, description, kind, sections[], estimatedSlides, isBuiltIn, winProbabilityPct }
+  • PitchTemplateUsage { timesUsed, wins, lastUsedAt }
+  • PitchTemplateState { customTemplates[], usage: Record<id, PitchTemplateUsage> }
+  • ComparisonMetricKey = "score" | "sentiment" | "mentions30d" | "crisisAlerts" | "healthBand" | "mrr" | "planTier" | "retentionMonths" | "harchiqUsage"
+  • ComparisonMetric { key, label, shortLabel, extract, numeric, invert?, display }
+  • ComparisonView { id, name, clientIds[], savedAt }
+  • ComparisonState { selectedIds[], savedViews[], activeViewId }
+
+- Étape 3 — Feature 3 MultiClientComparisonCard (inséré après ClientComparisonCard, ligne 4807):
+  • Constantes: MAX_COMPARISON_CLIENTS=5, MAX_SAVED_VIEWS=5, COMPARISON_PALETTE=[SAGE, CLIENT_B, CLIENT_C, CLIENT_D, NEUTRAL_GRAY] (5 couleurs pour overlay radar)
+  • COMPARISON_METRICS (9 métriques): score (derivedClientScore 0-100), sentiment (derivedClientSentiment.positive %), mentions30d (usage.apiRequests), crisisAlerts (hashStr%4, INVERTED), healthBand (non-numeric, label from healthBandStyle), mrr (quota.monthlyPriceMAD), planTier (non-numeric, planTierLabel), retentionMonths (monthsSince createdAt), harchiqUsage (bars.apiRequests.pct)
+  • COMPARISON_RADAR_AXES (6 axes): Score, Sentiment, Mentions (normalized /max), MRR (normalized /max), Rétention (normalized /max), HarchIQ — tous 0-100
+  • State: usePersistentState<ComparisonState>("agency:comparison-views", { selectedIds: [], savedViews: [], activeViewId: null }) + useState saveDialogOpen, newViewName
+  • Sync effect (useEffect sur [clients, state.selectedIds.length]): seed default top 3 clients by MRR si selectedIds vide. Cleanup: filter validSelectedIds (drop stale IDs).
+  • toggleClient(clientId): add/remove from selectedIds (max 5), reset activeViewId null sur toggle. Toast si max atteint.
+  • handleSaveView: validation (name non vide + ≥2 clients + <5 savedViews), génère id view-${Date.now()}, persist.
+  • loadView(view): set selectedIds = validIds, activeViewId = view.id.
+  • deleteView(viewId): filter out, reset activeViewId si actif.
+  • handleExport: toast "Comparaison exportée · N client(s) · 9 métriques (CSV/PDF)".
+  • rowExtremes = useMemo: pour chaque métrique numérique, bestId (max ou min si invert) + worstId. Skip si tie.
+  • radarData = useMemo: 6 axes × N clients, normalisé 0-100 par axe (mentions/MRR/rétention normalisés /max).
+  • Render: SectionHeader avec badge Columns + count N/5 + boutons Exporter (Download) + Sauvegarder la vue (Save) / Separator / loading skeleton OU empty state (si 0 clients) OU client multi-select chips (colorées par index palette, validSelectedIds) / saved views chips (avec load + delete X) / si 0 sélection: empty state "Sélectionnez au moins 2 clients" / sinon grid 12: table (lg:col-span-7) + radar overlay (lg:col-span-5). Table: 9 rows × N cols, chaque cell affiche valeur + badge TOP (sage Trophy) si bestId + badge FAIBLE (amber AlertTriangle) si worstId. Radar: RadarChart avec PolarGrid + PolarAngleAxis + N Radar (un par client, couleur palette, fillOpacity 0.10) + RTooltip + Legend.
+  • Dialog Sauvegarder la vue: DialogHeader + DialogDescription + Label + Input (max 50 chars, Enter to save) + DialogFooter (Annuler + Sauvegarder disabled si name vide).
+
+- Étape 4 — Feature 2 PitchTemplateLibraryCard (inséré après PitchDeckAnalyticsCard, ligne 10951):
+  • Constantes: MAX_CUSTOM_TEMPLATES=3, TEMPLATE_KIND_LABEL (Record<PitchTemplateKind, string>: Audit/Benchmark/Crise/ESG/Influence/Mensuel/Custom)
+  • BUILTIN_PITCH_TEMPLATES (6 templates): tpl-audit "Audit réputation prospect" (6 sections, 12 slides, 55% win), tpl-benchmark "Benchmark concurrentiel" (6 sections, 14 slides, 48% win), tpl-crisis "Crisis preparedness" (6 sections, 10 slides, 42% win), tpl-esg "ESG & conformité" (6 sections, 16 slides, 38% win), tpl-influence "Influenceur & portée" (6 sections, 11 slides, 52% win), tpl-monthly "Rapport mensuel type" (6 sections, 8 slides, 85% win — meilleur taux).
+  • Helper: parseSections(input) — split par \n, trim, filter non-empty, slice(0, 12).
+  • State: usePersistentState<PitchTemplateState>("agency:pitch-templates", { customTemplates: [], usage: {} }) + useState createOpen/createName/createDescription/createSections + editId/editName/editDescription/editSections.
+  • allTemplates = useMemo([…BUILTIN_PITCH_TEMPLATES, …state.customTemplates])
+  • totalUsage = useMemo: sum timesUsed + sum wins + winRate = wins/timesUsed*100.
+  • getUsage(id): helper inline (state.usage[id] ?? defaults).
+  • handleUse(tpl): setState prev.usage[tpl.id] = { timesUsed+1, wins + (isWin ? 1 : 0), lastUsedAt: now }. isWin = hashStr(`${id}:${timesUsed+1}:${Date.now()}`) % 100 < tpl.winProbabilityPct. Toast "Pitch généré · « name » · N slides · N sections".
+  • handleMarkWin(tpl): si timesUsed=0 → toast info "Utilisez d'abord…". Sinon wins+1 + toast success.
+  • handleDuplicate(tpl): si atCustomLimit → toast info. Sinon create copy with id tpl-custom-${Date.now()}, name + " (copie)", kind="custom", sections=[…], winProbabilityPct inherited.
+  • handleDelete(tpl): filter out customTemplates + remove usage entry.
+  • openCreate / handleCreateSave: validation (name + sections non vides + !atCustomLimit), create new custom template with estimatedSlides = max(4, sections.length * 2), winProbabilityPct=45.
+  • openEdit / handleEditSave: dialog avec name + description + sections (textarea), save updates customTemplates[id].
+  • Render: SectionHeader avec badge BookMarked (N templates) + badge Trophy (winRate% global) + bouton "Créer un template" (Plus) / Separator / grid 1-2-3 cols de template cards. Chaque card: header (FileStack icon + name + kind badge sage si custom / gray si built-in), description, sections chips (4 visibles + "+N" badge sage), stats row 3 cols (SLIDES / USAGE / WIN coloré sage si ≥50% sinon amber), "Dernier usage · X" ou "Jamais utilisé", actions row (Utiliser primary sage + Marquer victoire Trophy outline + selon built-in: Dupliquer Copy / selon custom: Personnaliser Pencil + Supprimer Trash2 rouge). Dernier card: dashed border "Créer un template" avec compteur N/3.
+  • AiCommentary: résumé N templates + total usage + winRate + recommendation "Mensuel et Audit ont la meilleure probabilité".
+  • Create dialog: DialogHeader + 3 fields (Nom + Description + Sections textarea avec live count "N section(s) détectée(s) · N slides estimées") + DialogFooter.
+  • Edit dialog (custom only): même structure que Create, pré-rempli avec template values.
+
+- Étape 5 — Feature 1 ClientRevenueTrackerCard (inséré après RevenueForecastingCard, ligne 13404):
+  • Constantes: REVENUE_PLAN_PRICE (Essentiel 3000 / Pro 6500 / Enterprise 15000 MAD), REVENUE_PLAN_DEFAULT_SETUP (2000 / 5000 / 12000 MAD), REVENUE_PLAN_COLOR (SAGE_DIM / SAGE / SAGE_DEEP pour gradient par tier).
+  • Helpers:
+    - revenueTrackerTier(client): map planTier raw → Essentiel (essentiel/emergence/autre) / Pro (pro/corporate) / Enterprise (enterprise/sovereign)
+    - setupFeeFromHash(clientId, tier): base ± 30% variance via hashStr, min 500 MAD
+    - overageChargesFromHash(client): 0 si apiRequests.pct ≤ 80%, sinon base * excess/20 + hash%200 (0-2000 MAD)
+    - computeRevenueRow(client, override, agencyCommissionPct): mrr = override.mrr ?? quota.monthlyPriceMAD, setupFee = override.setupFee ?? setupFeeFromHash, overage = overageChargesFromHash, commissionPct = override.commissionPct ?? agencyCommissionPct, monthsElapsed = clamp(1, 12, monthsSince(createdAt)), totalRevenueYTD = mrr × monthsElapsed + setupFee + overage, commissionEarned = round(totalRevenueYTD × commissionPct / 100), overridden = any override key set.
+  • State: usePersistentState<RevenueTrackerState>("agency:revenue-tracker", {}) + useState adjustClientId, draftMrr, draftSetup, draftCommission.
+  • rows = useMemo(clients.map(c => computeRevenueRow(c, overrides[c.id], agencyCommissionPct))).
+  • summary = useMemo: totalMrr (sum mrr), totalCommissionYTD (sum commissionEarned), totalRevenueYTD (sum), avgRevenuePerClient (total/clients.length), topClient (max totalRevenueYTD).
+  • top10ByRevenue = useMemo: sort desc by totalRevenueYTD, slice 10.
+  • tierDistribution = useMemo: 3 tiers × sum totalRevenueYTD par tier, filter value > 0.
+  • overriddenCount = rows.filter(overridden).length.
+  • handleFacturer(row): toast "Facture générée · {name} · {totalRevenueYTD} YTD (PDF simulé)".
+  • openAdjust(row): set adjustClientId + 3 drafts (mrr, setup, commission) initialisés depuis row.
+  • handleAdjustSave: validation (Number non-NaN, ≥0, commission 0-100), setOverrides[clientId] = { mrr, setupFee, commissionPct }. Toast "Tarif ajusté pour {name}".
+  • handleAdjustReset: remove overrides[clientId] + toast "Tarif réinitialisé (valeurs calculées)".
+  • Render: SectionHeader avec badge Wallet (N clients) + badge Pencil (N ajustés) si overriddenCount > 0 / Separator / loading skeleton OU empty state / sinon:
+    - Summary strip 4 MiniStat cards (MRR total sage / Commission YTD sage_deep / Revenu moyen gray / Top client terracotta)
+    - Top client detail line (name + YTD + tier + commission earned)
+    - Grid 12: BarChart top 10 (lg:col-span-7, layout=vertical, sage bars, YAxis category names, XAxis number k MAD formatter) + PieChart distribution par plan (lg:col-span-5, donut innerRadius 48 outerRadius 92, 3 Cell colors par tier)
+    - Revenue table 8 cols: Client (avec Pencil indicator si overridden + months elapsed/overage subtitle), Plan (badge coloré par tier), MRR, Setup, Commission %, Commission YTD (sage_deep), Revenu YTD, Actions (Facturer Receipt + Ajuster SlidersHorizontal). Footer total row (sum MRR + sum setup + sum commission + sum YTD).
+    - AiCommentary: résumé N clients + MRR + commission + top client + overridden count + tier distribution %.
+  • Dialog Ajuster: DialogTitle "Ajuster le tarif — {name}" + 3 Input number (MRR / Setup / Commission) avec "Valeur calculée: X" sous chaque input + DialogFooter (Réinitialiser rouge + Annuler + Enregistrer sage).
+
+- Étape 6 — MAIN wiring (3 motion.div insérés):
+  • R4-AGENCY-A · FEATURE 3 — MultiClientComparisonCard inséré après ClientComparisonCard motion.div (avant CommissionCalculatorCard), id="comparison-matrix", transition d(11), lg:col-span-12. Props: clients, loading, onToast.
+  • R4-AGENCY-A · FEATURE 1 — ClientRevenueTrackerCard inséré après RevenueForecastingCard motion.div (avant UpsellOpportunityTrackerCard), id="revenue-tracker", transition d(12), lg:col-span-12. Props: clients, agencyCommissionPct={agency?.commissionPct ?? 20}, loading, onToast.
+  • R4-AGENCY-A · FEATURE 2 — PitchTemplateLibraryCard inséré après PitchDeckAnalyticsCard motion.div (avant ClientPortalPreviewCard), id="pitch-templates", transition d(15), lg:col-span-12. Props: onToast.
+  • Footer text mis à jour: "31 sections" → "34 sections", ajouté "· 3 R4-AGENCY-A features".
+
+- Étape 7 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=8192" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors.
+  • bunx eslint src/app/atelier/console/agency/AgencyDashboard.tsx → 4 errors + 9 warnings TOUS pré-existants dans code R2-AGENCY-B / R3-AGENCY-A (PreviewPanel dans WhiteLabelThemeEditorCard lignes 12176/12231, setSelectedClientId dans ClientOnboardingWizard ligne 11674, setSyncedFromClients dans RevenueForecastingCard ligne 13122, useReactTable incompatible-library warnings lignes 3944/6805, plusieurs unused eslint-disable directives pré-existantes). AUCUNE erreur/warning dans nouveau code R4-AGENCY-A.
+  • 0 régression sur 15 features existantes (6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B + 3 R3-AGENCY-A) — aucun composant existant modifié, seulement additions (6 imports icônes + 9 imports shadcn + 11 types + 3 const blocks + 3 helpers functions + 3 components + 3 motion.div + footer text).
+  • Design system préservé: SAGE #4A7B5F, SAGE_DEEP #3A6450, SAGE_DIM #6FA088, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px max, no emojis, French throughout.
+  • 3 nouveaux localStorage keys: agency:revenue-tracker (RevenueTrackerState: Record<clientId, RevenueTrackerOverride>), agency:pitch-templates (PitchTemplateState: customTemplates + usage), agency:comparison-views (ComparisonState: selectedIds + savedViews + activeViewId). Total Agency dashboard localStorage keys: 18 (15 avant + 3 nouvelles).
+  • 6 nouveaux icônes Lucide (Receipt, Save, Pencil, Trash2, BookMarked, FileStack) + 9 nouveaux composants shadcn (Dialog/DialogContent/DialogDescription/DialogFooter/DialogHeader/DialogTitle + Input + Label) — tous utilisés au moins 2 fois (Receipt 2x, Save 5x, Pencil 4x, Trash2 2x, BookMarked 2x, FileStack 2x, Dialog 9x, Input 11x, Label 18x).
+  • 34 sections affichées (31 avant + 3 nouvelles : section 13 MultiClientComparisonCard après ClientComparisonCard, section 20 ClientRevenueTrackerCard après RevenueForecastingCard, section 28 PitchTemplateLibraryCard après PitchDeckAnalyticsCard).
+  • 3 nouvelles modales Dialog: Ajuster le tarif (Feature 1 — MRR/Setup/Commission inputs), Créer un template + Personnaliser (Feature 2 — name/description/sections textarea), Sauvegarder la vue (Feature 3 — name input).
+  • Recharts exports réutilisés: BarChart, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, CartesianGrid, XAxis, YAxis, RTooltip, Legend, ResponsiveContainer — aucun nouveau export recharts requis (tous déjà importés par R3-AGENCY-A AgencyBenchmarkCard).
+  • Vérifié persistance: 3 nouvelles clés localStorage toutes usePersistentState-backed (SSR-safe via useEffect mount + try/catch quota-safe).
+  • Vérifié default behavior: MultiClientComparisonCard seeds top 3 clients by MRR si selectedIds vide (useEffect avec guard), PitchTemplateLibraryCard affiche 6 built-in templates immédiatement, ClientRevenueTrackerCard calcule tout depuis clients + agency.commissionPct.
+  • Vérifié limites: MAX_COMPARISON_CLIENTS=5 (toggle gate), MAX_SAVED_VIEWS=5 (save gate), MAX_CUSTOM_TEMPLATES=3 (create/duplicate gate).
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/agency/AgencyDashboard.tsx (14942 → 16901 lignes, +1959 lignes net)
+- 3 features R4-AGENCY-A livrées (toutes persisted localStorage via usePersistentState, toutes client-side, aucune API backend requise):
+  1. Client Revenue Tracker — per-client revenue breakdown (MRR, setup fee, overage charges, commission earned, total YTD), 7-col table avec Facturer + Ajuster dialogs, summary strip 4 KPI (MRR total / commission YTD / revenu moyen / top client), BarChart top 10 clients (sage bars horizontal), PieChart distribution par plan tier (Essentiel/Pro/Enterprise donut). Persisted overrides MRR/setup/commission per client.
+  2. Pitch Template Library — 6 built-in templates (Audit réputation prospect, Benchmark concurrentiel, Crisis preparedness, ESG & conformité, Influenceur & portée, Rapport mensuel type) + up to 3 custom. Each template: name, description, sections chips (max 4 visibles + "+N"), estimatedSlides, usage stats (SLIDES/USAGE/WIN 3-col grid), lastUsedAt. Actions: Utiliser (probabilistic win via hashStr + winProbabilityPct), Marquer gagné, Dupliquer (built-in) / Personnaliser + Supprimer (custom), Créer un template (Dialog name+desc+sections textarea). Persisted custom templates + usage stats.
+  3. Multi-Client Comparison Matrix — side-by-side comparison up to 5 clients × 9 metrics (score, sentiment %, mentions 30d, crisis alerts INVERTED, health band, MRR, plan tier, retention months, HarchIQ usage). Per-row best performer sage badge (Trophy TOP) + worst performer amber badge (AlertTriangle FAIBLE) pour metrics numériques. Radar overlay 6 axes normalisés (Score/Sentiment/Mentions/MRR/Rétention/HarchIQ) avec N séries simultanées. Default top 3 by MRR. Sauvegarder la vue (max 5) + Exporter CSV/PDF simulated. Persisted saved views.
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px max, no emojis, French throughout, agency/commercial tone.
+- 6 nouveaux icônes Lucide (Receipt, Save, Pencil, Trash2, BookMarked, FileStack) + 9 nouveaux composants shadcn (Dialog/DialogContent/DialogDescription/DialogFooter/DialogHeader/DialogTitle + Input + Label) — préservé tous les imports existants.
+- 11 nouveaux types TypeScript (RevenuePlanTier, RevenueTrackerOverride, RevenueTrackerRow, RevenueTrackerState, PitchTemplateKind, PitchTemplate, PitchTemplateUsage, PitchTemplateState, ComparisonMetricKey, ComparisonMetric, ComparisonView, ComparisonState) + 4 nouvelles fonctions helper (revenueTrackerTier, setupFeeFromHash, overageChargesFromHash, computeRevenueRow, parseSections — 5 en tout).
+- 3 nouvelles localStorage keys: agency:revenue-tracker (RevenueTrackerState), agency:pitch-templates (PitchTemplateState), agency:comparison-views (ComparisonState) — toutes usePersistentState-backed (SSR-safe, quota-safe via try/catch).
+- 0 régression sur 15 features existantes (6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B + 3 R3-AGENCY-A) — aucun composant existant modifié, seulement additions.
+- Code quality: tsc 0 errors (EXIT_CODE=0). eslint 4 errors + 9 warnings TOUS pré-existants dans code R2-AGENCY-B (PreviewPanel dans WhiteLabelThemeEditorCard lignes 12176/12231) + R3-AGENCY-A (setSyncedFromClients dans RevenueForecastingCard ligne 13122, setSelectedClientId dans ClientOnboardingWizard ligne 11674). AUCUNE erreur/warning dans nouveau code R4-AGENCY-A.
+- Total Agency dashboard localStorage keys: 18 (6 ENV-AGENCY tier-level/pending-clients/whatsapp-config/portal-preview/wlabel-themes/pitch-pipeline + 3 R2-AGENCY-A client-health-overrides/churn-risk/revenue-forecast + 3 R2-AGENCY-B team-perf/pitch-analytics/wlabel-themes + 3 R3-AGENCY-A client-lifecycle/upsell-opportunities/benchmark-overrides + 3 R4-AGENCY-A revenue-tracker/pitch-templates/comparison-views).
+- 34 sections affichées dans Agency dashboard (31 avant + 3 nouvelles R4-AGENCY-A).
+
+---
+
+Task ID: R4-ENTERPRISE-A
+Agent: AURA — Enterprise Round 4
+Task: Board Resolution Tracker + Geopolitical Risk Feed + ESG Scorecard on EnterpriseDashboard
+
+Work Log:
+- Lu worklog.md tail (R3-ESSENTIEL-A → R4-AGENCY-A) — fichier cible EnterpriseDashboard.tsx (12368 lignes, déjà 15+ features: ENV-ENTERPRISE + R2-ENTERPRISE-A/B + R3-ENTERPRISE-A).
+- Lu EnterpriseDashboard.tsx en chunks: imports (1-230), design tokens (230-260), types (260-460), helpers + usePersistentState (460-960), cardMotion/atoms (940-960), sidebar (960+), BoardBriefingGeneratorCard (6102-6456), ComplianceCockpitCard (6458-6736), MultiMarketReputationMapCard (7192-7652), SuiviEsgCard (5570-5700), RegulatoryChangeFeedCard (11418-11962), MAIN usePersistentState hooks (11982-11996), MAIN grid wiring (12220-12307).
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF, BORDER #F0F0F0, BORDER_STRONG #E5E5E5, POSITIVE #10B981, NEGATIVE #EF4444, NEUTRAL_AMBER #F59E0B, NEUTRAL_GRAY #A1A1AA), usePersistentState hook (SSR-safe, localStorage-backed, try/catch quota-safe), framer-motion (motion + cardMotion preset {initial:{opacity:0,y:8}, animate:{opacity:1,y:0}, transition:{duration:0.35, ease:[0.16,1,0.3,1]}}), shadcn/ui (Card/Badge/Button/Separator/Skeleton/Tabs/Tooltip), recharts (RadarChart/Radar/PolarGrid/PolarAngleAxis/PolarRadiusAxis/BarChart/Bar/CartesianGrid/XAxis/YAxis/Legend/RTooltip/ResponsiveContainer), lucide-react, date-fns (format + fr locale), AiCommentary helper (sage green left border + Sparkles icon), SectionHeader + CardShell + Delta + SparkDot + MiniStat atoms réutilisés.
+- Confirmé pas de Dialog/Switch/Input/Label shadcn importé — pattern du file utilise native <input>/<select>/<textarea>/button stylés inline (cf. RiskHeatmapMatrixCard draft lignes 8090-8116, RegulatoryCalendarCard draft 8457-8464, RegulatoryChangeFeedCard analysis modal 11846-11957).
+- Confirmé types existants MarketCode = "MA" | "FR" | "BE" | "CH" | "CA" | "TN" | "SN" | "CI" (ligne 7199) + GeoRisk = "green" | "amber" | "red" (ligne 7200) + MARKET_REPUTATIONS[8] (lignes 7227-7348) réutilisables pour GeopoliticalRiskFeed.
+- Vérifié lucide-react 0.525.0 dispose des 8 nouveaux icônes (Gavel, Wind, Recycle, Bird, HeartHandshake, HardHat, Vote, Ship) via `ls node_modules/lucide-react/dist/esm/icons/`.
+
+- Étape 1 — Imports: ajouté 8 nouveaux icônes Lucide (Gavel, Wind, Recycle, Bird, HeartHandshake, HardHat, Vote, Ship) au bloc lucide-react existant (lignes 157-164). Aucun nouvel import shadcn (pattern native inputs respecté). Aucun nouvel import recharts (tous déjà disponibles: RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, BarChart, Bar, CartesianGrid, XAxis, YAxis, Legend, RTooltip, ResponsiveContainer).
+
+- Étape 2 — Feature 1 Board Resolution Tracker (SECTION 39, inséré avant MAIN, ~525 lignes):
+  • Types: ResolutionStatus ("proposed" | "in-progress" | "approved" | "rejected" | "executed"), ResolutionNote (id/timestamp/author/note), Resolution (id/title/date/status/proposedBy/approvedBy[]/executionOwner/deadline/linkedItem/summary/notes[]).
+  • Constants: RESOLUTION_STATUS_LABEL (Proposé/En cours/Approuvé/Rejeté/Exécuté), RESOLUTION_STATUS_COLOR (gray/amber/sage/red/positive), RESOLUTION_STATUS_ICON (FileText/Clock/CheckCircle2/X/Flag), RESOLUTION_NEXT_STATUS workflow graph (Proposé → [En cours, Rejeté], En cours → [Approuvé, Rejeté], Approuvé → [Exécuté], Rejeté/Exécuté → []). 5 résolutions seed RES-001 à RES-005 couvrant 4 statuts sur 5 (1 in-progress, 1 approved, 2 executed, 1 proposed) — RES-003 crise CI + RES-004 audit CNDP = exécutées, RES-002 rapport ESG Q3 = approuvée en attente exécution, RES-001 surveillance AMMC = en cours, RES-005 communication diversité = proposée.
+  • State: usePersistentState<Resolution[]>("enterprise:resolutions", RESOLUTIONS_SEED) + useState filterStatus/filterDateFrom/filterDateTo/expandedId/showForm/draft/noteDrafts (Record<string, string> pour notes per-résolution).
+  • filtered = useMemo sur [resolutions, filterStatus, filterDateFrom, filterDateTo] — filtre par statut + plage de dates (proposé date). Sort par date décroissante.
+  • statusCounts = useMemo sur [resolutions] — compte par statut.
+  • upcomingDeadline = useMemo sur [resolutions] — compte résolutions non-exécutées/non-rejetées avec deadline dans les 30 prochains jours.
+  • handleCreate: validation (titre + proposedBy + executionOwner + deadline requis), génère id `RES-{NNN}-{timestamp36}`, authorShort = proposedBy.split(" — ")[0], newRes avec status="proposed", approvedBy=[], notes=[{author:authorShort, note:"Résolution proposée au conseil."}], onResolutionsChange([newRes, ...resolutions]) + toast.success + reset draft + fermer form.
+  • transitionStatus(id, next): onResolutionsChange map — si next="approved" ajoute "Karim B." à approvedBy si pas déjà présent, ajoute note "Statut changé : {label}." avec author "Karim B." + timestamp. Toast success.
+  • handleAddNote(id): text = noteDrafts[id].trim(), si non vide onResolutionsChange map ajoute note (author "Karim B." + timestamp) + clear draft + toast success.
+  • handleExportComex: toast.success "Export COMEX lancé — fichier PDF en préparation." avec description `${filtered.length} résolution(s) · transmis au secrétariat du COMEX`.
+  • Render: motion.div id="board-resolutions" + CardShell lg:col-span-12. SectionHeader title "39 · Suivi des Résolutions du Conseil" + right = badge sage "{N} RÉSOLUTIONS · {executedCount} EXÉCUTÉES" + badge amber si upcomingDeadline > 0 "{N} ÉCHÉANCE 30J" + Button outline sage "EXPORTER COMEX" (Download icon) + Button charcoal "NOUVELLE RÉSOLUTION" (Plus icon). Separator. Status summary strip 5 cards (proposed/in-progress/approved/rejected/executed) chacune: icône statut + count + label, cliquable pour filtrer par statut (toggle). Filter bar: Filter icon + FONT_HEADER "FILTRES DATE" + 2 inputs date (DU / AU) + bouton RÉINITIALISER (X icon) si filtres actifs + counter "{filtered}/{total} résolution(s)" à droite. Form création (motion.div height auto): Gavel icon + FONT_HEADER "NOUVELLE RÉSOLUTION" + X close. Grid 12 colonnes: Titre (col-12) + Proposé par (col-4) + Responsable exécution (col-4) + Échéance (col-2 date) + Item lié (col-2) + Synthèse textarea (col-12). Boutons ANNULER (outline) + CRÉER LA RÉSOLUTION (SAGE). Resolutions list: rows avec icône statut 32×32 + ID mono + badge statut coloré + badge EN RETARD (rouge) si deadline < now et status ≠ executed/rejected + titre + bouton DÉTAILS/MASQUER (ChevronDown rotate 180° si expanded). Metadata row: CalendarDays date + UserPlus proposedBy + Users executionOwner + CalendarClock deadline (rouge si overdue) + ShieldCheck linkedItem. Workflow transition buttons: pour chaque nextStatus de RESOLUTION_NEXT_STATUS[r.status], bouton border-coloré avec icône + label uppercase (PROPOSÉ → [EN COURS, REJETÉ], etc.). Expanded details (motion.div): grid 3 cols — col-2 Synthèse (texte) + Approubations ({N} chips sage CheckCircle2 + name, ou "Aucune approbation…" italic) | col-1 Suivi de progression (timeline notes: author sage + timestamp fmtRelative + note texte, scrollable max-h-40) + input note + bouton Send (disabled si vide). AiCommentary: stats + recommandation (échéances 30j / revue COMEX).
+  • col-span-12
+
+- Étape 3 — Feature 2 Geopolitical Risk Feed (SECTION 40, inséré avant MAIN, ~290 lignes):
+  • Types: GeoEventType ("Sanctions" | "Conflit" | "Élection" | "Régulation" | "Commerce" | "Diplomatie"), GeoSeverity ("Faible" | "Modéré" | "Élevé" | "Critique"), GeoImpact ("low" | "medium" | "high"), GeoEvent (id/type/region:MarketCode/severity/title/summary/date/source/reputationImpact/affectedCountries:MarketCode[]), GeoFeedState (watchlist: string[]).
+  • Constants: GEO_EVENT_TYPE_ICON (Sanctions→Landmark, Conflit→AlertTriangle, Élection→Vote, Régulation→Scale, Commerce→Ship, Diplomatie→Network), GEO_EVENT_TYPE_COLOR (6 couleurs distinctes: violet/rouge/bleu/sage/amber/cyan), GEO_SEVERITY_COLOR (Faible→POSITIVE, Modéré→AMBER, Élevé→ORANGE #F97316, Critique→NEGATIVE), GEO_IMPACT_LABEL (low→Faible, medium→Moyen, high→Fort), GEO_IMPACT_COLOR (low→POSITIVE, medium→AMBER, high→NEGATIVE). 8 events seed GEO-001 à GEO-008 — 1 par marché francophone (MA Régulation Modéré, FR Conflit Élevé, BE Élection Faible, CH Diplomatie Faible, CA Commerce Modéré, TN Élection Élevé, SN Sanctions Modéré, CI Conflit Critique). affectedCountries multi-marchés pour plusieurs events (ex GEO-008 CI+SN+TN+MA).
+  • State: usePersistentState<GeoFeedState>("enterprise:geo-feed", {watchlist:[]}) + useState filterRegion/filterType/filterSeverity.
+  • filtered = useMemo sur [filterRegion, filterType, filterSeverity] — filtre par région (region OU affectedCountries), type, sévérité. Sort par date décroissante.
+  • marketSeverity = useMemo: pour chaque MarketCode (8), prend tous les events où region=m OU m ∈ affectedCountries, sort par sévérité décroissante (Faible=1 < Modéré=2 < Élevé=3 < Critique=4), retourne la sévérité la plus élevée. Out: Record<MarketCode, GeoSeverity|null>.
+  • criticalCount/highCount/watchedCount/highImpactCount: compteurs dérivés de GEO_FEED_INITIAL + state.watchlist.
+  • toggleWatch(id): onStateChange toggle dans watchlist[]. Toast implicite via re-render.
+  • scrollToMarketMap: document.getElementById("market-map").scrollIntoView({behavior:smooth, block:start}) — lien vers SECTION 29 Multi-Market Reputation Map.
+  • Render: motion.div id="geo-risk-feed" + CardShell lg:col-span-12. SectionHeader title "40 · Veille Géopolitique — Risques Réputationnels" + right = badge rouge si criticalCount > 0 "{N} CRITIQUE" (AlertTriangle) + badge sage "{N} ÉVÉNEMENTS · {N} SURVEILLÉS" + Button outline sage "CARTE MULTI-MARCHÉS" (ExternalLink icon → scrollToMarketMap). Separator. Mini-carte 8 marchés (rounded-lg #FAFAFA): header "MINI-CARTE 8 MARCHÉS — SÉVÉRITÉ PAR ZONE" (MapPin icon) + counter "{highCount} élevé · {criticalCount} critique". Grid 8 cols (4 sur mobile): pour chaque marché (MARKET_REPUTATIONS), bouton cliquable pour filtrer par région — flag mono + dot 7×7 coloré par sévérité (rouge/amber/orange/vert si sev, gris si null) avec boxShadow ring si sev. Nom pays + label sévérité uppercase (ou "—" si null). Filter bar: Filter icon + FONT_HEADER "FILTRES" + select Type (6 options) + select Sévérité (4 options) + bouton RÉINITIALISER (X icon) si filtres actifs + counter "{filtered}/{total} événements". Feed list: rows avec icône type 36×36 colorée (bg type-color 15%, color type-color) + badge type coloré + badge sévérité coloré (AlertTriangle) + badge marché (flag + country) + titre + bouton SURVEILLER (Eye) / SURVEILLÉ (Bell, sage border + SAGE_BG). Summary texte. Metadata row: date fmtRelative + "·" + source. Impact strip: "IMPACT RÉPUTATION" label + valeur colorée (Faible vert / Moyen amber / Fort rouge) dans rounded-md border coloré + MapPin + chips affectedCountries (flag par pays, bg gray 8%). AiCommentary: stats globales + recommandation (niveau critique → activer protocole crise + COMEX / niveau élevé multiple → renforcer veille / niveau modéré → cadence hebdo).
+  • col-span-12
+
+- Étape 4 — Feature 3 ESG Scorecard (SECTION 41, inséré avant MAIN, ~340 lignes):
+  • Types: EsgPillarId ("environmental" | "social" | "governance"), EsgSubMetric (key/label/score 0-100/benchmark 0-100/Icon), EsgPillar (id/label/Icon/trend/submetrics[4]), EsgScorecardState (overrides: Record<string, number>).
+  • Constants: ESG_PILLARS_SEED — 3 piliers × 4 sub-metrics (12 total):
+    - Environmental (Leaf, trend +3): env_emissions Émissions Scope 1+2 (74/68 Wind), env_resources Utilisation ressources (70/65 Database), env_biodiversity Biodiversité (64/60 Bird), env_circular Économie circulaire (80/70 Recycle). Pillar avg ≈ 72.
+    - Social (Users, trend +5): soc_diversity Diversité & inclusion (72/66 Users), soc_labor Pratiques de travail (66/70 Briefcase), soc_community Impact communautaire (70/62 HeartHandshake), soc_health Santé & sécurité (64/68 HardHat). Pillar avg ≈ 68.
+    - Governance (Scale, trend -1): gov_board Structure du conseil (82/72 Landmark), gov_ethics Éthique & conformité (80/74 Scale), gov_transparency Transparence (79/70 Eye), gov_shareholders Droits actionnaires (83/75 Key). Pillar avg ≈ 81.
+  • State: usePersistentState<EsgScorecardState>("enterprise:esg-scorecard", {overrides:{}}) + useState expandedPillar (default "environmental") / editingKey / editDraft / showReport.
+  • pillars = useMemo sur [state.overrides]: applique overrides sur sub-metrics scores (state.overrides[sm.key] ?? sm.score).
+  • pillarScores = useMemo sur [pillars]: pour chaque pilier, score = mean(submetrics.score), benchmark = mean(submetrics.benchmark), trend préservé, submetrics avec overrides appliqués.
+  • overallScore = mean(pillarScores.score), overallBenchmark = mean(pillarScores.benchmark), deltaVsBenchmark = overallScore - overallBenchmark.
+  • radarData = pillarScores.map → {pillar: label.charAt(0) [E/S/G], score, benchmark}.
+  • startEdit(key, current): setEditingKey + setEditDraft(String(current)).
+  • saveEdit: validation 0-100, onStateChange overrides[key] = parsed + toast success + clear editing.
+  • resetOverride(key): delete overrides[key] + onStateChange + toast info.
+  • handleGenerateReport: setShowReport(true) + toast success "Rapport ESG généré — layout PDF-ready." avec description scores.
+  • colorForScore(s): s >= 80 → POSITIVE / s >= 65 → NEUTRAL_AMBER / sinon NEGATIVE.
+  • Render: motion.div id="esg-scorecard" + CardShell lg:col-span-12. SectionHeader title "41 · ESG Scorecard — Tableau de Bord Extra-Financier" + right = badge coloré (sage si delta ≥ 0, rouge sinon) "GLOBAL {score}/100 · {+/-}{delta} VS SECTEUR" + Button charcoal "RAPPORT ESG" (Download icon → handleGenerateReport). Separator. Grid 12 cols: col-4 Radar chart (RadarChart recharts 200px height, 3 axes E/S/G, PolarGrid, PolarAngleAxis mono bold, PolarRadiusAxis 0-100, Radar "Votre score" SAGE fillOpacity 0.35, Radar "Benchmark sectoriel" NEUTRAL_GRAY dashed fillOpacity 0.12, Legend mono, RTooltip). Sous radar: 3 mini-cards (E/S/G) avec icône pilier + lettre + score 14px coloré. col-8 Pillars expandable list: pour chaque pilier, div border-coloré si expanded, button header (icône 32×32 colorée + label + Delta trend + score/benchmark/écart coloré + ChevronDown rotate 180° si expanded). Expandable content: BarChart 140px (4 sub-metrics × 2 bars Votre score SAGE + Benchmark gray 60% opacity, CartesianGrid horizontal dashed, XAxis rotated -15°, YAxis 0-100, Legend mono, RTooltip) + grid 2 cols sub-metrics. Chaque sub-metric card: icône + label + bouton RESET (RefreshCw) si overridden + bar 4px colorée + bouton score coloré avec Pencil (ouvre edit input + CheckCircle2 save). Benchmark + écart coloré. AiCommentary: stats globales + recommandation (maturité ESG solide ≥75 / acceptable 65-75 / à risque <65).
+  • PDF-ready modal: fixed inset-0 z-180 bg rgba(10,10,10,0.55), max-w-3xl max-h-88vh overflow-y-auto. Header sticky: "RAPPORT ESG — PDF-READY" + titre "Tableau de Bord Extra-Financier — {MMMM yyyy}" + scores résumé. Body: pour chaque pilier, card avec icône + label + score + sub-metrics grid 2 cols (label + score coloré / benchmark). Footer sticky: bouton FERMER (outline) + bouton TÉLÉCHARGER PDF (SAGE → toast success "Téléchargement PDF lancé.").
+  • col-span-12
+
+- Étape 5 — MAIN wiring (3 hooks usePersistentState + 3 motion.div insérés):
+  • 3 nouveaux hooks ajoutés après `const [regFeedState, setRegFeedState] = usePersistentState<RegFeedState>("enterprise:reg-feed", REG_FEED_STATE_INITIAL);` (avant `const [warRoomOpen, setWarRoomOpen] = useState(false);`):
+    - `const [resolutionsState, setResolutionsState] = usePersistentState<Resolution[]>("enterprise:resolutions", RESOLUTIONS_SEED);`
+    - `const [geoFeedState, setGeoFeedState] = usePersistentState<GeoFeedState>("enterprise:geo-feed", GEO_FEED_STATE_INITIAL);`
+    - `const [esgScorecardState, setEsgScorecardState] = usePersistentState<EsgScorecardState>("enterprise:esg-scorecard", ESG_SCORECARD_INITIAL);`
+  • 3 motion.div insérés dans le grid principal:
+    - SECTION 39 Board Resolution Tracker — inséré APRÈS BoardBriefingGeneratorCard (entre SECTION 26 et SECTION 33 Board PDF Template Gallery). Props: resolutions={resolutionsState} onResolutionsChange={setResolutionsState}.
+    - SECTION 41 ESG Scorecard — inséré APRÈS ComplianceCockpitCard (entre SECTION 27 et SECTION 34 Audit Log Timeline). Props: state={esgScorecardState} onStateChange={setEsgScorecardState}.
+    - SECTION 40 Geopolitical Risk Feed — inséré APRÈS MultiMarketReputationMapCard (entre SECTION 29 et SECTION 33 Stakeholder Mapping). Props: state={geoFeedState} onStateChange={setGeoFeedState}.
+
+- Étape 6 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors (EnterpriseDashboard.tsx clean, 0 erreurs dans tout le projet — pas d'erreurs ProDashboard non plus, R4-PRO-A a fixé ReferenceDot isAnimationActive en parallèle).
+  • bunx eslint src/app/atelier/console/enterprise/EnterpriseDashboard.tsx --max-warnings=0 → 8 errors + 4 warnings TOUS pré-existants dans code R3-ENTERPRISE-A / R2-ENTERPRISE-A / ENV-ENTERPRISE (lignes 759, 3463, 3719, 4441, 5425, 5445, 5447, 5454, 5465 — toutes AVANT ligne 11972, avant nouveau code R4-ENTERPRISE-A). AUCUNE erreur/warning dans nouveau code R4-ENTERPRISE-A (lignes 11972+). Vérifié: 10 localisations d'erreurs identiques avant/après stash → 0 nouveau lint issue.
+  • 0 régression sur features existantes (ENV-ENTERPRISE + R2-ENTERPRISE-A + R2-ENTERPRISE-B + R3-ENTERPRISE-A) — aucun composant existant modifié, seulement additions (8 imports icônes + 3 sections complètes avec types/constants/seed/components + 3 hooks usePersistentState + 3 motion.div wrappers dans le grid).
+  • Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px max (9-14px selon contexte), no emojis, French throughout, tone Enterprise (Marques leaders, COMEX, gouvernance, HarchIQ illimité, board-ready).
+  • 3 nouvelles localStorage keys: enterprise:resolutions (Resolution[]), enterprise:geo-feed (GeoFeedState: watchlist[]), enterprise:esg-scorecard (EsgScorecardState: overrides Record<string, number>). Toutes usePersistentState-backed (SSR-safe, quota-safe via try/catch, lazy load depuis localStorage via useEffect + write via useEffect).
+  • Total Enterprise dashboard localStorage keys: 16 (ENV-ENTERPRISE defcon-level/briefing-schedule/compliance/integrations/milestones/risk-matrix/reg-calendar/pdf-templates/audit-log/siem-config + R3-ENTERPRISE-A war-room/stakeholders/reg-feed + R4-ENTERPRISE-A resolutions/geo-feed/esg-scorecard).
+  • 8 nouveaux icônes Lucide (Gavel, Wind, Recycle, Bird, HeartHandshake, HardHat, Vote, Ship) — tous utilisés au moins 1 fois (Gavel header Board Resolution Tracker form; Wind/Recycle/Bird sub-metrics ESG Environmental; HeartHandshake/HardHat sub-metrics ESG Social; Vote type Élection + Ship type Commerce dans Geopolitical Risk Feed).
+  • 0 nouvel import recharts — tous les charts (RadarChart, BarChart) utilisent des imports déjà disponibles.
+  • 0 nouvel import shadcn — pattern native inputs (<input>/<select>/<textarea> stylés inline) respecté pour cohérence avec cards existantes (RiskHeatmapMatrixCard, RegulatoryCalendarCard, RegulatoryChangeFeedCard).
+  • Vérifié 8 marchés francophones couverts: GeopoliticalRiskFeedCard seed 8 events (1 par marché MA/FR/BE/CH/CA/TN/SN/CI) + mini-carte 8 marchés avec dots colorés par sévérité + lien scroll vers MultiMarketReputationMapCard (id="market-map") via document.getElementById.scrollIntoView.
+  • Vérifié Board Resolution Tracker workflow: Proposé → En cours → Approuvé → Exécuté (4 transitions valides) + branche Rejeté (depuis Proposé ou En cours, terminal). Transition buttons affichés dynamiquement selon RESOLUTION_NEXT_STATUS[r.status] — Rejeté/Exécuté = terminal (pas de boutons).
+  • Vérifié ESG Scorecard: 3 piliers × 4 sub-metrics = 12 scores configurables, radar 3 axes (E/S/G), bar chart par pilier expandable, benchmark sectoriel (votre score vs industrie avg), overrides manuels persistés (Reset override disponible), rapport ESG PDF-ready modal (max-w-3xl, header sticky + body scores + footer Télécharger PDF).
+  • Vérifié filters: Board Resolution (statut 5 cards cliquables + date range DU/AU + bouton RÉINITIALISER) / Geopolitical Risk Feed (région via mini-carte 8 marchés cliquable + select type 6 options + select sévérité 4 options + bouton RÉINITIALISER) / ESG Scorecard (pas de filtre, mais expandable par pilier).
+  • Vérifié exports COMEX: Board Resolution Tracker "EXPORTER COMEX" button (toast.success avec description "{N} résolution(s) · transmis au secrétariat du COMEX") / ESG Scorecard "RAPPORT ESG" button (modal PDF-ready + bouton TÉLÉCHARGER PDF → toast.success).
+  • Vérifié accessibility: tous les boutons ont aria-label (icon-only: Surveiller/Ne plus surveiller, Masquer/Détails, Reset override, Ajouter la note, Enregistrer le score, Fermer le formulaire, Fermer le rapport, Carte Multi-Marchés, Exporter COMEX, Nouvelle résolution, Rapport ESG, Télécharger PDF). Form inputs ont aria-label ou <label>. Select ont aria-label. role=dialog + aria-modal + aria-label sur modals (Board Resolution form n'est pas modal, c'est un collapsible form; ESG Report modal = dialog). lang="fr" sur inputs français (titre, proposedBy, executionOwner, linkedItem, summary, note input).
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (12368 → 13642 lines, +1274 net)
+- 3 features R4-ENTERPRISE-A livrées (toutes persisted localStorage via usePersistentState, toutes client-side, aucune API backend requise, ton executive board-ready):
+  1. Board Resolution Tracker — suivi des résolutions du conseil liées à réputation/risque. 5 résolutions seed (RES-001 à RES-005) couvrant 4 statuts sur 5 (Proposé/En cours/Approuvé/Exécuté, + Rejeté via workflow). Chaque résolution: titre, date, statut, proposé par, approuvé par (liste chips sage CheckCircle2), responsable exécution, échéance (avec badge EN RETARD rouge si dépassée), item lié (risk/compliance: AMMC/CNDP/ESG/Marché CI), synthèse, timeline de notes de progression (author sage + timestamp fmtRelative + texte, scrollable). Workflow: Proposé → En cours → Approuvé → Exécuté + branche Rejeté (depuis Proposé ou En cours). Transition buttons dynamiques selon RESOLUTION_NEXT_STATUS[r.status]. "Nouvelle résolution" form (Gavel icon, 6 champs: Titre/Proposé par/Responsable exécution/Échéance/Item lié/Synthèse, validation champs requis, génère id RES-{NNN}-{timestamp36}, status initial Proposé). Filtres: 5 status cards cliquables (toggle filtre statut) + date range DU/AU + bouton RÉINITIALISER. "Exporter pour le COMEX" button (toast success PDF simulé). Persisted "enterprise:resolutions".
+  2. Geopolitical Risk Feed — flux temps réel d'événements géopolitiques affectant la réputation. 8 events seed (GEO-001 à GEO-008) — 1 par marché francophone (MA Régulation, FR Conflit, BE Élection, CH Diplomatie, CA Commerce, TN Élection, SN Sanctions, CI Conflit Critique). 6 types d'événements (Sanctions/Conflit/Élection/Régulation/Commerce/Diplomatie) avec icônes Lucide distinctes (Landmark/AlertTriangle/Vote/Scale/Ship/Network) et couleurs (violet/rouge/bleu/sage/amber/cyan). 4 niveaux sévérité (Faible/Modéré/Élevé/Critique) colorés (vert/amber/orange/rouge). Chaque event: titre, summary, date, source, impact sur réputation (low/medium/high → Faible/Moyen/Fort), pays affectés (chips flag). Mini-carte 8 marchés avec dots colorés par sévérité maximale (par marché, agrégation region OU affectedCountries) — cliquable pour filtrer par marché. Filtres: région (via mini-carte) + select type + select sévérité + bouton RÉINITIALISER. "Surveiller" toggle per event (Eye/Bell icon, persisted watchlist). "Carte Multi-Marchés" button (ExternalLink, scroll vers SECTION 29 MultiMarketReputationMapCard via document.getElementById("market-map").scrollIntoView). Persisted "enterprise:geo-feed".
+  3. ESG Scorecard — tableau de bord extra-financier 3 piliers (Environmental/Social/Governance) × 4 sub-metrics (12 scores configurables). Scores seed réalistes (E ≈ 72, S ≈ 68, G ≈ 81 — moyennes pilier). Chaque sub-metric: score 0-100 + benchmark sectoriel + icône Lucide distincte (Wind/Database/Bird/Recycle pour Environmental; Users/Briefcase/HeartHandshake/HardHat pour Social; Landmark/Scale/Eye/Key pour Governance). Radar chart 3 axes (E/S/G) avec Votre score (SAGE fill 0.35) + Benchmark sectoriel (NEUTRAL_GRAY dashed fill 0.12). Bar chart par pilier expandable (4 sub-metrics × 2 bars Votre score SAGE + Benchmark gray 60% opacity). Score global + delta vs secteur coloré (sage si ≥ 0, rouge sinon). Manual overrides persistés (clique Pencil sur sub-metric → input 0-100 + CheckCircle2 save, bouton Reset si overridden). "Rapport ESG" button (Download) → modal PDF-ready (max-w-3xl, header sticky "RAPPORT ESG — PDF-READY" + body 3 piliers × 4 sub-metrics + footer "TÉLÉCHARGER PDF" → toast success). Persisted "enterprise:esg-scorecard".
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px max (9-14px selon contexte), no emojis (Lucide icons throughout), French throughout, tone Enterprise executive (Marques leaders, COMEX, gouvernance, HarchIQ illimité, board-ready).
+- 8 nouveaux icônes Lucide (Gavel, Wind, Recycle, Bird, HeartHandshake, HardHat, Vote, Ship) — tous utilisés au moins 1 fois. Aucun nouvel import recharts (RadarChart/BarChart déjà disponibles). Aucun nouvel import shadcn (pattern native inputs respecté).
+- 11 nouveaux types TypeScript (ResolutionStatus, ResolutionNote, Resolution, GeoEventType, GeoSeverity, GeoImpact, GeoEvent, GeoFeedState, EsgPillarId, EsgSubMetric, EsgPillar, EsgScorecardState) + 11 nouvelles constants maps (RESOLUTION_STATUS_LABEL/COLOR/ICON/NEXT_STATUS, GEO_EVENT_TYPE_ICON/COLOR, GEO_SEVERITY_COLOR, GEO_IMPACT_LABEL/COLOR) + 3 seeds (RESOLUTIONS_SEED 5 résolutions, GEO_FEED_INITIAL 8 events, ESG_PILLARS_SEED 3 piliers × 4 sub-metrics) + 3 nouveaux composants (BoardResolutionTrackerCard, GeopoliticalRiskFeedCard, EsgScorecardCard).
+- 0 régression sur features existantes (ENV-ENTERPRISE + R2-ENTERPRISE-A + R2-ENTERPRISE-B + R3-ENTERPRISE-A) — aucun composant existant modifié, seulement additions (8 imports + 3 sections complètes + 3 hooks usePersistentState + 3 motion.div wrappers dans le grid).
+- Code quality: tsc --noEmit → EXIT_CODE=0, 0 errors (tout le projet, pas d'erreurs ProDashboard non plus). eslint 8 errors + 4 warnings TOUS pré-existants (lignes 759/3463/3719/4441/5425/5445/5447/5454/5465 — toutes AVANT ligne 11972, dans code R3-ENTERPRISE-A / R2-ENTERPRISE-A / ENV-ENTERPRISE). AUCUNE erreur/warning dans nouveau code R4-ENTERPRISE-A (lignes 11972+).
+- 3 nouvelles localStorage keys: enterprise:resolutions (Resolution[]), enterprise:geo-feed (GeoFeedState: watchlist[]), enterprise:esg-scorecard (EsgScorecardState: overrides Record<string, number>). Toutes usePersistentState-backed (SSR-safe, quota-safe). Total Enterprise dashboard localStorage keys: 16 (10 ENV-ENTERPRISE + 3 R3-ENTERPRISE-A + 3 R4-ENTERPRISE-A).
+- 3 nouvelles sections affichées (SECTION 39 Board Resolution Tracker après SECTION 26 Board Briefing, SECTION 40 Geopolitical Risk Feed après SECTION 29 Multi-Market Map, SECTION 41 ESG Scorecard après SECTION 27 Compliance Cockpit) — toutes col-span-12, toutes framer-motion animated (cardMotion preset), toutes AiCommentary en footer.

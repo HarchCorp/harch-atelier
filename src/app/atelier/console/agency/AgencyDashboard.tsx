@@ -176,6 +176,12 @@ import {
   ListChecks,
   Rocket,
   Workflow,
+  Receipt,
+  Save,
+  Pencil,
+  Trash2,
+  BookMarked,
+  FileStack,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -196,6 +202,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import {
   Area,
@@ -775,6 +791,103 @@ interface BenchmarkRow extends BenchmarkMetric {
   normalized: number;               // 0-100 (100 = top10% performance)
   isForced: boolean;                // true = above median (force)
   overridden: boolean;
+}
+
+// ─── AGENCY R4-A FEATURES TYPES (Task ID: R4-AGENCY-A) ────────────────
+// Drives 3 new agency features: client revenue tracker (per-client MRR,
+// setup fee, commission, overage, manual overrides), pitch template
+// library (6 built-in templates + up to 3 custom, usage analytics), and
+// multi-client comparison matrix (up to 5 clients side-by-side with
+// best/worst performer flags, radar overlay, saved views). All persisted
+// in localStorage via usePersistentState hook.
+
+type RevenuePlanTier = "Essentiel" | "Pro" | "Enterprise";
+
+interface RevenueTrackerOverride {
+  mrr?: number;                     // manual override of monthlyPriceMAD
+  setupFee?: number;                // manual override of one-time setup fee
+  commissionPct?: number;           // manual override of agency commission %
+}
+
+interface RevenueTrackerRow {
+  clientId: string;
+  displayName: string;
+  planTier: RevenuePlanTier;
+  mrr: number;                      // = override.mrr ?? quota.monthlyPriceMAD
+  setupFee: number;                 // = override.setupFee ?? deterministicFromHash
+  overageCharges: number;           // deterministic from quota usage bars
+  commissionPct: number;            // = override.commissionPct ?? agency.commissionPct
+  commissionEarned: number;         // (mrr * monthsElapsed + setupFee + overage) * pct / 100
+  totalRevenueYTD: number;          // mrr * monthsElapsed + setupFee + overage
+  monthsElapsed: number;            // monthsSince(createdAt), capped 1-12
+  overridden: boolean;
+}
+
+type RevenueTrackerState = Record<string, RevenueTrackerOverride>;
+
+type PitchTemplateKind =
+  | "audit"
+  | "benchmark"
+  | "crisis"
+  | "esg"
+  | "influence"
+  | "monthly"
+  | "custom";
+
+interface PitchTemplate {
+  id: string;
+  name: string;
+  description: string;
+  kind: PitchTemplateKind;
+  sections: string[];
+  estimatedSlides: number;
+  isBuiltIn: boolean;
+  winProbabilityPct: number;        // base win probability per use (deterministic)
+}
+
+interface PitchTemplateUsage {
+  timesUsed: number;
+  wins: number;
+  lastUsedAt: number | null;
+}
+
+interface PitchTemplateState {
+  customTemplates: PitchTemplate[];
+  usage: Record<string, PitchTemplateUsage>;
+}
+
+type ComparisonMetricKey =
+  | "score"
+  | "sentiment"
+  | "mentions30d"
+  | "crisisAlerts"
+  | "healthBand"
+  | "mrr"
+  | "planTier"
+  | "retentionMonths"
+  | "harchiqUsage";
+
+interface ComparisonMetric {
+  key: ComparisonMetricKey;
+  label: string;
+  shortLabel: string;               // radar axis label (≤ 14 chars)
+  extract: (c: AgencyClient) => number | string;
+  numeric: boolean;                 // numeric metrics compete for best/worst
+  invert?: boolean;                 // lower is better (e.g. crisisAlerts)
+  display: (c: AgencyClient) => string;
+}
+
+interface ComparisonView {
+  id: string;
+  name: string;
+  clientIds: string[];              // 2-5 clients
+  savedAt: number;
+}
+
+interface ComparisonState {
+  selectedIds: string[];
+  savedViews: ComparisonView[];
+  activeViewId: string | null;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
@@ -4689,6 +4802,612 @@ function ClientComparisonCard({
         Les 3 clients au meilleur score sont sélectionnés par défaut. Cliquez sur « Comparer d'autres » pour personnaliser.
       </p>
       <AiCommentary text={selected.length === 3 ? `${selected[0].displayName} mène sur le score (${derivedClientScore(selected[0])}) mais ${selected[2].displayName} a meilleur sentiment (${derivedClientSentiment(selected[2]).positive}%).` : "Sélectionnez au moins 3 clients pour la comparaison."} />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R4-AGENCY-A · FEATURE 3 — MULTI-CLIENT COMPARISON MATRIX (full-width)
+// Side-by-side comparison of up to 5 clients across 9 metrics: score,
+// sentiment %, mentions 30d, crisis alerts, health band, MRR, plan tier,
+// retention months, HarchIQ usage. Per-row best performer (sage badge)
+// and worst performer (amber badge) for numeric metrics. Radar overlay
+// chart with 6 axes comparing all selected clients simultaneously.
+// "Exporter la comparaison" (CSV/PDF simulated), "Sauvegarder la vue"
+// (max 5 persisted views), client multi-select (chips, max 5). Default:
+// top 3 clients by MRR. Persisted in localStorage "agency:comparison-views".
+// ════════════════════════════════════════════════════════════════════
+
+const MAX_COMPARISON_CLIENTS = 5;
+const MAX_SAVED_VIEWS = 5;
+
+const COMPARISON_PALETTE = [SAGE, CLIENT_B, CLIENT_C, CLIENT_D, NEUTRAL_GRAY];
+
+const COMPARISON_METRICS: ComparisonMetric[] = [
+  {
+    key: "score",
+    label: "Score de réputation",
+    shortLabel: "Score",
+    numeric: true,
+    extract: (c) => derivedClientScore(c),
+    display: (c) => String(derivedClientScore(c)),
+  },
+  {
+    key: "sentiment",
+    label: "Sentiment positif",
+    shortLabel: "Sentiment",
+    numeric: true,
+    extract: (c) => derivedClientSentiment(c).positive,
+    display: (c) => `${derivedClientSentiment(c).positive}%`,
+  },
+  {
+    key: "mentions30d",
+    label: "Mentions 30 jours",
+    shortLabel: "Mentions 30j",
+    numeric: true,
+    extract: (c) => c.usage.apiRequests ?? 0,
+    display: (c) => fmtNumber(c.usage.apiRequests ?? 0),
+  },
+  {
+    key: "crisisAlerts",
+    label: "Alertes crise",
+    shortLabel: "Alertes",
+    numeric: true,
+    invert: true,
+    extract: (c) => {
+      const h = hashStr(c.id + ":crisis");
+      return h % 4; // 0-3 deterministic
+    },
+    display: (c) => {
+      const h = hashStr(c.id + ":crisis");
+      return String(h % 4);
+    },
+  },
+  {
+    key: "healthBand",
+    label: "Bande de santé",
+    shortLabel: "Santé",
+    numeric: false,
+    extract: (c) => healthBandFor(computeClientHealth(c).score),
+    display: (c) => healthBandStyle(healthBandFor(computeClientHealth(c).score)).label,
+  },
+  {
+    key: "mrr",
+    label: "MRR (MAD/mois)",
+    shortLabel: "MRR",
+    numeric: true,
+    extract: (c) => c.quota?.monthlyPriceMAD ?? 6500,
+    display: (c) => fmtMAD(c.quota?.monthlyPriceMAD ?? 6500),
+  },
+  {
+    key: "planTier",
+    label: "Plan",
+    shortLabel: "Plan",
+    numeric: false,
+    extract: (c) => c.quota?.planTier ?? "—",
+    display: (c) => planTierLabel(c.quota?.planTier).label,
+  },
+  {
+    key: "retentionMonths",
+    label: "Ancienneté contrat (mois)",
+    shortLabel: "Rétention",
+    numeric: true,
+    extract: (c) => monthsSince(c.createdAt),
+    display: (c) => `${monthsSince(c.createdAt)} mois`,
+  },
+  {
+    key: "harchiqUsage",
+    label: "Usage HarchIQ",
+    shortLabel: "HarchIQ",
+    numeric: true,
+    extract: (c) => c.bars?.apiRequests?.pct ?? 0,
+    display: (c) => `${c.bars?.apiRequests?.pct ?? 0}%`,
+  },
+];
+
+// 6 axes for radar overlay (normalized 0-100 per axis)
+const COMPARISON_RADAR_AXES: Array<{
+  key: string;
+  label: string;
+  extract: (c: AgencyClient, max: number) => number;
+}> = [
+  { key: "score", label: "Score", extract: (c) => derivedClientScore(c) },
+  { key: "sentiment", label: "Sentiment", extract: (c) => derivedClientSentiment(c).positive },
+  { key: "mentions", label: "Mentions", extract: (c, max) => (max > 0 ? Math.min(100, ((c.usage.apiRequests ?? 0) / max) * 100) : 0) },
+  { key: "mrr", label: "MRR", extract: (c, max) => (max > 0 ? Math.min(100, ((c.quota?.monthlyPriceMAD ?? 6500) / max) * 100) : 0) },
+  { key: "retention", label: "Rétention", extract: (c, max) => (max > 0 ? Math.min(100, (monthsSince(c.createdAt) / max) * 100) : 0) },
+  { key: "harchiq", label: "HarchIQ", extract: (c) => c.bars?.apiRequests?.pct ?? 0 },
+];
+
+function MultiClientComparisonCard({
+  clients,
+  loading,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  loading: boolean;
+  onToast: (message: string, type?: "success" | "info") => void;
+}) {
+  const [state, setState] = usePersistentState<ComparisonState>(
+    "agency:comparison-views",
+    { selectedIds: [], savedViews: [], activeViewId: null },
+  );
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [newViewName, setNewViewName] = useState("");
+
+  // Seed default selection: top 3 clients by MRR (only when no persisted
+  // selection exists AND clients are loaded for the first time).
+  useEffect(() => {
+    if (state.selectedIds.length > 0) return;
+    if (clients.length === 0) return;
+    const top3 = [...clients]
+      .sort((a, b) => (b.quota?.monthlyPriceMAD ?? 0) - (a.quota?.monthlyPriceMAD ?? 0))
+      .slice(0, 3)
+      .map((c) => c.id);
+    if (top3.length === 0) return;
+    setState((prev) => ({ ...prev, selectedIds: top3 }));
+  }, [clients, state.selectedIds.length]);
+
+  // Filter out stale client IDs (clients removed from portfolio).
+  const validSelectedIds = useMemo(() => {
+    return state.selectedIds.filter((id) => clients.some((c) => c.id === id));
+  }, [state.selectedIds, clients]);
+
+  const selectedClients = useMemo(() => {
+    return validSelectedIds
+      .map((id) => clients.find((c) => c.id === id))
+      .filter((c): c is AgencyClient => c !== undefined);
+  }, [validSelectedIds, clients]);
+
+  const toggleClient = (clientId: string) => {
+    setState((prev) => {
+      const isSelected = prev.selectedIds.includes(clientId);
+      if (isSelected) {
+        return {
+          ...prev,
+          selectedIds: prev.selectedIds.filter((id) => id !== clientId),
+          activeViewId: null,
+        };
+      }
+      if (prev.selectedIds.length >= MAX_COMPARISON_CLIENTS) {
+        onToast(`Maximum ${MAX_COMPARISON_CLIENTS} clients pour la comparaison.`, "info");
+        return prev;
+      }
+      return {
+        ...prev,
+        selectedIds: [...prev.selectedIds, clientId],
+        activeViewId: null,
+      };
+    });
+  };
+
+  const handleSaveView = () => {
+    const name = newViewName.trim();
+    if (!name) {
+      onToast("Nom de la vue requis.", "info");
+      return;
+    }
+    if (validSelectedIds.length < 2) {
+      onToast("Sélectionnez au moins 2 clients avant de sauvegarder.", "info");
+      return;
+    }
+    setState((prev) => {
+      if (prev.savedViews.length >= MAX_SAVED_VIEWS) {
+        onToast(`Maximum ${MAX_SAVED_VIEWS} vues sauvegardées atteint.`, "info");
+        return prev;
+      }
+      const view: ComparisonView = {
+        id: `view-${Date.now()}`,
+        name,
+        clientIds: [...validSelectedIds],
+        savedAt: Date.now(),
+      };
+      return {
+        ...prev,
+        savedViews: [...prev.savedViews, view],
+        activeViewId: view.id,
+      };
+    });
+    setNewViewName("");
+    setSaveDialogOpen(false);
+    onToast(`Vue « ${name} » sauvegardée.`);
+  };
+
+  const loadView = (view: ComparisonView) => {
+    const validIds = view.clientIds.filter((id) => clients.some((c) => c.id === id));
+    setState((prev) => ({ ...prev, selectedIds: validIds, activeViewId: view.id }));
+    onToast(`Vue « ${view.name} » chargée.`);
+  };
+
+  const deleteView = (viewId: string) => {
+    setState((prev) => ({
+      ...prev,
+      savedViews: prev.savedViews.filter((v) => v.id !== viewId),
+      activeViewId: prev.activeViewId === viewId ? null : prev.activeViewId,
+    }));
+    onToast("Vue supprimée.");
+  };
+
+  const handleExport = () => {
+    if (selectedClients.length === 0) {
+      onToast("Aucun client sélectionné pour l'export.", "info");
+      return;
+    }
+    onToast(`Comparaison exportée · ${selectedClients.length} client(s) · 9 métriques (CSV/PDF).`);
+  };
+
+  // Compute best/worst per numeric row
+  const rowExtremes = useMemo(() => {
+    const map: Record<string, { bestId: string | null; worstId: string | null }> = {};
+    if (selectedClients.length < 2) return map;
+    COMPARISON_METRICS.forEach((m) => {
+      if (!m.numeric) return;
+      let bestId: string | null = null;
+      let worstId: string | null = null;
+      let bestVal = -Infinity;
+      let worstVal = Infinity;
+      selectedClients.forEach((c) => {
+        const v = m.extract(c);
+        if (typeof v !== "number") return;
+        if (m.invert) {
+          // Lower is better
+          if (v < bestVal) { bestVal = v; bestId = c.id; }
+          if (v > worstVal) { worstVal = v; worstId = c.id; }
+        } else {
+          if (v > bestVal) { bestVal = v; bestId = c.id; }
+          if (v < worstVal) { worstVal = v; worstId = c.id; }
+        }
+      });
+      // Only flag if best ≠ worst (no tie)
+      if (bestId && worstId && bestId !== worstId) {
+        map[m.key] = { bestId, worstId };
+      }
+    });
+    return map;
+  }, [selectedClients]);
+
+  // Radar data: one entry per axis, with each selected client as a series
+  const radarData = useMemo(() => {
+    if (selectedClients.length === 0) return [];
+    const maxMentions = Math.max(...selectedClients.map((c) => c.usage.apiRequests ?? 0), 1);
+    const maxMrr = Math.max(...selectedClients.map((c) => c.quota?.monthlyPriceMAD ?? 6500), 1);
+    const maxRetention = Math.max(...selectedClients.map((c) => monthsSince(c.createdAt)), 1);
+    return COMPARISON_RADAR_AXES.map((axis) => {
+      const row: Record<string, number | string> = { axis: axis.label };
+      selectedClients.forEach((c, i) => {
+        const max = axis.key === "mentions" ? maxMentions : axis.key === "mrr" ? maxMrr : axis.key === "retention" ? maxRetention : 100;
+        row[`c${i}`] = Math.round(axis.extract(c, max));
+      });
+      return row;
+    });
+  }, [selectedClients]);
+
+  const atLimit = state.savedViews.length >= MAX_SAVED_VIEWS;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Matrice de comparaison multi-clients"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE, fontWeight: 700 }}
+            >
+              <Columns size={10} /> {selectedClients.length}/{MAX_COMPARISON_CLIENTS}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={handleExport}
+              disabled={selectedClients.length === 0}
+            >
+              <Download size={11} /> Exporter
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+              onClick={() => setSaveDialogOpen(true)}
+              disabled={selectedClients.length < 2 || atLimit}
+            >
+              <Save size={11} /> Sauvegarder la vue
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-9 w-full" />
+          ))}
+        </div>
+      ) : clients.length === 0 ? (
+        <div
+          className="text-center py-10 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <Columns size={28} style={{ color: TEXT_MUTED, margin: "0 auto 8px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL, fontWeight: 600 }}>
+            Aucun client à comparer
+          </p>
+          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+            Le portefeuille de clients est vide — ajoutez des clients pour activer la comparaison.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Client multi-select chips */}
+          <div className="mb-4">
+            <div style={FONT_HEADER} className="mb-2">Sélection clients (max {MAX_COMPARISON_CLIENTS})</div>
+            <div className="flex flex-wrap gap-1.5">
+              {clients.map((c) => {
+                const isSelected = validSelectedIds.includes(c.id);
+                const idx = validSelectedIds.indexOf(c.id);
+                const color = idx >= 0 ? COMPARISON_PALETTE[idx] : null;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleClient(c.id)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      border: `1px solid ${isSelected ? (color ?? SAGE) : BORDER}`,
+                      backgroundColor: isSelected ? `${color ?? SAGE}14` : "#FFFFFF",
+                      color: isSelected ? (color ?? SAGE_DEEP) : TEXT_BODY,
+                    }}
+                  >
+                    {isSelected && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          backgroundColor: color ?? SAGE,
+                        }}
+                      />
+                    )}
+                    <span className="truncate" style={{ maxWidth: 140 }}>{c.displayName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Saved views */}
+          {state.savedViews.length > 0 && (
+            <div className="mb-4">
+              <div style={FONT_HEADER} className="mb-2">Vues sauvegardées ({state.savedViews.length}/{MAX_SAVED_VIEWS})</div>
+              <div className="flex flex-wrap gap-1.5">
+                {state.savedViews.map((v) => {
+                  const isActive = state.activeViewId === v.id;
+                  return (
+                    <div
+                      key={v.id}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        border: `1px solid ${isActive ? SAGE : BORDER}`,
+                        backgroundColor: isActive ? SAGE_BG : "#FAFAFA",
+                        color: isActive ? SAGE_DEEP : TEXT_BODY,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => loadView(v)}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        <Columns size={11} />
+                        <span className="truncate" style={{ maxWidth: 120 }}>{v.name}</span>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                          {v.clientIds.length}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteView(v.id)}
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-black/5"
+                        style={{ color: TEXT_MUTED }}
+                        aria-label={`Supprimer la vue ${v.name}`}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {selectedClients.length === 0 ? (
+            <div
+              className="text-center py-8 rounded-md"
+              style={{ border: `1px dashed ${BORDER_STRONG}` }}
+            >
+              <Columns size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+                Sélectionnez au moins 2 clients via les chips ci-dessus.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Comparison table — lg:col-span-7 */}
+              <div className="lg:col-span-7">
+                <div className="overflow-x-auto -mx-1 px-1">
+                  <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 480 }}>
+                    <thead>
+                      <tr>
+                        <th
+                          className="text-left py-2 pr-3"
+                          style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: TEXT_HEADER, borderBottom: `1px solid ${BORDER}` }}
+                        >
+                          Métrique
+                        </th>
+                        {selectedClients.map((c, i) => (
+                          <th
+                            key={c.id}
+                            className="text-left py-2 px-2"
+                            style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: COMPARISON_PALETTE[i], borderBottom: `1px solid ${BORDER}` }}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", backgroundColor: COMPARISON_PALETTE[i] }} />
+                              <span className="truncate" style={{ maxWidth: 110 }}>{c.displayName}</span>
+                            </div>
+                            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, fontWeight: 400 }}>
+                              {c.company.sector || "—"}
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {COMPARISON_METRICS.map((m) => {
+                        const extremes = rowExtremes[m.key];
+                        return (
+                          <tr key={m.key}>
+                            <td
+                              className="py-2.5 pr-3"
+                              style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: TEXT_HEADER, borderBottom: `1px solid ${BORDER}` }}
+                            >
+                              {m.label}
+                              {m.invert && (
+                                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, marginLeft: 4 }}>(inv.)</span>
+                              )}
+                            </td>
+                            {selectedClients.map((c) => {
+                              const isBest = extremes?.bestId === c.id;
+                              const isWorst = extremes?.worstId === c.id;
+                              return (
+                                <td
+                                  key={c.id + m.key}
+                                  className="py-2.5 px-2 align-middle"
+                                  style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{m.display(c)}</span>
+                                    {isBest && (
+                                      <span
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
+                                        style={{ fontFamily: FONT_MONO, fontSize: 8, letterSpacing: "0.06em", backgroundColor: SAGE_BG, color: SAGE_DEEP, fontWeight: 700 }}
+                                      >
+                                        <Trophy size={9} /> TOP
+                                      </span>
+                                    )}
+                                    {isWorst && (
+                                      <span
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
+                                        style={{ fontFamily: FONT_MONO, fontSize: 8, letterSpacing: "0.06em", backgroundColor: "rgba(245,158,11,0.12)", color: "#B45309", fontWeight: 700 }}
+                                      >
+                                        <AlertTriangle size={9} /> FAIBLE
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Radar overlay chart — lg:col-span-5 */}
+              <div className="lg:col-span-5">
+                <div style={FONT_HEADER} className="mb-2">Overlay radar · 6 axes normalisés</div>
+                <div style={{ height: 320, width: "100%" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={radarData} outerRadius="72%">
+                      <PolarGrid stroke={BORDER_STRONG} />
+                      <PolarAngleAxis dataKey="axis" tick={{ fill: TEXT_MUTED, fontSize: 10, fontFamily: FONT_MONO }} />
+                      {selectedClients.map((c, i) => (
+                        <Radar
+                          key={c.id}
+                          name={c.displayName}
+                          dataKey={`c${i}`}
+                          stroke={COMPARISON_PALETTE[i]}
+                          fill={COMPARISON_PALETTE[i]}
+                          fillOpacity={0.10}
+                          strokeWidth={1.5}
+                        />
+                      ))}
+                      <RTooltip
+                        contentStyle={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 11,
+                          border: `1px solid ${BORDER_STRONG}`,
+                          borderRadius: 8,
+                        }}
+                        formatter={(v: number, n: string) => [`${v}/100`, n]}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 10 }}
+                        formatter={(value: string) => <span style={{ color: TEXT_BODY }}>{value}</span>}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AiCommentary
+            text={
+              selectedClients.length < 2
+                ? "Sélectionnez au moins 2 clients pour activer la comparaison multi-axes."
+                : `${selectedClients.length} client(s) comparé(s) sur 9 métriques. ${Object.keys(rowExtremes).length} ligne(s) avec un leader clair identifié (sage) et un point faible (amber). Utilisez le radar pour visualiser le profil global de chaque client en overlay.`
+            }
+          />
+        </>
+      )}
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sauvegarder la vue de comparaison</DialogTitle>
+            <DialogDescription>
+              Donnez un nom à cette vue pour la retrouver rapidement. {validSelectedIds.length} client(s) sélectionné(s) · {state.savedViews.length}/{MAX_SAVED_VIEWS} vues utilisées.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label htmlFor="cmp-view-name" style={{ ...FONT_HEADER, fontSize: 10 }}>Nom de la vue</Label>
+            <Input
+              id="cmp-view-name"
+              value={newViewName}
+              onChange={(e) => setNewViewName(e.target.value)}
+              placeholder="Ex: Top MRR · Comparaison trimestrielle"
+              maxLength={50}
+              className="mt-1.5"
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveView(); }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={handleSaveView}
+              disabled={!newViewName.trim()}
+            >
+              <Save size={12} /> Sauvegarder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CardShell>
   );
 }
@@ -10230,6 +10949,667 @@ function PitchDeckAnalyticsCard() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R4-AGENCY-A · FEATURE 2 — PITCH TEMPLATE LIBRARY (full-width card)
+// 6 built-in reusable pitch templates + up to 3 custom templates.
+// Each template: name, description, sections list (auto-generated by
+// HarchIQ), estimated slides, last used date. "Utiliser" generates a
+// pitch (increments timesUsed, probabilistically increments wins).
+// "Dupliquer" creates a custom copy. "Personnaliser" edits sections.
+// "Créer un template" from scratch. Usage analytics per template:
+// times used, win rate. Persisted custom templates + usage stats in
+// localStorage "agency:pitch-templates".
+// ════════════════════════════════════════════════════════════════════
+
+const MAX_CUSTOM_TEMPLATES = 3;
+
+const TEMPLATE_KIND_LABEL: Record<PitchTemplateKind, string> = {
+  audit: "Audit",
+  benchmark: "Benchmark",
+  crisis: "Crise",
+  esg: "ESG",
+  influence: "Influence",
+  monthly: "Mensuel",
+  custom: "Custom",
+};
+
+const BUILTIN_PITCH_TEMPLATES: PitchTemplate[] = [
+  {
+    id: "tpl-audit",
+    name: "Audit réputation prospect",
+    description: "Analyse complète de la e-réputation d'un prospect avant première rencontre.",
+    kind: "audit",
+    sections: [
+      "Synthèse exécutive",
+      "Cartographie des sources",
+      "Volume & tonalité 90 jours",
+      "Top narratives émergentes",
+      "Risques identifiés",
+      "Recommandations stratégiques",
+    ],
+    estimatedSlides: 12,
+    isBuiltIn: true,
+    winProbabilityPct: 55,
+  },
+  {
+    id: "tpl-benchmark",
+    name: "Benchmark concurrentiel",
+    description: "Positionnement concurrentiel du prospect vs 3 à 5 challengers directs sur le marché.",
+    kind: "benchmark",
+    sections: [
+      "Paysage concurrentiel",
+      "Part de voix",
+      "Score de réputation comparé",
+      "Forces & faiblesses",
+      "Opportunités de différenciation",
+      "Plan d'action 90 jours",
+    ],
+    estimatedSlides: 14,
+    isBuiltIn: true,
+    winProbabilityPct: 48,
+  },
+  {
+    id: "tpl-crisis",
+    name: "Crisis preparedness",
+    description: "Diagnostic de préparation aux crises : détection, réponse et communication.",
+    kind: "crisis",
+    sections: [
+      "Matrice de risques",
+      "Scan des signaux faibles",
+      "Protocole de réponse",
+      "Scénarios de crise",
+      "Cellule de veille",
+      "Plan de communication",
+    ],
+    estimatedSlides: 10,
+    isBuiltIn: true,
+    winProbabilityPct: 42,
+  },
+  {
+    id: "tpl-esg",
+    name: "ESG & conformité",
+    description: "Angle enterprise : conformité réglementaire, RSE, gouvernance et reporting extra-financier.",
+    kind: "esg",
+    sections: [
+      "Cadre réglementaire",
+      "Performance ESG",
+      "Gouvernance & éthique",
+      "Reporting extra-financier",
+      "Risques de non-conformité",
+      "Feuille de route RSE",
+    ],
+    estimatedSlides: 16,
+    isBuiltIn: true,
+    winProbabilityPct: 38,
+  },
+  {
+    id: "tpl-influence",
+    name: "Influenceur & portée",
+    description: "Stratégie d'influence et de portée : KOL, leaders d'opinion, écosystème social.",
+    kind: "influence",
+    sections: [
+      "Mapping d'influenceurs",
+      "Portée cumulée",
+      "Taux d'engagement",
+      "Sentiment par communauté",
+      "Plan de partenariat",
+      "Calendrier éditorial",
+    ],
+    estimatedSlides: 11,
+    isBuiltIn: true,
+    winProbabilityPct: 52,
+  },
+  {
+    id: "tpl-monthly",
+    name: "Rapport mensuel type",
+    description: "Template de rapport mensuel récurrent pour clients en retainer.",
+    kind: "monthly",
+    sections: [
+      "Synthèse du mois",
+      "KPIs & évolution",
+      "Top mentions",
+      "Alertes traitées",
+      "Recommandations",
+      "Priorités du mois prochain",
+    ],
+    estimatedSlides: 8,
+    isBuiltIn: true,
+    winProbabilityPct: 85,
+  },
+];
+
+function parseSections(input: string): string[] {
+  return input
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .slice(0, 12);
+}
+
+function PitchTemplateLibraryCard({
+  onToast,
+}: {
+  onToast: (message: string, type?: "success" | "info") => void;
+}) {
+  const [state, setState] = usePersistentState<PitchTemplateState>(
+    "agency:pitch-templates",
+    { customTemplates: [], usage: {} },
+  );
+
+  // Create dialog state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createSections, setCreateSections] = useState("");
+
+  // Customize dialog state
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editSections, setEditSections] = useState("");
+
+  const allTemplates: PitchTemplate[] = useMemo(() => {
+    return [...BUILTIN_PITCH_TEMPLATES, ...state.customTemplates];
+  }, [state.customTemplates]);
+
+  const getUsage = (id: string): PitchTemplateUsage => {
+    return state.usage[id] ?? { timesUsed: 0, wins: 0, lastUsedAt: null };
+  };
+
+  const totalUsage = useMemo(() => {
+    let timesUsed = 0;
+    let wins = 0;
+    allTemplates.forEach((t) => {
+      const u = state.usage[t.id] ?? { timesUsed: 0, wins: 0, lastUsedAt: null };
+      timesUsed += u.timesUsed;
+      wins += u.wins;
+    });
+    return { timesUsed, wins, winRate: timesUsed > 0 ? Math.round((wins / timesUsed) * 100) : 0 };
+  }, [allTemplates, state.usage]);
+
+  const atCustomLimit = state.customTemplates.length >= MAX_CUSTOM_TEMPLATES;
+
+  const handleUse = (tpl: PitchTemplate) => {
+    setState((prev) => {
+      const u = prev.usage[tpl.id] ?? { timesUsed: 0, wins: 0, lastUsedAt: null };
+      // Probabilistic win: deterministic per template + timestamp.
+      const roll = hashStr(`${tpl.id}:${u.timesUsed + 1}:${Date.now()}`) % 100;
+      const isWin = roll < tpl.winProbabilityPct;
+      return {
+        ...prev,
+        usage: {
+          ...prev.usage,
+          [tpl.id]: {
+            timesUsed: u.timesUsed + 1,
+            wins: u.wins + (isWin ? 1 : 0),
+            lastUsedAt: Date.now(),
+          },
+        },
+      };
+    });
+    onToast(`Pitch généré · « ${tpl.name} » · ${tpl.estimatedSlides} slides · ${tpl.sections.length} sections.`);
+  };
+
+  const handleMarkWin = (tpl: PitchTemplate) => {
+    setState((prev) => {
+      const u = prev.usage[tpl.id] ?? { timesUsed: 0, wins: 0, lastUsedAt: null };
+      if (u.timesUsed === 0) {
+        onToast("Utilisez d'abord le template avant de marquer une victoire.", "info");
+        return prev;
+      }
+      return {
+        ...prev,
+        usage: {
+          ...prev.usage,
+          [tpl.id]: { ...u, wins: u.wins + 1 },
+        },
+      };
+    });
+    onToast(`Victoire enregistrée pour « ${tpl.name} ».`);
+  };
+
+  const handleDuplicate = (tpl: PitchTemplate) => {
+    if (atCustomLimit) {
+      onToast(`Maximum ${MAX_CUSTOM_TEMPLATES} templates custom atteint.`, "info");
+      return;
+    }
+    const copy: PitchTemplate = {
+      id: `tpl-custom-${Date.now()}`,
+      name: `${tpl.name} (copie)`,
+      description: tpl.description,
+      kind: "custom",
+      sections: [...tpl.sections],
+      estimatedSlides: tpl.estimatedSlides,
+      isBuiltIn: false,
+      winProbabilityPct: tpl.winProbabilityPct,
+    };
+    setState((prev) => ({ ...prev, customTemplates: [...prev.customTemplates, copy] }));
+    onToast(`« ${copy.name} » créé — personnalisable dans la bibliothèque.`);
+  };
+
+  const handleDelete = (tpl: PitchTemplate) => {
+    setState((prev) => ({
+      ...prev,
+      customTemplates: prev.customTemplates.filter((t) => t.id !== tpl.id),
+      usage: Object.fromEntries(Object.entries(prev.usage).filter(([k]) => k !== tpl.id)),
+    }));
+    onToast(`Template « ${tpl.name} » supprimé.`);
+  };
+
+  const openCreate = () => {
+    setCreateName("");
+    setCreateDescription("");
+    setCreateSections("");
+    setCreateOpen(true);
+  };
+
+  const handleCreateSave = () => {
+    const name = createName.trim();
+    const description = createDescription.trim();
+    const sections = parseSections(createSections);
+    if (!name) {
+      onToast("Nom du template requis.", "info");
+      return;
+    }
+    if (sections.length === 0) {
+      onToast("Au moins une section est requise.", "info");
+      return;
+    }
+    if (atCustomLimit) {
+      onToast(`Maximum ${MAX_CUSTOM_TEMPLATES} templates custom atteint.`, "info");
+      return;
+    }
+    const tpl: PitchTemplate = {
+      id: `tpl-custom-${Date.now()}`,
+      name,
+      description: description || "Template personnalisé de l'agence.",
+      kind: "custom",
+      sections,
+      estimatedSlides: Math.max(4, sections.length * 2),
+      isBuiltIn: false,
+      winProbabilityPct: 45,
+    };
+    setState((prev) => ({ ...prev, customTemplates: [...prev.customTemplates, tpl] }));
+    setCreateOpen(false);
+    onToast(`Template « ${name} » créé.`);
+  };
+
+  const openEdit = (tpl: PitchTemplate) => {
+    setEditId(tpl.id);
+    setEditName(tpl.name);
+    setEditDescription(tpl.description);
+    setEditSections(tpl.sections.join("\n"));
+  };
+
+  const handleEditSave = () => {
+    if (!editId) return;
+    const name = editName.trim();
+    const sections = parseSections(editSections);
+    if (!name) {
+      onToast("Nom du template requis.", "info");
+      return;
+    }
+    if (sections.length === 0) {
+      onToast("Au moins une section est requise.", "info");
+      return;
+    }
+    setState((prev) => ({
+      ...prev,
+      customTemplates: prev.customTemplates.map((t) =>
+        t.id === editId
+          ? {
+              ...t,
+              name,
+              description: editDescription.trim() || t.description,
+              sections,
+              estimatedSlides: Math.max(4, sections.length * 2),
+            }
+          : t,
+      ),
+    }));
+    setEditId(null);
+    onToast(`Template « ${name} » mis à jour.`);
+  };
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Bibliothèque de templates Pitch"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE, fontWeight: 700 }}
+            >
+              <BookMarked size={10} /> {allTemplates.length} templates
+            </span>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: "#FAFAFA", color: TEXT_MUTED, fontWeight: 700 }}
+            >
+              <Trophy size={10} /> {totalUsage.winRate}% win
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+              onClick={openCreate}
+              disabled={atCustomLimit}
+            >
+              <Plus size={11} /> Créer un template
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {allTemplates.map((tpl) => {
+          const u = getUsage(tpl.id);
+          const winRate = u.timesUsed > 0 ? Math.round((u.wins / u.timesUsed) * 100) : 0;
+          const isCustom = !tpl.isBuiltIn;
+          return (
+            <div
+              key={tpl.id}
+              className="rounded-md p-3 flex flex-col"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <FileStack size={12} style={{ color: SAGE, flexShrink: 0 }} />
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }} className="truncate">
+                      {tpl.name}
+                    </span>
+                  </div>
+                  <span
+                    className="inline-block px-1.5 py-0.5 rounded-full"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 8,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      backgroundColor: isCustom ? SAGE_BG : "#FAFAFA",
+                      color: isCustom ? SAGE_DEEP : TEXT_MUTED,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {TEMPLATE_KIND_LABEL[tpl.kind]}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45, marginBottom: 8 }} className="flex-1">
+                {tpl.description}
+              </p>
+
+              {/* Sections chips */}
+              <div className="flex flex-wrap gap-1 mb-2">
+                {tpl.sections.slice(0, 4).map((s, i) => (
+                  <span
+                    key={i}
+                    className="px-1.5 py-0.5 rounded"
+                    style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: "#FAFAFA", color: TEXT_BODY, border: `1px solid ${BORDER}` }}
+                  >
+                    {s}
+                  </span>
+                ))}
+                {tpl.sections.length > 4 && (
+                  <span
+                    className="px-1.5 py-0.5 rounded"
+                    style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE_DEEP, fontWeight: 700 }}
+                  >
+                    +{tpl.sections.length - 4}
+                  </span>
+                )}
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-1 mb-2.5">
+                <div className="text-center rounded" style={{ backgroundColor: "#FAFAFA", padding: "4px 0" }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em" }}>SLIDES</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{tpl.estimatedSlides}</div>
+                </div>
+                <div className="text-center rounded" style={{ backgroundColor: "#FAFAFA", padding: "4px 0" }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em" }}>USAGE</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{u.timesUsed}</div>
+                </div>
+                <div className="text-center rounded" style={{ backgroundColor: winRate >= 50 ? SAGE_BG : "rgba(245,158,11,0.08)", padding: "4px 0" }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.06em" }}>WIN</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: winRate >= 50 ? SAGE_DEEP : "#B45309" }}>
+                    {u.timesUsed > 0 ? `${winRate}%` : "—"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Last used */}
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginBottom: 8 }}>
+                {u.lastUsedAt ? `Dernier usage · ${fmtRelative(u.lastUsedAt)}` : "Jamais utilisé"}
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-1 mt-auto">
+                <Button
+                  size="sm"
+                  className="h-7 flex-1"
+                  style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10 }}
+                  onClick={() => handleUse(tpl)}
+                >
+                  <Send size={11} /> Utiliser
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                  onClick={() => handleMarkWin(tpl)}
+                  aria-label={`Marquer une victoire pour ${tpl.name}`}
+                >
+                  <Trophy size={11} />
+                </Button>
+                {!isCustom ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2"
+                    style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                    onClick={() => handleDuplicate(tpl)}
+                    aria-label={`Dupliquer ${tpl.name}`}
+                  >
+                    <Copy size={11} />
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                      onClick={() => openEdit(tpl)}
+                      aria-label={`Personnaliser ${tpl.name}`}
+                    >
+                      <Pencil size={11} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: "rgba(239,68,68,0.30)", color: NEGATIVE }}
+                      onClick={() => handleDelete(tpl)}
+                      aria-label={`Supprimer ${tpl.name}`}
+                    >
+                      <Trash2 size={11} />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Create new template card */}
+        <button
+          type="button"
+          onClick={openCreate}
+          disabled={atCustomLimit}
+          className="rounded-md p-3 flex flex-col items-center justify-center min-h-[180px] transition-colors"
+          style={{
+            border: `1px dashed ${atCustomLimit ? BORDER : SAGE_DIM}`,
+            backgroundColor: atCustomLimit ? "#FAFAFA" : "transparent",
+            color: atCustomLimit ? TEXT_MUTED : SAGE_DEEP,
+            cursor: atCustomLimit ? "not-allowed" : "pointer",
+          }}
+          aria-label="Créer un template"
+        >
+          <Plus size={24} style={{ marginBottom: 4 }} />
+          <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700 }}>
+            {atCustomLimit ? "Limite atteinte" : "Créer un template"}
+          </span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>
+            {state.customTemplates.length}/{MAX_CUSTOM_TEMPLATES} templates custom
+          </span>
+        </button>
+      </div>
+
+      <AiCommentary
+        text={
+          allTemplates.length === 0
+            ? "Bibliothèque vide."
+            : `${BUILTIN_PITCH_TEMPLATES.length} templates built-in + ${state.customTemplates.length} custom (max ${MAX_CUSTOM_TEMPLATES}). ${totalUsage.timesUsed} pitch(es) généré(s) au total · ${totalUsage.wins} victoire(s) · taux global ${totalUsage.winRate}%. Les templates « Mensuel » et « Audit » ont la meilleure probabilité de conversion — utilisez-les pour les premiers contacts.`
+        }
+      />
+
+      {/* Create dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Créer un template</DialogTitle>
+            <DialogDescription>
+              Définissez le nom, la description et les sections (une par ligne, max 12). HarchIQ générera le contenu de chaque section à l'utilisation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <div>
+              <Label htmlFor="tpl-name" style={{ ...FONT_HEADER, fontSize: 10 }}>Nom du template</Label>
+              <Input
+                id="tpl-name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="Ex: Audit sectoriel semi-annuel"
+                maxLength={60}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tpl-desc" style={{ ...FONT_HEADER, fontSize: 10 }}>Description</Label>
+              <Input
+                id="tpl-desc"
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                placeholder="Usage recommandé et contexte"
+                maxLength={140}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tpl-sections" style={{ ...FONT_HEADER, fontSize: 10 }}>Sections (une par ligne)</Label>
+              <textarea
+                id="tpl-sections"
+                value={createSections}
+                onChange={(e) => setCreateSections(e.target.value)}
+                placeholder={"Synthèse exécutive\nAnalyse des sources\nRecommandations\n…"}
+                rows={6}
+                className="mt-1.5 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1"
+                style={{ borderColor: BORDER_STRONG, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, resize: "vertical" }}
+              />
+              <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                {parseSections(createSections).length} section(s) détectée(s) · {Math.max(4, parseSections(createSections).length * 2)} slides estimées
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={handleCreateSave}
+              disabled={!createName.trim() || parseSections(createSections).length === 0}
+            >
+              <Plus size={12} /> Créer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog (custom templates only) */}
+      <Dialog open={editId !== null} onOpenChange={(o) => { if (!o) setEditId(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Personnaliser le template</DialogTitle>
+            <DialogDescription>
+              Modifiez le nom, la description et les sections (une par ligne, max 12).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <div>
+              <Label htmlFor="edit-name" style={{ ...FONT_HEADER, fontSize: 10 }}>Nom du template</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                maxLength={60}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-desc" style={{ ...FONT_HEADER, fontSize: 10 }}>Description</Label>
+              <Input
+                id="edit-desc"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                maxLength={140}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-sections" style={{ ...FONT_HEADER, fontSize: 10 }}>Sections (une par ligne)</Label>
+              <textarea
+                id="edit-sections"
+                value={editSections}
+                onChange={(e) => setEditSections(e.target.value)}
+                rows={6}
+                className="mt-1.5 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1"
+                style={{ borderColor: BORDER_STRONG, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, resize: "vertical" }}
+              />
+              <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                {parseSections(editSections).length} section(s) détectée(s) · {Math.max(4, parseSections(editSections).length * 2)} slides estimées
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditId(null)}>
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={handleEditSave}
+              disabled={!editName.trim() || parseSections(editSections).length === 0}
+            >
+              <Save size={12} /> Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // R2-AGENCY-B · FEATURE 3 — WHITE-LABEL THEME EDITOR (full-width card)
 // Per-client branded portal theme editor: primary color picker (6 sage
 // presets), logo upload (simulated), font family selector, border radius
@@ -12016,6 +13396,540 @@ function RevenueForecastingCard({
             : `Tier maximum atteint. Scénario réaliste: ARR ${fmtMAD(arrRealiste)} (MRR ×12). Optimiste: ${fmtMAD(arrOptimiste)}.`
         }
       />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R4-AGENCY-A · FEATURE 1 — CLIENT REVENUE TRACKER (full-width card)
+// Per-client revenue breakdown: monthly retainer (MRR), setup fee,
+// overage charges, commission earned. Revenue table with 7 columns
+// (client, plan tier, MRR, setup fee, commission %, commission earned,
+// total revenue YTD). Summary strip: total MRR, total commission YTD,
+// avg revenue per client, top client revenue. BarChart top 10 clients
+// by revenue YTD (sage bars, descending). PieChart revenue distribution
+// by plan tier (Essentiel/Pro/Enterprise). "Facturer" button per client
+// (simulated invoice generation). "Ajuster le tarif" dialog (manual
+// override of MRR / setup fee / commission %). Persisted overrides in
+// localStorage "agency:revenue-tracker".
+// ════════════════════════════════════════════════════════════════════
+
+const REVENUE_PLAN_PRICE: Record<RevenuePlanTier, number> = {
+  Essentiel: 3000,
+  Pro: 6500,
+  Enterprise: 15000,
+};
+
+const REVENUE_PLAN_DEFAULT_SETUP: Record<RevenuePlanTier, number> = {
+  Essentiel: 2000,
+  Pro: 5000,
+  Enterprise: 12000,
+};
+
+const REVENUE_PLAN_COLOR: Record<RevenuePlanTier, string> = {
+  Essentiel: SAGE_DIM,
+  Pro: SAGE,
+  Enterprise: SAGE_DEEP,
+};
+
+function revenueTrackerTier(client: AgencyClient): RevenuePlanTier {
+  const raw = (client.quota?.planTier ?? "").toLowerCase();
+  if (raw === "enterprise" || raw === "sovereign") return "Enterprise";
+  if (raw === "pro" || raw === "corporate") return "Pro";
+  return "Essentiel";
+}
+
+function setupFeeFromHash(clientId: string, tier: RevenuePlanTier): number {
+  const base = REVENUE_PLAN_DEFAULT_SETUP[tier];
+  const h = hashStr(clientId + ":setup");
+  const variance = (h % 60) - 30; // ±30% variance
+  return Math.max(500, Math.round((base * (100 + variance)) / 100));
+}
+
+function overageChargesFromHash(client: AgencyClient): number {
+  const pct = client.bars?.apiRequests?.pct ?? 0;
+  if (pct <= 80) return 0;
+  // 0-2000 MAD overage, scaled by excess usage above 80%
+  const excess = Math.min(100, pct - 80);
+  const base = (client.quota?.monthlyPriceMAD ?? 6500) * 0.1;
+  const h = hashStr(client.id + ":overage");
+  return Math.round((base * excess) / 20) + (h % 200);
+}
+
+function computeRevenueRow(
+  client: AgencyClient,
+  override: RevenueTrackerOverride | undefined,
+  agencyCommissionPct: number,
+): RevenueTrackerRow {
+  const tier = revenueTrackerTier(client);
+  const baseMrr = client.quota?.monthlyPriceMAD ?? REVENUE_PLAN_PRICE[tier];
+  const mrr = override?.mrr ?? baseMrr;
+  const setupFee = override?.setupFee ?? setupFeeFromHash(client.id, tier);
+  const overage = overageChargesFromHash(client);
+  const commissionPct = override?.commissionPct ?? agencyCommissionPct;
+  const monthsElapsed = Math.max(1, Math.min(12, monthsSince(client.createdAt)));
+  const totalRevenueYTD = mrr * monthsElapsed + setupFee + overage;
+  const commissionEarned = Math.round((totalRevenueYTD * commissionPct) / 100);
+  const overridden =
+    override?.mrr !== undefined ||
+    override?.setupFee !== undefined ||
+    override?.commissionPct !== undefined;
+  return {
+    clientId: client.id,
+    displayName: client.displayName,
+    planTier: tier,
+    mrr,
+    setupFee,
+    overageCharges: overage,
+    commissionPct,
+    commissionEarned,
+    totalRevenueYTD,
+    monthsElapsed,
+    overridden,
+  };
+}
+
+function ClientRevenueTrackerCard({
+  clients,
+  agencyCommissionPct,
+  loading,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  agencyCommissionPct: number;
+  loading: boolean;
+  onToast: (message: string, type?: "success" | "info") => void;
+}) {
+  const [overrides, setOverrides] = usePersistentState<RevenueTrackerState>(
+    "agency:revenue-tracker",
+    {},
+  );
+
+  // Adjust dialog state
+  const [adjustClientId, setAdjustClientId] = useState<string | null>(null);
+  const [draftMrr, setDraftMrr] = useState("");
+  const [draftSetup, setDraftSetup] = useState("");
+  const [draftCommission, setDraftCommission] = useState("");
+
+  const rows = useMemo(() => {
+    return clients.map((c) => computeRevenueRow(c, overrides[c.id], agencyCommissionPct));
+  }, [clients, overrides, agencyCommissionPct]);
+
+  const summary = useMemo(() => {
+    const totalMrr = rows.reduce((s, r) => s + r.mrr, 0);
+    const totalCommissionYTD = rows.reduce((s, r) => s + r.commissionEarned, 0);
+    const totalRevenueYTD = rows.reduce((s, r) => s + r.totalRevenueYTD, 0);
+    const avgRevenuePerClient = rows.length > 0 ? Math.round(totalRevenueYTD / rows.length) : 0;
+    const topClient = rows.length > 0
+      ? rows.reduce((max, r) => (r.totalRevenueYTD > max.totalRevenueYTD ? r : max), rows[0])
+      : null;
+    return { totalMrr, totalCommissionYTD, totalRevenueYTD, avgRevenuePerClient, topClient };
+  }, [rows]);
+
+  const top10ByRevenue = useMemo(() => {
+    return [...rows].sort((a, b) => b.totalRevenueYTD - a.totalRevenueYTD).slice(0, 10);
+  }, [rows]);
+
+  const tierDistribution = useMemo(() => {
+    const tiers: RevenuePlanTier[] = ["Essentiel", "Pro", "Enterprise"];
+    return tiers
+      .map((t) => {
+        const tierRows = rows.filter((r) => r.planTier === t);
+        const value = tierRows.reduce((s, r) => s + r.totalRevenueYTD, 0);
+        return { name: t, value, color: REVENUE_PLAN_COLOR[t] };
+      })
+      .filter((d) => d.value > 0);
+  }, [rows]);
+
+  const overriddenCount = rows.filter((r) => r.overridden).length;
+
+  const handleFacturer = (row: RevenueTrackerRow) => {
+    onToast(`Facture générée · ${row.displayName} · ${fmtMAD(row.totalRevenueYTD)} YTD (PDF simulé).`);
+  };
+
+  const openAdjust = (row: RevenueTrackerRow) => {
+    setAdjustClientId(row.clientId);
+    setDraftMrr(String(row.mrr));
+    setDraftSetup(String(row.setupFee));
+    setDraftCommission(String(row.commissionPct));
+  };
+
+  const handleAdjustSave = () => {
+    if (!adjustClientId) return;
+    const mrr = Number(draftMrr);
+    const setup = Number(draftSetup);
+    const commission = Number(draftCommission);
+    if (isNaN(mrr) || mrr < 0 || isNaN(setup) || setup < 0 || isNaN(commission) || commission < 0 || commission > 100) {
+      onToast("Valeurs invalides — vérifiez MRR, setup et commission (0-100%).", "info");
+      return;
+    }
+    setOverrides((prev) => ({
+      ...prev,
+      [adjustClientId]: { mrr, setupFee: setup, commissionPct: commission },
+    }));
+    const clientName = clients.find((c) => c.id === adjustClientId)?.displayName ?? "Client";
+    onToast(`Tarif ajusté pour ${clientName} · MRR ${fmtMAD(mrr)} · ${commission}% commission.`);
+    setAdjustClientId(null);
+  };
+
+  const handleAdjustReset = () => {
+    if (!adjustClientId) return;
+    setOverrides((prev) => {
+      const copy: RevenueTrackerState = {};
+      Object.keys(prev).forEach((k) => {
+        if (k !== adjustClientId) copy[k] = prev[k];
+      });
+      return copy;
+    });
+    const clientName = clients.find((c) => c.id === adjustClientId)?.displayName ?? "Client";
+    onToast(`Tarif réinitialisé pour ${clientName} (valeurs calculées).`);
+    setAdjustClientId(null);
+  };
+
+  const adjustTargetRow = adjustClientId ? rows.find((r) => r.clientId === adjustClientId) ?? null : null;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Suivi revenus par client"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE, fontWeight: 700 }}
+            >
+              <Wallet size={10} /> {rows.length} clients
+            </span>
+            {overriddenCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: "#FAFAFA", color: TEXT_MUTED, fontWeight: 700 }}
+              >
+                <Pencil size={10} /> {overriddenCount} ajusté(s)
+              </span>
+            )}
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-9 w-full" />
+          ))}
+        </div>
+      ) : clients.length === 0 ? (
+        <div
+          className="text-center py-10 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <Wallet size={28} style={{ color: TEXT_MUTED, margin: "0 auto 8px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL, fontWeight: 600 }}>
+            Aucun client dans le portefeuille
+          </p>
+          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+            Le suivi des revenus par client s'active dès le premier client ajouté à l'agence.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Summary strip — 4 KPI cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <MiniStat
+              label="MRR total"
+              value={fmtMAD(summary.totalMrr)}
+              dotColor={SAGE}
+            />
+            <MiniStat
+              label="Commission YTD"
+              value={fmtMAD(summary.totalCommissionYTD)}
+              dotColor={SAGE_DEEP}
+            />
+            <MiniStat
+              label="Revenu moyen / client"
+              value={fmtMAD(summary.avgRevenuePerClient)}
+              dotColor={NEUTRAL_GRAY}
+            />
+            <MiniStat
+              label="Top client YTD"
+              value={summary.topClient ? `${summary.topClient.displayName}` : "—"}
+              dotColor={CLIENT_B}
+            />
+          </div>
+          {summary.topClient && (
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginBottom: 12, marginTop: -4 }}>
+              Top client: {summary.topClient.displayName} · {fmtMAD(summary.topClient.totalRevenueYTD)} YTD · {summary.topClient.planTier} · commission {fmtMAD(summary.topClient.commissionEarned)}
+            </div>
+          )}
+
+          {/* Charts: BarChart top 10 + PieChart by tier */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
+            <div className="lg:col-span-7">
+              <div style={FONT_HEADER} className="mb-2">Top 10 clients · revenu YTD</div>
+              <div style={{ height: 280, width: "100%" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={top10ByRevenue.map((r) => ({ name: r.displayName, value: r.totalRevenueYTD }))} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={BORDER} horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tick={{ fill: TEXT_MUTED, fontSize: 10, fontFamily: FONT_MONO }}
+                      tickFormatter={(v) => `${Math.round(v / 1000)}k`}
+                      axisLine={{ stroke: BORDER_STRONG }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={{ fill: TEXT_BODY, fontSize: 10, fontFamily: FONT_SANS }}
+                      width={120}
+                      axisLine={{ stroke: BORDER_STRONG }}
+                      tickLine={false}
+                    />
+                    <RTooltip
+                      contentStyle={{ fontFamily: FONT_SANS, fontSize: 11, border: `1px solid ${BORDER_STRONG}`, borderRadius: 8 }}
+                      formatter={(v: number) => [fmtMAD(v), "Revenu YTD"]}
+                    />
+                    <Bar dataKey="value" fill={SAGE} radius={[0, 4, 4, 0]} barSize={14} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5">
+              <div style={FONT_HEADER} className="mb-2">Distribution par plan</div>
+              <div style={{ height: 280, width: "100%" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={tierDistribution}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={92}
+                      innerRadius={48}
+                      paddingAngle={2}
+                    >
+                      {tierDistribution.map((d) => (
+                        <Cell key={d.name} fill={d.color} />
+                      ))}
+                    </Pie>
+                    <RTooltip
+                      contentStyle={{ fontFamily: FONT_SANS, fontSize: 11, border: `1px solid ${BORDER_STRONG}`, borderRadius: 8 }}
+                      formatter={(v: number, n: string) => [fmtMAD(v), n]}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 10 }}
+                      formatter={(value: string) => <span style={{ color: TEXT_BODY }}>{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue table */}
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 880 }}>
+              <thead>
+                <tr>
+                  {["Client", "Plan", "MRR", "Setup", "Commission", "Commission YTD", "Revenu YTD", ""].map((h, i) => (
+                    <th
+                      key={i}
+                      className="text-left py-2 px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: TEXT_HEADER, borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.clientId}>
+                    <td
+                      className="py-2.5 px-2"
+                      style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate" style={{ maxWidth: 140 }}>{r.displayName}</span>
+                        {r.overridden && (
+                          <span
+                            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full"
+                            style={{ backgroundColor: SAGE_BG }}
+                            title="Tarif ajusté manuellement"
+                          >
+                            <Pencil size={8} style={{ color: SAGE_DEEP }} />
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, fontWeight: 400 }}>
+                        {r.monthsElapsed} mois · {r.overageCharges > 0 ? `+${fmtMAD(r.overageCharges)} overage` : "pas d'overage"}
+                      </div>
+                    </td>
+                    <td
+                      className="py-2.5 px-2"
+                      style={{ borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      <span
+                        className="inline-block px-1.5 py-0.5 rounded-full"
+                        style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", backgroundColor: `${REVENUE_PLAN_COLOR[r.planTier]}14`, color: REVENUE_PLAN_COLOR[r.planTier], fontWeight: 700 }}
+                      >
+                        {r.planTier}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}>
+                      {fmtMAD(r.mrr)}
+                    </td>
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, borderBottom: `1px solid ${BORDER}` }}>
+                      {fmtMAD(r.setupFee)}
+                    </td>
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, borderBottom: `1px solid ${BORDER}` }}>
+                      {r.commissionPct}%
+                    </td>
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: SAGE_DEEP, borderBottom: `1px solid ${BORDER}` }}>
+                      {fmtMAD(r.commissionEarned)}
+                    </td>
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}>
+                      {fmtMAD(r.totalRevenueYTD)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2"
+                          style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE_DIM, color: SAGE_DEEP }}
+                          onClick={() => handleFacturer(r)}
+                          aria-label={`Facturer ${r.displayName}`}
+                        >
+                          <Receipt size={11} /> Facturer
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                          onClick={() => openAdjust(r)}
+                          aria-label={`Ajuster le tarif pour ${r.displayName}`}
+                        >
+                          <SlidersHorizontal size={11} /> Ajuster
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: TEXT_HEADER, borderTop: `1px solid ${BORDER_STRONG}` }}>
+                    Total ({rows.length})
+                  </td>
+                  <td className="py-2.5 px-2" style={{ borderTop: `1px solid ${BORDER_STRONG}` }} />
+                  <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderTop: `1px solid ${BORDER_STRONG}` }}>
+                    {fmtMAD(summary.totalMrr)}
+                  </td>
+                  <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, borderTop: `1px solid ${BORDER_STRONG}` }}>
+                    {fmtMAD(rows.reduce((s, r) => s + r.setupFee, 0))}
+                  </td>
+                  <td className="py-2.5 px-2" style={{ borderTop: `1px solid ${BORDER_STRONG}` }} />
+                  <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: SAGE_DEEP, borderTop: `1px solid ${BORDER_STRONG}` }}>
+                    {fmtMAD(summary.totalCommissionYTD)}
+                  </td>
+                  <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderTop: `1px solid ${BORDER_STRONG}` }}>
+                    {fmtMAD(summary.totalRevenueYTD)}
+                  </td>
+                  <td className="py-2.5 px-2" style={{ borderTop: `1px solid ${BORDER_STRONG}` }} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <AiCommentary
+            text={
+              rows.length === 0
+                ? "Le tracker de revenus s'active dès le premier client."
+                : `${rows.length} client(s) · MRR total ${fmtMAD(summary.totalMrr)} · commission YTD ${fmtMAD(summary.totalCommissionYTD)} (${agencyCommissionPct}% par défaut). Top client: ${summary.topClient?.displayName ?? "—"} (${fmtMAD(summary.topClient?.totalRevenueYTD ?? 0)}). ${overriddenCount > 0 ? `${overriddenCount} client(s) avec tarif ajusté manuellement.` : "Aucun ajustement manuel — toutes les valeurs sont calculées."} ${summary.totalRevenueYTD > 0 ? `Répartition: ${tierDistribution.map((d) => `${d.name} ${Math.round((d.value / summary.totalRevenueYTD) * 100)}%`).join(" · ")}.` : ""}`
+            }
+          />
+        </>
+      )}
+
+      {/* Adjust dialog */}
+      <Dialog open={adjustClientId !== null} onOpenChange={(o) => { if (!o) setAdjustClientId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajuster le tarif — {adjustTargetRow?.displayName}</DialogTitle>
+            <DialogDescription>
+              Modifiez manuellement le MRR, le setup fee et le taux de commission. Sauvegardé localement pour ce client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <div>
+              <Label htmlFor="adj-mrr" style={{ ...FONT_HEADER, fontSize: 10 }}>MRR mensuel (MAD)</Label>
+              <Input
+                id="adj-mrr"
+                type="number"
+                value={draftMrr}
+                onChange={(e) => setDraftMrr(e.target.value)}
+                min={0}
+                step={500}
+                className="mt-1.5"
+              />
+              <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                Valeur calculée: {fmtMAD(adjustTargetRow ? clients.find((c) => c.id === adjustTargetRow.clientId)?.quota?.monthlyPriceMAD ?? REVENUE_PLAN_PRICE[adjustTargetRow.planTier] : 0)}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="adj-setup" style={{ ...FONT_HEADER, fontSize: 10 }}>Setup fee (MAD)</Label>
+              <Input
+                id="adj-setup"
+                type="number"
+                value={draftSetup}
+                onChange={(e) => setDraftSetup(e.target.value)}
+                min={0}
+                step={500}
+                className="mt-1.5"
+              />
+              <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                Valeur calculée: {fmtMAD(adjustTargetRow ? setupFeeFromHash(adjustTargetRow.clientId, adjustTargetRow.planTier) : 0)}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="adj-commission" style={{ ...FONT_HEADER, fontSize: 10 }}>Commission (%)</Label>
+              <Input
+                id="adj-commission"
+                type="number"
+                value={draftCommission}
+                onChange={(e) => setDraftCommission(e.target.value)}
+                min={0}
+                max={100}
+                step={1}
+                className="mt-1.5"
+              />
+              <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                Valeur agence: {agencyCommissionPct}%
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={handleAdjustReset} style={{ color: NEGATIVE }}>
+              <RotateCcw size={12} /> Réinitialiser
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAdjustClientId(null)}>
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={handleAdjustSave}
+            >
+              <Save size={12} /> Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CardShell>
   );
 }
@@ -14654,6 +16568,21 @@ export default function AgencyDashboard({
                 <ClientComparisonCard clients={clients} onCompareOthers={handleCompareOthers} />
               </motion.div>
 
+              {/* R4-AGENCY-A · FEATURE 3 — Multi-Client Comparison Matrix (full width, after client comparison) */}
+              <motion.div
+                id="comparison-matrix"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(11)}
+                className="lg:col-span-12"
+              >
+                <MultiClientComparisonCard
+                  clients={clients}
+                  loading={clientsLoading}
+                  onToast={pushToast}
+                />
+              </motion.div>
+
               {/* ENV-AGENCY · FEATURE 3 — Commission Calculator (full width, after revenue) */}
               <motion.div
                 id="commission-calc"
@@ -14674,6 +16603,22 @@ export default function AgencyDashboard({
                 className="lg:col-span-12"
               >
                 <RevenueForecastingCard tier={activeTier} clients={clients} />
+              </motion.div>
+
+              {/* R4-AGENCY-A · FEATURE 1 — Client Revenue Tracker (full width, after revenue forecast) */}
+              <motion.div
+                id="revenue-tracker"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(12)}
+                className="lg:col-span-12"
+              >
+                <ClientRevenueTrackerCard
+                  clients={clients}
+                  agencyCommissionPct={agency?.commissionPct ?? 20}
+                  loading={clientsLoading}
+                  onToast={pushToast}
+                />
               </motion.div>
 
               {/* R3-AGENCY-A · FEATURE 2 — Upsell Opportunity Tracker (full width, after revenue forecast) */}
@@ -14756,6 +16701,17 @@ export default function AgencyDashboard({
                 className="lg:col-span-12"
               >
                 <PitchDeckAnalyticsCard />
+              </motion.div>
+
+              {/* R4-AGENCY-A · FEATURE 2 — Pitch Template Library (full width, after pitch deck analytics) */}
+              <motion.div
+                id="pitch-templates"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(15)}
+                className="lg:col-span-12"
+              >
+                <PitchTemplateLibraryCard onToast={pushToast} />
               </motion.div>
 
               {/* ENV-AGENCY · FEATURE 4 — Client Portal Preview (full width, after white-label) */}
@@ -14920,7 +16876,7 @@ export default function AgencyDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Agences · 31 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · 3 R3-AGENCY-A features · Multi-clients · White-label ·
+              Harch Atelier · Console Agences · 34 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · 3 R3-AGENCY-A features · 3 R4-AGENCY-A features · Multi-clients · White-label ·
               Commission {agency?.commissionPct ?? 20}% · Tier {activeTier.label}
               {pendingClients.length > 0 ? ` · ${pendingClients.length} client(s) en attente` : ""}
               {userEmail ? ` · ${userEmail}` : ""}

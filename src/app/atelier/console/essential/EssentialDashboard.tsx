@@ -61,6 +61,7 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowDown,
   ArrowRight,
@@ -81,6 +82,7 @@ import {
   Command,
   CornerDownLeft,
   Download,
+  Eye,
   ExternalLink,
   FileText,
   Filter,
@@ -93,11 +95,13 @@ import {
   LayoutGrid,
   Lightbulb,
   LogOut,
+  Mail,
   Map,
   Menu,
   MessageCircle,
   MessageSquare,
   Minus,
+  Monitor,
   Newspaper,
   Pause,
   Phone,
@@ -110,6 +114,8 @@ import {
   Send,
   Settings,
   Share2,
+  Shield,
+  Smartphone,
   Sparkles,
   Sun,
   Trash2,
@@ -120,6 +126,7 @@ import {
   Users,
   Volume2,
   X,
+  XCircle,
   Zap,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -450,6 +457,82 @@ interface SavedSearch {
   query: string;
   /** Last run timestamp (epoch ms) — null if never run. */
   lastRunAt: number | null;
+}
+
+// ─── R4-ESSENTIEL-A — Round 4 client-side environment types ────────────
+// Persisted in localStorage via usePersistentState. SSR-safe.
+
+/** Weekly digest email schedule — persisted in localStorage. */
+type DigestSchedule = "monday" | "friday" | "off";
+
+/** Email mockup viewport — desktop wide preview vs mobile 375px narrow. */
+type DigestViewMode = "desktop" | "mobile";
+
+/** Source credibility tier — drives the badge color + icon. */
+type SourceCredTier = "verified" | "reliable" | "check" | "unreliable";
+
+/** Credibility factor — 4 dimensions of source evaluation. */
+type CredibilityFactor = "authority" | "editorial" | "factcheck" | "transparency";
+
+/** Individual factor score breakdown — shown when "Pourquoi ce score?" is expanded. */
+interface CredibilityFactorScore {
+  /** Factor key — drives icon + label lookup. */
+  factor: CredibilityFactor;
+  /** French label (e.g. "Autorité du domaine"). */
+  label: string;
+  /** Score 0-100 — drives color (sage/amber/red). */
+  score: number;
+  /** One-sentence description of what the factor measures. */
+  description: string;
+}
+
+/** Source with computed credibility — derived from API sources + custom user-added. */
+interface CredibilitySource {
+  /** Stable unique ID — derived from hash(name) for API sources, generated for custom. */
+  id: string;
+  /** Source name — either media domain (e.g. "Hespress") or user-entered domain. */
+  name: string;
+  /** Source type — drives the icon (Newspaper/MessageCircle/Globe2). */
+  type: "media" | "social" | "custom";
+  /** Overall credibility score 0-100 — mean of the 4 factor scores. */
+  credibilityScore: number;
+  /** Breakdown of the 4 factors (authority, editorial, factcheck, transparency). */
+  factors: CredibilityFactorScore[];
+  /** Tier derived from credibilityScore — drives badge color + icon. */
+  tier: SourceCredTier;
+  /** Number of articles this source has produced (from API or 0 for custom). */
+  articlesCount: number;
+  /** Last article timestamp (epoch ms) — null for custom sources never seen. */
+  lastArticleAt: number | null;
+  /** True when user manually evaluated this source via the "Évaluer" input. */
+  custom?: boolean;
+}
+
+/** Persisted state for the Source Credibility card — stores API-derived + custom sources. */
+interface SourceCredibilityState {
+  /** All evaluated sources (API-derived + custom). */
+  sources: CredibilitySource[];
+}
+
+/** Sentiment timeline view range — 24 hourly buckets or 7 daily buckets. */
+type SentimentTimelineRange = "24h" | "7j";
+
+/** Single bucket in the sentiment timeline — hour (0-23) or day index (0-6). */
+interface SentimentTimelineBucket {
+  /** Bucket index — 0-23 for 24h view, 0-6 for 7j view. */
+  index: number;
+  /** Number of positive mentions in this bucket. */
+  positive: number;
+  /** Number of neutral mentions in this bucket. */
+  neutral: number;
+  /** Number of negative mentions in this bucket. */
+  negative: number;
+  /** Total mentions in this bucket — drives bar height. */
+  total: number;
+  /** Dominant sentiment — drives bar color. */
+  dominantSentiment: "positive" | "neutral" | "negative";
+  /** True when the bucket shows an unusual pattern (negative spike or volume >2x mean). */
+  isAnomaly: boolean;
 }
 
 // ─── HarchIQ AI Workspace types ────────────────────────────────────────
@@ -5777,6 +5860,231 @@ function isValidPhone(input: string): boolean {
   return digits.length >= 8 && digits.length <= 15;
 }
 
+// ─── R4-ESSENTIEL-A — Round 4 constants ──────────────────────────────
+// Weekly digest email schedule options · Source credibility tiers ·
+// Credibility factor definitions · Weekly article pool · Hourly
+// distribution pattern for sentiment timeline simulation.
+
+/** Schedule options for the weekly digest email — persisted in localStorage. */
+const DIGEST_SCHEDULE_OPTIONS: {
+  value: DigestSchedule;
+  label: string;
+  description: string;
+  Icon: typeof CalendarDays;
+}[] = [
+  { value: "monday", label: "Chaque lundi 8h", description: "Démarrez la semaine avec un récapitulatif stratégique", Icon: CalendarDays },
+  { value: "friday", label: "Chaque vendredi 18h", description: "Bilan de fin de semaine avant le week-end", Icon: CalendarDays },
+  { value: "off", label: "Désactiver", description: "Aucun email automatique — consultation manuelle uniquement", Icon: Pause },
+];
+
+/** Credibility tier definitions — drives badge color + icon + range. */
+const CREDIBILITY_TIERS: {
+  tier: SourceCredTier;
+  label: string;
+  min: number;
+  max: number;
+  color: string;
+  bg: string;
+  Icon: typeof CheckCircle2;
+}[] = [
+  { tier: "verified", label: "Vérifié", min: 80, max: 100, color: SAGE, bg: SAGE_BG, Icon: CheckCircle2 },
+  { tier: "reliable", label: "Fiable", min: 60, max: 79, color: SAGE_DIM, bg: "rgba(111,160,136,0.10)", Icon: CheckCircle2 },
+  { tier: "check", label: "À vérifier", min: 40, max: 59, color: NEUTRAL_AMBER, bg: "rgba(245,158,11,0.10)", Icon: AlertCircle },
+  { tier: "unreliable", label: "Non fiable", min: 0, max: 39, color: NEGATIVE, bg: "rgba(239,68,68,0.10)", Icon: XCircle },
+];
+
+/** Credibility factor definitions — 4 dimensions of source evaluation. */
+const CREDIBILITY_FACTORS: {
+  factor: CredibilityFactor;
+  label: string;
+  description: string;
+  Icon: typeof Shield;
+}[] = [
+  { factor: "authority", label: "Autorité du domaine", description: "Indice de notoriété du domaine (DA simulé)", Icon: Shield },
+  { factor: "editorial", label: "Standards éditoriaux", description: "Charte éditoriale, signatures, ligne éditoriale claire", Icon: FileText },
+  { factor: "factcheck", label: "Historique de vérification", description: "Antécédents de fact-checking et corrections publiées", Icon: CheckCheck },
+  { factor: "transparency", label: "Transparence", description: "Contact éditorial, mentions légales accessibles", Icon: Eye },
+];
+
+/** Simulated top articles of the week — shown in the digest email body. */
+const WEEKLY_ARTICLES_POOL: { title: string; source: string }[] = [
+  { title: "Stratégie de marque: un tournant pour le secteur cette semaine", source: "Hespress" },
+  { title: "Étude réputationnelle — les leaders se démarquent sur les réseaux", source: "Medias24" },
+  { title: "Analyse — perception publique et communication institutionnelle", source: "Le Desk" },
+  { title: "Opinion — ce que disent les médias internationaux de la marque", source: "TelQuel" },
+  { title: "Décryptage — tendances de communication à surveiller", source: "L'Économiste" },
+];
+
+/** Hourly distribution pattern (24 values, 0-23) — normalized weights.
+ * Low at night (3-5h), peaks around 9-15h, tapers in evening. */
+const HOURLY_DISTRIBUTION_PATTERN: number[] = [
+  0.18, 0.12, 0.08, 0.06, 0.05, 0.08, 0.12, 0.22,
+  0.38, 0.55, 0.68, 0.78, 0.85, 0.92, 1.00, 0.88,
+  0.72, 0.62, 0.55, 0.48, 0.40, 0.32, 0.25, 0.20,
+];
+
+/** Daily distribution pattern (7 values, Mon-Sun) — weekdays higher than weekend. */
+const DAILY_DISTRIBUTION_PATTERN: number[] = [
+  0.92, 1.00, 0.95, 0.88, 0.78, 0.55, 0.45,
+];
+
+// ─── R4-ESSENTIEL-A — Round 4 helper functions ──────────────────────
+
+/** Compute ISO 8601 week number (1-53) for the given date. */
+function weekNumber(d: Date): number {
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  // Set to nearest Thursday: ISO week starts Monday, contains Jan 4.
+  date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+  const yearStart = new Date(date.getFullYear(), 0, 1);
+  return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+/** Map a credibility score (0-100) to its tier. */
+function tierForScore(score: number): SourceCredTier {
+  if (score >= 80) return "verified";
+  if (score >= 60) return "reliable";
+  if (score >= 40) return "check";
+  return "unreliable";
+}
+
+/** Lookup the French label for a tier. */
+function tierLabelFor(tier: SourceCredTier): string {
+  return CREDIBILITY_TIERS.find((t) => t.tier === tier)?.label ?? "—";
+}
+
+/** Deterministic 32-bit unsigned hash — used to derive stable per-source scores. */
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+/** Simulate the 4 credibility factor scores for a source name (deterministic). */
+function simulateCredibilityFactors(name: string): CredibilityFactorScore[] {
+  const h = hashStr(name.toLowerCase());
+  return CREDIBILITY_FACTORS.map((cf, i) => {
+    // Each factor draws 8 bits from the hash, shifted by factor index.
+    const raw = (h >> (i * 4)) & 0xff;
+    // Score range 30-100 (avoid extreme lows so tiers spread naturally).
+    const score = 30 + (raw % 71);
+    return {
+      factor: cf.factor,
+      label: cf.label,
+      score,
+      description: cf.description,
+    };
+  });
+}
+
+/** Build a full CredibilitySource from a name + type + article count.
+ *  Used to seed API-derived sources and evaluate user-entered domains. */
+function simulateSourceCredibility(
+  name: string,
+  type: "media" | "social" | "custom",
+  articlesCount: number,
+): CredibilitySource {
+  const factors = simulateCredibilityFactors(name);
+  const credibilityScore = Math.round(
+    factors.reduce((s, f) => s + f.score, 0) / factors.length,
+  );
+  const tier = tierForScore(credibilityScore);
+  // Simulated last article timestamp: spread within last 7 days based on hash.
+  const lastArticleAt = articlesCount > 0
+    ? Date.now() - (hashStr(name) % (7 * 24 * 3600 * 1000))
+    : null;
+  return {
+    id: `src-${hashStr(name.toLowerCase())}`,
+    name,
+    type,
+    credibilityScore,
+    factors,
+    tier,
+    articlesCount,
+    lastArticleAt,
+    custom: type === "custom",
+  };
+}
+
+/** Simulate 24 hourly buckets from total mentions + sentiment split.
+ *  Each bucket: positive/neutral/negative count, dominant sentiment,
+ *  anomaly flag (negative spike or volume >2x mean). */
+function simulateSentimentHourBuckets(
+  mentionCount24h: number,
+  sentiment: { positive: number; neutral: number; negative: number },
+): SentimentTimelineBucket[] {
+  const patternSum = HOURLY_DISTRIBUTION_PATTERN.reduce((a, b) => a + b, 0);
+  const meanPerHour = mentionCount24h / 24;
+  return HOURLY_DISTRIBUTION_PATTERN.map((weight, hour) => {
+    const total = Math.max(
+      0,
+      Math.round((mentionCount24h * weight) / patternSum),
+    );
+    // Per-hour sentiment variation (±10%) — deterministic from hour.
+    const variation = (hashStr(`hour-${hour}`) % 20) - 10;
+    const posPct = Math.max(0, Math.min(100, sentiment.positive + variation));
+    const negPct = Math.max(0, Math.min(100, sentiment.negative - variation));
+    const positive = Math.round((total * posPct) / 100);
+    const negative = Math.round((total * negPct) / 100);
+    const neutral = Math.max(0, total - positive - negative);
+    const dominantSentiment: "positive" | "neutral" | "negative" =
+      positive >= neutral && positive >= negative
+        ? "positive"
+        : negative >= neutral
+          ? "negative"
+          : "neutral";
+    const isAnomaly =
+      negative > (positive + neutral) * 0.5 ||
+      (total > meanPerHour * 2 && meanPerHour > 0);
+    return {
+      index: hour,
+      positive,
+      neutral,
+      negative,
+      total,
+      dominantSentiment,
+      isAnomaly,
+    };
+  });
+}
+
+/** Simulate 7 daily buckets from sentiment split.
+ *  Each bucket: positive/neutral/negative count, dominant sentiment,
+ *  anomaly flag (negative spike). */
+function simulateSentimentDailyBuckets(
+  sentiment: { positive: number; neutral: number; negative: number },
+): SentimentTimelineBucket[] {
+  const patternSum = DAILY_DISTRIBUTION_PATTERN.reduce((a, b) => a + b, 0);
+  const dailyBase = 50; // base articles per day (simulated)
+  return DAILY_DISTRIBUTION_PATTERN.map((weight, day) => {
+    const total = Math.round((dailyBase * 7 * weight) / patternSum);
+    // Per-day sentiment variation (±15%) — deterministic from day.
+    const variation = (hashStr(`day-${day}`) % 30) - 15;
+    const posPct = Math.max(0, Math.min(100, sentiment.positive + variation));
+    const negPct = Math.max(0, Math.min(100, sentiment.negative - variation));
+    const positive = Math.round((total * posPct) / 100);
+    const negative = Math.round((total * negPct) / 100);
+    const neutral = Math.max(0, total - positive - negative);
+    const dominantSentiment: "positive" | "neutral" | "negative" =
+      positive >= neutral && positive >= negative
+        ? "positive"
+        : negative >= neutral
+          ? "negative"
+          : "neutral";
+    const isAnomaly = negative > (positive + neutral) * 0.5;
+    return {
+      index: day,
+      positive,
+      neutral,
+      negative,
+      total,
+      dominantSentiment,
+      isAnomaly,
+    };
+  });
+}
+
 // ════════════════════════════════════════════════════════════════════
 // R2-ESSENTIEL-A — Round 2 client-side environment components
 // Daily Briefing · Notification Center · Guided Tour
@@ -8035,6 +8343,1757 @@ function SavedSearchesStarterCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R4-ESSENTIEL-A — Round 4 components
+// Weekly Digest Email Preview · Source Credibility Scoring ·
+// Sentiment Timeline. All persisted via usePersistentState
+// (localStorage-backed, SSR-safe). No new API — derived from
+// existing data (health, insights, sources) + simulated patterns.
+// ════════════════════════════════════════════════════════════════════
+
+/**
+ * Feature 1 — WeeklyDigestEmailPreviewCard
+ *
+ * Renders a CSS email mockup with a sage header bar, From/To/Subject
+ * meta, and an HTML body: greeting, 4 KPI highlights (score, mentions,
+ * sentiment, top source), top 3 articles of the week, HarchIQ insight,
+ * CTA button. Toggle "Aperçu" (desktop) vs "Mobile" (375px narrow).
+ * Schedule dropdown (Chaque lundi 8h / Chaque vendredi 18h / Désactiver)
+ * persisted in localStorage. "Envoyer un test" button triggers a
+ * simulated toast.
+ */
+function WeeklyDigestEmailPreviewCard({
+  userName,
+  userEmail,
+  health,
+  insights,
+  sources,
+}: {
+  userName: string;
+  userEmail: string;
+  health: BrandHealth | null;
+  insights: InsightsResp | null;
+  sources: SourceDistResp | null;
+}) {
+  const [schedule, setSchedule] = usePersistentState<DigestSchedule>(
+    "essential:digest-schedule",
+    "monday",
+  );
+  const [view, setView] = useState<DigestViewMode>("desktop");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  // Compute ISO week number — memoised for stable render.
+  const weekNum = useMemo(() => weekNumber(new Date()), []);
+
+  // Derive 4 KPI highlights from real API data (health, sources).
+  const scoreKpi = health ? Math.round(health.score) : null;
+  // Weekly mentions approximation: 7 × daily 24h count.
+  const mentionsKpi = health ? Math.round(health.mentionCount24h * 7) : null;
+  const sentimentKpi = health ? Math.round(health.sentiment.positive) : null;
+  const topSourceKpi = sources?.sources?.[0]?.name ?? null;
+
+  // Top 3 articles of the week — synthesised from the static pool.
+  const topArticles = useMemo(() => WEEKLY_ARTICLES_POOL.slice(0, 3), []);
+
+  // HarchIQ insight of the week — falls back to a generic sentence.
+  const weeklyInsight =
+    insights?.insights?.[0]?.body ??
+    "Votre marque maintient une réputation stable cette semaine. Continuez à surveiller les narratives émergentes et préparez une réponse pour les sujets sensibles.";
+
+  const handleSendTest = () => {
+    setSending(true);
+    setTimeout(() => {
+      setSending(false);
+      toast.success("Email test envoyé", {
+        description: `Un résumé de test a été envoyé à ${userEmail || "[votre email]"}.`,
+      });
+    }, 1200);
+  };
+
+  const handleScheduleChange = (s: DigestSchedule) => {
+    setSchedule(s);
+    setScheduleOpen(false);
+    const label =
+      s === "off"
+        ? "désactivé"
+        : s === "monday"
+          ? "programmé pour chaque lundi 8h"
+          : "programmé pour chaque vendredi 18h";
+    toast.success(`Résumé hebdomadaire ${label}`);
+  };
+
+  const isMobile = view === "mobile";
+  const currentScheduleLabel =
+    DIGEST_SCHEDULE_OPTIONS.find((o) => o.value === schedule)?.label ?? "—";
+  const currentScheduleIcon =
+    DIGEST_SCHEDULE_OPTIONS.find((o) => o.value === schedule)?.Icon ?? CalendarDays;
+  const ScheduleIcon = currentScheduleIcon;
+
+  return (
+    <motion.div id="apercu-digest-hebdo" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="Aperçu Email — Résumé hebdomadaire"
+          right={
+            <Tabs
+              value={view}
+              onValueChange={(v) => setView(v as DigestViewMode)}
+            >
+              <TabsList className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+                <TabsTrigger value="desktop" className="h-5 px-2 text-[10px]">
+                  <Monitor size={10} className="mr-1" />
+                  Aperçu
+                </TabsTrigger>
+                <TabsTrigger value="mobile" className="h-5 px-2 text-[10px]">
+                  <Smartphone size={10} className="mr-1" />
+                  Mobile
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Email mockup — sage header bar + From/To/Subject + HTML body. */}
+        <div className="flex justify-center">
+          <div
+            className="rounded-lg overflow-hidden shadow-md transition-all"
+            style={{
+              width: isMobile ? 375 : "100%",
+              maxWidth: isMobile ? 375 : 720,
+              border: `1px solid ${BORDER_STRONG}`,
+              backgroundColor: "#FFFFFF",
+            }}
+            aria-label="Aperçu de l'email — résumé hebdomadaire"
+          >
+            {/* Email header bar (sage). */}
+            <div
+              className="flex items-center justify-between px-4 py-2.5"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+            >
+              <div className="flex items-center gap-2">
+                <Mail size={12} />
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  HARCH ATELIER
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: "rgba(255,255,255,0.85)",
+                }}
+              >
+                Semaine {weekNum}
+              </span>
+            </div>
+
+            {/* Email meta (From/To/Subject). */}
+            <div
+              className="px-4 py-3 space-y-1"
+              style={{
+                borderBottom: `1px solid ${BORDER}`,
+                backgroundColor: "#FAFAFA",
+              }}
+            >
+              <div className="flex items-start gap-2">
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    minWidth: 36,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  De:
+                </span>
+                <span
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: CHARCOAL,
+                  }}
+                >
+                  insights@harch.atelier
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    minWidth: 36,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  À:
+                </span>
+                <span
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: CHARCOAL,
+                  }}
+                >
+                  {userEmail || "[votre email]"}
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    minWidth: 36,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Objet:
+                </span>
+                <span
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: CHARCOAL,
+                    fontWeight: 600,
+                  }}
+                >
+                  Votre résumé hebdomadaire — semaine {weekNum}
+                </span>
+              </div>
+            </div>
+
+            {/* Email body — greeting + 4 KPI highlights + top 3 articles + insight + CTA. */}
+            <div className="px-4 py-4">
+              {/* Greeting */}
+              <p
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 12,
+                  color: CHARCOAL,
+                  marginBottom: 8,
+                }}
+              >
+                Bonjour {userName},
+              </p>
+              <p
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 12,
+                  color: TEXT_BODY,
+                  lineHeight: 1.55,
+                  marginBottom: 16,
+                }}
+              >
+                Voici votre récapitulatif de la semaine. Votre réputation
+                évolue — voici les points clés à retenir.
+              </p>
+
+              {/* 4 KPI highlights — 2x2 grid */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FAFAFA",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: TEXT_MUTED,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Score de réputation
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 18,
+                      color: SAGE,
+                      fontWeight: 700,
+                      marginTop: 2,
+                    }}
+                  >
+                    {scoreKpi !== null ? `${scoreKpi}/100` : "—"}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FAFAFA",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: TEXT_MUTED,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Mentions 7j
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 18,
+                      color: CHARCOAL,
+                      fontWeight: 700,
+                      marginTop: 2,
+                    }}
+                  >
+                    {mentionsKpi !== null ? mentionsKpi : "—"}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FAFAFA",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: TEXT_MUTED,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Sentiment positif
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 18,
+                      color: POSITIVE,
+                      fontWeight: 700,
+                      marginTop: 2,
+                    }}
+                  >
+                    {sentimentKpi !== null ? `${sentimentKpi}%` : "—"}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FAFAFA",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: TEXT_MUTED,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Source principale
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 12,
+                      color: CHARCOAL,
+                      fontWeight: 700,
+                      marginTop: 2,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {topSourceKpi ?? "—"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Top 3 articles of the week */}
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: CHARCOAL,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginBottom: 8,
+                  }}
+                >
+                  Top 3 articles de la semaine
+                </div>
+                <ol style={{ padding: 0, margin: 0, listStyle: "none" }}>
+                  {topArticles.map((a, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 11,
+                          color: SAGE,
+                          fontWeight: 700,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {i + 1}.
+                      </span>
+                      <div>
+                        <div
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 11,
+                            color: CHARCOAL,
+                            fontWeight: 600,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {a.title}
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            color: TEXT_MUTED,
+                            marginTop: 1,
+                          }}
+                        >
+                          {a.source}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* HarchIQ insight of the week */}
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 8,
+                  borderLeft: `3px solid ${SAGE}`,
+                  backgroundColor: SAGE_BG,
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: SAGE,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginBottom: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Sparkles size={10} />
+                  Insight HarchIQ de la semaine
+                </div>
+                <p
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: CHARCOAL,
+                    lineHeight: 1.55,
+                    margin: 0,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {weeklyInsight}
+                </p>
+              </div>
+
+              {/* CTA button — sage, mock (no actual link) */}
+              <div style={{ textAlign: "center", marginBottom: 8 }}>
+                <div
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 24px",
+                    backgroundColor: SAGE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    borderRadius: 6,
+                  }}
+                >
+                  Voir le tableau de bord
+                </div>
+              </div>
+
+              {/* Signature */}
+              <p
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  textAlign: "center",
+                  marginTop: 16,
+                }}
+              >
+                — L&apos;équipe Harch Atelier
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule + send test controls */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          {/* Schedule dropdown — custom popover with 3 options */}
+          <div className="relative inline-flex items-center gap-2">
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              Programmer:
+            </span>
+            <button
+              type="button"
+              onClick={() => setScheduleOpen((o) => !o)}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                color: schedule === "off" ? TEXT_MUTED : SAGE,
+                backgroundColor: schedule === "off" ? "#F4F4F5" : SAGE_BG,
+                border: `1px solid ${schedule === "off" ? BORDER_STRONG : SAGE}`,
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={scheduleOpen}
+              aria-label="Programmer le résumé hebdomadaire"
+            >
+              <ScheduleIcon size={11} />
+              {currentScheduleLabel}
+              <ChevronRight
+                size={11}
+                style={{
+                  transform: scheduleOpen ? "rotate(90deg)" : "rotate(90deg)",
+                  transition: "transform 150ms",
+                }}
+              />
+            </button>
+            {scheduleOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 z-20 rounded-md overflow-hidden shadow-lg"
+                style={{
+                  border: `1px solid ${BORDER_STRONG}`,
+                  backgroundColor: "#FFFFFF",
+                  minWidth: 260,
+                }}
+                role="listbox"
+              >
+                {DIGEST_SCHEDULE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="option"
+                    aria-selected={schedule === opt.value}
+                    onClick={() => handleScheduleChange(opt.value)}
+                    className="w-full text-left px-3 py-2 transition-colors hover:bg-[#FAFAFA] flex items-start gap-2"
+                    style={{
+                      backgroundColor:
+                        schedule === opt.value ? SAGE_BG : "#FFFFFF",
+                      borderBottom: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <opt.Icon
+                      size={12}
+                      style={{ color: SAGE, flexShrink: 0, marginTop: 1 }}
+                    />
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: CHARCOAL,
+                        }}
+                      >
+                        {opt.label}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: TEXT_MUTED,
+                          marginTop: 1,
+                        }}
+                      >
+                        {opt.description}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Send test button */}
+          <Button
+            type="button"
+            size="sm"
+            className="h-8"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+            }}
+            onClick={handleSendTest}
+            disabled={sending}
+          >
+            {sending ? (
+              <>
+                <RefreshCw size={11} className="mr-1.5 animate-spin" />
+                Envoi…
+              </>
+            ) : (
+              <>
+                <Send size={11} className="mr-1.5" />
+                Envoyer un test
+              </>
+            )}
+          </Button>
+        </div>
+
+        <AiCommentary
+          text={`Email hebdomadaire ${
+            schedule === "off"
+              ? "désactivé"
+              : `programmé pour ${currentScheduleLabel.toLowerCase()}`
+          }. Recevez un récapitulatif stratégique chaque semaine : score, mentions, sentiment, top sources et insight HarchIQ — sans ouvrir votre tableau de bord.`}
+        />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+/**
+ * Feature 2 — SourceCredibilityScoringCard
+ *
+ * Each source (API-derived + user-evaluated) gets a credibility score
+ * 0-100 computed from 4 simulated factors (authority, editorial,
+ * fact-check, transparency). Tier badges: Vérifié (80-100) / Fiable
+ * (60-79) / À vérifier (40-59) / Non fiable (<40). Source list rows
+ * with credibility bar, tier badge, articles count, last article date.
+ * "Pourquoi ce score?" expandable reveals the 4-factor breakdown.
+ * Filter by tier. "Évaluer une nouvelle source" input simulates a
+ * score for any domain. Persisted custom evaluations in localStorage.
+ */
+function SourceCredibilityScoringCard({
+  sources,
+  loading,
+}: {
+  sources: SourceDistResp | null;
+  loading: boolean;
+}) {
+  const [credState, setCredState] = usePersistentState<SourceCredibilityState>(
+    "essential:source-cred",
+    { sources: [] },
+  );
+  const [tierFilter, setTierFilter] = useState<SourceCredTier | "all">("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [newDomain, setNewDomain] = useState("");
+  const [evaluating, setEvaluating] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydration flag — ensures usePersistentState has read localStorage
+  // before the sync effect runs (avoids overwriting persisted customs).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
+  }, []);
+
+  // Sync effect: drop persisted API sources no longer in API data,
+  // refresh article counts for existing, seed new from API. Always
+  // preserve user-added custom sources. Returns prev when no changes
+  // to avoid unnecessary re-renders / infinite loops.
+  useEffect(() => {
+    if (!hydrated || loading) return;
+    const apiSources = sources?.sources ?? [];
+    setCredState((prev) => {
+      let hasChanges = false;
+      // Keep custom sources always (never auto-removed).
+      const customs = prev.sources.filter((s) => s.custom);
+      // For API sources: derive credibility if new, or refresh count if existing.
+      const apiDerived: CredibilitySource[] = apiSources.slice(0, 10).map((apiSrc) => {
+        const existing = prev.sources.find(
+          (s) => s.name === apiSrc.name && !s.custom,
+        );
+        if (existing) {
+          if (existing.articlesCount !== apiSrc.count) {
+            hasChanges = true;
+            return { ...existing, articlesCount: apiSrc.count };
+          }
+          return existing;
+        }
+        hasChanges = true;
+        return simulateSourceCredibility(apiSrc.name, apiSrc.type, apiSrc.count);
+      });
+      if (!hasChanges) return prev;
+      return { sources: [...apiDerived, ...customs] };
+    });
+  }, [hydrated, loading, sources, setCredState]);
+
+  const allSources = credState.sources;
+  const filtered =
+    tierFilter === "all"
+      ? allSources
+      : allSources.filter((s) => s.tier === tierFilter);
+
+  // Tier counts for the summary strip + filter chips.
+  const tierCounts = useMemo(() => {
+    const counts: Record<SourceCredTier, number> = {
+      verified: 0,
+      reliable: 0,
+      check: 0,
+      unreliable: 0,
+    };
+    allSources.forEach((s) => {
+      counts[s.tier]++;
+    });
+    return counts;
+  }, [allSources]);
+
+  const avgScore =
+    allSources.length > 0
+      ? Math.round(
+          allSources.reduce((s, x) => s + x.credibilityScore, 0) /
+            allSources.length,
+        )
+      : 0;
+
+  const handleEvaluateDomain = () => {
+    const rawDomain = newDomain.trim();
+    if (!rawDomain) {
+      toast.error("Veuillez saisir un domaine", {
+        description: "Exemple: lematin.ma, hespress.com, twitter.com/@user",
+      });
+      return;
+    }
+    // Normalize: strip protocol + path, keep domain-like text.
+    const domain = rawDomain
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .split("/")[0]
+      .toLowerCase();
+    if (!domain) {
+      toast.error("Domaine invalide");
+      return;
+    }
+    setEvaluating(true);
+    setTimeout(() => {
+      const existing = allSources.find(
+        (s) => s.name.toLowerCase() === domain,
+      );
+      if (existing) {
+        setEvaluating(false);
+        toast.info("Source déjà évaluée", {
+          description: `« ${domain} » est déjà dans votre liste.`,
+        });
+        setExpandedId(existing.id);
+        return;
+      }
+      const newSrc = simulateSourceCredibility(domain, "custom", 0);
+      setCredState((prev) => ({
+        sources: [...prev.sources, newSrc],
+      }));
+      setEvaluating(false);
+      setNewDomain("");
+      setExpandedId(newSrc.id);
+      toast.success(`${domain} évalué`, {
+        description: `Score de crédibilité: ${newSrc.credibilityScore}/100 · tier « ${tierLabelFor(newSrc.tier)} ».`,
+      });
+    }, 1200);
+  };
+
+  const handleRemoveCustom = (id: string) => {
+    setCredState((prev) => ({
+      sources: prev.sources.filter((s) => s.id !== id),
+    }));
+    if (expandedId === id) setExpandedId(null);
+    toast.success("Source personnalisée supprimée");
+  };
+
+  return (
+    <motion.div id="credibilite-sources" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="Crédibilité des Sources"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="secondary"
+                className="h-5"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  backgroundColor: SAGE_BG,
+                  color: SAGE,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {allSources.length} SOURCES
+              </Badge>
+              <Badge
+                variant="secondary"
+                className="h-5"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  backgroundColor:
+                    avgScore >= 60 ? SAGE_BG : "rgba(245,158,11,0.10)",
+                  color: avgScore >= 60 ? SAGE : NEUTRAL_AMBER,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                MOY. {avgScore}/100
+              </Badge>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Tier summary strip — 4 tier cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          {CREDIBILITY_TIERS.map((t) => (
+            <div
+              key={t.tier}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                backgroundColor: t.bg,
+              }}
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <t.Icon size={11} style={{ color: t.color }} />
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: t.color,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    fontWeight: 700,
+                  }}
+                >
+                  {t.label}
+                </span>
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 16,
+                  color: CHARCOAL,
+                  fontWeight: 700,
+                }}
+              >
+                {tierCounts[t.tier]}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: TEXT_MUTED,
+                }}
+              >
+                {t.min}-{t.max}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tier filter chips */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-3">
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              color: TEXT_MUTED,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              marginRight: 4,
+            }}
+          >
+            Filtrer:
+          </span>
+          <button
+            type="button"
+            onClick={() => setTierFilter("all")}
+            className="rounded-full px-2.5 py-1 transition-colors"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: tierFilter === "all" ? "#FFFFFF" : TEXT_MUTED,
+              backgroundColor:
+                tierFilter === "all" ? CHARCOAL : "#F4F4F5",
+              border: `1px solid ${
+                tierFilter === "all" ? CHARCOAL : BORDER_STRONG
+              }`,
+            }}
+          >
+            Tous ({allSources.length})
+          </button>
+          {CREDIBILITY_TIERS.map((t) => (
+            <button
+              key={t.tier}
+              type="button"
+              onClick={() => setTierFilter(t.tier)}
+              className="rounded-full px-2.5 py-1 inline-flex items-center gap-1 transition-colors"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: tierFilter === t.tier ? "#FFFFFF" : t.color,
+                backgroundColor: tierFilter === t.tier ? t.color : t.bg,
+                border: `1px solid ${t.color}`,
+              }}
+            >
+              <t.Icon size={9} />
+              {t.label} ({tierCounts[t.tier]})
+            </button>
+          ))}
+        </div>
+
+        {/* Source list — rows with credibility bar + tier badge + expandable factor breakdown */}
+        {loading ? (
+          <div className="space-y-2">
+            <LiveSkeleton className="h-16 w-full" />
+            <LiveSkeleton className="h-16 w-full" />
+            <LiveSkeleton className="h-16 w-full" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="h-32 flex items-center justify-center">
+            <EmptyDash
+              label={
+                allSources.length === 0
+                  ? "Aucune source évaluée"
+                  : "Aucune source dans ce tier"
+              }
+            />
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {filtered.map((src) => {
+              const tier = CREDIBILITY_TIERS.find(
+                (t) => t.tier === src.tier,
+              )!;
+              const isExpanded = expandedId === src.id;
+              const TypeIcon =
+                src.type === "social"
+                  ? MessageCircle
+                  : src.type === "custom"
+                    ? Globe2
+                    : Newspaper;
+              return (
+                <div
+                  key={src.id}
+                  style={{
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 8,
+                    backgroundColor: "#FFFFFF",
+                    overflow: "hidden",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : src.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#FAFAFA]"
+                    aria-expanded={isExpanded}
+                    aria-label={`Détails crédibilité — ${src.name}`}
+                  >
+                    {/* Type icon */}
+                    <span
+                      className="inline-flex items-center justify-center rounded shrink-0"
+                      style={{
+                        width: 24,
+                        height: 24,
+                        backgroundColor:
+                          src.type === "social"
+                            ? SAGE_BG
+                            : src.type === "custom"
+                              ? "rgba(74,123,95,0.06)"
+                              : "#FEF3C7",
+                        color:
+                          src.type === "social" || src.type === "custom"
+                            ? SAGE
+                            : "#92400E",
+                      }}
+                    >
+                      <TypeIcon size={11} />
+                    </span>
+                    {/* Name + meta */}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div
+                        className="truncate"
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: CHARCOAL,
+                        }}
+                      >
+                        {src.name}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: TEXT_MUTED,
+                          marginTop: 1,
+                        }}
+                      >
+                        {src.articlesCount} article
+                        {src.articlesCount > 1 ? "s" : ""} ·{" "}
+                        {src.lastArticleAt
+                          ? fmtRelative(src.lastArticleAt)
+                          : "jamais vu"}
+                      </div>
+                    </div>
+                    {/* Credibility bar */}
+                    <div
+                      className="hidden sm:block shrink-0"
+                      style={{ width: 80 }}
+                    >
+                      <div
+                        style={{
+                          height: 6,
+                          backgroundColor: "#F4F4F5",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${src.credibilityScore}%`,
+                            height: "100%",
+                            backgroundColor: tier.color,
+                            transition: "width 400ms",
+                          }}
+                        />
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: tier.color,
+                          marginTop: 2,
+                          fontWeight: 700,
+                          textAlign: "right",
+                        }}
+                      >
+                        {src.credibilityScore}/100
+                      </div>
+                    </div>
+                    {/* Tier badge */}
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 shrink-0"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        color: tier.color,
+                        backgroundColor: tier.bg,
+                        border: `1px solid ${tier.color}`,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      <tier.Icon size={9} />
+                      {tier.label}
+                    </span>
+                    {/* Expand chevron */}
+                    <ChevronRight
+                      size={12}
+                      style={{
+                        color: TEXT_MUTED,
+                        transform: isExpanded ? "rotate(90deg)" : "none",
+                        transition: "transform 150ms",
+                        flexShrink: 0,
+                      }}
+                    />
+                  </button>
+                  {/* Expandable factor breakdown */}
+                  {isExpanded && (
+                    <div
+                      className="px-3 py-3"
+                      style={{
+                        borderTop: `1px solid ${BORDER}`,
+                        backgroundColor: "#FAFAFA",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: CHARCOAL,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          fontWeight: 700,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Pourquoi ce score?
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {src.factors.map((f) => {
+                          const factorDef = CREDIBILITY_FACTORS.find(
+                            (cf) => cf.factor === f.factor,
+                          )!;
+                          const FactorIcon = factorDef.Icon;
+                          const factorColor =
+                            f.score >= 70
+                              ? SAGE
+                              : f.score >= 50
+                                ? NEUTRAL_AMBER
+                                : NEGATIVE;
+                          return (
+                            <div
+                              key={f.factor}
+                              style={{
+                                padding: 10,
+                                borderRadius: 6,
+                                border: `1px solid ${BORDER}`,
+                                backgroundColor: "#FFFFFF",
+                              }}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <FactorIcon
+                                  size={11}
+                                  style={{ color: SAGE }}
+                                />
+                                <span
+                                  style={{
+                                    fontFamily: FONT_SANS,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: CHARCOAL,
+                                  }}
+                                >
+                                  {f.label}
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: FONT_MONO,
+                                    fontSize: 10,
+                                    color: factorColor,
+                                    fontWeight: 700,
+                                    marginLeft: "auto",
+                                  }}
+                                >
+                                  {f.score}/100
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  height: 4,
+                                  backgroundColor: "#F4F4F5",
+                                  borderRadius: 2,
+                                  overflow: "hidden",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: `${f.score}%`,
+                                    height: "100%",
+                                    backgroundColor: factorColor,
+                                  }}
+                                />
+                              </div>
+                              <p
+                                style={{
+                                  fontFamily: FONT_SANS,
+                                  fontSize: 10,
+                                  color: TEXT_MUTED,
+                                  margin: 0,
+                                  lineHeight: 1.4,
+                                }}
+                              >
+                                {f.description}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {src.custom && (
+                        <div className="mt-3 flex items-center justify-between">
+                          <span
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              color: TEXT_MUTED,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.06em",
+                            }}
+                          >
+                            Source évaluée manuellement
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustom(src.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors"
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 10,
+                              color: NEGATIVE,
+                              border: `1px solid ${BORDER_STRONG}`,
+                            }}
+                            aria-label={`Supprimer la source « ${src.name} »`}
+                          >
+                            <Trash2 size={11} /> Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Evaluate new source */}
+        <div
+          className="mt-4 rounded-md p-3"
+          style={{
+            border: `1px solid ${BORDER}`,
+            backgroundColor: "#FAFAFA",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={12} style={{ color: SAGE }} />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: CHARCOAL,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                fontWeight: 700,
+              }}
+            >
+              Évaluer une nouvelle source
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              lang="fr"
+              placeholder="exemple.ma, lematin.ma, twitter.com/@user"
+              value={newDomain}
+              onChange={(e) => setNewDomain(e.target.value.slice(0, 60))}
+              className="h-8 flex-1"
+              style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleEvaluateDomain();
+                }
+              }}
+              aria-label="Domaine de la source à évaluer"
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+              }}
+              onClick={handleEvaluateDomain}
+              disabled={evaluating}
+            >
+              {evaluating ? (
+                <>
+                  <RefreshCw size={11} className="mr-1 animate-spin" />
+                  Évaluation…
+                </>
+              ) : (
+                <>
+                  <Sparkles size={11} className="mr-1" />
+                  Évaluer
+                </>
+              )}
+            </Button>
+          </div>
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 10,
+              color: TEXT_MUTED,
+              margin: "6px 0 0 0",
+            }}
+          >
+            Saisissez un domaine médiatique ou social. L&apos;évaluation est
+            simulée à partir de 4 facteurs (autorité, standards éditoriaux,
+            fact-check, transparence).
+          </p>
+        </div>
+
+        <AiCommentary
+          text={`${allSources.length} source(s) évaluée(s) · moyenne ${avgScore}/100. ${
+            tierCounts.verified + tierCounts.reliable
+          } source(s) fiable(s), ${
+            tierCounts.check + tierCounts.unreliable
+          } à surveiller. Évaluez toute nouvelle source avant de l'intégrer à votre veille.`}
+        />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+/**
+ * Feature 3 — SentimentTimelineCard
+ *
+ * Horizontal timeline showing sentiment evolution. 24h view: 24 hourly
+ * buckets. 7j view: 7 daily buckets. Each bucket: colored bar (height =
+ * volume, color = dominant sentiment — sage/gray/red). Current hour
+ * highlighted with a sage pulse. Hover: tooltip "HH:00 — X articles,
+ * Y% positif". Peak/trough annotation strip. Anomaly markers (red dots
+ * on unusual buckets). 24h / 7j toggle. No new API — derived from
+ * existing BrandHealth data + simulated hourly distribution.
+ */
+function SentimentTimelineCard({
+  health,
+  loading,
+}: {
+  health: BrandHealth | null;
+  loading: boolean;
+}) {
+  const [range, setRange] = useState<SentimentTimelineRange>("24h");
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
+  // Derive hourly or daily buckets from BrandHealth data.
+  const buckets = useMemo<SentimentTimelineBucket[]>(() => {
+    const sentiment = health?.sentiment ?? {
+      positive: 50,
+      neutral: 30,
+      negative: 20,
+    };
+    if (range === "24h") {
+      return simulateSentimentHourBuckets(
+        health?.mentionCount24h ?? 0,
+        sentiment,
+      );
+    }
+    return simulateSentimentDailyBuckets(sentiment);
+  }, [range, health]);
+
+  // Peak / trough annotations.
+  const peak = useMemo(() => {
+    if (!buckets.length) return null;
+    return buckets.reduce(
+      (max, b) => (b.total > max.total ? b : max),
+      buckets[0],
+    );
+  }, [buckets]);
+
+  const trough = useMemo(() => {
+    if (!buckets.length) return null;
+    return buckets.reduce(
+      (min, b) => (b.total < min.total ? b : min),
+      buckets[0],
+    );
+  }, [buckets]);
+
+  const currentHour = new Date().getHours();
+  const maxTotal = Math.max(...buckets.map((b) => b.total), 1);
+  const anomalyCount = buckets.filter((b) => b.isAnomaly).length;
+
+  const dominantColor = (s: "positive" | "neutral" | "negative") =>
+    s === "positive" ? POSITIVE : s === "negative" ? NEGATIVE : NEUTRAL_GRAY;
+
+  const bucketLabel = (idx: number) =>
+    range === "24h" ? `${idx}h` : `J${idx + 1}`;
+
+  return (
+    <motion.div id="timeline-sentiment" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="Évolution 24h — Sentiment en temps réel"
+          right={
+            <Tabs
+              value={range}
+              onValueChange={(v) => setRange(v as SentimentTimelineRange)}
+            >
+              <TabsList
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              >
+                <TabsTrigger value="24h" className="h-5 px-2 text-[10px]">
+                  24h
+                </TabsTrigger>
+                <TabsTrigger value="7j" className="h-5 px-2 text-[10px]">
+                  7j
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Peak / trough / anomaly annotation strip */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {peak && peak.total > 0 && (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1"
+              style={{
+                backgroundColor: SAGE_BG,
+                border: `1px solid ${SAGE}`,
+              }}
+            >
+              <TrendingUp size={11} style={{ color: SAGE }} />
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: SAGE,
+                  fontWeight: 700,
+                }}
+              >
+                Pic à {bucketLabel(peak.index)}:
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 10,
+                  color: CHARCOAL,
+                }}
+              >
+                {peak.total} articles · {peak.positive} positif(s)
+              </span>
+            </div>
+          )}
+          {trough && trough !== peak && trough.total > 0 && (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1"
+              style={{
+                backgroundColor: "#F4F4F5",
+                border: `1px solid ${BORDER_STRONG}`,
+              }}
+            >
+              <TrendingDown size={11} style={{ color: TEXT_MUTED }} />
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  fontWeight: 700,
+                }}
+              >
+                Creux à {bucketLabel(trough.index)}:
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 10,
+                  color: CHARCOAL,
+                }}
+              >
+                {trough.total} articles
+              </span>
+            </div>
+          )}
+          {anomalyCount > 0 && (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.10)",
+                border: `1px solid ${NEGATIVE}`,
+              }}
+            >
+              <AlertTriangle size={11} style={{ color: NEGATIVE }} />
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: NEGATIVE,
+                  fontWeight: 700,
+                }}
+              >
+                {anomalyCount} anomalie{anomalyCount > 1 ? "s" : ""} détectée
+                {anomalyCount > 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Timeline bars */}
+        {loading ? (
+          <LiveSkeleton className="h-[180px] w-full" />
+        ) : buckets.length === 0 ? (
+          <div className="h-[180px] flex items-center justify-center">
+            <EmptyDash label="Aucune donnée" />
+          </div>
+        ) : (
+          <div
+            className="relative"
+            style={{ height: 180 }}
+            onMouseLeave={() => setHoverIdx(null)}
+          >
+            {/* Bars row */}
+            <div
+              className="flex items-end justify-between gap-0.5 h-full"
+              style={{ paddingBottom: 24 }}
+            >
+              {buckets.map((b, idx) => {
+                const heightPct = (b.total / maxTotal) * 100;
+                const isCurrent =
+                  range === "24h" && b.index === currentHour;
+                const color = dominantColor(b.dominantSentiment);
+                return (
+                  <div
+                    key={idx}
+                    className="relative flex-1 flex flex-col items-center justify-end cursor-pointer"
+                    style={{ height: "100%", maxWidth: 28 }}
+                    onMouseEnter={() => setHoverIdx(idx)}
+                  >
+                    {/* Anomaly red dot */}
+                    {b.isAnomaly && (
+                      <span
+                        className="absolute"
+                        style={{
+                          top: -4,
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          backgroundColor: NEGATIVE,
+                          border: "1.5px solid #FFFFFF",
+                          zIndex: 2,
+                        }}
+                        aria-label="Anomalie"
+                      />
+                    )}
+                    {/* Current hour pulse */}
+                    {isCurrent && (
+                      <span
+                        className="absolute"
+                        style={{
+                          top: -2,
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          border: `2px solid ${SAGE}`,
+                          animation:
+                            "sage-pulse-kf 1.6s ease-out infinite",
+                          zIndex: 2,
+                        }}
+                        aria-label="Maintenant"
+                      />
+                    )}
+                    {/* Bar */}
+                    <div
+                      style={{
+                        width: "100%",
+                        height: `${heightPct}%`,
+                        minHeight: b.total > 0 ? 4 : 0,
+                        backgroundColor: color,
+                        borderRadius: "3px 3px 0 0",
+                        opacity:
+                          hoverIdx === null || hoverIdx === idx ? 1 : 0.4,
+                        transition: "opacity 150ms",
+                      }}
+                    />
+                    {/* Hour label */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: -20,
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        color: isCurrent ? SAGE : TEXT_MUTED,
+                        fontWeight: isCurrent ? 700 : 400,
+                      }}
+                    >
+                      {bucketLabel(b.index)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Hover tooltip */}
+            {hoverIdx !== null && buckets[hoverIdx] && (
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  top: 4,
+                  left: `${(hoverIdx / Math.max(buckets.length - 1, 1)) * 100}%`,
+                  transform: "translateX(-50%)",
+                  zIndex: 3,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    backgroundColor: CHARCOAL,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>
+                    {range === "24h"
+                      ? `${buckets[hoverIdx].index}:00`
+                      : `Jour ${buckets[hoverIdx].index + 1}`}
+                  </div>
+                  <div style={{ marginTop: 2, opacity: 0.85 }}>
+                    {buckets[hoverIdx].total} articles ·{" "}
+                    {Math.round(
+                      (buckets[hoverIdx].positive /
+                        Math.max(buckets[hoverIdx].total, 1)) *
+                        100,
+                    )}
+                    % positif
+                  </div>
+                  {buckets[hoverIdx].isAnomaly && (
+                    <div style={{ marginTop: 2, color: "#FCA5A5" }}>
+                      <AlertTriangle size={9} className="inline" /> anomalie
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="mt-4 flex items-center justify-center gap-4 flex-wrap">
+          <span className="inline-flex items-center gap-1">
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 2,
+                backgroundColor: POSITIVE,
+              }}
+            />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+              }}
+            >
+              Positif dominant
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 2,
+                backgroundColor: NEUTRAL_GRAY,
+              }}
+            />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+              }}
+            >
+              Neutre dominant
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 2,
+                backgroundColor: NEGATIVE,
+              }}
+            />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+              }}
+            >
+              Négatif dominant
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                backgroundColor: NEGATIVE,
+                border: "1.5px solid #FFFFFF",
+                boxShadow: "0 0 0 1px #EF4444",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+              }}
+            >
+              Anomalie
+            </span>
+          </span>
+        </div>
+
+        <AiCommentary
+          text={`Évolution ${
+            range === "24h" ? "horaire sur 24h" : "journalière sur 7 jours"
+          } du sentiment. Chaque barre représente le volume de mentions, sa couleur indique le sentiment dominant. Les pics d'activité négative sont marqués d'un point rouge — surveillez-les pour anticiper les crises.`}
+        />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EssentialDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -8134,6 +10193,7 @@ export default function EssentialDashboard() {
 
   const { data: session } = useSession();
   const userName = session?.user?.name ?? "Utilisateur";
+  const userEmail = session?.user?.email ?? "";
 
   // ─── Daily quota reset (HarchIQ) + monthly reset (WhatsApp) ─────────
   useEffect(() => {
@@ -8672,6 +10732,12 @@ export default function EssentialDashboard() {
               onDismissHelp={dismissHelp}
             />
 
+            {/* R4-ESSENTIEL-A · FEATURE 3 — Sentiment Timeline (col-span-12) */}
+            <SentimentTimelineCard health={health} loading={healthLoading} />
+
+            {/* R4-ESSENTIEL-A · FEATURE 2 — Source Credibility Scoring (col-span-12) */}
+            <SourceCredibilityScoringCard sources={sources} loading={sourcesLoading} />
+
             {/* SECTIONS 9-10 — Feed row */}
             <DernieresMentionsCard alerts={alerts} loading={alertsLoading} />
             <ResumeHebdoCard
@@ -8797,6 +10863,15 @@ export default function EssentialDashboard() {
               onRunSearch={handleRunSearch}
             />
 
+            {/* R4-ESSENTIEL-A · FEATURE 1 — Weekly Digest Email Preview (col-span-12) */}
+            <WeeklyDigestEmailPreviewCard
+              userName={userName}
+              userEmail={userEmail}
+              health={health}
+              insights={insights}
+              sources={sources}
+            />
+
             {/* SECTION 21 — ENV-ESSENTIEL — Milestone tracker (gamification) */}
             <MilestoneTrackerCard
               milestones={milestones}
@@ -8830,7 +10905,7 @@ export default function EssentialDashboard() {
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A · R2-ESSENTIEL-B · R3-ESSENTIEL-A
+              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A · R2-ESSENTIEL-B · R3-ESSENTIEL-A · R4-ESSENTIEL-A
             </div>
             <div
               style={{

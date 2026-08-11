@@ -154,6 +154,14 @@ import {
   Pencil,
   Star,
   Megaphone,
+  Gavel,
+  Wind,
+  Recycle,
+  Bird,
+  HeartHandshake,
+  HardHat,
+  Vote,
+  Ship,
 } from "lucide-react";
 import {
   addDays,
@@ -11962,6 +11970,1250 @@ function RegulatoryChangeFeedCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// SECTION 39 — BOARD RESOLUTION TRACKER (R4-ENTERPRISE-A)
+// Board resolutions related to reputation/risk · status workflow ·
+// proposed by, approved by, execution owner, deadline ·
+// linked risk/compliance item · progress notes timeline ·
+// "Nouvelle résolution" form · filter by status/date range ·
+// "Exporter pour le COMEX" (PDF simulated)
+// Persists: enterprise:resolutions
+// ════════════════════════════════════════════════════════════════════
+
+type ResolutionStatus = "proposed" | "in-progress" | "approved" | "rejected" | "executed";
+
+interface ResolutionNote {
+  id: string;
+  timestamp: number;
+  author: string;
+  note: string;
+}
+
+interface Resolution {
+  id: string;
+  title: string;
+  date: number;
+  status: ResolutionStatus;
+  proposedBy: string;
+  approvedBy: string[];
+  executionOwner: string;
+  deadline: number;
+  linkedItem: string;
+  summary: string;
+  notes: ResolutionNote[];
+}
+
+const RESOLUTION_STATUS_LABEL: Record<ResolutionStatus, string> = {
+  proposed: "Proposé",
+  "in-progress": "En cours",
+  approved: "Approuvé",
+  rejected: "Rejeté",
+  executed: "Exécuté",
+};
+
+const RESOLUTION_STATUS_COLOR: Record<ResolutionStatus, string> = {
+  proposed: NEUTRAL_GRAY,
+  "in-progress": NEUTRAL_AMBER,
+  approved: SAGE,
+  rejected: NEGATIVE,
+  executed: POSITIVE,
+};
+
+const RESOLUTION_STATUS_ICON: Record<ResolutionStatus, typeof FileText> = {
+  proposed: FileText,
+  "in-progress": Clock,
+  approved: CheckCircle2,
+  rejected: X,
+  executed: Flag,
+};
+
+// Workflow: Proposé → En cours → Approuvé → Exécuté (avec branche Rejeté)
+const RESOLUTION_NEXT_STATUS: Record<ResolutionStatus, ResolutionStatus[]> = {
+  proposed: ["in-progress", "rejected"],
+  "in-progress": ["approved", "rejected"],
+  approved: ["executed"],
+  rejected: [],
+  executed: [],
+};
+
+const RESOLUTIONS_SEED: Resolution[] = [
+  {
+    id: "RES-001",
+    title: "Renforcement du dispositif de surveillance AMMC — opérations dirigées",
+    date: Date.now() - 86400_000 * 18,
+    status: "in-progress",
+    proposedBy: "Sophie M. — Compliance Officer",
+    approvedBy: [],
+    executionOwner: "Sophie M.",
+    deadline: Date.now() + 86400_000 * 22,
+    linkedItem: "AMMC · Conformité",
+    summary: "Mise en place d'un workflow de déclaration automatique des opérations dirigées conformément au bulletin Q4 de l'AMMC. Formation des équipes Trader et mise à jour du registre interne.",
+    notes: [
+      { id: "N1", timestamp: Date.now() - 86400_000 * 18, author: "Sophie M.", note: "Résolution proposée au conseil suite au bulletin AMMC Q4." },
+      { id: "N2", timestamp: Date.now() - 86400_000 * 9, author: "Karim B.", note: "Revue technique — solution de workflow en cours d'évaluation, 3 fournisseurs short-listés." },
+    ],
+  },
+  {
+    id: "RES-002",
+    title: "Publication du rapport ESG trimestriel Q3 2025",
+    date: Date.now() - 86400_000 * 35,
+    status: "approved",
+    proposedBy: "Yasmine T. — DRSE",
+    approvedBy: ["Karim B.", "Leila R.", "Mehdi A."],
+    executionOwner: "Yasmine T.",
+    deadline: Date.now() + 86400_000 * 14,
+    linkedItem: "ESG · CSRD",
+    summary: "Validation par le conseil du rapport ESG trimestriel — disclosure Scope 1, 2 et premiers éléments Scope 3. Mise en ligne sur le site investisseurs et dépôt AMMC.",
+    notes: [
+      { id: "N1", timestamp: Date.now() - 86400_000 * 35, author: "Yasmine T.", note: "Proposition de résolution — rapport Q3 ESG prêt pour revue." },
+      { id: "N2", timestamp: Date.now() - 86400_000 * 12, author: "Karim B.", note: "Approuvé par 3 administrateurs. Coordination communication pour mise en ligne." },
+    ],
+  },
+  {
+    id: "RES-003",
+    title: "Crise politique Côte d'Ivoire — protocole de communication",
+    date: Date.now() - 86400_000 * 6,
+    status: "executed",
+    proposedBy: "Karim B. — VP Comms",
+    approvedBy: ["Mehdi A.", "Sophie M."],
+    executionOwner: "Karim B.",
+    deadline: Date.now() - 86400_000 * 2,
+    linkedItem: "Risque Marché CI · Géopolitique",
+    summary: "Activation du protocole de communication de crise pour le marché ivoirien suite aux tensions régionales CEDEAO. Mise en pause des prises de parole publiques, briefings internes quotidiens.",
+    notes: [
+      { id: "N1", timestamp: Date.now() - 86400_000 * 6, author: "Karim B.", note: "Résolution d'urgence proposée — contexte CEDEAO dégradé." },
+      { id: "N2", timestamp: Date.now() - 86400_000 * 5, author: "Mehdi A.", note: "Approbation COMEX express — protocole activé." },
+      { id: "N3", timestamp: Date.now() - 86400_000 * 2, author: "Karim B.", note: "Exécution complète — cellule de crise fermée, retour à communication normale progressive." },
+    ],
+  },
+  {
+    id: "RES-004",
+    title: "Audit interne CNDP — registre des traitements",
+    date: Date.now() - 86400_000 * 48,
+    status: "executed",
+    proposedBy: "Leila R. — DPO",
+    approvedBy: ["Karim B.", "Mehdi A.", "Sophie M."],
+    executionOwner: "Leila R.",
+    deadline: Date.now() - 86400_000 * 20,
+    linkedItem: "CNDP · Loi 09-08",
+    summary: "Réalisation d'un audit interne complet du registre des traitements CNDP. Vérification de la conformité Loi 09-08, mise à jour des déclarations CIL et formalisation du DPIA IA.",
+    notes: [
+      { id: "N1", timestamp: Date.now() - 86400_000 * 48, author: "Leila R.", note: "Proposition d'audit — délai depuis dernière révision : 14 mois." },
+      { id: "N2", timestamp: Date.now() - 86400_000 * 45, author: "Karim B.", note: "Approuvé à l'unanimité — budget alloué." },
+      { id: "N3", timestamp: Date.now() - 86400_000 * 20, author: "Leila R.", note: "Audit clôturé — 3 écarts mineurs corrigés, rapport final déposé." },
+    ],
+  },
+  {
+    id: "RES-005",
+    title: "Stratégie de communication — diversité conseil d'administration",
+    date: Date.now() - 86400_000 * 4,
+    status: "proposed",
+    proposedBy: "Karim B. — VP Comms",
+    approvedBy: [],
+    executionOwner: "Karim B.",
+    deadline: Date.now() + 86400_000 * 60,
+    linkedItem: "ESG · Gouvernance",
+    summary: "Élaboration d'une stratégie de communication transparente sur la diversité du conseil (genre, origines, indépendance). Publication d'un livret investisseurs et session de présentation.",
+    notes: [
+      { id: "N1", timestamp: Date.now() - 86400_000 * 4, author: "Karim B.", note: "Proposition de résolution — attendre revue COMEX de novembre." },
+    ],
+  },
+];
+
+function BoardResolutionTrackerCard({
+  resolutions,
+  onResolutionsChange,
+}: {
+  resolutions: Resolution[];
+  onResolutionsChange: (r: Resolution[]) => void;
+}) {
+  const [filterStatus, setFilterStatus] = useState<"all" | ResolutionStatus>("all");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState<{ title: string; proposedBy: string; executionOwner: string; deadline: string; linkedItem: string; summary: string }>({ title: "", proposedBy: "", executionOwner: "", deadline: "", linkedItem: "", summary: "" });
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+
+  const filtered = useMemo(() => {
+    return resolutions.filter((r) => {
+      if (filterStatus !== "all" && r.status !== filterStatus) return false;
+      if (filterDateFrom && r.date < new Date(filterDateFrom).getTime()) return false;
+      if (filterDateTo && r.date > new Date(filterDateTo).getTime() + 86400_000 - 1) return false;
+      return true;
+    }).sort((a, b) => b.date - a.date);
+  }, [resolutions, filterStatus, filterDateFrom, filterDateTo]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<ResolutionStatus, number> = { proposed: 0, "in-progress": 0, approved: 0, rejected: 0, executed: 0 };
+    for (const r of resolutions) counts[r.status]++;
+    return counts;
+  }, [resolutions]);
+
+  const hasActiveFilters = filterStatus !== "all" || filterDateFrom !== "" || filterDateTo !== "";
+  const clearFilters = () => { setFilterStatus("all"); setFilterDateFrom(""); setFilterDateTo(""); };
+
+  const upcomingDeadline = useMemo(() => resolutions.filter((r) => r.status !== "executed" && r.status !== "rejected" && r.deadline > Date.now() && r.deadline < Date.now() + 86400_000 * 30).length, [resolutions]);
+
+  const handleCreate = () => {
+    if (!draft.title.trim() || !draft.proposedBy.trim() || !draft.executionOwner.trim() || !draft.deadline) {
+      toast.error("Tous les champs requis doivent être renseignés.");
+      return;
+    }
+    const id = `RES-${String(resolutions.length + 1).padStart(3, "0")}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const authorShort = draft.proposedBy.split(" — ")[0]?.trim() || draft.proposedBy.trim();
+    const newRes: Resolution = {
+      id,
+      title: draft.title.trim(),
+      date: Date.now(),
+      status: "proposed",
+      proposedBy: draft.proposedBy.trim(),
+      approvedBy: [],
+      executionOwner: draft.executionOwner.trim(),
+      deadline: new Date(draft.deadline).getTime(),
+      linkedItem: draft.linkedItem.trim() || "—",
+      summary: draft.summary.trim() || "—",
+      notes: [{ id: `N-${Date.now()}`, timestamp: Date.now(), author: authorShort, note: "Résolution proposée au conseil." }],
+    };
+    onResolutionsChange([newRes, ...resolutions]);
+    toast.success(`Résolution ${id} créée.`, { description: "Statut initial : Proposé." });
+    setShowForm(false);
+    setDraft({ title: "", proposedBy: "", executionOwner: "", deadline: "", linkedItem: "", summary: "" });
+  };
+
+  const transitionStatus = (id: string, next: ResolutionStatus) => {
+    onResolutionsChange(resolutions.map((r) => {
+      if (r.id !== id) return r;
+      const author = "Karim B.";
+      let approvedBy = r.approvedBy;
+      if (next === "approved" && !approvedBy.includes(author)) {
+        approvedBy = [...approvedBy, author];
+      }
+      return {
+        ...r,
+        status: next,
+        approvedBy,
+        notes: [...r.notes, { id: `N-${Date.now()}`, timestamp: Date.now(), author, note: `Statut changé : ${RESOLUTION_STATUS_LABEL[next]}.` }],
+      };
+    }));
+    toast.success(`Résolution ${id} — statut mis à jour : ${RESOLUTION_STATUS_LABEL[next]}.`);
+  };
+
+  const handleAddNote = (id: string) => {
+    const text = (noteDrafts[id] ?? "").trim();
+    if (!text) return;
+    onResolutionsChange(resolutions.map((r) => r.id === id ? { ...r, notes: [...r.notes, { id: `N-${Date.now()}`, timestamp: Date.now(), author: "Karim B.", note: text }] } : r));
+    setNoteDrafts((prev) => ({ ...prev, [id]: "" }));
+    toast.success("Note de progression ajoutée.");
+  };
+
+  const handleExportComex = () => {
+    toast.success("Export COMEX lancé — fichier PDF en préparation.", {
+      description: `${filtered.length} résolution(s) · transmis au secrétariat du COMEX`,
+    });
+  };
+
+  return (
+    <motion.div id="board-resolutions" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="39 · Suivi des Résolutions du Conseil"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {resolutions.length} RÉSOLUTIONS · {statusCounts.executed} EXÉCUTÉES
+              </Badge>
+              {upcomingDeadline > 0 && (
+                <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: `${NEUTRAL_AMBER}15`, color: NEUTRAL_AMBER }}>
+                  {upcomingDeadline} ÉCHÉANCE 30J
+                </Badge>
+              )}
+              <Button type="button" variant="outline" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={handleExportComex}>
+                <Download size={12} className="mr-1" /> EXPORTER COMEX
+              </Button>
+              <Button type="button" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: CHARCOAL, color: "#FFFFFF" }} onClick={() => setShowForm((v) => !v)}>
+                <Plus size={12} className="mr-1" /> NOUVELLE RÉSOLUTION
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Status summary strip — 5 status cards acting as filters */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+          {(Object.keys(RESOLUTION_STATUS_LABEL) as ResolutionStatus[]).map((st) => {
+            const Icon = RESOLUTION_STATUS_ICON[st];
+            const color = RESOLUTION_STATUS_COLOR[st];
+            const isActive = filterStatus === st;
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setFilterStatus(isActive ? "all" : st)}
+                className="text-left rounded-md p-2 transition-all"
+                style={{ border: `1px solid ${isActive ? color : BORDER}`, backgroundColor: isActive ? `${color}10` : "#FFFFFF" }}
+                aria-label={`Filtrer par statut ${RESOLUTION_STATUS_LABEL[st]}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <Icon size={11} style={{ color }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color }}>{statusCounts[st]}</span>
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  {RESOLUTION_STATUS_LABEL[st]}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filter bar — date range */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-1">
+            <Filter size={12} style={{ color: TEXT_MUTED }} />
+            <span style={FONT_HEADER}>FILTRES DATE</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>DU</span>
+            <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }} aria-label="Date de début" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AU</span>
+            <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }} aria-label="Date de fin" />
+          </div>
+          {hasActiveFilters && (
+            <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>
+              <X size={10} /> RÉINITIALISER
+            </button>
+          )}
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
+            {filtered.length} / {resolutions.length} résolution(s)
+          </span>
+        </div>
+
+        {/* New resolution form */}
+        {showForm && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="rounded-lg p-3 mb-3 overflow-hidden" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Gavel size={13} style={{ color: SAGE }} />
+                <span style={FONT_HEADER}>NOUVELLE RÉSOLUTION</span>
+              </div>
+              <button type="button" onClick={() => setShowForm(false)} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 24, height: 24 }} aria-label="Fermer le formulaire">
+                <X size={14} style={{ color: TEXT_MUTED }} />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+              <div className="md:col-span-12">
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>TITRE *</label>
+                <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Intitulé de la résolution" lang="fr" className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }} />
+              </div>
+              <div className="md:col-span-4">
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>PROPOSÉ PAR *</label>
+                <input value={draft.proposedBy} onChange={(e) => setDraft({ ...draft, proposedBy: e.target.value })} placeholder="Nom — Fonction" lang="fr" className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }} />
+              </div>
+              <div className="md:col-span-4">
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>RESPONSABLE EXÉCUTION *</label>
+                <input value={draft.executionOwner} onChange={(e) => setDraft({ ...draft, executionOwner: e.target.value })} placeholder="Nom du responsable" lang="fr" className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }} />
+              </div>
+              <div className="md:col-span-2">
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ÉCHÉANCE *</label>
+                <input type="date" value={draft.deadline} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }} />
+              </div>
+              <div className="md:col-span-2">
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ITEM LIÉ</label>
+                <input value={draft.linkedItem} onChange={(e) => setDraft({ ...draft, linkedItem: e.target.value })} placeholder="AMMC · CNDP · …" lang="fr" className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }} />
+              </div>
+              <div className="md:col-span-12">
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>SYNTHÈSE</label>
+                <textarea value={draft.summary} onChange={(e) => setDraft({ ...draft, summary: e.target.value })} placeholder="Résumé de la résolution (contexte, décision attendue, impact)" rows={2} lang="fr" className="w-full rounded-md px-2 py-1.5 mt-0.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }} />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <Button type="button" variant="outline" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, borderColor: BORDER_STRONG }} onClick={() => setShowForm(false)}>ANNULER</Button>
+              <Button type="button" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={handleCreate}>
+                <Plus size={12} className="mr-1" /> CRÉER LA RÉSOLUTION
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Resolutions list */}
+        <div className="space-y-2">
+          {filtered.length === 0 ? (
+            <div className="rounded-md p-4 text-center" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, margin: 0 }}>Aucune résolution ne correspond aux filtres actifs.</p>
+            </div>
+          ) : (
+            filtered.map((r) => {
+              const StatusIcon = RESOLUTION_STATUS_ICON[r.status];
+              const color = RESOLUTION_STATUS_COLOR[r.status];
+              const isExpanded = expandedId === r.id;
+              const isOverdue = r.deadline < Date.now() && r.status !== "executed" && r.status !== "rejected";
+              const nextStatuses = RESOLUTION_NEXT_STATUS[r.status];
+              return (
+                <div key={r.id} className="rounded-md p-3" style={{ border: `1px solid ${isExpanded ? color : BORDER}`, backgroundColor: isExpanded ? `${color}06` : "#FFFFFF" }}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center rounded-md shrink-0" style={{ width: 32, height: 32, backgroundColor: `${color}15`, color }}>
+                      <StatusIcon size={14} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.06em" }}>{r.id}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: color, color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                            {RESOLUTION_STATUS_LABEL[r.status].toUpperCase()}
+                          </span>
+                          {isOverdue && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: NEGATIVE, color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                              <AlertTriangle size={9} /> EN RETARD
+                            </span>
+                          )}
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>{r.title}</span>
+                        </div>
+                        <button type="button" onClick={() => setExpandedId(isExpanded ? null : r.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-0.5" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.06em" }} aria-label={isExpanded ? "Masquer les détails" : "Afficher les détails"}>
+                          {isExpanded ? "MASQUER" : "DÉTAILS"} <ChevronDown size={10} style={{ transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                        <span className="inline-flex items-center gap-1"><CalendarDays size={10} /> {format(r.date, "d MMM yyyy", { locale: fr })}</span>
+                        <span className="inline-flex items-center gap-1"><UserPlus size={10} /> {r.proposedBy}</span>
+                        <span className="inline-flex items-center gap-1"><Users size={10} /> Resp. {r.executionOwner}</span>
+                        <span className="inline-flex items-center gap-1" style={{ color: isOverdue ? NEGATIVE : TEXT_MUTED }}>
+                          <CalendarClock size={10} /> Éch. {format(r.deadline, "d MMM yyyy", { locale: fr })}
+                        </span>
+                        <span className="inline-flex items-center gap-1"><ShieldCheck size={10} /> {r.linkedItem}</span>
+                      </div>
+
+                      {/* Workflow transition buttons */}
+                      {nextStatuses.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>TRANSITION :</span>
+                          {nextStatuses.map((ns) => {
+                            const NIcon = RESOLUTION_STATUS_ICON[ns];
+                            const nColor = RESOLUTION_STATUS_COLOR[ns];
+                            return (
+                              <button key={ns} type="button" onClick={() => transitionStatus(r.id, ns)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]" style={{ border: `1px solid ${nColor}`, fontFamily: FONT_MONO, fontSize: 9, color: nColor, letterSpacing: "0.06em", backgroundColor: "#FFFFFF" }}>
+                                <NIcon size={10} /> {RESOLUTION_STATUS_LABEL[ns].toUpperCase()}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Expanded details */}
+                      {isExpanded && (
+                        <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                            <div className="lg:col-span-2">
+                              <div style={FONT_HEADER} className="mb-1">SYNTHÈSE</div>
+                              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.55, margin: 0 }}>{r.summary}</p>
+                              <div style={FONT_HEADER} className="mt-3 mb-1">APPROBATIONS ({r.approvedBy.length})</div>
+                              {r.approvedBy.length === 0 ? (
+                                <p style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, margin: 0, fontStyle: "italic" }}>Aucune approbation enregistrée à ce stade.</p>
+                              ) : (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {r.approvedBy.map((a) => (
+                                    <span key={a} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, backgroundColor: SAGE_BG, color: SAGE }}>
+                                      <CheckCircle2 size={10} /> {a}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div style={FONT_HEADER} className="mb-1">SUIVI DE PROGRESSION</div>
+                              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                {r.notes.map((n) => (
+                                  <div key={n.id} className="text-left" style={{ padding: "4px 0", borderBottom: `1px solid ${BORDER}` }}>
+                                    <div className="flex items-center justify-between">
+                                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: SAGE, letterSpacing: "0.04em" }}>{n.author}</span>
+                                      <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED }}>{fmtRelative(n.timestamp)}</span>
+                                    </div>
+                                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45, margin: "2px 0 0 0" }}>{n.note}</p>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-1 mt-2">
+                                <input value={noteDrafts[r.id] ?? ""} onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [r.id]: e.target.value }))} placeholder="Ajouter une note…" lang="fr" className="flex-1 rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, outline: "none" }} aria-label="Nouvelle note de progression" onKeyDown={(e) => { if (e.key === "Enter") handleAddNote(r.id); }} />
+                                <button type="button" onClick={() => handleAddNote(r.id)} disabled={!(noteDrafts[r.id] ?? "").trim()} className="inline-flex items-center justify-center rounded-md px-2 py-1 transition-colors" style={{ border: `1px solid ${(noteDrafts[r.id] ?? "").trim() ? SAGE : BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: (noteDrafts[r.id] ?? "").trim() ? SAGE : TEXT_MUTED, letterSpacing: "0.06em", backgroundColor: (noteDrafts[r.id] ?? "").trim() ? SAGE_BG : "#FFFFFF" }} aria-label="Ajouter la note">
+                                  <Send size={10} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <AiCommentary text={`${resolutions.length} résolution(s) suivie(s) · ${statusCounts.executed} exécutée(s) · ${statusCounts["in-progress"]} en cours · ${statusCounts.approved} approuvée(s) en attente d'exécution · ${statusCounts.proposed} en attente de revue. ${upcomingDeadline > 0 ? `${upcomingDeadline} échéance(s) dans les 30 prochains jours — anticipez les revues COMEX.` : "Aucune échéance critique à 30 jours."}`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 40 — GEOPOLITICAL RISK FEED (R4-ENTERPRISE-A)
+// Real-time feed of geopolitical events affecting reputation ·
+// 8 francophone markets · 6 event types · severity · impact analysis ·
+// mini-map integration with Multi-Market Map · watchlist persisted
+// Persists: enterprise:geo-feed
+// ════════════════════════════════════════════════════════════════════
+
+type GeoEventType = "Sanctions" | "Conflit" | "Élection" | "Régulation" | "Commerce" | "Diplomatie";
+type GeoSeverity = "Faible" | "Modéré" | "Élevé" | "Critique";
+type GeoImpact = "low" | "medium" | "high";
+
+interface GeoEvent {
+  id: string;
+  type: GeoEventType;
+  region: MarketCode;
+  severity: GeoSeverity;
+  title: string;
+  summary: string;
+  date: number;
+  source: string;
+  reputationImpact: GeoImpact;
+  affectedCountries: MarketCode[];
+}
+
+interface GeoFeedState {
+  watchlist: string[];
+}
+
+const GEO_EVENT_TYPE_ICON: Record<GeoEventType, typeof Globe> = {
+  Sanctions: Landmark,
+  Conflit: AlertTriangle,
+  Élection: Vote,
+  Régulation: Scale,
+  Commerce: Ship,
+  Diplomatie: Network,
+};
+
+const GEO_EVENT_TYPE_COLOR: Record<GeoEventType, string> = {
+  Sanctions: "#8B5CF6",
+  Conflit: NEGATIVE,
+  Élection: "#3B82F6",
+  Régulation: SAGE,
+  Commerce: NEUTRAL_AMBER,
+  Diplomatie: "#0EA5E9",
+};
+
+const GEO_SEVERITY_COLOR: Record<GeoSeverity, string> = {
+  Faible: POSITIVE,
+  Modéré: NEUTRAL_AMBER,
+  Élevé: "#F97316",
+  Critique: NEGATIVE,
+};
+
+const GEO_IMPACT_LABEL: Record<GeoImpact, string> = {
+  low: "Faible",
+  medium: "Moyen",
+  high: "Fort",
+};
+
+const GEO_IMPACT_COLOR: Record<GeoImpact, string> = {
+  low: POSITIVE,
+  medium: NEUTRAL_AMBER,
+  high: NEGATIVE,
+};
+
+const GEO_FEED_INITIAL: GeoEvent[] = [
+  {
+    id: "GEO-001",
+    type: "Régulation",
+    region: "MA",
+    severity: "Modéré",
+    title: "Bank Al-Maghrib — nouveau cadre fintech sandbox",
+    summary: "Publication du cadre réglementaire sandbox fintech. Bouleversement concurrentiel attendu sur les paiements mobiles et l'open banking. Opportunité de leadership.",
+    date: Date.now() - 86400_000 * 2,
+    source: "Bank Al-Maghrib · Communiqué officiel",
+    reputationImpact: "low",
+    affectedCountries: ["MA", "TN"],
+  },
+  {
+    id: "GEO-002",
+    type: "Conflit",
+    region: "FR",
+    severity: "Élevé",
+    title: "Mouvements sociaux — blocage réforme retraites",
+    summary: "Reprise des mobilisations contre la réforme des retraites. Risque de débordements médiatiques sur les banques perçues comme bénéficiaires. Surveillance narrative accrue.",
+    date: Date.now() - 86400_000 * 1,
+    source: "Les Échos · AFP",
+    reputationImpact: "medium",
+    affectedCountries: ["FR", "BE"],
+  },
+  {
+    id: "GEO-003",
+    type: "Élection",
+    region: "BE",
+    severity: "Faible",
+    title: "Élections communales — coalition en formation",
+    summary: "Négociations de coalition en cours au niveau communal. Impact limité sur le secteur bancaire mais veille juridique sur la transparence des financements.",
+    date: Date.now() - 86400_000 * 4,
+    source: "L'Echo · RTBF",
+    reputationImpact: "low",
+    affectedCountries: ["BE"],
+  },
+  {
+    id: "GEO-004",
+    type: "Diplomatie",
+    region: "CH",
+    severity: "Faible",
+    title: "Sommet financier Suisse-Afrique — annonces attendues",
+    summary: "Sommet diplomatique Suisse-Afrique francophone. Opportunité de communication positive sur la finance durable et le wealth management. Présence médiatique à anticiper.",
+    date: Date.now() - 86400_000 * 3,
+    source: "Le Temps · ATS",
+    reputationImpact: "low",
+    affectedCountries: ["CH", "FR", "SN", "CI"],
+  },
+  {
+    id: "GEO-005",
+    type: "Commerce",
+    region: "CA",
+    severity: "Modéré",
+    title: "Renégociation NAFTA — pressions sur le secteur financier",
+    summary: "Reprise des discussions commerciales NAFTA/USMCA. Exigences de transparence accrues sur les flux transfrontaliers. Risque réglementaire à moyen terme.",
+    date: Date.now() - 86400_000 * 5,
+    source: "Les Affaires · La Presse",
+    reputationImpact: "medium",
+    affectedCountries: ["CA"],
+  },
+  {
+    id: "GEO-006",
+    type: "Élection",
+    region: "TN",
+    severity: "Élevé",
+    title: "Campagne électorale — tensions sur les réformes économiques",
+    summary: "Montée des tensions politiques à l'approche du scrutin. Polémiques sur la souveraineté économique et le rôle des banques. Risque narratif élevé.",
+    date: Date.now() - 86400_000 * 2,
+    source: "Realites · Business News",
+    reputationImpact: "high",
+    affectedCountries: ["TN", "MA"],
+  },
+  {
+    id: "GEO-007",
+    type: "Sanctions",
+    region: "SN",
+    severity: "Modéré",
+    title: "UEMOA — durcissement des sanctions régionales",
+    summary: "Durcissement du régime de sanctions UEMOA contre certains acteurs régionaux. Risque de contagion narrative. Veille diligente renforcée.",
+    date: Date.now() - 86400_000 * 6,
+    source: "Le Soleil · Financial Afrik",
+    reputationImpact: "medium",
+    affectedCountries: ["SN", "CI"],
+  },
+  {
+    id: "GEO-008",
+    type: "Conflit",
+    region: "CI",
+    severity: "Critique",
+    title: "Tensions CEDEAO — risque de contagion régionale",
+    summary: "Dégradation de la situation politique en CEDEAO. Risques pour les opérations bancaires régionales. Cellule de crise activée — voir résolution RES-003.",
+    date: Date.now() - 86400_000 * 7,
+    source: "Fraternité Matin · AFP",
+    reputationImpact: "high",
+    affectedCountries: ["CI", "SN", "TN", "MA"],
+  },
+];
+
+const GEO_FEED_STATE_INITIAL: GeoFeedState = { watchlist: [] };
+
+function GeopoliticalRiskFeedCard({
+  state,
+  onStateChange,
+}: {
+  state: GeoFeedState;
+  onStateChange: (s: GeoFeedState) => void;
+}) {
+  const [filterRegion, setFilterRegion] = useState<"all" | MarketCode>("all");
+  const [filterType, setFilterType] = useState<"all" | GeoEventType>("all");
+  const [filterSeverity, setFilterSeverity] = useState<"all" | GeoSeverity>("all");
+
+  const filtered = useMemo(() => {
+    return GEO_FEED_INITIAL.filter((e) => {
+      if (filterRegion !== "all" && e.region !== filterRegion && !e.affectedCountries.includes(filterRegion)) return false;
+      if (filterType !== "all" && e.type !== filterType) return false;
+      if (filterSeverity !== "all" && e.severity !== filterSeverity) return false;
+      return true;
+    }).sort((a, b) => b.date - a.date);
+  }, [filterRegion, filterType, filterSeverity]);
+
+  const marketSeverity = useMemo(() => {
+    const sevRank: Record<GeoSeverity, number> = { Faible: 1, Modéré: 2, Élevé: 3, Critique: 4 };
+    const out: Record<MarketCode, GeoSeverity | null> = { MA: null, FR: null, BE: null, CH: null, CA: null, TN: null, SN: null, CI: null };
+    for (const m of Object.keys(out) as MarketCode[]) {
+      const events = GEO_FEED_INITIAL.filter((e) => e.region === m || e.affectedCountries.includes(m));
+      if (events.length === 0) { out[m] = null; continue; }
+      const sorted = [...events].sort((a, b) => sevRank[b.severity] - sevRank[a.severity]);
+      out[m] = sorted[0].severity;
+    }
+    return out;
+  }, []);
+
+  const criticalCount = GEO_FEED_INITIAL.filter((e) => e.severity === "Critique").length;
+  const highCount = GEO_FEED_INITIAL.filter((e) => e.severity === "Élevé").length;
+  const watchedCount = GEO_FEED_INITIAL.filter((e) => state.watchlist.includes(e.id)).length;
+  const highImpactCount = GEO_FEED_INITIAL.filter((e) => e.reputationImpact === "high").length;
+  const hasActiveFilters = filterRegion !== "all" || filterType !== "all" || filterSeverity !== "all";
+
+  const clearFilters = () => { setFilterRegion("all"); setFilterType("all"); setFilterSeverity("all"); };
+
+  const toggleWatch = (id: string) => {
+    onStateChange({
+      ...state,
+      watchlist: state.watchlist.includes(id) ? state.watchlist.filter((x) => x !== id) : [...state.watchlist, id],
+    });
+  };
+
+  const scrollToMarketMap = () => {
+    if (typeof document !== "undefined") {
+      const el = document.getElementById("market-map");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  return (
+    <motion.div id="geo-risk-feed" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="40 · Veille Géopolitique — Risques Réputationnels"
+          right={
+            <div className="flex items-center gap-2">
+              {criticalCount > 0 && (
+                <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: `${NEGATIVE}15`, color: NEGATIVE, letterSpacing: "0.06em" }}>
+                  <AlertTriangle size={10} className="mr-1" />{criticalCount} CRITIQUE
+                </Badge>
+              )}
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {GEO_FEED_INITIAL.length} ÉVÉNEMENTS · {watchedCount} SURVEILLÉS
+              </Badge>
+              <Button type="button" variant="outline" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={scrollToMarketMap}>
+                <ExternalLink size={12} className="mr-1" /> CARTE MULTI-MARCHÉS
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Mini-map integration: 8 market badges with red/amber dots */}
+        <div className="rounded-lg p-3 mb-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <MapPin size={11} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>MINI-CARTE 8 MARCHÉS — SÉVÉRITÉ PAR ZONE</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+              {highCount} élevé · {criticalCount} critique
+            </span>
+          </div>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5">
+            {MARKET_REPUTATIONS.map((m) => {
+              const sev = marketSeverity[m.code];
+              const dotColor = sev ? GEO_SEVERITY_COLOR[sev] : BORDER_STRONG;
+              const isFilterActive = filterRegion === m.code;
+              return (
+                <button
+                  key={m.code}
+                  type="button"
+                  onClick={() => setFilterRegion(isFilterActive ? "all" : m.code)}
+                  className="text-left rounded-md p-2 transition-all"
+                  style={{ border: `1px solid ${isFilterActive ? dotColor : BORDER}`, backgroundColor: isFilterActive ? `${dotColor}10` : "#FFFFFF" }}
+                  aria-label={`Filtrer par marché ${m.country}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: CHARCOAL, letterSpacing: "0.06em" }}>{m.flag}</span>
+                    <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", backgroundColor: dotColor, boxShadow: sev ? `0 0 0 2px ${dotColor}30` : "none" }} />
+                  </div>
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 10, fontWeight: 700, color: CHARCOAL, lineHeight: 1.2 }}>{m.country}</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: sev ?? TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 1 }}>
+                    {sev ?? "—"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-1">
+            <Filter size={12} style={{ color: TEXT_MUTED }} />
+            <span style={FONT_HEADER}>FILTRES</span>
+          </div>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value as "all" | GeoEventType)} className="rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }} aria-label="Filtrer par type d'événement">
+            <option value="all">Tous types</option>
+            {(Object.keys(GEO_EVENT_TYPE_ICON) as GeoEventType[]).map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterSeverity} onChange={(e) => setFilterSeverity(e.target.value as "all" | GeoSeverity)} className="rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }} aria-label="Filtrer par sévérité">
+            <option value="all">Toutes sévérités</option>
+            {(Object.keys(GEO_SEVERITY_COLOR) as GeoSeverity[]).map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {hasActiveFilters && (
+            <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>
+              <X size={10} /> RÉINITIALISER
+            </button>
+          )}
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
+            {filtered.length} / {GEO_FEED_INITIAL.length} événements
+          </span>
+        </div>
+
+        {/* Feed */}
+        <div className="space-y-2">
+          {filtered.length === 0 ? (
+            <div className="rounded-md p-4 text-center" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, margin: 0 }}>Aucun événement géopolitique ne correspond aux filtres actifs.</p>
+            </div>
+          ) : (
+            filtered.map((e) => {
+              const TypeIcon = GEO_EVENT_TYPE_ICON[e.type];
+              const typeColor = GEO_EVENT_TYPE_COLOR[e.type];
+              const sevColor = GEO_SEVERITY_COLOR[e.severity];
+              const impactColor = GEO_IMPACT_COLOR[e.reputationImpact];
+              const isWatched = state.watchlist.includes(e.id);
+              const market = MARKET_REPUTATIONS.find((m) => m.code === e.region);
+              return (
+                <div key={e.id} className="rounded-md p-3" style={{ border: `1px solid ${isWatched ? SAGE : BORDER}`, backgroundColor: isWatched ? SAGE_BG : "#FFFFFF" }}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center rounded-md shrink-0" style={{ width: 36, height: 36, backgroundColor: `${typeColor}15`, color: typeColor }}>
+                      <TypeIcon size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: typeColor, color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                            {e.type.toUpperCase()}
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: `${sevColor}15`, color: sevColor, letterSpacing: "0.06em" }}>
+                            <AlertTriangle size={9} /> {e.severity.toUpperCase()}
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: `${CHARCOAL}08`, color: CHARCOAL, letterSpacing: "0.06em" }}>
+                            {market?.flag} {market?.country}
+                          </span>
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>{e.title}</span>
+                        </div>
+                        <button type="button" onClick={() => toggleWatch(e.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors" style={{ border: `1px solid ${isWatched ? SAGE : BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: isWatched ? SAGE : TEXT_MUTED, letterSpacing: "0.06em", backgroundColor: isWatched ? SAGE_BG : "#FFFFFF" }} aria-label={isWatched ? "Ne plus surveiller" : "Surveiller"}>
+                          {isWatched ? <Bell size={10} /> : <Eye size={10} />}
+                          {isWatched ? "SURVEILLÉ" : "SURVEILLER"}
+                        </button>
+                      </div>
+                      <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{e.summary}</p>
+                      <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
+                        <div className="flex items-center gap-3 flex-wrap" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                          <span>{fmtRelative(e.date)}</span>
+                          <span>·</span>
+                          <span>{e.source}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="inline-flex items-center gap-1.5 rounded-md px-2 py-1" style={{ border: `1px solid ${impactColor}30`, backgroundColor: `${impactColor}08` }}>
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>IMPACT RÉPUTATION</span>
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: impactColor, letterSpacing: "0.06em" }}>{GEO_IMPACT_LABEL[e.reputationImpact].toUpperCase()}</span>
+                          </div>
+                          <div className="inline-flex items-center gap-1 flex-wrap" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                            <MapPin size={10} />
+                            {e.affectedCountries.map((c) => {
+                              const cm = MARKET_REPUTATIONS.find((m) => m.code === c);
+                              return (
+                                <span key={c} style={{ display: "inline-flex", alignItems: "center", padding: "1px 5px", borderRadius: 2, backgroundColor: `${CHARCOAL}08`, color: CHARCOAL, fontWeight: 700, letterSpacing: "0.04em" }}>
+                                  {cm?.flag ?? c}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <AiCommentary text={`${GEO_FEED_INITIAL.length} événements géopolitiques suivis · ${criticalCount} critique(s) · ${highCount} élevé(s) · ${highImpactCount} à fort impact réputationnel · ${watchedCount} en watchlist. ${criticalCount > 0 ? "Niveau critique atteint — activez le protocole de communication de crise et informez le COMEX." : highCount > 1 ? "Plusieurs signaux élevés — renforcez la veille narrative sur les marchés affectés." : "Niveau de risque géopolitique modéré — maintenez la cadence de revue hebdomadaire."}`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 41 — ESG SCORECARD (R4-ENTERPRISE-A)
+// 3 pillars (Environmental / Social / Governance) ·
+// 12 sub-metrics · radar chart · bar chart per pillar ·
+// benchmark sectoriel · "Rapport ESG" PDF-ready ·
+// persisted manual score overrides
+// Persists: enterprise:esg-scorecard
+// ════════════════════════════════════════════════════════════════════
+
+type EsgPillarId = "environmental" | "social" | "governance";
+
+interface EsgSubMetric {
+  key: string;
+  label: string;
+  score: number;
+  benchmark: number;
+  Icon: typeof Leaf;
+}
+
+interface EsgPillar {
+  id: EsgPillarId;
+  label: string;
+  Icon: typeof Leaf;
+  trend: number;
+  submetrics: EsgSubMetric[];
+}
+
+interface EsgScorecardState {
+  overrides: Record<string, number>;
+}
+
+const ESG_PILLARS_SEED: EsgPillar[] = [
+  {
+    id: "environmental",
+    label: "Environnement",
+    Icon: Leaf,
+    trend: 3,
+    submetrics: [
+      { key: "env_emissions", label: "Émissions (Scope 1+2)", score: 74, benchmark: 68, Icon: Wind },
+      { key: "env_resources", label: "Utilisation ressources", score: 70, benchmark: 65, Icon: Database },
+      { key: "env_biodiversity", label: "Biodiversité", score: 64, benchmark: 60, Icon: Bird },
+      { key: "env_circular", label: "Économie circulaire", score: 80, benchmark: 70, Icon: Recycle },
+    ],
+  },
+  {
+    id: "social",
+    label: "Social",
+    Icon: Users,
+    trend: 5,
+    submetrics: [
+      { key: "soc_diversity", label: "Diversité & inclusion", score: 72, benchmark: 66, Icon: Users },
+      { key: "soc_labor", label: "Pratiques de travail", score: 66, benchmark: 70, Icon: Briefcase },
+      { key: "soc_community", label: "Impact communautaire", score: 70, benchmark: 62, Icon: HeartHandshake },
+      { key: "soc_health", label: "Santé & sécurité", score: 64, benchmark: 68, Icon: HardHat },
+    ],
+  },
+  {
+    id: "governance",
+    label: "Gouvernance",
+    Icon: Scale,
+    trend: -1,
+    submetrics: [
+      { key: "gov_board", label: "Structure du conseil", score: 82, benchmark: 72, Icon: Landmark },
+      { key: "gov_ethics", label: "Éthique & conformité", score: 80, benchmark: 74, Icon: Scale },
+      { key: "gov_transparency", label: "Transparence", score: 79, benchmark: 70, Icon: Eye },
+      { key: "gov_shareholders", label: "Droits actionnaires", score: 83, benchmark: 75, Icon: Key },
+    ],
+  },
+];
+
+const ESG_SCORECARD_INITIAL: EsgScorecardState = { overrides: {} };
+
+function EsgScorecardCard({
+  state,
+  onStateChange,
+}: {
+  state: EsgScorecardState;
+  onStateChange: (s: EsgScorecardState) => void;
+}) {
+  const [expandedPillar, setExpandedPillar] = useState<EsgPillarId | null>("environmental");
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<string>("");
+  const [showReport, setShowReport] = useState(false);
+
+  const pillars = useMemo(() => {
+    return ESG_PILLARS_SEED.map((p) => ({
+      ...p,
+      submetrics: p.submetrics.map((sm) => ({
+        ...sm,
+        score: state.overrides[sm.key] ?? sm.score,
+      })),
+    }));
+  }, [state.overrides]);
+
+  const pillarScores = useMemo(() => pillars.map((p) => ({
+    id: p.id,
+    label: p.label,
+    Icon: p.Icon,
+    trend: p.trend,
+    score: Math.round(p.submetrics.reduce((s, sm) => s + sm.score, 0) / p.submetrics.length),
+    benchmark: Math.round(p.submetrics.reduce((s, sm) => s + sm.benchmark, 0) / p.submetrics.length),
+    submetrics: p.submetrics,
+  })), [pillars]);
+
+  const overallScore = Math.round(pillarScores.reduce((s, p) => s + p.score, 0) / pillarScores.length);
+  const overallBenchmark = Math.round(pillarScores.reduce((s, p) => s + p.benchmark, 0) / pillarScores.length);
+  const deltaVsBenchmark = overallScore - overallBenchmark;
+
+  const radarData = pillarScores.map((p) => ({ pillar: p.label.charAt(0), score: p.score, benchmark: p.benchmark }));
+
+  const startEdit = (key: string, current: number) => {
+    setEditingKey(key);
+    setEditDraft(String(current));
+  };
+
+  const saveEdit = () => {
+    if (!editingKey) return;
+    const parsed = parseInt(editDraft, 10);
+    if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+      toast.error("Le score doit être un nombre entre 0 et 100.");
+      return;
+    }
+    onStateChange({ ...state, overrides: { ...state.overrides, [editingKey]: parsed } });
+    toast.success("Score ESG mis à jour (override manuel).");
+    setEditingKey(null);
+    setEditDraft("");
+  };
+
+  const resetOverride = (key: string) => {
+    const next = { ...state.overrides };
+    delete next[key];
+    onStateChange({ ...state, overrides: next });
+    toast.info("Override réinitialisé — valeur seed restaurée.");
+  };
+
+  const handleGenerateReport = () => {
+    setShowReport(true);
+    toast.success("Rapport ESG généré — layout PDF-ready.", {
+      description: `Score global ${overallScore}/100 · Écart vs benchmark : ${deltaVsBenchmark >= 0 ? "+" : ""}${deltaVsBenchmark}`,
+    });
+  };
+
+  const colorForScore = (s: number) => s >= 80 ? POSITIVE : s >= 65 ? NEUTRAL_AMBER : NEGATIVE;
+
+  return (
+    <motion.div id="esg-scorecard" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="41 · ESG Scorecard — Tableau de Bord Extra-Financier"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: deltaVsBenchmark >= 0 ? SAGE_BG : `${NEGATIVE}15`, color: deltaVsBenchmark >= 0 ? SAGE : NEGATIVE }}>
+                GLOBAL {overallScore}/100 · {deltaVsBenchmark >= 0 ? "+" : ""}{deltaVsBenchmark} VS SECTEUR
+              </Badge>
+              <Button type="button" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: CHARCOAL, color: "#FFFFFF" }} onClick={handleGenerateReport}>
+                <Download size={12} className="mr-1" /> RAPPORT ESG
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left: Radar chart */}
+          <div className="lg:col-span-4">
+            <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <div style={FONT_HEADER} className="mb-2">ÉQUILIBRE E/S/G — RADAR</div>
+              <div style={{ width: "100%", height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={radarData} outerRadius="70%">
+                    <PolarGrid stroke={BORDER_STRONG} />
+                    <PolarAngleAxis dataKey="pillar" tick={{ fill: TEXT_BODY, fontSize: 11, fontFamily: FONT_MONO, fontWeight: 700 }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={{ fill: TEXT_MUTED, fontSize: 9 }} stroke={BORDER_STRONG} />
+                    <Radar name="Votre score" dataKey="score" stroke={SAGE} fill={SAGE} fillOpacity={0.35} strokeWidth={1.5} />
+                    <Radar name="Benchmark sectoriel" dataKey="benchmark" stroke={NEUTRAL_GRAY} fill={NEUTRAL_GRAY} fillOpacity={0.12} strokeWidth={1} strokeDasharray="3 3" />
+                    <Legend wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 9 }} />
+                    <RTooltip contentStyle={{ fontFamily: FONT_SANS, fontSize: 11, borderRadius: 6, border: `1px solid ${BORDER_STRONG}` }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {pillarScores.map((p) => {
+                    const { Icon } = p;
+                    const color = colorForScore(p.score);
+                    return (
+                      <div key={p.id} className="rounded-md p-2 text-center" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                        <Icon size={12} style={{ color, margin: "0 auto 2px" }} />
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>{p.label.charAt(0)}</div>
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color }}>{p.score}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Pillars with sub-metrics + bar chart */}
+          <div className="lg:col-span-8 space-y-2">
+            {pillarScores.map((p) => {
+              const { Icon } = p;
+              const color = colorForScore(p.score);
+              const isExpanded = expandedPillar === p.id;
+              const barData = p.submetrics.map((sm) => ({ name: sm.label, score: sm.score, benchmark: sm.benchmark }));
+              return (
+                <div key={p.id} className="rounded-lg p-3" style={{ border: `1px solid ${isExpanded ? color : BORDER}`, backgroundColor: isExpanded ? `${color}04` : "#FFFFFF" }}>
+                  <button type="button" onClick={() => setExpandedPillar(isExpanded ? null : p.id)} className="w-full text-left" aria-label={`${isExpanded ? "Masquer" : "Afficher"} les sous-métriques ${p.label}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center rounded-md shrink-0" style={{ width: 32, height: 32, backgroundColor: `${color}15`, color }}>
+                        <Icon size={14} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>{p.label}</span>
+                          <Delta value={p.trend} suffix=" pts" />
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                          <span style={{ fontWeight: 700, color }}>{p.score}/100</span>
+                          <span>·</span>
+                          <span>Benchmark {p.benchmark}</span>
+                          <span>·</span>
+                          <span style={{ color: p.score >= p.benchmark ? POSITIVE : NEGATIVE, fontWeight: 700 }}>
+                            {p.score >= p.benchmark ? "+" : ""}{p.score - p.benchmark}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronDown size={14} style={{ color: TEXT_MUTED, transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                      {/* Bar chart per pillar */}
+                      <div style={{ width: "100%", height: 140 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={barData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
+                            <XAxis dataKey="name" tick={{ fill: TEXT_MUTED, fontSize: 9, fontFamily: FONT_SANS }} interval={0} angle={-15} textAnchor="end" height={40} />
+                            <YAxis domain={[0, 100]} tick={{ fill: TEXT_MUTED, fontSize: 9, fontFamily: FONT_MONO }} />
+                            <RTooltip contentStyle={{ fontFamily: FONT_SANS, fontSize: 11, borderRadius: 6, border: `1px solid ${BORDER_STRONG}` }} />
+                            <Legend wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 9 }} />
+                            <Bar dataKey="score" name="Votre score" fill={SAGE} radius={[3, 3, 0, 0]} barSize={14} />
+                            <Bar dataKey="benchmark" name="Benchmark" fill={NEUTRAL_GRAY} radius={[3, 3, 0, 0]} barSize={14} opacity={0.6} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Sub-metrics grid with edit */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                        {p.submetrics.map((sm) => {
+                          const smColor = colorForScore(sm.score);
+                          const isOverridden = state.overrides[sm.key] !== undefined;
+                          const isEditing = editingKey === sm.key;
+                          const SMIcon = sm.Icon;
+                          return (
+                            <div key={sm.key} className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <SMIcon size={12} style={{ color: smColor, flexShrink: 0 }} />
+                                  <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sm.label}</span>
+                                </div>
+                                {isOverridden && (
+                                  <button type="button" onClick={() => resetOverride(sm.key)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-[#FFFFFF]" style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.04em" }} aria-label="Réinitialiser l'override">
+                                    <RefreshCw size={9} /> RESET
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div style={{ flex: 1, height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2 }}>
+                                  <div style={{ width: `${sm.score}%`, height: "100%", backgroundColor: smColor, borderRadius: 2 }} />
+                                </div>
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      value={editDraft}
+                                      onChange={(e) => setEditDraft(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") { setEditingKey(null); setEditDraft(""); } }}
+                                      className="rounded-md px-1.5 py-0.5"
+                                      style={{ width: 56, border: `1px solid ${SAGE}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, outline: "none" }}
+                                      aria-label={`Score ${sm.label}`}
+                                      autoFocus
+                                    />
+                                    <button type="button" onClick={saveEdit} className="inline-flex items-center justify-center rounded-md p-1" style={{ border: `1px solid ${SAGE}`, color: SAGE, backgroundColor: SAGE_BG }} aria-label="Enregistrer le score">
+                                      <CheckCircle2 size={12} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button type="button" onClick={() => startEdit(sm.key, sm.score)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-[#FFFFFF]" style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: smColor }} aria-label={`Modifier le score ${sm.label}`}>
+                                    <span>{sm.score}</span>
+                                    <span style={{ fontSize: 8, color: TEXT_MUTED }}>/ 100</span>
+                                    <Pencil size={9} style={{ color: TEXT_MUTED }} />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between mt-1.5" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                                <span>Benchmark : <strong style={{ color: CHARCOAL }}>{sm.benchmark}</strong></span>
+                                <span style={{ color: sm.score >= sm.benchmark ? POSITIVE : NEGATIVE, fontWeight: 700 }}>
+                                  {sm.score >= sm.benchmark ? "+" : ""}{sm.score - sm.benchmark}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <AiCommentary text={`Score ESG global ${overallScore}/100 · benchmark sectoriel ${overallBenchmark}/100 · ${deltaVsBenchmark >= 0 ? "surperformance" : "sous-performance"} de ${Math.abs(deltaVsBenchmark)} point(s). ${overallScore >= 75 ? "Niveau de maturité ESG solide — capitalisez sur les forces et publiez le rapport CSRD." : overallScore >= 65 ? "Niveau ESG acceptable — identifiez les piliers sous le benchmark et planifiez des actions correctives." : "Niveau ESG à risque — mobilisez le COMEX sur un plan de remédiation trimestriel."}`} />
+      </CardShell>
+
+      {/* PDF-ready ESG report modal */}
+      {showReport && (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(10,10,10,0.55)" }} onClick={() => setShowReport(false)}>
+          <div className="rounded-lg max-w-3xl w-full max-h-[88vh] overflow-y-auto" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, boxShadow: "0 20px 60px rgba(10,10,10,0.2)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Rapport ESG PDF-ready">
+            <div className="flex items-start justify-between gap-2 px-5 py-4 sticky top-0" style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+              <div className="flex-1 min-w-0">
+                <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>RAPPORT ESG — PDF-READY</div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>Tableau de Bord Extra-Financier — {format(Date.now(), "MMMM yyyy", { locale: fr })}</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                  Score global <strong style={{ color: colorForScore(overallScore) }}>{overallScore}/100</strong> · Benchmark {overallBenchmark} · Écart {deltaVsBenchmark >= 0 ? "+" : ""}{deltaVsBenchmark}
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowReport(false)} aria-label="Fermer le rapport" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 28, height: 28 }}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {pillarScores.map((p) => {
+                const { Icon } = p;
+                const color = colorForScore(p.score);
+                return (
+                  <div key={p.id} className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon size={14} style={{ color }} />
+                      <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>{p.label}</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color, marginLeft: "auto" }}>{p.score}/100</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>(bench. {p.benchmark})</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {p.submetrics.map((sm) => (
+                        <div key={sm.key} className="flex items-center justify-between rounded-sm px-2 py-1" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER}` }}>
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: CHARCOAL }}>{sm.label}</span>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: colorForScore(sm.score) }}>{sm.score} <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>/ {sm.benchmark}</span></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-3 sticky bottom-0" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <Button type="button" variant="outline" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, borderColor: BORDER_STRONG }} onClick={() => setShowReport(false)}>FERMER</Button>
+              <Button type="button" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={() => toast.success("Téléchargement PDF lancé.", { description: "Le rapport ESG sera transmis par email." })}>
+                <Download size={12} className="mr-1" /> TÉLÉCHARGER PDF
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EnterpriseDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -11994,6 +13246,10 @@ export function EnterpriseDashboard({
   const [warRoomState, setWarRoomState] = usePersistentState<WarRoomPersisted>("enterprise:war-room", WAR_ROOM_INITIAL);
   const [stakeholdersState, setStakeholdersState] = usePersistentState<Stakeholder[]>("enterprise:stakeholders", STAKEHOLDERS_INITIAL);
   const [regFeedState, setRegFeedState] = usePersistentState<RegFeedState>("enterprise:reg-feed", REG_FEED_STATE_INITIAL);
+  // ─── R4-ENTERPRISE-A — Board Resolutions + Geopolitical Feed + ESG Scorecard state ───
+  const [resolutionsState, setResolutionsState] = usePersistentState<Resolution[]>("enterprise:resolutions", RESOLUTIONS_SEED);
+  const [geoFeedState, setGeoFeedState] = usePersistentState<GeoFeedState>("enterprise:geo-feed", GEO_FEED_STATE_INITIAL);
+  const [esgScorecardState, setEsgScorecardState] = usePersistentState<EsgScorecardState>("enterprise:esg-scorecard", ESG_SCORECARD_INITIAL);
   const [warRoomOpen, setWarRoomOpen] = useState(false);
   const currentUserRole: UserRole = "comms"; // Karim B., VP Comms
 
@@ -12245,6 +13501,12 @@ export function EnterpriseDashboard({
               onScheduleChange={setBriefingSchedule}
             />
 
+            {/* SECTION 39 — Board Resolution Tracker (R4-ENTERPRISE-A) */}
+            <BoardResolutionTrackerCard
+              resolutions={resolutionsState}
+              onResolutionsChange={setResolutionsState}
+            />
+
             {/* SECTION 33 — Board PDF Template Gallery (R2-ENTERPRISE-B) */}
             <BoardPdfTemplateGalleryCard
               state={pdfTemplatesState}
@@ -12255,6 +13517,12 @@ export function EnterpriseDashboard({
             <ComplianceCockpitCard
               state={complianceState}
               onStateChange={setComplianceState}
+            />
+
+            {/* SECTION 41 — ESG Scorecard (R4-ENTERPRISE-A) */}
+            <EsgScorecardCard
+              state={esgScorecardState}
+              onStateChange={setEsgScorecardState}
             />
 
             {/* SECTION 34 — Audit Log Timeline (R2-ENTERPRISE-B) */}
@@ -12286,6 +13554,12 @@ export function EnterpriseDashboard({
 
             {/* SECTION 29 — Multi-Market Reputation Map (8 francophone markets) */}
             <MultiMarketReputationMapCard />
+
+            {/* SECTION 40 — Geopolitical Risk Feed (R4-ENTERPRISE-A) */}
+            <GeopoliticalRiskFeedCard
+              state={geoFeedState}
+              onStateChange={setGeoFeedState}
+            />
 
             {/* SECTION 33 — Stakeholder Mapping (R3-ENTERPRISE-A) */}
             <StakeholderMappingCard

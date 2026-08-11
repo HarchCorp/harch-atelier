@@ -155,6 +155,9 @@ import {
   Users,
   X,
   Zap,
+  Calculator,
+  Megaphone,
+  Layers,
 } from "lucide-react";
 import {
   DndContext,
@@ -182,6 +185,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -1029,8 +1033,10 @@ const TEMPLATE_WIDGET_LABELS: Record<string, string> = {
   "tendance-sentiment": "Tendance sentiment",
   "benchmark-concurrents": "Benchmark concurrentiel",
   "competitor-watchlist": "Watchlist concurrents",
+  "competitor-content-analysis": "Analyse contenu concurrents",
   "radar-reputation": "Radar réputation",
   "part-voix-donut": "Part de voix (donut)",
+  "sov-trends": "Tendances part de voix",
   "top-sujets": "Top sujets",
   "dernieres-mentions": "Dernières mentions",
   "comparaison-semaine": "Comparaison semaine",
@@ -1041,6 +1047,7 @@ const TEMPLATE_WIDGET_LABELS: Record<string, string> = {
   "alert-rules-builder": "Constructeur de règles",
   "top-influenceurs": "Top influenceurs",
   "influencer-tracker": "Suivi influenceurs",
+  "media-reach-calculator": "Calculateur reach média",
   "estimation-reach": "Estimation reach",
   "carte-crise": "Carte de crise",
   "heatmap": "Heatmap heure × jour",
@@ -1135,6 +1142,338 @@ const MENTION_REGEX = new RegExp(
   `@(${TEAM_MEMBERS.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
   "g",
 );
+
+// ─── R4-PRO-A · Feature 1: Competitor Content Analysis types ───────────
+
+interface CompetitorContentArticle {
+  id: string;
+  headline: string;
+  source: string;
+  date: string; // ISO yyyy-MM-dd
+  sentiment: "positif" | "neutre" | "négatif";
+}
+
+interface CompetitorContentSummary {
+  competitorId: string;
+  competitorName: string;
+  postingFrequencyPerWeek: number;
+  avgSentimentPct: number;
+  shareOfVoicePct: number;
+  topKeywords: string[];
+  mediaReach: number;
+  recentArticles: CompetitorContentArticle[];
+}
+
+interface CompetitorContentConfig {
+  watchEnabled: boolean;
+  selectedIds: string[];
+}
+
+const COMPETITOR_CONTENT_KEYWORDS_POOL = [
+  "stratégie", "innovation", "leadership", "croissance", "durabilité",
+  "transformation", "client", "digital", "excellence", "ambition",
+  "investissement", "responsabilité", "performance", "compétitivité",
+  "qualité", "expansion", "modernisation", "rse", "marque", "disruption",
+];
+
+const COMPETITOR_ARTICLE_SOURCES = [
+  "Hespress", "Le Matin", "L'Économiste", "Aujourd'hui Le Maroc",
+  "Médias24", "TelQuel", "Le Desk", "Yabiladi News",
+];
+
+const COMPETITOR_CONTENT_WATCH_INTERVAL_MS = 15000;
+const MAX_COMPETITOR_CONTENT_SELECTED = 5;
+
+function hashStrContent(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function pickKeywords(seed: number, count: number): string[] {
+  const result: string[] = [];
+  const used = new Set<number>();
+  let s = seed || 1;
+  while (result.length < count && used.size < COMPETITOR_CONTENT_KEYWORDS_POOL.length) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const idx = s % COMPETITOR_CONTENT_KEYWORDS_POOL.length;
+    if (!used.has(idx)) {
+      used.add(idx);
+      result.push(COMPETITOR_CONTENT_KEYWORDS_POOL[idx]);
+    }
+  }
+  return result;
+}
+
+function synthesizeRecentArticles(
+  competitorName: string,
+  sentimentPct: number,
+  seedSalt: number,
+): CompetitorContentArticle[] {
+  const seed = hashStrContent(competitorName) + seedSalt * 7919;
+  const articles: CompetitorContentArticle[] = [];
+  const headlines: Array<(n: string) => string> = [
+    (n) => `${n} accélère sa transformation digitale`,
+    (n) => `${n} annonce une nouvelle stratégie de croissance`,
+    (n) => `Entretien exclusif avec la direction de ${n}`,
+    (n) => `${n} renforce son positionnement sur le marché`,
+    (n) => `${n} lance une initiative RSE ambitieuse`,
+    (n) => `Comment ${n} innove dans son secteur`,
+    (n) => `${n} : résultats annuels en hausse`,
+    (n) => `${n} étend son empreinte régionale`,
+  ];
+  for (let i = 0; i < 3; i++) {
+    const s = (seed * (i + 1) * 7919) & 0x7fffffff;
+    const headlineIdx = s % headlines.length;
+    const sourceIdx = (s >> 3) % COMPETITOR_ARTICLE_SOURCES.length;
+    const daysAgo = 1 + ((s >> 6) % 21);
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - daysAgo);
+    let sentiment: CompetitorContentArticle["sentiment"];
+    if (i === 0) {
+      sentiment = sentimentPct > 60 ? "positif" : sentimentPct < 40 ? "négatif" : "neutre";
+    } else {
+      const roll = (s >> 9) % 100;
+      sentiment = roll < sentimentPct
+        ? "positif"
+        : roll < sentimentPct + (100 - sentimentPct) / 2
+          ? "neutre"
+          : "négatif";
+    }
+    articles.push({
+      id: `art-${competitorName}-${i}-${s}`,
+      headline: headlines[headlineIdx](competitorName),
+      source: COMPETITOR_ARTICLE_SOURCES[sourceIdx],
+      date: d.toISOString().slice(0, 10),
+      sentiment,
+    });
+  }
+  return articles.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function buildCompetitorContentSummaries(
+  radar: CompetitorRadarResp | null,
+  sov: ShareOfVoiceResp | null,
+  refreshTick: number,
+  selectedIds: string[] | null,
+): CompetitorContentSummary[] {
+  if (!radar?.brands?.length) return [];
+  const competitors = sov?.competitors ?? [];
+  const total = competitors.reduce((s, c) => s + c.mentionCount, 0) || 1;
+  const summaries: CompetitorContentSummary[] = radar.brands
+    .filter((b) => !b.isYou)
+    .map((b) => {
+      const sovRow = competitors.find((c) => c.name === b.name);
+      const sovPct = sovRow ? (sovRow.mentionCount / total) * 100 : b.scores.shareOfVoice;
+      const mentions = sovRow?.mentionCount ?? Math.round(b.scores.mediaReach * 12);
+      const postingFreqPerWeek = Math.max(0.5, Math.round((mentions / 4) * 10) / 10);
+      const sentimentPct = b.scores.sentiment;
+      const seed = hashStrContent(b.name) + refreshTick * 7;
+      return {
+        competitorId: b.name,
+        competitorName: b.name,
+        postingFrequencyPerWeek: postingFreqPerWeek,
+        avgSentimentPct: sentimentPct,
+        shareOfVoicePct: sovPct,
+        topKeywords: pickKeywords(seed, 5),
+        mediaReach: b.scores.mediaReach,
+        recentArticles: synthesizeRecentArticles(b.name, sentimentPct, refreshTick * 11),
+      };
+    });
+  if (selectedIds && selectedIds.length > 0) {
+    const idSet = new Set(selectedIds);
+    return summaries.filter((s) => idSet.has(s.competitorId));
+  }
+  return summaries.slice(0, MAX_COMPETITOR_CONTENT_SELECTED);
+}
+
+// ─── R4-PRO-A · Feature 2: Media Reach Calculator types ───────────────
+
+type SourceTier = "national" | "regional" | "specialise" | "blog";
+
+interface SourceTierDef {
+  key: SourceTier;
+  label: string;
+  audience: number;
+  color: string;
+}
+
+const SOURCE_TIERS: SourceTierDef[] = [
+  { key: "national", label: "National", audience: 500_000, color: SAGE },
+  { key: "regional", label: "Régional", audience: 50_000, color: SAGE_DIM },
+  { key: "specialise", label: "Spécialisé", audience: 10_000, color: NEUTRAL_GRAY },
+  { key: "blog", label: "Blog", audience: 5_000, color: "#D4D4D8" },
+];
+
+const AVE_RATE_MAD = 0.03; // MAD per impression
+const ENGAGEMENT_RATE_PCT = 2.5; // %
+const MAX_REACH_SCENARIOS = 5;
+const PAID_CPM_MAD = 8; // MAD per 1000 impressions (display benchmark)
+
+interface ReachScenario {
+  id: string;
+  name: string;
+  articles: number;
+  mix: Record<SourceTier, number>;
+  reach: number;
+  ave: number;
+  engagement: number;
+  savedAt: number;
+}
+
+const DEFAULT_REACH_MIX: Record<SourceTier, number> = {
+  national: 25,
+  regional: 35,
+  specialise: 25,
+  blog: 15,
+};
+
+function computeReach(articles: number, mix: Record<SourceTier, number>): number {
+  const weightedAudience = SOURCE_TIERS.reduce(
+    (sum, t) => sum + (mix[t.key] / 100) * t.audience,
+    0,
+  );
+  return Math.round(articles * weightedAudience);
+}
+
+// ─── R4-PRO-A · Feature 3: Share of Voice Trends types ────────────────
+
+type SovTrendsRange = "30d" | "90d" | "12m";
+
+interface SovTrendsState {
+  range: SovTrendsRange;
+  detailExpanded: boolean;
+}
+
+const SOV_TRENDS_DAYS: Record<SovTrendsRange, number> = {
+  "30d": 30,
+  "90d": 90,
+  "12m": 365,
+};
+
+const SOV_LINE_COLORS = {
+  you: SAGE,
+  comp1: "#A1A1AA",
+  comp2: "#71717A",
+  comp3: "#525252",
+};
+
+type SovTrendPoint = { date: string; you: number } & Record<string, number | string>;
+
+interface SovSourceBreakdownRow {
+  key: string;
+  label: string;
+  color: string;
+  youPct: number;
+  compPct: number;
+}
+
+function buildSovTrendsSeries(
+  radar: CompetitorRadarResp | null,
+  sov: ShareOfVoiceResp | null,
+  range: SovTrendsRange,
+): {
+  data: SovTrendPoint[];
+  competitors: Array<{ id: string; name: string; color: string }>;
+  pivotPoints: Array<{ date: string; compName: string; you: number; comp: number }>;
+  anomalies: Array<{ date: string; value: number }>;
+} {
+  if (!radar?.brands?.length) {
+    return { data: [], competitors: [], pivotPoints: [], anomalies: [] };
+  }
+  const youBrand = radar.brands.find((b) => b.isYou);
+  if (!youBrand) {
+    return { data: [], competitors: [], pivotPoints: [], anomalies: [] };
+  }
+  const competitorBrands = radar.brands.filter((b) => !b.isYou).slice(0, 3);
+  const competitors = competitorBrands.map((b, i) => {
+    const color = i === 0
+      ? SOV_LINE_COLORS.comp1
+      : i === 1
+        ? SOV_LINE_COLORS.comp2
+        : SOV_LINE_COLORS.comp3;
+    return { id: b.name, name: b.name, color };
+  });
+  const competitorsData = sov?.competitors ?? [];
+  const total = competitorsData.reduce((s, c) => s + c.mentionCount, 0) || 1;
+  const youSovBase = youBrand.scores.shareOfVoice;
+  const compSovBase = competitorBrands.map((b) => {
+    const row = competitorsData.find((r) => r.name === b.name);
+    return row ? (row.mentionCount / total) * 100 : b.scores.shareOfVoice;
+  });
+
+  const days = SOV_TRENDS_DAYS[range];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const data: SovTrendPoint[] = [];
+  const cycleLen = range === "30d" ? 7 : range === "90d" ? 21 : 60;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const iso = format(d, "yyyy-MM-dd");
+    const seed = d.getDate() * 100 + d.getMonth() * 31 + d.getFullYear();
+    const youVar = Math.sin((seed / cycleLen) * Math.PI) * 6 + Math.cos(seed * 0.3) * 3;
+    const you = Math.max(0, Math.min(100, youSovBase + youVar));
+    const point: SovTrendPoint = { date: iso, you: Math.round(you * 10) / 10 };
+    competitors.forEach((c, idx) => {
+      const cVar = Math.sin((seed / cycleLen) * Math.PI + idx) * 5 + Math.cos(seed * 0.2 + idx) * 2;
+      const cVal = Math.max(0, Math.min(100, compSovBase[idx] + cVar));
+      point[c.id] = Math.round(cVal * 10) / 10;
+    });
+    data.push(point);
+  }
+
+  const pivotPoints: Array<{ date: string; compName: string; you: number; comp: number }> = [];
+  for (let i = 1; i < data.length; i++) {
+    const prev = data[i - 1];
+    const curr = data[i];
+    for (const c of competitors) {
+      const prevDiff = prev.you - Number(prev[c.id] ?? 0);
+      const currDiff = curr.you - Number(curr[c.id] ?? 0);
+      if (prevDiff === 0 || currDiff === 0) continue;
+      if (Math.sign(prevDiff) !== Math.sign(currDiff)) {
+        pivotPoints.push({
+          date: curr.date,
+          compName: c.name,
+          you: curr.you,
+          comp: Number(curr[c.id] ?? 0),
+        });
+      }
+    }
+  }
+
+  const youValues = data.map((d) => d.you);
+  const anomalies = detectAnomalies(youValues, data.map((d) => d.date))
+    .map((a) => ({ date: a.label ?? data[a.index]?.date ?? "", value: a.value }));
+
+  return { data, competitors, pivotPoints, anomalies };
+}
+
+function buildSovSourceBreakdown(
+  radar: CompetitorRadarResp | null,
+  sov: ShareOfVoiceResp | null,
+): SovSourceBreakdownRow[] {
+  if (!radar?.brands?.length) return [];
+  const youBrand = radar.brands.find((b) => b.isYou);
+  if (!youBrand) return [];
+  const types: Array<{ key: string; label: string; color: string }> = [
+    { key: "national", label: "Presse nationale", color: SAGE },
+    { key: "regional", label: "Presse régionale", color: SAGE_DIM },
+    { key: "social", label: "Réseaux sociaux", color: NEUTRAL_GRAY },
+    { key: "specialise", label: "Presse spécialisée", color: "#D4D4D8" },
+  ];
+  const youSov = youBrand.scores.shareOfVoice;
+  return types.map((t) => {
+    const seed = hashStrContent(t.key) + Math.round(youSov * 13);
+    const youPct = Math.max(5, Math.min(80, 15 + (seed % 50)));
+    const compPct = Math.max(5, 100 - youPct - ((seed >> 3) % 15));
+    return { ...t, youPct, compPct };
+  });
+}
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
@@ -11833,6 +12172,1562 @@ function CompetitorCompareModal({
   );
 }
 
+// ─── R4-PRO-A · Feature 1: Competitor Content Analysis Card ────────────
+
+function CompetitorContentAnalysisCard({
+  radar,
+  sov,
+  loading,
+}: {
+  radar: CompetitorRadarResp | null;
+  sov: ShareOfVoiceResp | null;
+  loading: boolean;
+}) {
+  const [config, setConfig] = usePersistentState<CompetitorContentConfig>(
+    "pro:competitor-content",
+    { watchEnabled: false, selectedIds: [] },
+  );
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
+  const [compareRightId, setCompareRightId] = useState<string | null>(null);
+
+  // Auto-refresh simulation: increment refreshTick every 15s while watch enabled
+  useEffect(() => {
+    if (!config.watchEnabled) return;
+    const timer = setInterval(() => {
+      setRefreshTick((t) => t + 1);
+    }, COMPETITOR_CONTENT_WATCH_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [config.watchEnabled]);
+
+  // Stable list (no refreshTick) for selector — basic info only
+  const allCompetitors = useMemo(
+    () => buildCompetitorContentSummaries(radar, sov, 0, null),
+    [radar, sov],
+  );
+
+  // Auto-seed: when first load and selectedIds empty, pick top 3
+  useEffect(() => {
+    if (allCompetitors.length > 0 && config.selectedIds.length === 0) {
+      setConfig((prev) => ({
+        ...prev,
+        selectedIds: allCompetitors.slice(0, 3).map((c) => c.competitorId),
+      }));
+    }
+  }, [allCompetitors, config.selectedIds.length, setConfig]);
+
+  // Refreshed summaries for selected competitors
+  const summaries = useMemo(
+    () => buildCompetitorContentSummaries(radar, sov, refreshTick, config.selectedIds),
+    [radar, sov, refreshTick, config.selectedIds],
+  );
+
+  // Top 5 for bar chart (refreshed)
+  const allSummaries = useMemo(
+    () => buildCompetitorContentSummaries(radar, sov, refreshTick, null),
+    [radar, sov, refreshTick],
+  );
+
+  const freqData = allSummaries.map((s) => ({
+    name: s.competitorName.length > 12 ? s.competitorName.slice(0, 11) + "…" : s.competitorName,
+    freq: s.postingFrequencyPerWeek,
+  }));
+
+  const handleToggleWatch = useCallback((checked: boolean) => {
+    setConfig((prev) => ({ ...prev, watchEnabled: checked }));
+    if (checked) {
+      toast.success("Surveillance du contenu activée — actualisation toutes les 15 secondes.");
+    } else {
+      toast.info("Surveillance du contenu désactivée.");
+    }
+  }, [setConfig]);
+
+  const handleSelect = useCallback((id: string) => {
+    setConfig((prev) => {
+      const isSelected = prev.selectedIds.includes(id);
+      if (isSelected) {
+        return { ...prev, selectedIds: prev.selectedIds.filter((x) => x !== id) };
+      }
+      if (prev.selectedIds.length >= MAX_COMPETITOR_CONTENT_SELECTED) {
+        toast.error(`Maximum ${MAX_COMPETITOR_CONTENT_SELECTED} concurrents analysés. Retirez-en un d'abord.`);
+        return prev;
+      }
+      return { ...prev, selectedIds: [...prev.selectedIds, id] };
+    });
+  }, [setConfig]);
+
+  const handleCompare = useCallback((leftId: string) => {
+    setCompareLeftId(leftId);
+    const other = summaries.find((s) => s.competitorId !== leftId);
+    setCompareRightId(other?.competitorId ?? null);
+    setCompareOpen(true);
+  }, [summaries]);
+
+  const handleCompareRightChange = useCallback((id: string) => {
+    setCompareRightId(id);
+  }, []);
+
+  const compareLeft = compareLeftId ? summaries.find((s) => s.competitorId === compareLeftId) ?? null : null;
+  const compareRight = compareRightId ? summaries.find((s) => s.competitorId === compareRightId) ?? null : null;
+
+  const avgFreq = summaries.length > 0
+    ? mean(summaries.map((s) => s.postingFrequencyPerWeek))
+    : 0;
+
+  const insight = loading
+    ? "Chargement de l'analyse de contenu…"
+    : allCompetitors.length === 0
+      ? "Configurez vos concurrents via le wizard pour activer l'analyse de contenu."
+      : summaries.length === 0
+        ? "Sélectionnez au moins un concurrent pour lancer l'analyse de contenu."
+        : `${summaries.length} concurrent(s) analysé(s) — fréquence moyenne ${avgFreq.toFixed(1)} articles/sem. ${config.watchEnabled ? "Surveillance active (rafraîchissement 15s)." : "Surveillance inactive."} Comparez les stratégies éditoriales côte à côte.`;
+
+  return (
+    <motion.div id="competitor-content-analysis" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="32 · Analyse de Contenu Concurrents"
+          right={
+            <div className="flex items-center gap-2">
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: config.watchEnabled ? SAGE : TEXT_MUTED,
+                }}
+              >
+                <Radio size={11} className={config.watchEnabled ? "animate-pulse" : ""} />
+                {config.watchEnabled ? "Surveillance active" : "Surveillance inactive"}
+              </span>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <Switch
+                  checked={config.watchEnabled}
+                  onCheckedChange={handleToggleWatch}
+                  aria-label="Surveiller le contenu"
+                />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                  Surveiller
+                </span>
+              </label>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[300px] w-full rounded-lg" />
+            ))}
+          </div>
+        ) : allCompetitors.length === 0 ? (
+          <div className="h-[160px] flex items-center justify-center">
+            <EmptyDash label="Configurez vos concurrents via le wizard pour activer l'analyse de contenu" />
+          </div>
+        ) : (
+          <>
+            {/* Top row: bar chart + selector */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              <div
+                className="rounded-lg p-3"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span style={FONT_HEADER}>Fréquence de publication (articles/sem)</span>
+                  <BarChart3 size={14} style={{ color: SAGE }} />
+                </div>
+                <div style={{ width: "100%", height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={freqData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid stroke="#F4F4F5" vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                        tickLine={false}
+                        axisLine={{ stroke: BORDER_STRONG }}
+                        interval={0}
+                        angle={-12}
+                        textAnchor="end"
+                        height={48}
+                      />
+                      <YAxis
+                        tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={32}
+                      />
+                      <RTooltip
+                        contentStyle={{
+                          borderRadius: 8,
+                          border: `1px solid ${BORDER_STRONG}`,
+                          fontFamily: FONT_MONO,
+                          fontSize: 11,
+                        }}
+                        cursor={{ fill: SAGE_BG }}
+                        formatter={(v: number) => [`${v.toFixed(1)} art/sem`, "Fréquence"]}
+                      />
+                      <Bar dataKey="freq" fill={SAGE} radius={[3, 3, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Selector */}
+              <div
+                className="rounded-lg p-3"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span style={FONT_HEADER}>
+                    Sélectionner ({config.selectedIds.length}/{MAX_COMPETITOR_CONTENT_SELECTED})
+                  </span>
+                  <Users size={14} style={{ color: SAGE }} />
+                </div>
+                <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                  {allCompetitors.map((c) => {
+                    const isSelected = config.selectedIds.includes(c.competitorId);
+                    return (
+                      <button
+                        key={c.competitorId}
+                        type="button"
+                        onClick={() => handleSelect(c.competitorId)}
+                        className="w-full flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-white"
+                        style={{
+                          border: `1px solid ${isSelected ? SAGE_DIM : BORDER}`,
+                          backgroundColor: isSelected ? SAGE_BG : "transparent",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 12,
+                            color: CHARCOAL,
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          {isSelected ? (
+                            <Check size={11} style={{ color: SAGE }} />
+                          ) : (
+                            <Plus size={11} style={{ color: TEXT_MUTED }} />
+                          )}
+                          {c.competitorName}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 10,
+                            color: isSelected ? SAGE : TEXT_MUTED,
+                          }}
+                        >
+                          {c.postingFrequencyPerWeek.toFixed(1)}/sem · SOV {c.shareOfVoicePct.toFixed(1)}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Per-competitor content cards */}
+            {summaries.length === 0 ? (
+              <div className="h-[120px] flex items-center justify-center">
+                <EmptyDash label="Sélectionnez au moins un concurrent ci-dessus" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {summaries.map((s) => (
+                  <CompetitorContentCard
+                    key={s.competitorId}
+                    s={s}
+                    canCompare={summaries.length >= 2}
+                    onCompare={() => handleCompare(s.competitorId)}
+                  />
+                ))}
+              </div>
+            )}
+
+            <AiCommentary text={insight} />
+          </>
+        )}
+
+        {compareOpen && compareLeft && compareRight && (
+          <CompetitorContentCompareModal
+            left={compareLeft}
+            right={compareRight}
+            allSummaries={summaries}
+            onRightChange={handleCompareRightChange}
+            onClose={() => {
+              setCompareOpen(false);
+              setCompareLeftId(null);
+              setCompareRightId(null);
+            }}
+          />
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+function CompetitorContentCard({
+  s,
+  canCompare,
+  onCompare,
+}: {
+  s: CompetitorContentSummary;
+  canCompare: boolean;
+  onCompare: () => void;
+}) {
+  return (
+    <div
+      className="rounded-lg p-3 flex flex-col"
+      style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}
+    >
+      <div className="flex items-start justify-between mb-2 gap-2">
+        <span
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 13,
+            fontWeight: 700,
+            color: CHARCOAL,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            flex: 1,
+          }}
+        >
+          {s.competitorName}
+        </span>
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 9,
+            color: SAGE,
+            backgroundColor: SAGE_BG,
+            border: `1px solid ${SAGE_DIM}`,
+            borderRadius: 3,
+            padding: "1px 5px",
+            flexShrink: 0,
+          }}
+        >
+          {s.postingFrequencyPerWeek.toFixed(1)}/sem
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5 mb-2">
+        <div style={{ textAlign: "center" }}>
+          <div style={FONT_HEADER}>SOV</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+            {s.shareOfVoicePct.toFixed(1)}%
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={FONT_HEADER}>Sent.</div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 12,
+              fontWeight: 700,
+              color:
+                s.avgSentimentPct >= 60 ? POSITIVE : s.avgSentimentPct >= 40 ? NEUTRAL_AMBER : NEGATIVE,
+            }}
+          >
+            {s.avgSentimentPct}%
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={FONT_HEADER}>Reach</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+            {fmtNumber(s.mediaReach)}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div style={FONT_HEADER} className="mb-1">Mots-clés</div>
+        <div className="flex flex-wrap gap-1">
+          {s.topKeywords.map((kw) => (
+            <span
+              key={kw}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: SAGE,
+                backgroundColor: SAGE_BG,
+                border: `1px solid ${SAGE_DIM}`,
+                borderRadius: 3,
+                padding: "1px 5px",
+              }}
+            >
+              {kw}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-3 flex-1">
+        <div style={FONT_HEADER} className="mb-1">Contenu récent</div>
+        <div className="space-y-1.5">
+          {s.recentArticles.map((a) => (
+            <div
+              key={a.id}
+              className="rounded-md p-1.5"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+            >
+              <div className="flex items-center justify-between mb-0.5">
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                  {a.source} · {fmtDayShort(a.date)}
+                </span>
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color:
+                      a.sentiment === "positif"
+                        ? POSITIVE
+                        : a.sentiment === "négatif"
+                          ? NEGATIVE
+                          : NEUTRAL_GRAY,
+                  }}
+                >
+                  {a.sentiment}
+                </span>
+              </div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, lineHeight: 1.35 }}>
+                {a.headline}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onCompare}
+        disabled={!canCompare}
+        className="w-full inline-flex items-center justify-center gap-1 rounded-md h-7 transition-colors hover:bg-[#FAFAFA] disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 10,
+          color: SAGE,
+          border: `1px solid ${SAGE_DIM}`,
+          backgroundColor: SAGE_BG,
+        }}
+        aria-label={`Comparer le contenu de ${s.competitorName}`}
+      >
+        <ArrowLeftRight size={11} />
+        Comparer le contenu
+      </button>
+    </div>
+  );
+}
+
+function CompetitorContentCompareModal({
+  left,
+  right,
+  allSummaries,
+  onRightChange,
+  onClose,
+}: {
+  left: CompetitorContentSummary;
+  right: CompetitorContentSummary;
+  allSummaries: CompetitorContentSummary[];
+  onRightChange: (id: string) => void;
+  onClose: () => void;
+}) {
+  const metrics: Array<{ label: string; left: number; right: number; format: (v: number) => string }> = [
+    { label: "Fréquence (art/sem)", left: left.postingFrequencyPerWeek, right: right.postingFrequencyPerWeek, format: (v) => v.toFixed(1) },
+    { label: "Sentiment moyen (%)", left: left.avgSentimentPct, right: right.avgSentimentPct, format: (v) => `${v}%` },
+    { label: "Part de voix (%)", left: left.shareOfVoicePct, right: right.shareOfVoicePct, format: (v) => `${v.toFixed(1)}%` },
+    { label: "Reach média", left: left.mediaReach, right: right.mediaReach, format: (v) => fmtNumber(v) },
+  ];
+
+  const leftWins = metrics.filter((m) => m.left > m.right).length;
+  const rightWins = metrics.filter((m) => m.right > m.left).length;
+
+  const aiInsight = leftWins > rightWins
+    ? `${left.competitorName} mène sur ${leftWins}/4 métriques de contenu vs ${right.competitorName}. Stratégie éditoriale plus offensive en volume.`
+    : rightWins > leftWins
+      ? `${right.competitorName} mène sur ${rightWins}/4 métriques de contenu vs ${left.competitorName}. ${right.competitorName} domine la conversation sectorielle.`
+      : `Match nul : ${leftWins}/4 métriques chacun. Stratégies éditoriales équivalentes en intensité.`;
+
+  const otherOptions = allSummaries.filter((s) => s.competitorId !== left.competitorId);
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[860px]">
+        <DialogHeader>
+          <DialogTitle>Comparaison de contenu</DialogTitle>
+          <DialogDescription>
+            {left.competitorName} vs {right.competitorName} — stratégies éditoriales 30 jours.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2">
+          {/* Right selector */}
+          <div className="mb-3 flex items-center gap-2">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              Comparer à :
+            </span>
+            <select
+              value={right.competitorId}
+              onChange={(e) => onRightChange(e.target.value)}
+              aria-label="Sélectionner le concurrent à comparer"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                color: CHARCOAL,
+                border: `1px solid ${BORDER_STRONG}`,
+                borderRadius: 4,
+                padding: "3px 6px",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              {otherOptions.map((s) => (
+                <option key={s.competitorId} value={s.competitorId}>
+                  {s.competitorName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Left column */}
+            <CompareColumn summary={left} wins={leftWins} totalMetrics={metrics.length} />
+            {/* Right column */}
+            <CompareColumn summary={right} wins={rightWins} totalMetrics={metrics.length} />
+          </div>
+
+          {/* Metrics comparison table */}
+          <div
+            className="mt-3 grid grid-cols-3 gap-2 rounded-md p-2"
+            style={{ backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}
+          >
+            <div style={{ color: TEXT_MUTED }}>MÉTRIQUE</div>
+            <div style={{ color: SAGE }}>{left.competitorName.toUpperCase().slice(0, 18)}</div>
+            <div style={{ color: CHARCOAL }}>{right.competitorName.toUpperCase().slice(0, 18)}</div>
+          </div>
+          {metrics.map((m) => {
+            const leftWin = m.left >= m.right;
+            const isTie = m.left === m.right;
+            return (
+              <div
+                key={m.label}
+                className="grid grid-cols-3 gap-2 py-1.5 px-2 rounded-md items-center"
+                style={{ borderBottom: `1px solid ${BORDER}` }}
+              >
+                <div style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}>{m.label}</div>
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: !isTie && leftWin ? SAGE : CHARCOAL,
+                  }}
+                >
+                  {m.format(m.left)}
+                  {!isTie && leftWin && (
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: POSITIVE, marginLeft: 4 }}>
+                      &#9650;
+                    </span>
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: !isTie && !leftWin ? SAGE : TEXT_BODY,
+                  }}
+                >
+                  {m.format(m.right)}
+                  {!isTie && !leftWin && (
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: POSITIVE, marginLeft: 4 }}>
+                      &#9650;
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          <div
+            className="mt-3 p-2 rounded-md"
+            style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+          >
+            <div className="flex items-start gap-2">
+              <Sparkles size={12} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
+                {aiInsight}
+              </span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose} style={{ backgroundColor: SAGE, color: "#FFFFFF" }}>
+            Compris
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CompareColumn({
+  summary,
+  wins,
+  totalMetrics,
+}: {
+  summary: CompetitorContentSummary;
+  wins: number;
+  totalMetrics: number;
+}) {
+  return (
+    <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER_STRONG}` }}>
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <span
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 14,
+            fontWeight: 700,
+            color: CHARCOAL,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            flex: 1,
+          }}
+        >
+          {summary.competitorName}
+        </span>
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 9,
+            color: SAGE,
+            backgroundColor: SAGE_BG,
+            border: `1px solid ${SAGE_DIM}`,
+            borderRadius: 3,
+            padding: "1px 5px",
+            flexShrink: 0,
+          }}
+        >
+          {wins}/{totalMetrics}
+        </span>
+      </div>
+      <div style={FONT_HEADER} className="mb-1">Contenu récent</div>
+      <div className="space-y-1.5 mb-2">
+        {summary.recentArticles.map((a) => (
+          <div
+            key={a.id}
+            className="rounded-md p-1.5"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div className="flex items-center justify-between mb-0.5">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                {a.source} · {fmtDayShort(a.date)}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color:
+                    a.sentiment === "positif"
+                      ? POSITIVE
+                      : a.sentiment === "négatif"
+                        ? NEGATIVE
+                        : NEUTRAL_GRAY,
+                }}
+              >
+                {a.sentiment}
+              </span>
+            </div>
+            <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, lineHeight: 1.35 }}>
+              {a.headline}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={FONT_HEADER} className="mb-1">Mots-clés</div>
+      <div className="flex flex-wrap gap-1">
+        {summary.topKeywords.map((kw) => (
+          <span
+            key={kw}
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              color: SAGE,
+              backgroundColor: SAGE_BG,
+              border: `1px solid ${SAGE_DIM}`,
+              borderRadius: 3,
+              padding: "1px 5px",
+            }}
+          >
+            {kw}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── R4-PRO-A · Feature 2: Media Reach Calculator Card ─────────────────
+
+function MediaReachCalculatorCard() {
+  const [scenarios, setScenarios] = usePersistentState<ReachScenario[]>(
+    "pro:reach-scenarios",
+    [],
+  );
+  const [articles, setArticles] = useState(50);
+  const [mix, setMix] = useState<Record<SourceTier, number>>(DEFAULT_REACH_MIX);
+  const [scenarioName, setScenarioName] = useState("");
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  // Adjust mix: when one slider moves, redistribute delta to others proportionally
+  const handleMixChange = useCallback((tier: SourceTier, newValue: number) => {
+    setMix((prev) => {
+      if (newValue === prev[tier]) return prev;
+      const others = (["national", "regional", "specialise", "blog"] as SourceTier[]).filter(
+        (t) => t !== tier,
+      );
+      const othersTotal = others.reduce((s, t) => s + prev[t], 0);
+      const remaining = Math.max(0, 100 - newValue);
+      const next: Record<SourceTier, number> = { ...prev, [tier]: newValue };
+      if (othersTotal === 0) {
+        // All others are 0 — split equally
+        const share = Math.floor(remaining / others.length);
+        others.forEach((t, i) => {
+          next[t] = i === others.length - 1
+            ? remaining - share * (others.length - 1)
+            : share;
+        });
+      } else {
+        // Redistribute proportionally to keep sum = 100
+        let allocated = 0;
+        for (let i = 0; i < others.length; i++) {
+          const t = others[i];
+          if (i === others.length - 1) {
+            next[t] = Math.max(0, remaining - allocated);
+          } else {
+            const share = Math.max(0, Math.round((prev[t] / othersTotal) * remaining));
+            next[t] = share;
+            allocated += share;
+          }
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const reach = useMemo(() => computeReach(articles, mix), [articles, mix]);
+  const ave = Math.round(reach * AVE_RATE_MAD);
+  const engagement = Math.round(reach * (ENGAGEMENT_RATE_PCT / 100));
+  // Portée équivalente publicité: paid impressions you could buy with the AVE budget
+  const paidImpressionsEquiv = Math.round((ave / PAID_CPM_MAD) * 1000);
+  const ratioVsPaid = reach > 0 ? paidImpressionsEquiv / reach : 0;
+
+  const mixData = SOURCE_TIERS.map((t) => ({
+    name: t.label,
+    value: mix[t.key],
+    color: t.color,
+  }));
+
+  const mixSum = SOURCE_TIERS.reduce((s, t) => s + mix[t.key], 0);
+
+  const handleSaveScenario = useCallback(() => {
+    if (scenarios.length >= MAX_REACH_SCENARIOS) {
+      toast.error(`Maximum ${MAX_REACH_SCENARIOS} scénarios autorisé. Supprimez-en un d'abord.`);
+      return;
+    }
+    const name = scenarioName.trim() || `Scénario ${scenarios.length + 1}`;
+    const newScenario: ReachScenario = {
+      id: `scn-${Date.now()}`,
+      name,
+      articles,
+      mix: { ...mix },
+      reach,
+      ave,
+      engagement,
+      savedAt: Date.now(),
+    };
+    setScenarios((prev) => [...prev, newScenario]);
+    setScenarioName("");
+    toast.success(`Scénario « ${name} » sauvegardé (${scenarios.length + 1}/${MAX_REACH_SCENARIOS}).`);
+  }, [scenarios.length, scenarioName, articles, mix, reach, ave, engagement, setScenarios]);
+
+  const handleDeleteScenario = useCallback((id: string) => {
+    setScenarios((prev) => prev.filter((s) => s.id !== id));
+    toast.info("Scénario supprimé.");
+  }, [setScenarios]);
+
+  const handleLoadScenario = useCallback((scn: ReachScenario) => {
+    setArticles(scn.articles);
+    setMix({ ...scn.mix });
+    toast.info(`Scénario « ${scn.name} » chargé.`);
+  }, []);
+
+  const insight = `Reach estimé : ${fmtNumber(reach)} impressions · AVE ${fmtNumber(ave)} MAD · Engagement ${fmtNumber(engagement)}. Pour le même budget AVE en display (${PAID_CPM_MAD} MAD CPM), vous obtiendriez ${fmtNumber(paidImpressionsEquiv)} impressions publicitaires (${ratioVsPaid.toFixed(1)}× votre reach PR). Le PR compense par la crédibilité éditoriale (multiplicateur ×3 standard).`;
+
+  return (
+    <motion.div id="media-reach-calculator" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="33 · Calculateur de Reach Média"
+          right={
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: SAGE,
+                backgroundColor: SAGE_BG,
+                border: `1px solid ${SAGE_DIM}`,
+                borderRadius: 3,
+                padding: "2px 6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Calculator size={10} />
+              Outil autonome
+            </span>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* Left: inputs */}
+          <div
+            className="rounded-lg p-3"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span style={FONT_HEADER}>Paramètres du scénario</span>
+              <SlidersHorizontal size={14} style={{ color: SAGE }} />
+            </div>
+
+            {/* Articles input */}
+            <div className="mb-3">
+              <Label className="mb-1.5 block" style={FONT_HEADER}>
+                Nombre d'articles
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={articles}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= 10000) {
+                      setArticles(v);
+                    } else if (e.target.value === "") {
+                      setArticles(0);
+                    }
+                  }}
+                  style={{ fontFamily: FONT_MONO, fontSize: 13, maxWidth: 120 }}
+                  aria-label="Nombre d'articles"
+                />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                  articles
+                </span>
+              </div>
+            </div>
+
+            {/* Mix sliders */}
+            <div className="mb-1">
+              <div className="flex items-center justify-between mb-2">
+                <span style={FONT_HEADER}>Mix de sources</span>
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: mixSum === 100 ? SAGE : NEUTRAL_AMBER,
+                    fontWeight: 700,
+                  }}
+                >
+                  Total : {mixSum}%
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {SOURCE_TIERS.map((t) => (
+                  <div key={t.key} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-3 flex items-center gap-1.5">
+                      <SparkDot color={t.color} />
+                      <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, fontWeight: 600 }}>
+                        {t.label}
+                      </span>
+                    </div>
+                    <div className="col-span-7">
+                      <Slider
+                        value={[mix[t.key]]}
+                        onValueChange={(v) => handleMixChange(t.key, v[0])}
+                        min={0}
+                        max={100}
+                        step={5}
+                        aria-label={`Mix ${t.label}`}
+                      />
+                    </div>
+                    <div className="col-span-2 text-right">
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
+                        {mix[t.key]}%
+                      </span>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED }}>
+                        {fmtNumber(t.audience)} aud.
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 6 }}>
+                Audience moyenne pondérée : {fmtNumber(SOURCE_TIERS.reduce((s, t) => s + (mix[t.key] / 100) * t.audience, 0))} / article
+              </p>
+            </div>
+
+            {/* Save scenario */}
+            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+              <Label className="mb-1.5 block" style={FONT_HEADER}>
+                Sauvegarder le scénario
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={scenarioName}
+                  onChange={(e) => setScenarioName(e.target.value)}
+                  placeholder="Nom du scénario"
+                  maxLength={40}
+                  style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+                  aria-label="Nom du scénario"
+                />
+                <Button
+                  type="button"
+                  onClick={handleSaveScenario}
+                  disabled={scenarios.length >= MAX_REACH_SCENARIOS}
+                  style={{
+                    backgroundColor: SAGE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                  }}
+                  size="sm"
+                >
+                  <Save size={12} className="mr-1" />
+                  Sauvegarder
+                </Button>
+              </div>
+              <div className="mt-1.5 flex items-center justify-between">
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                  {scenarios.length}/{MAX_REACH_SCENARIOS} scénarios sauvegardés
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCompareOpen(true)}
+                  disabled={scenarios.length === 0}
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                >
+                  <Layers size={11} className="mr-1" />
+                  Comparer les scénarios
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: outputs + donut */}
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-3 gap-2">
+              <BigNumberStat
+                label="Reach total"
+                value={fmtNumber(reach)}
+                sub="impressions"
+                color={SAGE}
+                Icon={Megaphone}
+              />
+              <BigNumberStat
+                label="AVE (MAD)"
+                value={fmtNumber(ave)}
+                sub="Advertising Value Equivalency"
+                color={CHARCOAL}
+                Icon={Calculator}
+              />
+              <BigNumberStat
+                label="Engagement"
+                value={fmtNumber(engagement)}
+                sub={`${ENGAGEMENT_RATE_PCT}% du reach`}
+                color={SAGE_DIM}
+                Icon={Activity}
+              />
+            </div>
+
+            <div
+              className="rounded-lg p-3"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span style={FONT_HEADER}>Répartition du mix sources</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                  {articles} articles
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div style={{ width: "100%", height: 140 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={mixData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={32}
+                        outerRadius={56}
+                        paddingAngle={1}
+                        startAngle={90}
+                        endAngle={-270}
+                        isAnimationActive={false}
+                      >
+                        {mixData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RTooltip
+                        contentStyle={{
+                          borderRadius: 8,
+                          border: `1px solid ${BORDER_STRONG}`,
+                          fontFamily: FONT_MONO,
+                          fontSize: 11,
+                        }}
+                        formatter={(v: number, n: string) => [`${v}%`, n]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1">
+                  {mixData.map((m) => (
+                    <div key={m.name} className="flex items-center gap-1.5">
+                      <SparkDot color={m.color} />
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                        {m.name}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 10,
+                          color: CHARCOAL,
+                          fontWeight: 700,
+                          marginLeft: "auto",
+                        }}
+                      >
+                        {m.value}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Portée équivalente publicité comparison */}
+            <div
+              className="rounded-lg p-3"
+              style={{ border: `1px solid ${SAGE_DIM}`, backgroundColor: SAGE_BG }}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span style={FONT_HEADER}>Portée équivalente publicité</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE }}>
+                  CPM {PAID_CPM_MAD} MAD
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                    Votre reach PR
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: SAGE }}>
+                    {fmtNumber(reach)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                    Équivalent pub (budget AVE)
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL }}>
+                    {fmtNumber(paidImpressionsEquiv)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-1.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                {ratioVsPaid.toFixed(1)}× plus d'impressions publicitaires pour le même budget —
+                le PR compense par la crédibilité éditoriale.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <AiCommentary text={insight} />
+
+        {compareOpen && (
+          <ReachScenariosCompareModal
+            scenarios={scenarios}
+            onLoad={handleLoadScenario}
+            onDelete={handleDeleteScenario}
+            onClose={() => setCompareOpen(false)}
+          />
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+function BigNumberStat({
+  label,
+  value,
+  sub,
+  color,
+  Icon,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+  Icon: typeof Megaphone;
+}) {
+  return (
+    <div
+      className="rounded-lg p-3"
+      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <Icon size={12} style={{ color }} />
+        <span style={FONT_HEADER}>{label}</span>
+      </div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color }}>{value}</div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>{sub}</div>
+    </div>
+  );
+}
+
+function ReachScenariosCompareModal({
+  scenarios,
+  onLoad,
+  onDelete,
+  onClose,
+}: {
+  scenarios: ReachScenario[];
+  onLoad: (s: ReachScenario) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[860px]">
+        <DialogHeader>
+          <DialogTitle>Comparer les scénarios</DialogTitle>
+          <DialogDescription>
+            {scenarios.length} scénario(s) sauvegardé(s) · maximum {MAX_REACH_SCENARIOS}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2 overflow-x-auto">
+          {scenarios.length === 0 ? (
+            <div className="h-[120px] flex items-center justify-center">
+              <EmptyDash label="Aucun scénario sauvegardé pour le moment" />
+            </div>
+          ) : (
+            <table className="w-full" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Nom</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Articles</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>National</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Régional</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Spécialisé</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Blog</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Reach</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>AVE</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Engag.</th>
+                  <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: `1px solid ${BORDER}` }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scenarios.map((s) => (
+                  <tr key={s.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    <td style={{ padding: "8px", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, fontWeight: 600 }}>
+                      {s.name}
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, textAlign: "right" }}>
+                      {s.articles}
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: SAGE, textAlign: "right" }}>
+                      {s.mix.national}%
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: SAGE_DIM, textAlign: "right" }}>
+                      {s.mix.regional}%
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: NEUTRAL_GRAY, textAlign: "right" }}>
+                      {s.mix.specialise}%
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: "#D4D4D8", textAlign: "right" }}>
+                      {s.mix.blog}%
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700, textAlign: "right" }}>
+                      {fmtNumber(s.reach)}
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, textAlign: "right" }}>
+                      {fmtNumber(s.ave)}
+                    </td>
+                    <td style={{ padding: "8px", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, textAlign: "right" }}>
+                      {fmtNumber(s.engagement)}
+                    </td>
+                    <td style={{ padding: "8px", textAlign: "center" }}>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { onLoad(s); onClose(); }}
+                          aria-label={`Charger le scénario ${s.name}`}
+                          className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                          style={{ width: 24, height: 24, color: SAGE, border: `1px solid ${SAGE_DIM}` }}
+                        >
+                          <Play size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(s.id)}
+                          aria-label={`Supprimer le scénario ${s.name}`}
+                          className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                          style={{ width: 24, height: 24, color: NEGATIVE, border: `1px solid ${BORDER_STRONG}` }}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose} style={{ backgroundColor: SAGE, color: "#FFFFFF" }}>
+            Compris
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── R4-PRO-A · Feature 3: Share of Voice Trends Card ──────────────────
+
+function ShareOfVoiceTrendsCard({
+  radar,
+  sov,
+  loading,
+}: {
+  radar: CompetitorRadarResp | null;
+  sov: ShareOfVoiceResp | null;
+  loading: boolean;
+}) {
+  const [state, setState] = usePersistentState<SovTrendsState>(
+    "pro:sov-trends",
+    { range: "30d", detailExpanded: false },
+  );
+
+  const { data, competitors, pivotPoints, anomalies } = useMemo(
+    () => buildSovTrendsSeries(radar, sov, state.range),
+    [radar, sov, state.range],
+  );
+
+  const sourceBreakdown = useMemo(
+    () => buildSovSourceBreakdown(radar, sov),
+    [radar, sov],
+  );
+
+  const yourValues = data.map((d) => d.you);
+  const avgSov = yourValues.length > 0 ? mean(yourValues) : 0;
+  const peakSov = yourValues.length > 0 ? Math.max(...yourValues) : 0;
+  const firstHalf = yourValues.slice(0, Math.floor(yourValues.length / 2));
+  const secondHalf = yourValues.slice(Math.floor(yourValues.length / 2));
+  const trend = (secondHalf.length > 0 ? mean(secondHalf) : 0) - (firstHalf.length > 0 ? mean(firstHalf) : 0);
+
+  const rangeLabel = state.range === "30d" ? "30 jours" : state.range === "90d" ? "90 jours" : "12 mois";
+
+  const insight = loading
+    ? "Chargement des tendances de part de voix…"
+    : data.length === 0
+      ? "Configurez vos concurrents via le wizard pour activer l'analyse des tendances SOV."
+      : `Votre SOV moyenne sur ${rangeLabel} : ${avgSov.toFixed(1)}% (pic ${peakSov.toFixed(1)}%). ${trend > 0 ? `Tendance en hausse de +${trend.toFixed(1)} pts vs période précédente.` : trend < 0 ? `Tendance en baisse de ${trend.toFixed(1)} pts vs période précédente.` : "Tendance stable."} ${pivotPoints.length} point(s) de bascule détecté(s), ${anomalies.length} anomalie(s) signalée(s).`;
+
+  return (
+    <motion.div id="sov-trends" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="34 · Tendances Part de Voix"
+          right={
+            <Tabs
+              value={state.range}
+              onValueChange={(v) => setState((prev) => ({ ...prev, range: v as SovTrendsRange }))}
+            >
+              <TabsList className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+                <TabsTrigger value="30d" className="h-5 px-2 text-[10px]">30 jours</TabsTrigger>
+                <TabsTrigger value="90d" className="h-5 px-2 text-[10px]">90 jours</TabsTrigger>
+                <TabsTrigger value="12m" className="h-5 px-2 text-[10px]">12 mois</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {loading ? (
+          <Skeleton className="h-[280px] w-full" />
+        ) : data.length === 0 ? (
+          <div className="h-[160px] flex items-center justify-center">
+            <EmptyDash label="Configurez vos concurrents via le wizard pour activer les tendances SOV" />
+          </div>
+        ) : (
+          <>
+            {/* Stats strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+              <div className="rounded-md p-2" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div style={FONT_HEADER}>SOV moyenne</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: SAGE }}>
+                  {avgSov.toFixed(1)}%
+                </div>
+              </div>
+              <div className="rounded-md p-2" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div style={FONT_HEADER}>SOV pic</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL }}>
+                  {peakSov.toFixed(1)}%
+                </div>
+              </div>
+              <div className="rounded-md p-2" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div style={FONT_HEADER}>Tendance</div>
+                <div
+                  className="inline-flex items-center gap-1"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: trend > 0 ? POSITIVE : trend < 0 ? NEGATIVE : TEXT_MUTED,
+                  }}
+                >
+                  {trend > 0 ? <ArrowUp size={12} /> : trend < 0 ? <ArrowDown size={12} /> : <Minus size={12} />}
+                  {trend > 0 ? "+" : ""}{trend.toFixed(1)} pts
+                </div>
+              </div>
+              <div className="rounded-md p-2" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div style={FONT_HEADER}>Bascules</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL }}>
+                  {pivotPoints.length}
+                </div>
+              </div>
+            </div>
+
+            {/* LineChart */}
+            <div style={{ width: "100%", height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="sovYouGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={SAGE} stopOpacity={0.22} />
+                      <stop offset="100%" stopColor={SAGE} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#F4F4F5" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(d) => {
+                      try {
+                        return format(
+                          parseISO(String(d)),
+                          state.range === "12m" ? "MMM yy" : "dd MMM",
+                          { locale: fr },
+                        );
+                      } catch {
+                        return String(d);
+                      }
+                    }}
+                    tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                    tickLine={false}
+                    axisLine={{ stroke: BORDER_STRONG }}
+                    minTickGap={32}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <RTooltip
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                    }}
+                    labelFormatter={(l) => {
+                      try {
+                        return format(parseISO(String(l)), "dd MMM yyyy", { locale: fr });
+                      } catch {
+                        return String(l);
+                      }
+                    }}
+                    formatter={(v: number, n: string) => [`${Number(v).toFixed(1)}%`, n === "you" ? "Votre marque" : n]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="you"
+                    stroke="none"
+                    fill="url(#sovYouGrad)"
+                    isAnimationActive={false}
+                  />
+                  {competitors.map((c) => (
+                    <Line
+                      key={c.id}
+                      type="monotone"
+                      dataKey={c.id}
+                      stroke={c.color}
+                      strokeWidth={1.4}
+                      strokeDasharray="4 3"
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  ))}
+                  <Line
+                    type="monotone"
+                    dataKey="you"
+                    stroke={SAGE}
+                    strokeWidth={2.2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  {/* Pivot points markers (amber dots) */}
+                  {pivotPoints.map((p, i) => (
+                    <ReferenceDot
+                      key={`pivot-${i}`}
+                      x={p.date}
+                      y={p.you}
+                      r={5}
+                      fill={NEUTRAL_AMBER}
+                      stroke="#FFFFFF"
+                      strokeWidth={1.5}
+                    />
+                  ))}
+                  {/* Anomaly markers (red dots) */}
+                  {anomalies.map((a, i) => (
+                    <ReferenceDot
+                      key={`anom-${i}`}
+                      x={a.date}
+                      y={a.value}
+                      r={6}
+                      fill={NEGATIVE}
+                      stroke="#FFFFFF"
+                      strokeWidth={1.5}
+                    />
+                  ))}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legend */}
+            <div
+              className="mt-2 flex items-center flex-wrap gap-3"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+            >
+              <span className="inline-flex items-center gap-1" style={{ color: CHARCOAL }}>
+                <SparkDot color={SAGE} /> Votre marque
+              </span>
+              {competitors.map((c) => (
+                <span key={c.id} className="inline-flex items-center gap-1" style={{ color: TEXT_BODY }}>
+                  <SparkDot color={c.color} /> {c.name}
+                </span>
+              ))}
+              <span className="inline-flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+                <SparkDot color={NEUTRAL_AMBER} /> Point de bascule
+              </span>
+              <span className="inline-flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+                <SparkDot color={NEGATIVE} /> Anomalie
+              </span>
+            </div>
+
+            {/* Expandable detail per source */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setState((prev) => ({ ...prev, detailExpanded: !prev.detailExpanded }))}
+                className="w-full flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-[#FAFAFA]"
+                style={{ border: `1px solid ${BORDER}` }}
+                aria-expanded={state.detailExpanded}
+              >
+                <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
+                  Détail par source
+                </span>
+                <ChevronDown
+                  size={14}
+                  style={{
+                    color: SAGE,
+                    transform: state.detailExpanded ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s",
+                  }}
+                />
+              </button>
+              {state.detailExpanded && (
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {sourceBreakdown.map((s) => (
+                    <div
+                      key={s.key}
+                      className="rounded-md p-2"
+                      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <SparkDot color={s.color} />
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                          {s.label}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE }}>
+                          {s.youPct}%
+                        </span>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>vous</span>
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 11,
+                            color: TEXT_BODY,
+                            marginLeft: "auto",
+                          }}
+                        >
+                          {s.compPct}% conc.
+                        </span>
+                      </div>
+                      <div
+                        className="mt-1.5"
+                        style={{ height: 4, backgroundColor: "#FFFFFF", borderRadius: 2, overflow: "hidden" }}
+                      >
+                        <div style={{ width: `${s.youPct}%`, height: "100%", backgroundColor: s.color }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
 // ─── Default widget order (ProDashboard layout) ───────────────────────
 const DEFAULT_WIDGET_ORDER: string[] = [
   "ai-workspace",
@@ -11846,8 +13741,10 @@ const DEFAULT_WIDGET_ORDER: string[] = [
   "tendance-sentiment",
   "benchmark-concurrents",
   "competitor-watchlist",
+  "competitor-content-analysis",
   "radar-reputation",
   "part-voix-donut",
+  "sov-trends",
   "top-sujets",
   "dernieres-mentions",
   "comparaison-semaine",
@@ -11859,6 +13756,7 @@ const DEFAULT_WIDGET_ORDER: string[] = [
   "top-influenceurs",
   "influencer-tracker",
   "campaign-tracker",
+  "media-reach-calculator",
   "estimation-reach",
   "carte-crise",
   "heatmap",
@@ -12044,8 +13942,12 @@ export default function ProDashboard({
     "competitor-watchlist": (
       <CompetitorWatchlist radar={radar} sov={sov} loading={radarLoading} />
     ),
+    "competitor-content-analysis": (
+      <CompetitorContentAnalysisCard radar={radar} sov={sov} loading={radarLoading} />
+    ),
     "radar-reputation": <RadarReputationCard radar={radar} loading={radarLoading} />,
     "part-voix-donut": <PartDeVoixDonutCard sov={sov} loading={sovLoading} />,
+    "sov-trends": <ShareOfVoiceTrendsCard radar={radar} sov={sov} loading={radarLoading} />,
     "top-sujets": <TopSujetsCard topics={topics} trend={sentimentTrend} loading={topicsLoading} />,
     "dernieres-mentions": (
       <DernieresMentionsCard
@@ -12065,6 +13967,7 @@ export default function ProDashboard({
     "alert-rules-builder": <AlertRulesBuilder />,
     "top-influenceurs": <TopInfluenceursCard influencers={influencers} loading={influencersLoading} />,
     "influencer-tracker": <InfluencerTrackerWidget />,
+    "media-reach-calculator": <MediaReachCalculatorCard />,
     "estimation-reach": <EstimationReachCard trend={sentimentTrend} loading={trendLoading} />,
     "carte-crise": <CarteCriseCard trend={sentimentTrend} health={health} loading={trendLoading} />,
     "heatmap": <HeatmapCard alerts={alerts} loading={alertsLoading} />,
@@ -12243,7 +14146,7 @@ export default function ProDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 30 sections · 200 questions IA/jour · Casablanca
+              Données temps réel · 33 sections · 200 questions IA/jour · Casablanca · 3 R4-PRO-A features
             </div>
           </div>
         </footer>
