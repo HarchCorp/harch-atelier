@@ -3513,7 +3513,11 @@ function ResumeHebdoCard({ insights, loading, onRegenerate }: { insights: Insigh
                 size="sm"
                 className="h-7"
                 style={{ fontFamily: FONT_MONO, fontSize: 10 }}
-                onClick={() => toast.success("Export PDF lancé")}
+                onClick={() => {
+                  // P1-5 FIX: real PDF export via /api/pdf/insights
+                  toast.info("Génération du PDF en cours…");
+                  window.open("/api/pdf/insights?locale=fr", "_blank");
+                }}
               >
                 <Download size={11} className="mr-1" />
                 Exporter PDF
@@ -4013,7 +4017,20 @@ function IndicateurCriseCard({ health, alerts, loading }: { health: BrandHealth 
                   color: defcon <= 2 ? NEGATIVE : TEXT_BODY,
                   borderColor: defcon <= 2 ? NEGATIVE : BORDER_STRONG,
                 }}
-                onClick={() => toast.info("Mode Crise — workflow activé")}
+                onClick={async () => {
+                  // P1-5 FIX: real crisis workflow via /api/console/crisis-workflow
+                  toast.info("Activation du Mode Crise…");
+                  try {
+                    const r = await fetch("/api/console/crisis-workflow", { method: "GET" });
+                    if (r.ok) {
+                      toast.success("Mode Crise activé — workflow d'urgence déclenché");
+                    } else {
+                      toast.error(`Erreur ${r.status} — échec activation`);
+                    }
+                  } catch {
+                    toast.error("Erreur réseau — réessayez");
+                  }
+                }}
               >
                 <AlertTriangle size={12} className="mr-1.5" />
                 Mode Crise
@@ -6155,11 +6172,22 @@ function DailyBriefingCard({
     }
   }, [briefingText, onViewed]);
 
-  const handleWhatsApp = useCallback(() => {
-    toast.success("Briefing envoyé sur WhatsApp", {
-      description: "Vous recevrez le résumé quotidien sur votre numéro enregistré.",
-    });
-    onViewed();
+  const handleWhatsApp = useCallback(async () => {
+    // P1-5 FIX: real WhatsApp digest trigger via /api/console/whatsapp-digest
+    toast.info("Envoi du briefing sur WhatsApp…");
+    try {
+      const r = await fetch("/api/console/whatsapp-digest", { method: "GET" });
+      if (r.ok) {
+        toast.success("Briefing envoyé sur WhatsApp", {
+          description: "Vous recevrez le résumé quotidien sur votre numéro enregistré.",
+        });
+        onViewed();
+      } else {
+        toast.error(`Erreur ${r.status} — envoi échoué`);
+      }
+    } catch {
+      toast.error("Erreur réseau — réessayez");
+    }
   }, [onViewed]);
 
   const lastViewedLabel = briefingDate

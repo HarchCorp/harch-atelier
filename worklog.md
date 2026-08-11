@@ -5028,3 +5028,28 @@ Stage Summary:
 - Mock classification: 16 deterministic-hash-mock features (real clientId + hashStr to fabricate trends/fees/overage/NPS/onboarding time) + 15 pure localStorage fiction (no API) + 15 toast-only buttons (no backend).
 - Top gaps: orphan code (43 invisible features), 3-tier commission ladder is client-side fiction (DB has single Agency.commissionPct), conflicting thresholds (6/50 vs 5/20), WhatsApp Import not on mounted console, simulated PDF/PPT exports, team assignment checkbox does nothing, sentiment column hardcoded "—", benchmark sources appear fabricated, 12 localStorage-only features lost on browser cache clear.
 - Code unchanged (RESEARCH ONLY — 0 lines modified).
+
+---
+Task ID: LEVERAGE-MAXIMAL-1
+Agent: Kaelen Vance (Principal Architect)
+Task: Exécution P0 + P1-4 du audit-master.md (Protocole Leverage Maximal)
+
+Work Log:
+- P0-1 PULVÉRISÉ : AgencyDashboard.tsx (16898 lignes, 43 sections) was dead code — rewrote /atelier/console/agency/page.tsx to mount it directly (was mounting Dashboard + AgencyConsole 2302 lines). 43 agency features now visible (was 5). Commit 5825c9d.
+- P0-2 PULVÉRISÉ : Forged RBAC shield in src/lib/auth/rbac.ts — added normalizeAccountType() + isAccountTypeAllowed() with legacy/new compat. Wired into 4 API routes (ai-visibility, sentiment-trend, topics, insights) that were returning 403 for 'essential' users. Commit f7f6a89.
+- P0-3 PULVÉRISÉ : Unified taxonomy — AtelierHome pricing section rewritten from 3 tiers (Émergence/Corporate/Sovereign with prices) to 4 plans (Essentiel/Pro/Grandes Entreprises/Agences, "Sur devis") matching PricingPage exactly. Fixed 2 inline references + dashboard mockup. Commit 6e783a3.
+- P1-4 PULVÉRISÉ : Server-enforced HarchIQ quota — new module src/lib/harchiq/quota.ts (checkHarchIQQuota + recordHarchIQQuestion). Wired into POST /api/console/ask. Quotas: essential=50/j, pro=200/j, enterprise=illimité, agency=200/j. Tracked via AuditLog (action='harchiq_ask', 24h rolling). HTTP 429 on exceed. Commit 8d23897.
+
+Stage Summary:
+- 4 commits pushés (5825c9d → 8d23897), tous tsc 0 errors
+- 16898 lignes libérées en production (agency)
+- 4 routes API débloquées (RBAC)
+- 1 faille de sécurité corrigée (quota bypass)
+- Taxonomie unifiée (1 système de noms partout)
+- Vercel déploie en continu (HTTP 200 sur toutes les routes console)
+
+Unresolved:
+- P1-5 : 3 toast-only handlers qui mentent (PDF export, WhatsApp send, Crisis mode) — à implémenter
+- P1-6 : 3 orphelins Pro (sentiment-heatmap, campaign-tracker, dashboard-templates = 1150 lignes ghost code) — à brancher ou supprimer
+- P2 : SSO/SAML, MCP réel, workflows persistance, PDF génération, déduplication Enterprise
+- DB prisma schema toujours en legacy (brand-monitor etc.) — RBAC helper normalise à runtime, migration DB en P3
