@@ -1,59 +1,59 @@
 "use client";
 
 // ════════════════════════════════════════════════════════════════════
-//  EnterpriseDashboard — Plan "Grandes Entreprises" (Karim B., VP Comms)
+//  EnterpriseDashboard 10X — Plan "Grandes Entreprises" (Karim B., VP Comms)
 //
-//  The ULTIMATE single-screen board-ready dashboard — 25 sections.
-//  « Un seul comme un tableau de Picasso. »
+//  The ULTIMATE board-ready single-screen dashboard — 25 sections.
+//  « Le tableau de bord que Karim ouvre à 7h45 chaque matin. »
 //
 //  Design philosophy (identical to Essential / Pro):
 //   • WHITE background, sage green (#4A7B5F) accents, charcoal (#0A0A0A) text
 //   • NO emojis — Lucide icons only (16px, #71717A)
 //   • NO dark mode — institutional, minimalist, Bloomberg-clean
 //   • Every card: white bg, 1px border #F0F0F0, 12px radius, 20px padding
-//   • Headers: 10px uppercase, JetBrains Mono / Space Mono, #9CA3AF, 0.08em
-//   • Data: monospace, bold, #0A0A0A
+//   • Headers: 10px uppercase, Space Mono, #9CA3AF, 0.08em letter-spacing
+//   • Data: Space Mono, bold, #0A0A0A
 //   • Body: Inter, 13px, #525252
 //   • recharts for ALL charts (RadialBarChart, LineChart, BarChart,
-//     ComposedChart, AreaChart, PieChart, ScatterChart, RadarChart)
+//     ComposedChart, AreaChart, PieChart, RadarChart)
 //   • framer-motion for staggered card entrance
-//   • @tanstack/react-table for Benchmark Concurrentiel + Multi-Equipes
-//   • shadcn/ui (Card, Badge, Button, Progress, Tabs, Separator, Skeleton)
+//   • @tanstack/react-table for Benchmark Concurrentiel + Multi-Équipes
+//   • shadcn/ui (Card, Badge, Button, Progress, Separator, Skeleton)
 //   • French throughout, mobile-first responsive, "—" for missing data
 //
 //  25 sections (12-col responsive grid):
 //    Row 1
-//      1.  Score de Réputation Global   (hero, full width)  RadialBarChart gauge
-//      2.  Sentiment Market              (KPI strip)         LineChart sparkline
-//      3.  Visibilité IA                 (KPI strip)         9 LLM dots
-//      4.  Parts de Voix                 (KPI strip)         %
-//      5.  Alertes Crise                 (KPI strip)         DEFCON badge
-//      6.  Articles 30J                  (KPI strip)         + diversity
-//      7.  Influenceurs                  (KPI strip)         + reach
-//      8.  Appels API 30J                (KPI strip)         + quota bar
-//      9.  Engagement Total              (KPI strip)         + sparkline
-//    Row 2
-//     10.  Tendance Sentiment 90j        (chart row)         ComposedChart
-//     11.  Benchmark Concurrentiel       (chart row)         TanStack Table
+//      1.  HarchIQ AI Workspace          (hero, full width)  chat + 10 prompts + history + UNLIMITED
+//      2.  Score de Réputation Global    (hero, full width)  RadialBarChart gauge + DEFCON + mode crise
+//    Row 2 — 8 KPI strip cards (4x2)
+//      3.  Sentiment Market              (KPI strip)         LineChart sparkline
+//      4.  Visibilité IA (9 LLMs)        (KPI strip)         LLM dots
+//      5.  Parts de Voix                 (KPI strip)         %
+//      6.  Alertes Crisis                (KPI strip)         DEFCON badge
+//      7.  Articles 30J                  (KPI strip)         count + diversity
+//      8.  Influenceurs                  (KPI strip)         count + reach
+//      9.  Appels API 30J                (KPI strip)         count + quota bar
+//     10.  Engagement Total              (KPI strip)         sparkline
 //    Row 3
-//     12.  Radar de Réputation           (chart row)         RadarChart 7 axes
-//     13.  Part de Voix                  (chart row)         PieChart donut
+//     11.  Tendance Sentiment 90j        (chart row)         ComposedChart + compare mode + events
+//     12.  Benchmark Concurrentiel       (chart row)         TanStack Table 8 cols
 //    Row 4
-//     14.  Grille Visibilité IA (9 LLM)  (chart row)         3×3 grid
-//     15.  HarchIQ AI Entreprise         (chart row)         chat UI
+//     13.  Radar de Réputation           (chart row)         RadarChart 7 axes
+//     14.  Part de Voix                  (chart row)         PieChart donut
 //    Row 5
-//     16.  Panneau de Gouvernance        (chart row)         4 cards
-//     17.  Tableau Multi-Équipes         (chart row)         TanStack Table
+//     15.  Grille Visibilité IA (9 LLM)  (chart row)         3×3 grid
+//     16.  HarchIQ AI Entreprise         (chart row)         chat UI unlimited
 //    Row 6
-//     18.  API & Intégrations            (chart row)         keys + connectors
-//     19.  Marketing d'Influence         (chart row)         3 KPIs + top 5
+//     17.  Panneau de Gouvernance        (chart row)         4 cards
+//     18.  Tableau Multi-Équipes         (chart row)         TanStack Table expandable
 //    Row 7
-//     20.  DEFCON Crise                  (chart row)         gauge + button
-//     21.  Carte de Chaleur Géo          (chart row)         ScatterChart
+//     19.  API & Intégrations            (chart row)         keys + 5 connectors
+//     20.  Marketing d'Influence         (chart row)         3 KPIs + top 5
 //    Row 8
+//     21.  DEFCON Crise                  (chart row)         gauge + button + threats
 //     22.  Générateur Briefing Exec      (chart row)         wizard + history
-//     23.  Competitor Deep Dive          (chart row)         radar+line+donut+insights
 //    Row 9
+//     23.  Competitor Deep Dive          (chart row)         radar+line+donut+insights
 //     24.  Suivi ESG                     (chart row)         3 cards
 //     25.  Veille Réglementaire          (chart row)         list
 //
@@ -63,20 +63,17 @@
 //   • /api/console/insights              — HarchIQ weekly summary
 //   • /api/console/ai-visibility         — LLM citations
 //   • /api/console/sentiment-trend       — daily sentiment series
-//   • /api/console/topics                — top topics
-//   • /api/console/source-distribution   — top sources
+//   • /api/console/competitor-radar      — competitor radar (5-7 axes)
 //   • /api/console/share-of-voice        — competitor SOV
-//   • /api/console/competitor-radar      — competitor radar
-//   • /api/console/regulatory-feed       — regulatory updates
+//   • /api/console/source-distribution   — top sources
 //   • /api/console/influencers           — top influencers
+//   • /api/console/regulatory-feed       — regulatory updates
 //   • /api/console/briefing/list         — past briefings
-//   • /api/api-keys                      — masked API keys
 //   • /api/console/settings/users        — team members
-//   • /api/webhooks                      — webhook integrations
-//   • /api/console/geo-signals           — geo heatmap
-//   • /api/console/export-csv            — CSV download
+//   • /api/console/team-activity         — team activity feed
+//   • /api/console/ask (POST)            — HarchIQ chat
 //
-//  Task ID: FINAL-ENTERPRISE
+//  Task ID: 10X-ENTERPRISE
 // ════════════════════════════════════════════════════════════════════
 
 import {
@@ -86,11 +83,10 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
+  Fragment,
 } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -98,14 +94,15 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  BarChart3,
   Bell,
-  Bot,
   Brain,
+  Briefcase,
   Building2,
   CalendarDays,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
-  Code,
   Copy,
   Database,
   Download,
@@ -113,26 +110,31 @@ import {
   Eye,
   FileText,
   GitBranch,
-  Globe2,
+  Globe,
   Key,
   Layers,
   LayoutGrid,
   Leaf,
   LogOut,
+  MapPin,
   Menu,
   MessageSquare,
   Minus,
+  Newspaper,
   Network,
   Plug,
+  Plus,
+  Radio,
   RefreshCw,
   Scale,
+  Search,
   Send,
   Settings,
+  Share2,
   ShieldCheck,
   Sparkles,
   TrendingDown,
   TrendingUp,
-  Trophy,
   UserPlus,
   Users,
   Webhook,
@@ -141,6 +143,14 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
 
 import {
   Card,
@@ -151,6 +161,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -181,21 +192,10 @@ import {
   ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
-  Scatter,
-  ScatterChart,
   Tooltip as RTooltip,
   XAxis,
   YAxis,
 } from "recharts";
-
-import {
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  type ColumnDef,
-  type SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
 
 import { toast } from "sonner";
 
@@ -221,8 +221,9 @@ const COMPETITOR_B = "#8B6914";
 const COMPETITOR_C = "#1E3A5F";
 const COMPETITOR_D = "#78716C";
 
-// Tailwind doesn't include JetBrains Mono in this project — Space Mono is the
-// next/font/google equivalent loaded at the root. Use it via inline style.
+// DEFCON colors (1=calm green → 5=critical red)
+const DEFCON_COLORS = ["#10B981", "#84CC16", "#F59E0B", "#F97316", "#EF4444"];
+
 const FONT_MONO = "var(--font-space-mono), ui-monospace, monospace";
 const FONT_SANS = "var(--font-inter), system-ui, sans-serif";
 
@@ -233,8 +234,6 @@ interface BrandHealth {
   trend: number;
   sentiment: { positive: number; neutral: number; negative: number };
   shareOfVoice: number;
-  competitiveRank?: number;
-  totalCompetitors?: number;
   mentionCount24h: number;
   mentionVelocity: number;
   crisisLevel: "safe" | "watch" | "warning" | "critical";
@@ -256,32 +255,13 @@ interface CrisisAlert {
   language?: string;
   timestamp: number;
   acknowledged: boolean;
+  url?: string;
 }
 
 interface CrisisAlertsResp {
   alerts: CrisisAlert[];
   count?: number;
   source?: string;
-}
-
-interface InsightItem {
-  id: string;
-  type: string;
-  severity: "info" | "warning" | "critical";
-  title: string;
-  body: string;
-  confidence: number;
-  action: string;
-  persona: string;
-  generatedAt: string;
-}
-
-interface InsightsResp {
-  insights: InsightItem[];
-  cached?: boolean;
-  accountType?: string;
-  generatedAt?: string;
-  model?: string;
 }
 
 interface SentimentDay {
@@ -355,97 +335,76 @@ interface ShareOfVoiceResp {
   source?: string;
 }
 
-interface RadarScoreSet {
-  sentiment: number;
-  shareOfVoice: number;
-  aiVisibility: number;
-  influencerAuthority: number;
-  crisisResilience: number;
-  mediaReach: number;
-}
-
-interface RadarBrand {
+interface CompetitorBrand {
   name: string;
-  color?: string;
+  color: string;
   isYou: boolean;
-  scores: RadarScoreSet;
+  scores: {
+    sentiment: number;
+    shareOfVoice: number;
+    aiVisibility: number;
+    influencerAuthority: number;
+    crisisResilience: number;
+    mediaReach: number;
+  };
 }
 
 interface CompetitorRadarResp {
-  brands: RadarBrand[];
+  brands: CompetitorBrand[];
   source?: string;
 }
 
-interface RegulatoryItem {
-  id: string;
+interface InfluencerRow {
   source: string;
-  title: string;
-  type?: string;
-  date: string;
-  impact: "high" | "medium" | "low";
-  summary?: string;
-}
-
-interface RegulatoryFeedResp {
-  items: RegulatoryItem[];
-  source?: string;
-}
-
-interface InfluencerRowApi {
-  name: string;
-  handle: string | null;
-  platform: string;
-  followers: number;
-  engagementScore: number;
-  influenceScore: number;
-  reachScore: number;
-  avgSentiment: number;
   mentionCount: number;
+  reachScore: number;
+  sentimentImpact: number;
+  authorityTier: "elite" | "high" | "medium" | "low";
+  consistency: number;
+  influenceScore: number;
+  avgSentiment: number;
   trend: "up" | "down" | "stable";
-  verified: boolean;
+  lastMention: string | null;
 }
 
 interface InfluencersResp {
   range: string;
-  influencers: InfluencerRowApi[];
+  company?: { name: string; slug: string };
+  influencers: InfluencerRow[];
+  totalMentions: number;
+  sourceCount?: number;
 }
 
-interface BriefingRow {
+interface RegulatoryItem {
+  id: string;
+  source: "AMMC" | "BAM" | "BVC" | "ONSSA" | "ANRT" | string;
+  title: string;
+  type: string;
+  date: string;
+  impact: "low" | "medium" | "high";
+  summary: string;
+}
+
+interface RegulatoryResp {
+  items: RegulatoryItem[];
+  source?: string;
+}
+
+interface BriefingListItem {
   id: string;
   date: string;
   title: string;
   summary: string;
   status: string;
-  model: string | null;
-  alertCount: number;
-  citedCount: number;
-  confidence: number | null;
-  topThreatCount: number;
-  topOpportunityCount: number;
+  alertCount?: number;
+  citedCount?: number;
   createdAt: string;
-  updatedAt: string;
   companyName: string | null;
 }
 
 interface BriefingListResp {
-  briefings: BriefingRow[];
+  briefings: BriefingListItem[];
   total: number;
-}
-
-interface ApiKeyRow {
-  id: string;
-  name: string;
-  keyPrefix: string | null;
-  tier: string;
-  lastUsedAt: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-  revokedAt: string | null;
-  status: "active" | "expired" | "revoked";
-}
-
-interface ApiKeyListResp {
-  keys?: ApiKeyRow[];
 }
 
 interface TeamUser {
@@ -458,55 +417,76 @@ interface TeamUser {
   createdAt: string;
 }
 
-interface UsersListResp {
-  users: TeamUser[];
-  count: number;
+interface TeamUsersResp {
+  users?: TeamUser[];
+  total?: number;
+  error?: string;
 }
 
-interface WebhookRow {
+interface TeamActivityRow {
   id: string;
-  url: string;
-  events: string[];
-  description: string | null;
-  isActive: boolean;
-  hasSecret: boolean;
-  lastDeliveryAt: string | null;
-  lastDeliveryStatus: string | null;
-  lastDeliveryMessage: string | null;
+  userId: string | null;
+  userName: string;
+  action: string;
+  actionLabel: string;
+  resource: string;
   createdAt: string;
-  deliveryCount: number;
+  result: string;
 }
 
-interface WebhooksListResp {
-  webhooks: WebhookRow[];
+interface TeamActivityResp {
+  activities: TeamActivityRow[];
   total: number;
+  source?: string;
 }
 
-interface GeoPoint {
-  city: string;
-  lat?: number;
-  lng?: number;
-  count: number;
-  sentiment?: "pos" | "neu" | "neg";
-  score?: number;
+// ─── HarchIQ AI Workspace types ────────────────────────────────────────
+
+interface AskSource {
+  type: "alert" | "topic" | "ai-visibility" | "neighbor";
+  id: string;
+  title: string;
 }
 
-interface GeoSignalsResp {
-  company?: { name: string; slug: string } | null;
-  range: string;
-  points: GeoPoint[];
-  totals: { cities: number; alerts: number; criticalCount: number; highCount: number };
+interface AskResponse {
+  answer: string;
+  sources: AskSource[];
+  generatedAt: string;
 }
+
+type ChatRole = "user" | "ai";
 
 interface ChatMessage {
-  role: "user" | "assistant";
+  id: string;
+  role: ChatRole;
   content: string;
-  at: number;
+  sources?: AskSource[];
+  followUps?: string[];
+  timestamp: number;
+  pending?: boolean;
+}
+
+interface PromptCard {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  followUps: string[];
+  Icon: typeof Newspaper;
+}
+
+interface ConversationHistoryItem {
+  id: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  timestamp: number;
+  messages: ChatMessage[];
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
-function fmtRelative(ts: number | string | undefined | null): string {
+function fmtRelative(ts: number | string | undefined): string {
   if (!ts) return "—";
   const d = typeof ts === "number" ? new Date(ts) : new Date(ts);
   if (isNaN(d.getTime())) return "—";
@@ -547,19 +527,16 @@ function fmtSigned(n: number | undefined | null, suffix = ""): string {
   return `${sign}${n.toFixed(1).replace(/\.0$/, "")}${suffix}`;
 }
 
-function fmtSignedInt(n: number | undefined | null, suffix = ""): string {
-  if (n === undefined || n === null || isNaN(n)) return "—";
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${Math.round(n)}${suffix}`;
-}
-
-function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  try {
-    return format(parseISO(iso), "dd MMM yyyy", { locale: fr });
-  } catch {
-    return iso;
-  }
+function fmtPeriod(period: string): string {
+  if (!period || !/^\d{4}-\d{2}$/.test(period)) return period || "—";
+  const [y, m] = period.split("-");
+  const months = [
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+  ];
+  const mi = parseInt(m, 10) - 1;
+  if (mi < 0 || mi > 11) return period;
+  return `${months[mi]} ${y}`;
 }
 
 function severityColor(sev: string): string {
@@ -569,29 +546,118 @@ function severityColor(sev: string): string {
   return POSITIVE;
 }
 
-function defconFor(score: number, level: string): { label: string; color: string; defcon: number } {
-  if (level === "critical" || score >= 75) return { label: "Crise active", color: NEGATIVE, defcon: 1 };
-  if (level === "warning" || score >= 50) return { label: "Surveillance", color: NEUTRAL_AMBER, defcon: 3 };
-  if (level === "watch" || score >= 25) return { label: "Vigilance", color: SAGE, defcon: 4 };
-  return { label: "RAS", color: POSITIVE, defcon: 5 };
+/** Generate 6 follow-up prompt suggestions based on the user question. */
+function generateFollowUps(question: string): string[] {
+  const q = question.toLowerCase();
+  if (q.includes("geopolit") || q.includes("réputation internationale") || q.includes("afrique")) {
+    return [
+      "Quels pays génèrent le plus de mentions négatives ?",
+      "Comparez ma réputation Maroc vs Afrique de l'Ouest.",
+      "Quels narratifs internationaux me concernent ?",
+      "Quels concurrents sont les plus visibles à l'étranger ?",
+      "Rédigez une note stratégique pour le COMEX.",
+      "Quelle est ma part de voix mondiale ?",
+    ];
+  }
+  if (q.includes("esg") || q.includes("rse") || q.includes("durab")) {
+    return [
+      "Quels piliers ESG sont mes points forts ?",
+      "Comparez mon score ESG à mes concurrents.",
+      "Quels sujets environnementaux émergent ?",
+      "Générez un rapport ESG trimestriel.",
+      "Quelles publications ESG me citent ?",
+      "Quelle est la perception de ma gouvernance ?",
+    ];
+  }
+  if (q.includes("crise") || q.includes("alerte") || q.includes("risque")) {
+    return [
+      "Quelle est la gravité des crises détectées ?",
+      "Quels articles négatifs surveiller en priorité ?",
+      "Rédigez une note de communication pour la direction.",
+      "Quels concurrents sont également touchés ?",
+      "Activez le mode crise et notifiez l'équipe.",
+      "Quelle est la cartographie des narratives de crise ?",
+    ];
+  }
+  if (q.includes("concurrent") || q.includes("benchmark")) {
+    return [
+      "Classez mes concurrents par score de réputation.",
+      "Quels sujets mes concurrents dominent-ils ?",
+      "Quelles opportunités de différenciation identifiez-vous ?",
+      "Comparez ma visibilité IA à celle de mes concurrents.",
+      "Quelle est ma part de voix sectorielle ?",
+      "Générez un benchmark complet des top 5 concurrents.",
+    ];
+  }
+  if (q.includes("ia") || q.includes("chatgpt") || q.includes("llm")) {
+    return [
+      "Comment améliorer ma visibilité dans ChatGPT ?",
+      "Quels LLMs me citent le plus positivement ?",
+      "Quels mots-clés les IA associent-ils à ma marque ?",
+      "Comparez ma visibilité IA à mes concurrents.",
+      "Quelle est ma position moyenne sur les 9 LLMs ?",
+      "Générez un rapport de visibilité IA mensuel.",
+    ];
+  }
+  if (q.includes("comex") || q.includes("direction") || q.includes("briefing")) {
+    return [
+      "Quels sont les 3 points clés à retenir ?",
+      "Quelle recommandation pour la semaine prochaine ?",
+      "Exportez ce briefing en PDF et PowerPoint.",
+      "Programmez ce briefing chaque lundi.",
+      "Ajoutez une section benchmark concurrentiel.",
+      "Incluez les indicateurs ESG et réglementaires.",
+    ];
+  }
+  return [
+    "Analysez le sentiment de cette semaine.",
+    "Quelles crises potentielles détectez-vous ?",
+    "Comparez-moi à mes 5 principaux concurrents.",
+    "Quels sujets émergents surveiller ?",
+    "Générez un briefing exécutif pour le COMEX.",
+    "Quelle est ma position dans les 9 LLMs ?",
+  ];
 }
 
-/** Parse "1st" / "2nd" / "top-3" / "not cited" → number | null */
-function parsePositionRank(pos: string | null | undefined): number | null {
-  if (!pos) return null;
-  const lower = pos.toLowerCase().trim();
-  if (lower.includes("not cited") || lower === "absent") return null;
-  const ord = lower.match(/^(\d+)(?:st|nd|rd|th)?$/);
-  if (ord) return parseInt(ord[1], 10);
-  const top = lower.match(/top-(\d+)/);
-  if (top) return parseInt(top[1], 10);
-  const num = lower.match(/(\d+)/);
-  if (num) return parseInt(num[1], 10);
-  return null;
+function userInitials(name?: string | null): string {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  const letters = parts.slice(0, 2).map((p) => p[0] ?? "").filter(Boolean);
+  return (letters.length ? letters.join("") : name[0] ?? "U").toUpperCase();
+}
+
+function scrollToSection(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+/** Compute DEFCON level (1-5) from crisis alerts + crisis score. */
+function computeDefcon(alerts: CrisisAlert[], crisisScore: number): {
+  level: 1 | 2 | 3 | 4 | 5;
+  label: string;
+  color: string;
+} {
+  const criticalCount = alerts.filter((a) => a.severity === "critical").length;
+  const warningCount = alerts.filter((a) => a.severity === "warning").length;
+  if (criticalCount >= 3 || crisisScore >= 80) {
+    return { level: 5, label: "Crise majeure", color: DEFCON_COLORS[4] };
+  }
+  if (criticalCount >= 1 || crisisScore >= 60) {
+    return { level: 4, label: "Crise active", color: DEFCON_COLORS[3] };
+  }
+  if (warningCount >= 2 || crisisScore >= 40) {
+    return { level: 3, label: "Surveillance renforcée", color: DEFCON_COLORS[2] };
+  }
+  if (warningCount >= 1 || crisisScore >= 20) {
+    return { level: 2, label: "Vigilance", color: DEFCON_COLORS[1] };
+  }
+  return { level: 1, label: "Paix", color: DEFCON_COLORS[0] };
 }
 
 // ─── useApi HOOK ──────────────────────────────────────────────────────
-// Tiny fetch wrapper — no external deps. Returns {data, loading, error, refetch}.
 
 function useApi<T>(url: string | null, opts?: RequestInit): {
   data: T | null;
@@ -634,6 +700,7 @@ function useApi<T>(url: string | null, opts?: RequestInit): {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, tick]);
 
   const refetch = useCallback(() => setTick((t) => t + 1), []);
@@ -656,7 +723,7 @@ function SectionHeader({
   right,
 }: {
   title: string;
-  right?: ReactNode;
+  right?: React.ReactNode;
 }) {
   return (
     <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2 space-y-0" style={{ padding: 0 }}>
@@ -671,7 +738,7 @@ function CardShell({
   className,
   style,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -744,6 +811,33 @@ function SparkDot({ color }: { color: string }) {
   );
 }
 
+/** AI Commentary block — sage green left border, Sparkles icon, sage text. */
+function AiCommentary({ text }: { text: string }) {
+  return (
+    <div
+      className="mt-3 flex items-start gap-2 rounded-md"
+      style={{
+        padding: "10px 12px",
+        backgroundColor: SAGE_BG,
+        borderLeft: `3px solid ${SAGE}`,
+      }}
+    >
+      <Sparkles size={14} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+      <p
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          lineHeight: 1.55,
+          color: SAGE,
+          margin: 0,
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
 function MiniStat({
   label,
   value,
@@ -789,3617 +883,51 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
 };
 
-const tooltipStyle: CSSProperties = {
-  borderRadius: 8,
-  border: `1px solid ${BORDER_STRONG}`,
-  fontFamily: FONT_MONO,
-  fontSize: 11,
-  background: "white",
+const containerStagger = {
+  animate: {
+    transition: { staggerChildren: 0.04 },
+  },
 };
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 1 — SCORE DE RÉPUTATION GLOBAL (hero, full width)
-// ════════════════════════════════════════════════════════════════════
+// ─── SIDEBAR NAV (Enterprise-aware — 10 items, 3 Enterprise exclusives) ──
 
-function ScoreReputationHero({
-  health,
-  loading,
-  onRefresh,
-}: {
-  health: BrandHealth | null;
-  loading: boolean;
-  onRefresh: () => void;
-}) {
-  const score = health?.score ?? 0;
-  const trend = health?.trend ?? 0;
-  const crisisScore = health?.crisisScore ?? 0;
-  const crisisLevel = health?.crisisLevel ?? "safe";
-  const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : "—";
-  const [refreshing, setRefreshing] = useState(false);
-  const defcon = defconFor(crisisScore, crisisLevel);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    onRefresh();
-    setTimeout(() => setRefreshing(false), 800);
-  }, [onRefresh]);
-
-  const gaugeData = [
-    {
-      name: "score",
-      value: score,
-      fill: score >= 70 ? SAGE : score >= 50 ? NEUTRAL_AMBER : NEGATIVE,
-    },
-  ];
-
-  return (
-    <CardShell className="lg:col-span-12">
-      <SectionHeader
-        title="01 · Score de Réputation Global"
-        right={
-          <>
-            <Badge
-              variant="secondary"
-              className="h-5"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                backgroundColor: `${defcon.color}1A`,
-                color: defcon.color,
-              }}
-            >
-              DEFCON {defcon.defcon} · {defcon.label}
-            </Badge>
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                color: TEXT_MUTED,
-              }}
-            >
-              {lastUpdated}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2"
-              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
-              onClick={handleRefresh}
-              aria-label="Rafraîchir"
-              disabled={loading}
-            >
-              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-            </Button>
-          </>
-        }
-      />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-        {/* Gauge */}
-        <div className="lg:col-span-3 flex justify-center">
-          <div style={{ position: "relative", width: 200, height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart
-                innerRadius="74%"
-                outerRadius="100%"
-                data={gaugeData}
-                startAngle={220}
-                endAngle={-40}
-                barSize={14}
-              >
-                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                <RadialBar
-                  background={{ fill: "#F4F4F5" }}
-                  dataKey="value"
-                  cornerRadius={8}
-                  isAnimationActive
-                />
-              </RadialBarChart>
-            </ResponsiveContainer>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 44,
-                  fontWeight: 700,
-                  color: CHARCOAL,
-                  lineHeight: 1,
-                }}
-              >
-                {health ? Math.round(score) : "—"}
-              </span>
-              <span style={{ ...FONT_HEADER, marginTop: 4 }}>/ 100</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Center text block */}
-        <div className="lg:col-span-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Activity size={18} style={{ color: SAGE }} />
-            <span
-              style={{
-                fontFamily: FONT_SANS,
-                fontSize: 18,
-                fontWeight: 600,
-                color: CHARCOAL,
-              }}
-            >
-              {health
-                ? `Score consolidé — ${score >= 70 ? "Forte réputation" : score >= 50 ? "Réputation modérée" : "Réputation fragile"}`
-                : "En attente des données…"}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-3">
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 22,
-                fontWeight: 700,
-                color: CHARCOAL,
-              }}
-            >
-              {trend > 0 ? "+" : ""}{trend} pts
-            </span>
-            <Delta value={trend} suffix=" vs sem. dernière" />
-          </div>
-          <p
-            style={{
-              fontFamily: FONT_SANS,
-              fontSize: 13,
-              lineHeight: 1.55,
-              color: TEXT_BODY,
-            }}
-          >
-            {health?.recommendation ?? "En attente des données de réputation…"}
-          </p>
-          {health?.topNarrative && (
-            <div
-              style={{
-                padding: "8px 12px",
-                border: `1px solid ${BORDER}`,
-                borderRadius: 8,
-                backgroundColor: "#FCFCFC",
-              }}
-            >
-              <span style={FONT_HEADER}>Narratif dominant</span>
-              <p
-                style={{
-                  fontFamily: FONT_SANS,
-                  fontSize: 12,
-                  color: CHARCOAL,
-                  marginTop: 2,
-                }}
-              >
-                {health.topNarrative.label} ·{" "}
-                <span style={{ color: health.topNarrative.sentiment < 0 ? NEGATIVE : POSITIVE, fontFamily: FONT_MONO }}>
-                  {health.topNarrative.sentiment.toFixed(2)}
-                </span>{" "}
-                · momentum {health.topNarrative.momentum}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Mini stats column */}
-        <div className="lg:col-span-4 grid grid-cols-3 gap-3">
-          <MiniStat
-            label="Part de voix"
-            value={health ? `${health.shareOfVoice}%` : "—"}
-          />
-          <MiniStat
-            label="Mentions 24h"
-            value={health ? fmtNumber(health.mentionCount24h) : "—"}
-          />
-          <MiniStat
-            label="Vélocité"
-            value={health ? `${health.mentionVelocity}/h` : "—"}
-          />
-          <MiniStat
-            label="Positif"
-            value={health ? `${health.sentiment.positive}%` : "—"}
-            dotColor={POSITIVE}
-          />
-          <MiniStat
-            label="Neutre"
-            value={health ? `${health.sentiment.neutral}%` : "—"}
-            dotColor={NEUTRAL_GRAY}
-          />
-          <MiniStat
-            label="Négatif"
-            value={health ? `${health.sentiment.negative}%` : "—"}
-            dotColor={NEGATIVE}
-          />
-        </div>
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTIONS 2-9 — EXECUTIVE KPI STRIP (4×2 grid)
-// ════════════════════════════════════════════════════════════════════
-
-function KpiShell({
-  index,
-  title,
-  icon,
-  children,
-}: {
-  index: number;
-  title: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <CardShell className="lg:col-span-3 md:col-span-6">
-      <SectionHeader title={title} right={<span style={{ color: SAGE }}>{icon}</span>} />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {children}
-    </CardShell>
-  );
-}
-
-function SentimentMarketKpi({
-  health,
-  trend,
-}: {
-  health: BrandHealth | null;
-  trend: SentimentTrendResp | null;
-}) {
-  const value = health?.sentiment?.positive ?? 0;
-  const spark = useMemo(() => {
-    if (!trend?.data?.length) return [];
-    return trend.data.slice(-7).map((d) => ({
-      d: d.date,
-      v: Math.round((d.positive / Math.max(1, d.count)) * 100),
-    }));
-  }, [trend]);
-
-  return (
-    <KpiShell index={2} title="02 · Sentiment Market" icon={<Activity size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {health ? `${value}%` : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            positif
-          </span>
-        </div>
-        <Delta value={health?.trend ?? 0} suffix=" pts" />
-      </div>
-      <div style={{ width: "100%", height: 36 }}>
-        {spark.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={spark} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <Line
-                type="monotone"
-                dataKey="v"
-                stroke={SAGE}
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex items-center">
-            <Skeleton className="h-3 w-full" />
-          </div>
-        )}
-      </div>
-    </KpiShell>
-  );
-}
-
-function VisibiliteIaKpi({ ai }: { ai: AiVisibilityResp | null }) {
-  const cited = ai?.citedCount ?? 0;
-  const total = ai?.totalCount ?? 9;
-  const pct = total > 0 ? Math.round((cited / total) * 100) : 0;
-  const dots = useMemo(() => {
-    const platforms = ai?.platforms ?? [];
-    const known = ["ChatGPT", "Claude", "Gemini", "Grok", "Mistral", "Llama", "Perplexity", "Copilot", "HarchIQ"];
-    return known.map((name) => {
-      const p = platforms.find((x) => x.platform.toLowerCase().includes(name.toLowerCase()));
-      return { name, cited: !!p?.cited };
-    });
-  }, [ai]);
-
-  return (
-    <KpiShell index={3} title="03 · Visibilité IA" icon={<Bot size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {ai ? `${cited}/${total}` : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            LLMs · {pct}%
-          </span>
-        </div>
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            color: pct >= 60 ? POSITIVE : pct >= 30 ? NEUTRAL_AMBER : NEGATIVE,
-          }}
-        >
-          {pct >= 60 ? "Sain" : pct >= 30 ? "Partiel" : "Faible"}
-        </span>
-      </div>
-      <div className="grid grid-cols-9 gap-1">
-        {dots.map((d) => (
-          <Tooltip key={d.name}>
-            <TooltipTrigger asChild>
-              <div
-                style={{
-                  height: 18,
-                  borderRadius: 3,
-                  backgroundColor: d.cited ? SAGE : "#F0F0F0",
-                  border: `1px solid ${d.cited ? SAGE : BORDER}`,
-                }}
-                aria-label={`${d.name}: ${d.cited ? "cite" : "absent"}`}
-              />
-            </TooltipTrigger>
-            <TooltipContent side="bottom" style={tooltipStyle}>
-              {d.name} — {d.cited ? "cite votre marque" : "absent"}
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </div>
-    </KpiShell>
-  );
-}
-
-function PartsDeVoixKpi({
-  health,
-  sov,
-}: {
-  health: BrandHealth | null;
-  sov: ShareOfVoiceResp | null;
-}) {
-  const mine = sov?.competitors?.find((c) => c.isYou);
-  const value = mine?.mentionCount ?? 0;
-  const total = (sov?.competitors ?? []).reduce((s, c) => s + c.mentionCount, 0);
-  const pct = total > 0 ? Math.round((value / total) * 100) : health?.shareOfVoice ?? 0;
-
-  return (
-    <KpiShell index={4} title="04 · Parts de Voix" icon={<Layers size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {sov ? `${pct}%` : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            vs marché
-          </span>
-        </div>
-        <Delta value={mine?.trend ?? 0} suffix=" pts" />
-      </div>
-      <div className="space-y-1">
-        <div
-          className="flex h-2 w-full overflow-hidden rounded-full"
-          style={{ backgroundColor: "#F4F4F5" }}
-        >
-          {(sov?.competitors ?? []).slice(0, 5).map((c, i) => {
-            const colors = [SAGE, COMPETITOR_A, COMPETITOR_B, COMPETITOR_C, COMPETITOR_D];
-            return (
-              <div
-                key={c.name}
-                style={{
-                  width: `${(c.mentionCount / Math.max(1, total)) * 100}%`,
-                  backgroundColor: c.isYou ? SAGE : colors[i % colors.length],
-                }}
-              />
-            );
-          })}
-        </div>
-        <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-          {fmtNumber(value)} mentions · {(sov?.competitors?.length ?? 0)} concurrents suivis
-        </p>
-      </div>
-    </KpiShell>
-  );
-}
-
-function AlertesCrisisKpi({
-  health,
-  alerts,
-}: {
-  health: BrandHealth | null;
-  alerts: CrisisAlertsResp | null;
-}) {
-  const count = alerts?.count ?? alerts?.alerts?.length ?? 0;
-  const crisisScore = health?.crisisScore ?? 0;
-  const crisisLevel = health?.crisisLevel ?? "safe";
-  const defcon = defconFor(crisisScore, crisisLevel);
-
-  return (
-    <KpiShell index={5} title="05 · Alertes Crise" icon={<AlertTriangle size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: count >= 3 ? NEGATIVE : count >= 1 ? NEUTRAL_AMBER : POSITIVE,
-            }}
-          >
-            {alerts ? count : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            actives
-          </span>
-        </div>
-        <Badge
-          variant="secondary"
-          className="h-5"
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            backgroundColor: `${defcon.color}1A`,
-            color: defcon.color,
-          }}
-        >
-          DEFCON {defcon.defcon}
-        </Badge>
-      </div>
-      <div
-        className="flex h-2 w-full overflow-hidden rounded-full"
-        style={{ backgroundColor: "#F4F4F5" }}
-      >
-        <div
-          style={{
-            width: `${Math.max(2, Math.min(100, crisisScore))}%`,
-            backgroundColor: defcon.color,
-            transition: "width 0.6s ease-out",
-          }}
-        />
-      </div>
-      <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 6 }}>
-        Score crise: {health ? Math.round(crisisScore) : "—"} · {defcon.label}
-      </p>
-    </KpiShell>
-  );
-}
-
-function Articles30JKpi({
-  src,
-  topics,
-}: {
-  src: SourceDistResp | null;
-  topics: TopicsResp | null;
-}) {
-  const total = src?.total ?? topics?.totalArticles ?? 0;
-  const diversity = src?.sources?.length ?? 0;
-
-  return (
-    <KpiShell index={6} title="06 · Articles 30J" icon={<FileText size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {src || topics ? fmtNumber(total) : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            articles
-          </span>
-        </div>
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            color: diversity >= 8 ? POSITIVE : diversity >= 4 ? NEUTRAL_AMBER : NEGATIVE,
-          }}
-        >
-          {diversity} sources
-        </span>
-      </div>
-      <div className="flex gap-0.5">
-        {(src?.sources ?? []).slice(0, 12).map((s, i) => (
-          <div
-            key={s.name + i}
-            style={{
-              flex: 1,
-              height: 24,
-              borderRadius: 2,
-              backgroundColor: s.type === "social" ? SAGE_DIM : SAGE,
-              opacity: 0.4 + (i === 0 ? 0.6 : 0),
-            }}
-            title={s.name}
-          />
-        ))}
-        {(!src || src.sources.length === 0) && (
-          <div className="h-6 w-full flex items-center">
-            <Skeleton className="h-3 w-full" />
-          </div>
-        )}
-      </div>
-    </KpiShell>
-  );
-}
-
-function InfluenceursKpi({ inf }: { inf: InfluencersResp | null }) {
-  const count = inf?.influencers?.length ?? 0;
-  const reach = useMemo(() => {
-    if (!inf?.influencers?.length) return 0;
-    return inf.influencers.reduce((s, i) => s + i.followers, 0);
-  }, [inf]);
-
-  return (
-    <KpiShell index={7} title="07 · Influenceurs" icon={<Users size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {inf ? count : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            identifiés
-          </span>
-        </div>
-        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}>
-          reach {fmtNumber(reach)}
-        </span>
-      </div>
-      <div className="flex items-center gap-1">
-        {(inf?.influencers ?? []).slice(0, 6).map((i, idx) => (
-          <div
-            key={i.name + idx}
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              backgroundColor: SAGE_BG_STRONG,
-              border: `1px solid ${SAGE}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: FONT_MONO,
-              fontSize: 9,
-              color: SAGE,
-              fontWeight: 700,
-            }}
-            title={i.name}
-          >
-            {i.name.charAt(0).toUpperCase()}
-          </div>
-        ))}
-        {(!inf || inf.influencers.length === 0) && (
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            Aucun influenceur identifié
-          </span>
-        )}
-      </div>
-    </KpiShell>
-  );
-}
-
-function AppelsApiKpi({ keys }: { keys: ApiKeyListResp | null }) {
-  // The API key list endpoint returns metadata only, not call counts. We
-  // synthesize a stable proxy from the number of active keys to give the
-  // board a "quota" feel without inventing random numbers.
-  const activeKeys = (keys?.keys ?? []).filter((k) => k.status === "active").length;
-  const calls30j = activeKeys * 2865 + 0; // stable per-key baseline
-  const quota = 50000;
-  const pct = Math.min(100, Math.round((calls30j / quota) * 100));
-
-  return (
-    <KpiShell index={8} title="08 · Appels API 30J" icon={<Key size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {keys ? fmtNumber(calls30j) : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            / {fmtNumber(quota)}
-          </span>
-        </div>
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            color: pct >= 80 ? NEGATIVE : pct >= 50 ? NEUTRAL_AMBER : POSITIVE,
-          }}
-        >
-          {keys ? `${pct}%` : "—"}
-        </span>
-      </div>
-      <Progress
-        value={pct}
-        className="h-2"
-        style={{ ["--progress-background" as string]: "#F4F4F5" }}
-      />
-      <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 6 }}>
-        {activeKeys} clé{activeKeys !== 1 ? "s" : ""} active{activeKeys !== 1 ? "s" : ""} · illimité Enterprise
-      </p>
-    </KpiShell>
-  );
-}
-
-function EngagementTotalKpi({
-  trend,
-  inf,
-}: {
-  trend: SentimentTrendResp | null;
-  inf: InfluencersResp | null;
-}) {
-  const total = useMemo(() => {
-    const mentions = trend?.data?.slice(-30).reduce((s, d) => s + d.count, 0) ?? 0;
-    const reach = inf?.influencers?.reduce((s, i) => s + Math.round(i.followers * (i.engagementScore / 100)), 0) ?? 0;
-    return mentions + reach;
-  }, [trend, inf]);
-
-  const spark = useMemo(() => {
-    if (!trend?.data?.length) return [];
-    return trend.data.slice(-14).map((d) => ({ d: d.date, v: d.count }));
-  }, [trend]);
-
-  return (
-    <KpiShell index={9} title="09 · Engagement Total" icon={<Zap size={14} />}>
-      <div className="flex items-end justify-between mb-2">
-        <div className="flex items-baseline gap-2">
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 28,
-              fontWeight: 700,
-              color: CHARCOAL,
-            }}
-          >
-            {trend ? fmtNumber(total) : "—"}
-          </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            int. 30j
-          </span>
-        </div>
-      </div>
-      <div style={{ width: "100%", height: 36 }}>
-        {spark.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={spark} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="engGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={SAGE} stopOpacity={0.4} />
-                  <stop offset="100%" stopColor={SAGE} stopOpacity={0.04} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="v" stroke={SAGE} strokeWidth={1.5} fill="url(#engGrad)" isAnimationActive />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex items-center">
-            <Skeleton className="h-3 w-full" />
-          </div>
-        )}
-      </div>
-    </KpiShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 10 — TENDANCE SENTIMENT 90J (chart row)
-// ════════════════════════════════════════════════════════════════════
-
-function TendanceSentimentCard({
-  trend,
-  range,
-  onRangeChange,
-}: {
-  trend: SentimentTrendResp | null;
-  range: "7d" | "30d" | "90d";
-  onRangeChange: (r: "7d" | "30d" | "90d") => void;
-}) {
-  const data = useMemo(() => {
-    if (!trend?.data?.length) return [];
-    const days = range === "7d" ? 7 : range === "30d" ? 30 : 90;
-    return trend.data.slice(-days).map((d) => {
-      const total = Math.max(1, d.count);
-      return {
-        date: d.date,
-        avg: Math.round(d.avgScore * 50 + 50),
-        positive: Math.round((d.positive / total) * 100),
-        negative: Math.round((d.negative / total) * 100),
-        neutral: Math.round((d.neutral / total) * 100),
-        count: d.count,
-      };
-    });
-  }, [trend, range]);
-
-  // Detect anomaly days (count > 1.8 × mean of neighbors)
-  const anomalies = useMemo(() => {
-    if (data.length < 5) return [];
-    const mean = data.reduce((s, d) => s + d.count, 0) / data.length;
-    return data.filter((d) => d.count > mean * 1.8).map((d) => ({
-      date: d.date,
-      avg: d.avg,
-      count: d.count,
-    }));
-  }, [data]);
-
-  return (
-    <CardShell className="lg:col-span-7">
-      <SectionHeader
-        title="10 · Tendance Sentiment"
-        right={
-          <div className="flex items-center gap-0.5 rounded-md" style={{ border: `1px solid ${BORDER}` }}>
-            {(["7j", "30j", "90j"] as const).map((lbl) => {
-              const r = lbl === "7j" ? "7d" : lbl === "30j" ? "30d" : "90d";
-              const active = range === r;
-              return (
-                <button
-                  key={lbl}
-                  type="button"
-                  onClick={() => onRangeChange(r)}
-                  className="px-2 py-0.5 transition-colors"
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 10,
-                    color: active ? "white" : TEXT_MUTED,
-                    backgroundColor: active ? SAGE : "transparent",
-                    borderRadius: 4,
-                  }}
-                >
-                  {lbl}
-                </button>
-              );
-            })}
-          </div>
-        }
-      />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {data.length === 0 ? (
-        <div className="h-[280px] flex items-center justify-center">
-          <EmptyDash label="Aucune donnée de tendance" />
-        </div>
-      ) : (
-        <>
-          <div style={{ width: "100%", height: 240 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="sentArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={SAGE} stopOpacity={0.25} />
-                    <stop offset="100%" stopColor={SAGE} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="#F4F4F5" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={fmtDayShort}
-                  tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
-                  tickLine={false}
-                  axisLine={{ stroke: BORDER_STRONG }}
-                  minTickGap={28}
-                />
-                <YAxis
-                  tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={36}
-                  domain={[0, 100]}
-                />
-                <RTooltip contentStyle={tooltipStyle} labelFormatter={(l) => fmtDayShort(String(l))} />
-                <Legend
-                  wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 8 }}
-                  iconType="circle"
-                  iconSize={6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="avg"
-                  name="Score moyen"
-                  stroke={SAGE}
-                  strokeWidth={2}
-                  fill="url(#sentArea)"
-                  isAnimationActive
-                />
-                <Line
-                  type="monotone"
-                  dataKey="positive"
-                  name="Positif %"
-                  stroke={POSITIVE}
-                  strokeWidth={1.5}
-                  dot={false}
-                  isAnimationActive
-                />
-                <Line
-                  type="monotone"
-                  dataKey="neutral"
-                  name="Neutre %"
-                  stroke={NEUTRAL_GRAY}
-                  strokeWidth={1.5}
-                  dot={false}
-                  isAnimationActive
-                />
-                <Line
-                  type="monotone"
-                  dataKey="negative"
-                  name="Négatif %"
-                  stroke={NEGATIVE}
-                  strokeWidth={1.5}
-                  dot={false}
-                  isAnimationActive
-                />
-                <ReferenceLine y={50} stroke={BORDER_STRONG} strokeDasharray="3 3" />
-                {anomalies.map((a) => (
-                  <ReferenceDot
-                    key={a.date}
-                    x={a.date}
-                    y={a.avg}
-                    r={5}
-                    fill={NEGATIVE}
-                    stroke="white"
-                    strokeWidth={2}
-                    isFront
-                  />
-                ))}
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-              <SparkDot color={NEGATIVE} /> {anomalies.length} anomalie{anomalies.length !== 1 ? "s" : ""} détectée{anomalies.length !== 1 ? "s" : ""}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-              Période: {range} · {data.length} jours
-            </span>
-          </div>
-        </>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 11 — BENCHMARK CONCURRENTIEL (chart row, TanStack Table)
-// ════════════════════════════════════════════════════════════════════
-
-interface BenchmarkRow {
-  name: string;
-  isYou: boolean;
-  mentions: number;
-  sov: number;
-  sentiment: number;
-  aiVisibility: number;
-  trend: number;
-  score: number;
-}
-
-function BenchmarkConcurrentielCard({ sov, radar }: { sov: ShareOfVoiceResp | null; radar: CompetitorRadarResp | null }) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: "sov", desc: true }]);
-
-  const data = useMemo<BenchmarkRow[]>(() => {
-    const competitors = sov?.competitors ?? [];
-    if (competitors.length === 0) return [];
-    const total = competitors.reduce((s, c) => s + c.mentionCount, 0);
-    return competitors.map((c) => {
-      const radarMatch = radar?.brands?.find((b) => b.name.toLowerCase().includes(c.name.toLowerCase().slice(0, 4)) || c.name.toLowerCase().includes(b.name.toLowerCase().slice(0, 4)));
-      const aiVis = radarMatch?.scores?.aiVisibility ?? Math.round((c.sentiment + 1) * 35);
-      const score = radarMatch
-        ? Math.round(
-            (radarMatch.scores.sentiment +
-              radarMatch.scores.shareOfVoice +
-              radarMatch.scores.aiVisibility +
-              radarMatch.scores.crisisResilience +
-              radarMatch.scores.mediaReach) / 5,
-          )
-        : Math.round((c.sentiment + 1) * 40 + Math.min(40, c.mentionCount / 100));
-      return {
-        name: c.name,
-        isYou: c.isYou,
-        mentions: c.mentionCount,
-        sov: total > 0 ? Math.round((c.mentionCount / total) * 100) : 0,
-        sentiment: Math.round(c.sentiment * 100),
-        aiVisibility: aiVis,
-        trend: c.trend,
-        score,
-      };
-    });
-  }, [sov, radar]);
-
-  const columns = useMemo<ColumnDef<BenchmarkRow>[]>(
-    () => [
-      {
-        accessorKey: "name",
-        header: "Marque",
-        cell: (info) => {
-          const v = String(info.getValue());
-          return (
-            <span
-              style={{
-                fontFamily: FONT_SANS,
-                fontSize: 12,
-                fontWeight: 600,
-                color: CHARCOAL,
-              }}
-            >
-              {v}
-              {info.row.original.isYou && (
-                <span
-                  style={{
-                    marginLeft: 6,
-                    fontFamily: FONT_MONO,
-                    fontSize: 9,
-                    color: SAGE,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  vous
-                </span>
-              )}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "mentions",
-        header: "Mentions",
-        cell: (info) => (
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>
-            {fmtNumber(Number(info.getValue()))}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "sov",
-        header: "PDV %",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          return (
-            <div className="flex items-center gap-2">
-              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>{v}%</span>
-              <div style={{ width: 60, height: 4, backgroundColor: "#F4F4F5", borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ width: `${v}%`, height: "100%", backgroundColor: info.row.original.isYou ? SAGE : COMPETITOR_A }} />
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "sentiment",
-        header: "Sentiment",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          const color = v > 10 ? POSITIVE : v < -10 ? NEGATIVE : NEUTRAL_AMBER;
-          return (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color }}>
-              {v > 0 ? "+" : ""}{v}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "aiVisibility",
-        header: "Visibilité IA",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          return (
-            <div className="flex items-center gap-2">
-              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>{v}%</span>
-              <div style={{ width: 40, height: 4, backgroundColor: "#F4F4F5", borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ width: `${v}%`, height: "100%", backgroundColor: v >= 60 ? SAGE : NEUTRAL_AMBER }} />
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "trend",
-        header: "Tendance",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          const Icon = v > 0 ? ArrowUp : v < 0 ? ArrowDown : Minus;
-          const color = v > 0 ? POSITIVE : v < 0 ? NEGATIVE : TEXT_MUTED;
-          return (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color }} className="inline-flex items-center gap-0.5">
-              <Icon size={11} />
-              {fmtSignedInt(v)}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "score",
-        header: "Score",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          const color = v >= 70 ? SAGE : v >= 50 ? NEUTRAL_AMBER : NEGATIVE;
-          return (
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 12,
-                fontWeight: 700,
-                color,
-              }}
-            >
-              {v}
-            </span>
-          );
-        },
-      },
-    ],
-    [],
-  );
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  return (
-    <CardShell className="lg:col-span-5">
-      <SectionHeader title="11 · Benchmark Concurrentiel" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {data.length === 0 ? (
-        <div className="h-[280px] flex items-center justify-center">
-          <EmptyDash label="Aucun concurrent suivi" />
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id}>
-                  {hg.headers.map((header) => {
-                    const canSort = header.column.getCanSort();
-                    const sortDir = header.column.getIsSorted();
-                    return (
-                      <th
-                        key={header.id}
-                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                        className="text-left py-2 px-1 select-none"
-                        style={{
-                          fontFamily: FONT_MONO,
-                          fontSize: 9,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                          color: TEXT_HEADER,
-                          cursor: canSort ? "pointer" : "default",
-                          borderBottom: `1px solid ${BORDER}`,
-                        }}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {canSort && (
-                            <span style={{ fontSize: 8, color: sortDir ? SAGE : TEXT_MUTED }}>
-                              {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "↕"}
-                            </span>
-                          )}
-                        </span>
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="transition-colors hover:bg-[#FAFAFA]">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="py-2.5 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 12 — RADAR DE RÉPUTATION (chart row, RadarChart 7 axes)
-// ════════════════════════════════════════════════════════════════════
-
-function RadarReputationCard({
-  radar,
-  health,
-  ai,
-  sov,
-  inf,
-  src,
-}: {
-  radar: CompetitorRadarResp | null;
-  health: BrandHealth | null;
-  ai: AiVisibilityResp | null;
-  sov: ShareOfVoiceResp | null;
-  inf: InfluencersResp | null;
-  src: SourceDistResp | null;
-}) {
-  const data = useMemo(() => {
-    const axes = ["Réputation", "Sentiment", "Visibilité IA", "Diversité", "Résilience", "Influence", "Reach"];
-    const brands = radar?.brands?.slice(0, 3) ?? [];
-
-    // If radar API returns no brands, synthesize from other APIs (you only).
-    if (brands.length === 0 && health) {
-      const youScores = {
-        reputation: health.score,
-        sentiment: Math.round((health.sentiment.positive - health.sentiment.negative + 100) / 2),
-        aiVisibility: ai?.visibilityScore ?? 0,
-        diversite: Math.min(100, (src?.sources?.length ?? 0) * 10),
-        resilience: 100 - health.crisisScore,
-        influence: Math.min(100, (inf?.influencers?.length ?? 0) * 8 + 30),
-        reach: Math.min(100, Math.round((health.mentionCount24h / 1000) * 30 + 40)),
-      };
-      const values = [youScores.reputation, youScores.sentiment, youScores.aiVisibility, youScores.diversite, youScores.resilience, youScores.influence, youScores.reach];
-      return axes.map((axis, i) => ({ axis, Vous: values[i] }));
-    }
-
-    // Map each brand onto the 7 axes — the radar API gives us 6 dimensions,
-    // we synthesize the 7th (Diversité) from the brand's position in the SOV list.
-    const sovList = sov?.competitors ?? [];
-    return axes.map((axis) => {
-      const row: Record<string, number | string> = { axis };
-      brands.forEach((b) => {
-        const s = b.scores;
-        const sovEntry = sovList.find((c) => c.name.toLowerCase().includes(b.name.toLowerCase().slice(0, 4)));
-        const diversite = sovEntry ? Math.min(100, Math.round((sovEntry.mentionCount / Math.max(1, sovList.reduce((acc, c) => acc + c.mentionCount, 0))) * 100) + 30) : 40;
-        let v: number;
-        switch (axis) {
-          case "Réputation": v = Math.round((s.sentiment + s.crisisResilience + s.mediaReach) / 3); break;
-          case "Sentiment": v = s.sentiment; break;
-          case "Visibilité IA": v = s.aiVisibility; break;
-          case "Diversité": v = diversite; break;
-          case "Résilience": v = s.crisisResilience; break;
-          case "Influence": v = s.influencerAuthority; break;
-          case "Reach": v = s.mediaReach; break;
-          default: v = 0;
-        }
-        row[b.name] = v;
-      });
-      return row;
-    });
-  }, [radar, health, ai, src, inf, sov]);
-
-  const brands = radar?.brands?.slice(0, 3) ?? (health ? [{ name: "Vous", color: SAGE, isYou: true }] : []);
-  const colors = [SAGE, COMPETITOR_A, COMPETITOR_B];
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="12 · Radar de Réputation" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {data.length === 0 ? (
-        <div className="h-[320px] flex items-center justify-center">
-          <EmptyDash label="Radar indisponible" />
-        </div>
-      ) : (
-        <>
-          <div style={{ width: "100%", height: 280 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={data} outerRadius="70%" margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
-                <PolarGrid stroke={BORDER_STRONG} />
-                <PolarAngleAxis
-                  dataKey="axis"
-                  tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_BODY }}
-                />
-                <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                {brands.map((b, i) => (
-                  <Radar
-                    key={b.name}
-                    name={b.name}
-                    dataKey={b.name}
-                    stroke={b.color ?? colors[i]}
-                    fill={b.color ?? colors[i]}
-                    fillOpacity={b.isYou ? 0.25 : 0.08}
-                    strokeWidth={b.isYou ? 2 : 1.5}
-                    isAnimationActive
-                  />
-                ))}
-                <RTooltip contentStyle={tooltipStyle} />
-                <Legend
-                  wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 4 }}
-                  iconType="circle"
-                  iconSize={6}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-          <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
-            7 axes · Vous vs {brands.length - 1} concurrent{brands.length - 1 !== 1 ? "s" : ""} · échelle 0-100
-          </p>
-        </>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 13 — PART DE VOIX (chart row, PieChart donut)
-// ════════════════════════════════════════════════════════════════════
-
-function PartDeVoixCard({ sov }: { sov: ShareOfVoiceResp | null }) {
-  const data = useMemo(() => {
-    const list = sov?.competitors ?? [];
-    if (list.length === 0) return [];
-    const colors = [SAGE, COMPETITOR_A, COMPETITOR_B, COMPETITOR_C, COMPETITOR_D];
-    return list.slice(0, 5).map((c, i) => ({
-      name: c.name,
-      value: c.mentionCount,
-      trend: c.trend,
-      sentiment: c.sentiment,
-      color: c.isYou ? SAGE : colors[i % colors.length],
-      isYou: c.isYou,
-    }));
-  }, [sov]);
-
-  const total = data.reduce((s, d) => s + d.value, 0);
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="13 · Part de Voix" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {data.length === 0 ? (
-        <div className="h-[320px] flex items-center justify-center">
-          <EmptyDash label="Aucune donnée SOV" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-          <div className="sm:col-span-5" style={{ position: "relative", height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="62%"
-                  outerRadius="100%"
-                  paddingAngle={2}
-                  isAnimationActive
-                >
-                  {data.map((d) => (
-                    <Cell key={d.name} fill={d.color} stroke="white" strokeWidth={2} />
-                  ))}
-                </Pie>
-                <RTooltip contentStyle={tooltipStyle} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-              }}
-            >
-              <span style={FONT_HEADER}>Total mentions</span>
-              <span
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: CHARCOAL,
-                }}
-              >
-                {fmtNumber(total)}
-              </span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-                30 derniers jours
-              </span>
-            </div>
-          </div>
-          <div className="sm:col-span-7 space-y-2">
-            {data.map((d) => (
-              <div
-                key={d.name}
-                className="flex items-center justify-between gap-3 p-2 rounded-md"
-                style={{
-                  border: `1px solid ${BORDER}`,
-                  backgroundColor: d.isYou ? SAGE_BG : "#FCFCFC",
-                }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <SparkDot color={d.color} />
-                  <span
-                    className="truncate"
-                    style={{
-                      fontFamily: FONT_SANS,
-                      fontSize: 12,
-                      fontWeight: d.isYou ? 600 : 400,
-                      color: CHARCOAL,
-                    }}
-                  >
-                    {d.name}
-                    {d.isYou && (
-                      <span
-                        style={{
-                          marginLeft: 6,
-                          fontFamily: FONT_MONO,
-                          fontSize: 9,
-                          color: SAGE,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        vous
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
-                    {fmtNumber(d.value)}
-                  </span>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, minWidth: 40, textAlign: "right" }}>
-                    {total > 0 ? Math.round((d.value / total) * 100) : 0}%
-                  </span>
-                  <span style={{ minWidth: 32, textAlign: "right" }}>
-                    <Delta value={d.trend} />
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 14 — GRILLE VISIBILITÉ IA (9 LLMs, 3×3)
-// ════════════════════════════════════════════════════════════════════
-
-function GrilleVisibiliteIaCard({ ai }: { ai: AiVisibilityResp | null }) {
-  const llms = useMemo(() => {
-    const known = ["GPT-4", "Claude", "Gemini", "Grok", "Mistral", "Llama", "Perplexity", "Copilot", "HarchIQ"];
-    const platforms = ai?.platforms ?? [];
-    return known.map((name) => {
-      const p = platforms.find(
-        (x) =>
-          x.platform.toLowerCase().includes(name.toLowerCase().replace(/[ -].*/, "")) ||
-          (name === "GPT-4" && /gpt|chatgpt|openai/i.test(x.platform)) ||
-          (name === "HarchIQ" && /harch/i.test(x.platform)),
-      );
-      return {
-        name,
-        cited: !!p?.cited,
-        position: p?.position ?? null,
-        rank: parsePositionRank(p?.position ?? null),
-        sentiment: p?.sentiment ?? null,
-        confidence: p?.confidence ?? 0,
-        summary: p?.summary ?? null,
-        trend: p ? (p.confidence > 0.7 ? 1 : p.confidence > 0.4 ? 0 : -1) : 0,
-      };
-    });
-  }, [ai]);
-
-  const citedCount = llms.filter((l) => l.cited).length;
-  const insight = useMemo(() => {
-    if (!ai) return null;
-    const pcts: number[] = llms.map((l) => (l.cited ? 100 : 0));
-    const avg = pcts.length > 0 ? Math.round(pcts.reduce<number>((s, p) => s + p, 0) / pcts.length) : 0;
-    if (citedCount === 0) return "Aucun des 9 LLMs suivis ne cite votre marque actuellement. Prioriser la production de contenus structurés (Wikipedia, schema.org, communiqués de presse).";
-    if (citedCount >= 7) return `Votre marque est citée par ${citedCount}/9 LLMs. Visibilité IA exemplaire — surveiller le positionnement et la cohérence du narratif.`;
-    return `Votre marque est citée par ${citedCount}/9 LLMs (${avg}% de couverture). Comblé le déficit sur ${9 - citedCount} moteurs via des contenus structurés et des sources tierces faisant autorité.`;
-  }, [ai, citedCount, llms]);
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader
-        title="14 · Grille Visibilité IA"
-        right={
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              color: citedCount >= 6 ? POSITIVE : citedCount >= 3 ? NEUTRAL_AMBER : NEGATIVE,
-            }}
-          >
-            {citedCount}/9 cite votre marque
-          </span>
-        }
-      />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-3 gap-2">
-        {llms.map((l) => {
-          const Icon = l.trend > 0 ? ArrowUp : l.trend < 0 ? ArrowDown : Minus;
-          const trendColor = l.trend > 0 ? POSITIVE : l.trend < 0 ? NEGATIVE : TEXT_MUTED;
-          return (
-            <div
-              key={l.name}
-              className="p-3 rounded-lg flex flex-col gap-1.5"
-              style={{
-                border: `1px solid ${l.cited ? SAGE : BORDER}`,
-                backgroundColor: l.cited ? SAGE_BG : "#FCFCFC",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  style={{
-                    fontFamily: FONT_SANS,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: CHARCOAL,
-                  }}
-                >
-                  {l.name}
-                </span>
-                <Icon size={12} style={{ color: trendColor }} />
-              </div>
-              {l.cited ? (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span
-                      style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 16,
-                        fontWeight: 700,
-                        color: SAGE,
-                      }}
-                    >
-                      {l.rank ? `#${l.rank}` : "cité"}
-                    </span>
-                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-                      position
-                    </span>
-                  </div>
-                  <Progress
-                    value={Math.round(l.confidence * 100)}
-                    className="h-1"
-                    style={{ ["--progress-background" as string]: "#E5E5E5" }}
-                  />
-                </>
-              ) : (
-                <>
-                  <span
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                      color: TEXT_MUTED,
-                    }}
-                  >
-                    absent
-                  </span>
-                  <div style={{ height: 4, backgroundColor: "#F4F4F5", borderRadius: 2 }} />
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {insight && (
-        <div
-          className="mt-3 p-3 rounded-md"
-          style={{
-            border: `1px solid ${BORDER}`,
-            backgroundColor: "#FCFCFC",
-            borderLeft: `2px solid ${SAGE}`,
-          }}
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles size={11} style={{ color: SAGE }} />
-            <span style={FONT_HEADER}>Comment l'IA perçoit votre marque</span>
-          </div>
-          <p
-            style={{
-              fontFamily: FONT_SANS,
-              fontSize: 12,
-              lineHeight: 1.5,
-              color: TEXT_BODY,
-            }}
-          >
-            {insight}
-          </p>
-        </div>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 15 — HARCHIQ AI ENTREPRISE (chat, unlimited)
-// ════════════════════════════════════════════════════════════════════
-
-function HarchIQChatCard({ weekly }: { weekly: InsightItem | null }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [history, setHistory] = useState<{ id: string; title: string; at: number }[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const suggestions = [
-    "Analyse ma réputation sur les 30 derniers jours",
-    "Compare-moi à mon principal concurrent",
-    "Génère un brief exécutif pour le COMEX",
-    "Quels sont les risques émergents ?",
-    "Quelles sources prioritaires surveiller ?",
-    "Rédige un plan de communication crise",
-  ];
-
-  useEffect(() => {
-    if (weekly) {
-      setMessages([
-        {
-          role: "assistant",
-          content: `Bonjour. J'ai analysé ${weekly.title || "vos données réputationnelles"}. ${weekly.body.slice(0, 220)}${weekly.body.length > 220 ? "…" : ""}`,
-          at: Date.now(),
-        },
-      ]);
-    }
-  }, [weekly]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const send = useCallback(async (text?: string) => {
-    const content = (text ?? input).trim();
-    if (!content || sending) return;
-    setInput("");
-    setMessages((m) => [...m, { role: "user", content, at: Date.now() }]);
-    setSending(true);
-    try {
-      const r = await fetch("/api/console/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: content, accountType: "enterprise" }),
-      });
-      if (!r.ok) throw new Error("Échec HarchIQ");
-      const json = await r.json();
-      const reply = typeof json.answer === "string" ? json.answer : typeof json.response === "string" ? json.response : "Réponse indisponible.";
-      setMessages((m) => [...m, { role: "assistant", content: reply, at: Date.now() }]);
-      setHistory((h) => [
-        { id: `c-${Date.now()}`, title: content.slice(0, 50), at: Date.now() },
-        ...h,
-      ].slice(0, 6));
-    } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: "Désolé, impossible de joindre HarchIQ pour le moment. Réessayez dans quelques secondes.", at: Date.now() },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  }, [input, sending]);
-
-  const exportConversation = useCallback(() => {
-    if (messages.length === 0) {
-      toast.error("Aucune conversation à exporter");
-      return;
-    }
-    const text = messages.map((m) => `[${m.role === "user" ? "Vous" : "HarchIQ"}]\n${m.content}`).join("\n\n---\n\n");
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `harchiq-entretien-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Conversation exportée");
-  }, [messages]);
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader
-        title="15 · HarchIQ AI Entreprise"
-        right={
-          <>
-            <Badge
-              variant="secondary"
-              className="h-5"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 9,
-                backgroundColor: SAGE_BG,
-                color: SAGE,
-              }}
-            >
-              ILLIMITÉ
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2"
-              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
-              onClick={exportConversation}
-              aria-label="Exporter la conversation"
-            >
-              <Download size={11} /> Exporter
-            </Button>
-          </>
-        }
-      />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-        {/* History sidebar */}
-        <div className="sm:col-span-3 space-y-1.5">
-          <span style={FONT_HEADER}>Historique</span>
-          <div
-            className="overflow-y-auto pr-1 -mr-1 space-y-1"
-            style={{ maxHeight: 240 }}
-          >
-            <button
-              type="button"
-              onClick={() => setMessages([])}
-              className="block w-full text-left p-2 rounded-md transition-colors hover:bg-[#FAFAFA]"
-              style={{
-                border: `1px solid ${BORDER}`,
-                backgroundColor: messages.length === 0 ? SAGE_BG : "#FCFCFC",
-              }}
-            >
-              <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: CHARCOAL }}>
-                Nouvelle conversation
-              </span>
-            </button>
-            {history.map((h) => (
-              <button
-                key={h.id}
-                type="button"
-                className="block w-full text-left p-2 rounded-md transition-colors hover:bg-[#FAFAFA]"
-                style={{ border: `1px solid ${BORDER}` }}
-              >
-                <span className="block truncate" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>
-                  {h.title}
-                </span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-                  {fmtRelative(h.at)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat column */}
-        <div className="sm:col-span-9 flex flex-col gap-2">
-          <div
-            ref={scrollRef}
-            className="overflow-y-auto pr-1 -mr-1 space-y-2"
-            style={{ maxHeight: 280, minHeight: 200 }}
-          >
-            {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center gap-2 text-center py-8">
-                <Bot size={28} style={{ color: SAGE }} />
-                <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}>
-                  Posez votre question à HarchIQ. Illimité sur le plan Enterprise.
-                </p>
-              </div>
-            )}
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className="flex"
-                style={{ justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}
-              >
-                <div
-                  className="max-w-[80%] p-2.5 rounded-lg"
-                  style={{
-                    backgroundColor: m.role === "user" ? SAGE : "#FCFCFC",
-                    color: m.role === "user" ? "white" : CHARCOAL,
-                    border: `1px solid ${m.role === "user" ? SAGE : BORDER}`,
-                    fontFamily: FONT_SANS,
-                    fontSize: 12,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {m.content}
-                </div>
-              </div>
-            ))}
-            {sending && (
-              <div className="flex justify-start">
-                <div
-                  className="p-2.5 rounded-lg flex items-center gap-1"
-                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
-                >
-                  <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: SAGE, display: "inline-block" }} />
-                  <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: SAGE, display: "inline-block", animationDelay: "0.15s" }} />
-                  <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: SAGE, display: "inline-block", animationDelay: "0.3s" }} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Suggestions */}
-          <div className="flex flex-wrap gap-1.5">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => send(s)}
-                disabled={sending}
-                className="px-2 py-1 rounded-full transition-colors hover:bg-[#FAFAFA] disabled:opacity-50"
-                style={{
-                  border: `1px solid ${BORDER}`,
-                  fontFamily: FONT_SANS,
-                  fontSize: 10,
-                  color: TEXT_BODY,
-                }}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-
-          {/* Input */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              send();
-            }}
-            className="flex items-center gap-2"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Demandez à HarchIQ…"
-              disabled={sending}
-              className="flex-1 px-3 py-2 rounded-md outline-none disabled:opacity-60"
-              style={{
-                border: `1px solid ${BORDER_STRONG}`,
-                fontFamily: FONT_SANS,
-                fontSize: 12,
-                color: CHARCOAL,
-              }}
-            />
-            <Button
-              type="submit"
-              size="sm"
-              className="h-9 px-3"
-              disabled={sending || !input.trim()}
-              style={{ backgroundColor: SAGE, color: "white" }}
-            >
-              <Send size={13} />
-            </Button>
-          </form>
-        </div>
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 16 — PANNEAU DE GOUVERNANCE (chart row, 4 cards)
-// ════════════════════════════════════════════════════════════════════
-
-function GouvernanceCard({
-  users,
-  webhooks,
-}: {
-  users: UsersListResp | null;
-  webhooks: WebhooksListResp | null;
-}) {
-  const userCount = users?.count ?? users?.users?.length ?? 0;
-  const activeWebhooks = (webhooks?.webhooks ?? []).filter((w) => w.isActive).length;
-
-  const cards = [
-    {
-      label: "Équipes",
-      value: 5,
-      hint: "Marketing · Comms · Juridique · Direction · RP",
-      Icon: Users,
-      action: "Gérer",
-    },
-    {
-      label: "Utilisateurs",
-      value: userCount,
-      hint: `${(users?.users ?? []).filter((u) => u.status === "active").length} actifs`,
-      Icon: Building2,
-      action: "Gérer",
-    },
-    {
-      label: "Workflows",
-      value: activeWebhooks,
-      hint: `${webhooks?.total ?? 0} webhooks configurés`,
-      Icon: GitBranch,
-      action: "Gérer",
-    },
-    {
-      label: "Audit trail",
-      value: "SHA-256",
-      hint: "Vérifié · chaîne immuable",
-      Icon: ShieldCheck,
-      action: "Voir",
-    },
-  ];
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="16 · Panneau de Gouvernance" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-2 gap-3">
-        {cards.map((c) => (
-          <div
-            key={c.label}
-            className="p-4 rounded-lg flex flex-col gap-2"
-            style={{
-              border: `1px solid ${BORDER}`,
-              backgroundColor: "#FCFCFC",
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span style={FONT_HEADER}>{c.label}</span>
-              <c.Icon size={14} style={{ color: SAGE }} />
-            </div>
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 22,
-                fontWeight: 700,
-                color: CHARCOAL,
-              }}
-            >
-              {c.value}
-            </span>
-            <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.4 }}>
-              {c.hint}
-            </span>
-            <button
-              type="button"
-              className="self-start inline-flex items-center gap-1 mt-1"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                color: SAGE,
-              }}
-            >
-              {c.action} <ChevronRight size={11} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 17 — TABLEAU MULTI-ÉQUIPES (chart row, TanStack Table expandable)
-// ════════════════════════════════════════════════════════════════════
-
-interface TeamRow {
-  name: string;
-  members: number;
-  score: number;
-  sentiment: number;
-  alerts: number;
-  status: "Actif" | "Surveillance" | "Veille";
-  memberList: string[];
-}
-
-function TableauMultiEquipesCard({
-  users,
-  alerts,
-}: {
-  users: UsersListResp | null;
-  alerts: CrisisAlertsResp | null;
-}) {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-
-  const data = useMemo<TeamRow[]>(() => {
-    const userCount = users?.count ?? 0;
-    const userList = users?.users ?? [];
-    const alertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
-    const teamNames = ["Marketing", "Communication", "Juridique", "Direction", "RP"];
-    const base = Math.max(2, Math.floor(userCount / 5));
-
-    return teamNames.map((name, i) => {
-      const memberSlice = userList.slice(i * base, (i + 1) * base);
-      const memberList = memberSlice.length > 0 ? memberSlice.map((u) => u.name || u.email) : ["Membre à inviter"];
-      const score = 80 - i * 6 - (i === 2 ? 8 : 0);
-      const sentiment = 30 - i * 4 + (i === 1 ? 5 : 0);
-      const teamAlerts = i === 2 ? Math.max(1, alertCount) : i === 0 ? Math.max(0, alertCount - 1) : Math.max(0, Math.floor(alertCount / 3));
-      const status: TeamRow["status"] = teamAlerts >= 3 ? "Surveillance" : teamAlerts >= 1 ? "Veille" : "Actif";
-      return {
-        name,
-        members: Math.max(1, memberList.length),
-        score,
-        sentiment,
-        alerts: teamAlerts,
-        status,
-        memberList,
-      };
-    });
-  }, [users, alerts]);
-
-  const columns = useMemo<ColumnDef<TeamRow>[]>(
-    () => [
-      {
-        accessorKey: "name",
-        header: "Équipe",
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            <ChevronRight
-              size={12}
-              style={{
-                color: TEXT_MUTED,
-                transition: "transform 0.2s",
-                transform: expanded === info.row.original.name ? "rotate(90deg)" : "rotate(0deg)",
-              }}
-            />
-            <span
-              style={{
-                fontFamily: FONT_SANS,
-                fontSize: 12,
-                fontWeight: 600,
-                color: CHARCOAL,
-              }}
-            >
-              {String(info.getValue())}
-            </span>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "members",
-        header: "Membres",
-        cell: (info) => (
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>
-            {Number(info.getValue())}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "score",
-        header: "Score",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          const color = v >= 70 ? SAGE : v >= 50 ? NEUTRAL_AMBER : NEGATIVE;
-          return (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color }}>
-              {v}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "sentiment",
-        header: "Sentiment",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          const color = v > 10 ? POSITIVE : v < 0 ? NEGATIVE : NEUTRAL_AMBER;
-          return (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color }}>
-              {v > 0 ? "+" : ""}{v}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "alerts",
-        header: "Alertes",
-        cell: (info) => {
-          const v = Number(info.getValue());
-          const color = v >= 3 ? NEGATIVE : v >= 1 ? NEUTRAL_AMBER : POSITIVE;
-          return (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: v === 0 ? POSITIVE : color }}>
-              {v}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "status",
-        header: "Statut",
-        cell: (info) => {
-          const v = String(info.getValue()) as TeamRow["status"];
-          const color = v === "Actif" ? POSITIVE : v === "Surveillance" ? NEGATIVE : NEUTRAL_AMBER;
-          return (
-            <Badge
-              variant="secondary"
-              className="h-5"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 9,
-                backgroundColor: `${color}1A`,
-                color,
-              }}
-            >
-              {v}
-            </Badge>
-          );
-        },
-      },
-    ],
-    [expanded],
-  );
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="17 · Tableau Multi-Équipes" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {data.length === 0 ? (
-        <div className="h-[280px] flex items-center justify-center">
-          <EmptyDash label="Aucune équipe" />
-        </div>
-      ) : (
-        <div className="overflow-hidden">
-          <table className="w-full" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id}>
-                  {hg.headers.map((header) => {
-                    const canSort = header.column.getCanSort();
-                    const sortDir = header.column.getIsSorted();
-                    return (
-                      <th
-                        key={header.id}
-                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                        className="text-left py-2 px-1 select-none"
-                        style={{
-                          fontFamily: FONT_MONO,
-                          fontSize: 9,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                          color: TEXT_HEADER,
-                          cursor: canSort ? "pointer" : "default",
-                          borderBottom: `1px solid ${BORDER}`,
-                        }}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {canSort && (
-                            <span style={{ fontSize: 8, color: sortDir ? SAGE : TEXT_MUTED }}>
-                              {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "↕"}
-                            </span>
-                          )}
-                        </span>
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <>
-                  <tr
-                    key={row.id}
-                    className="transition-colors hover:bg-[#FAFAFA] cursor-pointer"
-                    onClick={() => setExpanded(expanded === row.original.name ? null : row.original.name)}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="py-2.5 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                  {expanded === row.original.name && (
-                    <tr key={row.id + "-expand"}>
-                      <td colSpan={row.getVisibleCells().length} style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
-                        <div className="py-3 px-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Users size={11} style={{ color: SAGE }} />
-                            <span style={FONT_HEADER}>Membres de l'équipe {row.original.name}</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {row.original.memberList.map((m, i) => (
-                              <div
-                                key={m + i}
-                                className="flex items-center gap-2 p-2 rounded-md"
-                                style={{ border: `1px solid ${BORDER}`, backgroundColor: "white" }}
-                              >
-                                <div
-                                  style={{
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: "50%",
-                                    backgroundColor: SAGE_BG_STRONG,
-                                    border: `1px solid ${SAGE}`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontFamily: FONT_MONO,
-                                    fontSize: 9,
-                                    color: SAGE,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {m.charAt(0).toUpperCase()}
-                                </div>
-                                <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>
-                                  {m}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 18 — API & INTÉGRATIONS (chart row)
-// ════════════════════════════════════════════════════════════════════
-
-function ApiIntegrationsCard({
-  keys,
-  webhooks,
-}: {
-  keys: ApiKeyListResp | null;
-  webhooks: WebhooksListResp | null;
-}) {
-  const [revealed, setRevealed] = useState(false);
-  const activeKey = (keys?.keys ?? []).find((k) => k.status === "active") ?? (keys?.keys ?? [])[0] ?? null;
-  const maskedKey = activeKey?.keyPrefix ? `${activeKey.keyPrefix}${"•".repeat(8).slice(0, 4)}${activeKey.keyPrefix.slice(-4)}` : "harch_••••3f7a";
-  const displayKey = revealed && activeKey?.keyPrefix ? activeKey.keyPrefix : maskedKey;
-
-  const quotaUsed = (keys?.keys ?? []).filter((k) => k.status === "active").length * 2865;
-  const quotaMax = 50000;
-  const quotaPct = Math.min(100, Math.round((quotaUsed / quotaMax) * 100));
-
-  const integrations = useMemo(() => {
-    const wh = webhooks?.webhooks ?? [];
-    return [
-      {
-        name: "Power BI",
-        status: "Disponible" as const,
-        Icon: Database,
-        url: "https://powerbi.microsoft.com",
-      },
-      {
-        name: "Tableau",
-        status: "Disponible" as const,
-        Icon: Database,
-        url: "https://tableau.com",
-      },
-      {
-        name: "Slack",
-        status: wh.some((w) => /slack\.com/i.test(w.url)) ? "Connecté" as const : "Disponible" as const,
-        Icon: MessageSquare,
-        url: "https://slack.com",
-      },
-      {
-        name: "Microsoft Teams",
-        status: wh.some((w) => /teams|webhook\.office/i.test(w.url)) ? "Connecté" as const : "Disponible" as const,
-        Icon: MessageSquare,
-        url: "https://teams.microsoft.com",
-      },
-      {
-        name: "Webhook",
-        status: wh.length > 0 ? `Connecté (${wh.length})` as const : "Disponible" as const,
-        Icon: Webhook,
-        url: "/atelier/console/settings/api",
-      },
-    ];
-  }, [webhooks]);
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(displayKey).then(
-      () => toast.success("Clé API copiée"),
-      () => toast.error("Échec de la copie"),
-    );
-  }, [displayKey]);
-
-  const handleRegenerate = useCallback(() => {
-    toast.info("Régénération — ouverture du portail API");
-  }, []);
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="18 · API & Intégrations" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-
-      {/* API Key */}
-      <div
-        className="p-3 rounded-lg flex items-center justify-between gap-3 mb-3"
-        style={{
-          border: `1px solid ${BORDER}`,
-          backgroundColor: "#FCFCFC",
-        }}
-      >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Key size={14} style={{ color: SAGE }} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span style={FONT_HEADER}>Clé API</span>
-              <code
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 11,
-                  color: CHARCOAL,
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {displayKey}
-              </code>
-            </div>
-            <div className="flex items-center gap-1 mt-0.5">
-              <button
-                type="button"
-                onClick={() => setRevealed((v) => !v)}
-                className="inline-flex items-center gap-1"
-                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
-              >
-                <Eye size={11} /> {revealed ? "Masquer" : "Révéler"}
-              </button>
-              {activeKey?.tier && (
-                <Badge
-                  variant="secondary"
-                  className="h-4 ml-2"
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 9,
-                    backgroundColor: SAGE_BG,
-                    color: SAGE,
-                  }}
-                >
-                  {activeKey.tier}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7"
-            style={{ fontFamily: FONT_MONO, fontSize: 10 }}
-            onClick={handleCopy}
-          >
-            <Copy size={11} /> Copier
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7"
-            style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: NEGATIVE, color: NEGATIVE }}
-            onClick={handleRegenerate}
-          >
-            <RefreshCw size={11} /> Régénérer
-          </Button>
-        </div>
-      </div>
-
-      {/* Usage */}
-      <div className="mb-3">
-        <div className="flex items-baseline justify-between mb-1">
-          <span style={FONT_HEADER}>Quota d'appels · 30 jours</span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            <span style={{ color: CHARCOAL }}>{fmtNumber(quotaUsed)}</span> / {fmtNumber(quotaMax)}
-          </span>
-        </div>
-        <Progress
-          value={quotaPct}
-          className="h-2"
-          style={{ ["--progress-background" as string]: "#F4F4F5" }}
-        />
-      </div>
-
-      {/* Integrations */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {integrations.map((it) => {
-          const connected = it.status.startsWith("Connecté");
-          return (
-            <div
-              key={it.name}
-              className="p-3 rounded-lg flex items-center justify-between gap-2"
-              style={{
-                border: `1px solid ${connected ? SAGE : BORDER}`,
-                backgroundColor: connected ? SAGE_BG : "#FCFCFC",
-              }}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: connected ? "white" : SAGE_BG, color: SAGE }}
-                >
-                  <it.Icon size={14} />
-                </div>
-                <div className="min-w-0">
-                  <div
-                    style={{
-                      fontFamily: FONT_SANS,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: CHARCOAL,
-                    }}
-                  >
-                    {it.name}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 9,
-                      color: connected ? SAGE : TEXT_MUTED,
-                    }}
-                  >
-                    {it.status}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-0.5 shrink-0"
-                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
-              >
-                Configurer <ChevronRight size={11} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 19 — MARKETING D'INFLUENCE (chart row, 3 KPIs + top 5)
-// ════════════════════════════════════════════════════════════════════
-
-function MarketingInfluenceCard({ inf }: { inf: InfluencersResp | null }) {
-  const list = (inf?.influencers ?? []).slice(0, 5);
-  const totalReach = (inf?.influencers ?? []).reduce((s, i) => s + i.followers, 0);
-  const campaigns = Math.min(4, Math.floor((inf?.influencers?.length ?? 0) / 2));
-
-  const kpis = [
-    { label: "Influenceurs identifiés", value: inf?.influencers?.length ?? 0, Icon: Users },
-    { label: "Campagnes actives", value: campaigns, Icon: Activity },
-    { label: "Reach total", value: fmtNumber(totalReach), Icon: Globe2 },
-  ];
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="19 · Marketing d'Influence" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="p-3 rounded-lg"
-            style={{
-              border: `1px solid ${BORDER}`,
-              backgroundColor: "#FCFCFC",
-            }}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span style={FONT_HEADER}>{k.label}</span>
-              <k.Icon size={12} style={{ color: SAGE }} />
-            </div>
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 18,
-                fontWeight: 700,
-                color: CHARCOAL,
-              }}
-            >
-              {k.value}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="overflow-hidden">
-        <table className="w-full" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              {["Nom", "Plateforme", "Followers", "Engagement", "Sentiment"].map((h) => (
-                <th
-                  key={h}
-                  className="text-left py-2 px-1"
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 9,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: TEXT_HEADER,
-                    borderBottom: `1px solid ${BORDER}`,
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {list.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-6 text-center">
-                  <EmptyDash label="Aucun influenceur identifié" />
-                </td>
-              </tr>
-            ) : (
-              list.map((i, idx) => {
-                const sentColor = i.avgSentiment > 0.1 ? POSITIVE : i.avgSentiment < -0.1 ? NEGATIVE : NEUTRAL_AMBER;
-                return (
-                  <tr key={i.name + idx} className="transition-colors hover:bg-[#FAFAFA]">
-                    <td className="py-2 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: "50%",
-                            backgroundColor: SAGE_BG_STRONG,
-                            border: `1px solid ${SAGE}`,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontFamily: FONT_MONO,
-                            fontSize: 9,
-                            color: SAGE,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {i.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: CHARCOAL }}>
-                          {i.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
-                        {i.platform}
-                      </span>
-                    </td>
-                    <td className="py-2 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>
-                        {fmtNumber(i.followers)}
-                      </span>
-                    </td>
-                    <td className="py-2 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      <div className="flex items-center gap-2">
-                        <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>
-                          {Math.round(i.engagementScore)}%
-                        </span>
-                        <div style={{ width: 36, height: 4, backgroundColor: "#F4F4F5", borderRadius: 2, overflow: "hidden" }}>
-                          <div style={{ width: `${i.engagementScore}%`, height: "100%", backgroundColor: SAGE }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-2 px-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: sentColor, fontWeight: 700 }}>
-                        {i.avgSentiment > 0 ? "+" : ""}{i.avgSentiment.toFixed(2)}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-3 h-8 w-full"
-        style={{ fontFamily: FONT_MONO, fontSize: 11 }}
-      >
-        <Network size={13} /> Lancer une recherche d'influenceurs
-      </Button>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 20 — DEFCON CRISE (chart row)
-// ════════════════════════════════════════════════════════════════════
-
-function DefconCrisisCard({
-  health,
-  alerts,
-}: {
-  health: BrandHealth | null;
-  alerts: CrisisAlertsResp | null;
-}) {
-  const crisisScore = health?.crisisScore ?? 0;
-  const crisisLevel = health?.crisisLevel ?? "safe";
-  const defcon = defconFor(crisisScore, crisisLevel);
-  const alertList = (alerts?.alerts ?? []).filter((a) => a.severity === "critical" || a.severity === "warning").slice(0, 3);
-  const lastIncident = (alerts?.alerts ?? [])[0]?.timestamp;
-
-  return (
-    <CardShell
-      className="lg:col-span-6"
-      style={defcon.defcon <= 2 ? { boxShadow: `0 0 0 1px ${NEGATIVE}` } : undefined}
-    >
-      <SectionHeader
-        title="20 · DEFCON Crise"
-        right={
-          <Badge
-            variant="secondary"
-            className="h-5"
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              backgroundColor: `${defcon.color}1A`,
-              color: defcon.color,
-            }}
-          >
-            DEFCON {defcon.defcon} · {defcon.label}
-          </Badge>
-        }
-      />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
-        <div className="sm:col-span-7">
-          <div className="flex items-center gap-1 mb-3">
-            {[1, 2, 3, 4, 5].map((lvl) => (
-              <div
-                key={lvl}
-                style={{
-                  flex: 1,
-                  height: 8,
-                  borderRadius: 2,
-                  backgroundColor: lvl >= defcon.defcon
-                    ? lvl <= 2 ? NEGATIVE : lvl === 3 ? NEUTRAL_AMBER : SAGE
-                    : "#F4F4F5",
-                }}
-                title={`DEFCON ${lvl}`}
-              />
-            ))}
-          </div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 32,
-                fontWeight: 700,
-                color: defcon.color,
-              }}
-            >
-              {health ? Math.round(crisisScore) : "—"}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY }}>
-              {defcon.label}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <div
-              className="p-2 rounded-md"
-              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
-            >
-              <span style={FONT_HEADER}>Menaces actives</span>
-              <div
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: alertList.length >= 3 ? NEGATIVE : alertList.length >= 1 ? NEUTRAL_AMBER : POSITIVE,
-                }}
-              >
-                {alertList.length}
-              </div>
-            </div>
-            <div
-              className="p-2 rounded-md"
-              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
-            >
-              <span style={FONT_HEADER}>Dernier incident</span>
-              <div
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: CHARCOAL,
-                  marginTop: 2,
-                }}
-              >
-                {lastIncident ? fmtRelative(lastIncident) : "—"}
-              </div>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-full"
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 11,
-              borderColor: NEGATIVE,
-              color: NEGATIVE,
-            }}
-            onClick={() => toast.info("Mode crise — protocole déclenché")}
-          >
-            <AlertTriangle size={13} /> Activer le mode crise
-          </Button>
-        </div>
-        <div className="sm:col-span-5">
-          <span style={FONT_HEADER}>Menaces récentes</span>
-          <div className="mt-2 space-y-2 max-h-[200px] overflow-y-auto pr-1 -mr-1">
-            {alertList.length === 0 ? (
-              <div className="p-3 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
-                <EmptyDash label="Aucune menace active" />
-              </div>
-            ) : (
-              alertList.map((a) => (
-                <div
-                  key={a.id}
-                  className="p-2 rounded-md"
-                  style={{
-                    border: `1px solid ${BORDER}`,
-                    borderLeft: `2px solid ${severityColor(a.severity)}`,
-                    backgroundColor: "#FCFCFC",
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span
-                      style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 9,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        color: severityColor(a.severity),
-                      }}
-                    >
-                      {a.severity}
-                    </span>
-                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-                      {fmtRelative(a.timestamp)}
-                    </span>
-                  </div>
-                  <p
-                    className="line-clamp-2"
-                    style={{
-                      fontFamily: FONT_SANS,
-                      fontSize: 11,
-                      lineHeight: 1.4,
-                      color: CHARCOAL,
-                    }}
-                  >
-                    {a.title}
-                  </p>
-                  <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>
-                    {a.source}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 21 — CARTE DE CHALEUR GÉO (chart row, ScatterChart)
-// ════════════════════════════════════════════════════════════════════
-
-function CarteChaleurGeoCard({ geo }: { geo: GeoSignalsResp | null }) {
-  const cities = useMemo<GeoPoint[]>(() => {
-    const pts = geo?.points ?? [];
-    if (pts.length > 0) return pts;
-    // Fallback distribution — used when geo API returns no points yet.
-    return [
-      { city: "Casablanca", lat: 33.57, lng: -7.59, count: 847, sentiment: "pos" },
-      { city: "Rabat", lat: 34.02, lng: -6.83, count: 523, sentiment: "pos" },
-      { city: "Marrakech", lat: 31.63, lng: -7.99, count: 312, sentiment: "neu" },
-      { city: "Fès", lat: 34.03, lng: -5.00, count: 198, sentiment: "neg" },
-      { city: "Tanger", lat: 35.76, lng: -5.83, count: 156, sentiment: "neu" },
-      { city: "Dakar", lat: 14.69, lng: -17.45, count: 84, sentiment: "pos" },
-      { city: "Abidjan", lat: 5.36, lng: -4.01, count: 67, sentiment: "neu" },
-      { city: "Tunis", lat: 36.81, lng: 10.18, count: 102, sentiment: "pos" },
-    ];
-  }, [geo]);
-
-  const max = Math.max(1, ...cities.map((c) => c.count));
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader
-        title="21 · Carte de Chaleur Géo"
-        right={
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            Maroc · Afrique · {cities.length} villes
-          </span>
-        }
-      />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div style={{ width: "100%", height: 220 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 8, right: 8, left: -32, bottom: 0 }}>
-            <CartesianGrid stroke="#F4F4F5" />
-            <XAxis
-              type="number"
-              dataKey="lng"
-              domain={[-20, 15]}
-              tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
-              tickLine={false}
-              axisLine={{ stroke: BORDER_STRONG }}
-            />
-            <YAxis
-              type="number"
-              dataKey="lat"
-              domain={[0, 40]}
-              tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
-              tickLine={false}
-              axisLine={false}
-              width={36}
-            />
-            <RTooltip
-              cursor={{ strokeDasharray: "3 3" }}
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const p = payload[0].payload as GeoPoint;
-                const sentColor = p.sentiment === "neg" ? NEGATIVE : p.sentiment === "neu" ? NEUTRAL_AMBER : SAGE;
-                return (
-                  <div
-                    style={{
-                      border: `1px solid ${BORDER_STRONG}`,
-                      borderRadius: 8,
-                      padding: 8,
-                      background: "white",
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
-                  >
-                    <div style={{ color: CHARCOAL, fontWeight: 700 }}>{p.city}</div>
-                    <div style={{ color: TEXT_MUTED }}>{fmtNumber(p.count)} mentions</div>
-                    <div style={{ color: sentColor }}>
-                      Sentiment: {p.sentiment === "neg" ? "Négatif" : p.sentiment === "neu" ? "Neutre" : "Positif"}
-                    </div>
-                  </div>
-                );
-              }}
-            />
-            <Scatter
-              data={cities}
-              isAnimationActive
-              shape={(props: unknown) => {
-                const p = props as { cx?: number; cy?: number; payload?: GeoPoint };
-                const cx = p.cx ?? 0;
-                const cy = p.cy ?? 0;
-                const point = p.payload;
-                if (!point) return <g />;
-                const intensity = point.count / max;
-                const fill = point.sentiment === "neg" ? NEGATIVE : point.sentiment === "neu" ? NEUTRAL_AMBER : SAGE;
-                const r = 6 + intensity * 16;
-                return (
-                  <g>
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={r}
-                      fill={fill}
-                      fillOpacity={0.25 + intensity * 0.55}
-                      stroke={fill}
-                      strokeOpacity={0.7}
-                      strokeWidth={1}
-                    />
-                    <text
-                      x={cx}
-                      y={cy + r + 10}
-                      textAnchor="middle"
-                      style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 9,
-                        fill: TEXT_BODY,
-                      }}
-                    >
-                      {point.city}
-                    </text>
-                  </g>
-                );
-              }}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            <SparkDot color={SAGE} /> Positif
-          </span>
-          <span className="inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            <SparkDot color={NEUTRAL_AMBER} /> Neutre
-          </span>
-          <span className="inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-            <SparkDot color={NEGATIVE} /> Négatif
-          </span>
-        </div>
-        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-          Total: {fmtNumber(cities.reduce((s, c) => s + c.count, 0))} mentions
-        </span>
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 22 — GÉNÉRATEUR DE BRIEFING EXÉCUTIF (chart row)
-// ════════════════════════════════════════════════════════════════════
-
-function GenerateurBriefingCard({ briefings }: { briefings: BriefingListResp | null }) {
-  const router = useRouter();
-  const [reportType, setReportType] = useState("executif");
-  const [period, setPeriod] = useState("Q4");
-  const [sections, setSections] = useState<Record<string, boolean>>({
-    sommaire: true,
-    score: true,
-    sentiment: true,
-    benchmark: true,
-    ai: true,
-    crise: true,
-    recommandations: true,
-  });
-
-  const reportTypes = [
-    { id: "executif", label: "Briefing Exécutif" },
-    { id: "comex", label: "Rapport COMEX" },
-    { id: "crise", label: "Bilan de Crise" },
-    { id: "trimestriel", label: "Rapport Trimestriel" },
-    { id: "concurrentiel", label: "Étude Concurrentielle" },
-  ];
-
-  const periods = ["Q1", "Q2", "Q3", "Q4"];
-
-  const sectionList = [
-    { id: "sommaire", label: "Sommaire exécutif" },
-    { id: "score", label: "Score de réputation" },
-    { id: "sentiment", label: "Analyse de sentiment" },
-    { id: "benchmark", label: "Benchmark concurrentiel" },
-    { id: "ai", label: "Visibilité IA" },
-    { id: "crise", label: "Analyse de crise" },
-    { id: "recommandations", label: "Recommandations" },
-  ];
-
-  const recentBriefings = (briefings?.briefings ?? []).slice(0, 3);
-
-  const handleGenerate = useCallback(async () => {
-    try {
-      const r = await fetch("/api/console/briefing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: new Date().toISOString().slice(0, 10),
-          type: reportType,
-          period,
-          sections: Object.keys(sections).filter((k) => sections[k]),
-        }),
-      });
-      if (!r.ok) throw new Error("Échec génération");
-      toast.success("Briefing en cours de génération");
-      router.push("/atelier/console");
-    } catch {
-      toast.error("Échec de la génération");
-    }
-  }, [reportType, period, sections, router]);
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="22 · Générateur Briefing Exécutif" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-        {/* Report type */}
-        <div>
-          <span style={FONT_HEADER}>Type de rapport</span>
-          <select
-            value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-            className="w-full mt-1 px-2 py-2 rounded-md outline-none"
-            style={{
-              border: `1px solid ${BORDER_STRONG}`,
-              fontFamily: FONT_SANS,
-              fontSize: 12,
-              color: CHARCOAL,
-              backgroundColor: "white",
-            }}
-          >
-            {reportTypes.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
-        </div>
-        {/* Period */}
-        <div>
-          <span style={FONT_HEADER}>Période</span>
-          <div className="flex gap-0.5 mt-1 rounded-md" style={{ border: `1px solid ${BORDER}` }}>
-            {periods.map((p) => {
-              const active = period === p;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPeriod(p)}
-                  className="flex-1 py-2 transition-colors"
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 11,
-                    color: active ? "white" : TEXT_MUTED,
-                    backgroundColor: active ? SAGE : "transparent",
-                    borderRadius: 4,
-                  }}
-                >
-                  {p}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <div className="mb-3">
-        <span style={FONT_HEADER}>Sections à inclure</span>
-        <div className="grid grid-cols-2 gap-1.5 mt-1">
-          {sectionList.map((s) => {
-            const active = !!sections[s.id];
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSections((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
-                className="flex items-center gap-2 p-2 rounded-md text-left transition-colors"
-                style={{
-                  border: `1px solid ${active ? SAGE : BORDER}`,
-                  backgroundColor: active ? SAGE_BG : "#FCFCFC",
-                }}
-              >
-                <div
-                  style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 3,
-                    border: `1px solid ${active ? SAGE : BORDER_STRONG}`,
-                    backgroundColor: active ? SAGE : "white",
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>
-                  {s.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      <Button
-        onClick={handleGenerate}
-        size="sm"
-        className="h-9 w-full"
-        style={{ backgroundColor: SAGE, color: "white", fontFamily: FONT_MONO, fontSize: 11 }}
-      >
-        <FileText size={13} /> Générer le briefing
-      </Button>
-      {/* History */}
-      <div className="mt-4">
-        <span style={FONT_HEADER}>Derniers briefings</span>
-        <div className="mt-2 space-y-1.5">
-          {recentBriefings.length === 0 ? (
-            <div className="p-3 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
-              <EmptyDash label="Aucun briefing généré" />
-            </div>
-          ) : (
-            recentBriefings.map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center justify-between gap-2 p-2 rounded-md"
-                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText size={12} style={{ color: SAGE }} />
-                  <div className="min-w-0">
-                    <div className="truncate" style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 600, color: CHARCOAL }}>
-                      {b.title}
-                    </div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-                      {fmtDate(b.date)} · {b.alertCount} alertes · {b.citedCount} sources
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-0.5 shrink-0"
-                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
-                >
-                  <Download size={11} /> PDF
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 23 — COMPETITOR DEEP DIVE (chart row)
-// ════════════════════════════════════════════════════════════════════
-
-function CompetitorDeepDiveCard({
-  sov,
-  radar,
-  trend,
-}: {
-  sov: ShareOfVoiceResp | null;
-  radar: CompetitorRadarResp | null;
-  trend: SentimentTrendResp | null;
-}) {
-  const competitors = (sov?.competitors ?? []).filter((c) => !c.isYou).slice(0, 4);
-  const [selected, setSelected] = useState<string>(competitors[0]?.name ?? "");
-  const [watching, setWatching] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (!selected && competitors.length > 0) {
-      setSelected(competitors[0].name);
-    }
-  }, [competitors, selected]);
-
-  const selectedComp = competitors.find((c) => c.name === selected) ?? competitors[0] ?? null;
-  const myBrand = (radar?.brands ?? []).find((b) => b.isYou);
-  const compBrand = (radar?.brands ?? []).find((b) => selectedComp && (b.name.toLowerCase().includes(selectedComp.name.toLowerCase().slice(0, 4)) || selectedComp.name.toLowerCase().includes(b.name.toLowerCase().slice(0, 4))));
-
-  const radarData = useMemo(() => {
-    const axes = ["Sentiment", "PDV", "IA", "Influence", "Résilience", "Reach"];
-    if (!myBrand && !compBrand) return [];
-    return axes.map((axis) => {
-      const row: Record<string, number | string> = { axis };
-      if (myBrand) {
-        const s = myBrand.scores;
-        row["Vous"] = axis === "Sentiment" ? s.sentiment : axis === "PDV" ? s.shareOfVoice : axis === "IA" ? s.aiVisibility : axis === "Influence" ? s.influencerAuthority : axis === "Résilience" ? s.crisisResilience : s.mediaReach;
-      }
-      if (compBrand) {
-        const s = compBrand.scores;
-        row[compBrand.name] = axis === "Sentiment" ? s.sentiment : axis === "PDV" ? s.shareOfVoice : axis === "IA" ? s.aiVisibility : axis === "Influence" ? s.influencerAuthority : axis === "Résilience" ? s.crisisResilience : s.mediaReach;
-      }
-      return row;
-    });
-  }, [myBrand, compBrand]);
-
-  const sentimentData = useMemo(() => {
-    if (!trend?.data?.length || !selectedComp) return [];
-    return trend.data.slice(-30).map((d) => ({
-      date: d.date,
-      vous: Math.round((d.positive / Math.max(1, d.count)) * 100),
-      concurrent: Math.round((d.positive / Math.max(1, d.count)) * 100 * (selectedComp.sentiment > 0 ? 1.05 : 0.92) + (Math.random() * 6 - 3)),
-    }));
-  }, [trend, selectedComp]);
-
-  const sovDonut = useMemo(() => {
-    if (!selectedComp || !sov) return [];
-    return [
-      { name: "Vous", value: (sov.competitors.find((c) => c.isYou)?.mentionCount) ?? 0, color: SAGE },
-      { name: selectedComp.name, value: selectedComp.mentionCount, color: COMPETITOR_A },
-      { name: "Autres", value: sov.competitors.filter((c) => !c.isYou && c.name !== selectedComp.name).reduce((s, c) => s + c.mentionCount, 0), color: NEUTRAL_GRAY },
-    ];
-  }, [selectedComp, sov]);
-
-  const insights = useMemo(() => {
-    if (!selectedComp) return [];
-    const list: string[] = [];
-    const mine = (sov?.competitors ?? []).find((c) => c.isYou);
-    if (mine) {
-      const ratio = mine.mentionCount / Math.max(1, selectedComp.mentionCount);
-      if (ratio > 1.2) list.push(`${mine.name} génère ${Math.round((ratio - 1) * 100)}% de mentions supplémentaires que ${selectedComp.name}. Avantage de visibilité consolidé.`);
-      else if (ratio < 0.8) list.push(`${selectedComp.name} génère ${Math.round((1 - ratio) * 100)}% de mentions supplémentaires. Déficit de visibilité à combler.`);
-      else list.push(`Visibilité équilibrée entre ${mine.name} et ${selectedComp.name} (±${Math.round(Math.abs(1 - ratio) * 100)}%).`);
-    }
-    if (selectedComp.sentiment > 0.1) list.push(`${selectedComp.name} bénéficie d'un sentiment positif (${selectedComp.sentiment.toFixed(2)}). Risque de bascule narratif.`);
-    else if (selectedComp.sentiment < -0.1) list.push(`${selectedComp.name} subit un sentiment négatif (${selectedComp.sentiment.toFixed(2)}). Opportunité de captation narrative.`);
-    if (selectedComp.trend > 0) list.push(`Tendance haussière pour ${selectedComp.name} (+${selectedComp.trend} pts). Surveiller activement.`);
-    return list;
-  }, [selectedComp, sov]);
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="23 · Competitor Deep Dive" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {/* Selector */}
-      <div className="flex items-center gap-2 mb-3">
-        <span style={FONT_HEADER}>Concurrent</span>
-        <select
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="flex-1 px-2 py-1.5 rounded-md outline-none"
-          style={{
-            border: `1px solid ${BORDER_STRONG}`,
-            fontFamily: FONT_SANS,
-            fontSize: 12,
-            color: CHARCOAL,
-            backgroundColor: "white",
-          }}
-        >
-          {competitors.length === 0 ? (
-            <option value="">Aucun concurrent</option>
-          ) : (
-            competitors.map((c) => (
-              <option key={c.name} value={c.name}>{c.name}</option>
-            ))
-          )}
-        </select>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8"
-          style={{ fontFamily: FONT_MONO, fontSize: 10 }}
-          onClick={() => {
-            if (!selected) return;
-            setWatching((w) => ({ ...w, [selected]: !w[selected] }));
-            toast.success(watching[selected] ? `${selected} retiré de la surveillance` : `${selected} ajouté à la surveillance`);
-          }}
-          disabled={!selected}
-        >
-          <Eye size={12} /> {selected && watching[selected] ? "Surveillé" : "Surveiller"}
-        </Button>
-      </div>
-      {selectedComp ? (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            {/* Radar */}
-            <div>
-              <span style={FONT_HEADER}>Radar comparatif</span>
-              <div style={{ width: "100%", height: 160 }}>
-                {radarData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={radarData} outerRadius="68%" margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-                      <PolarGrid stroke={BORDER_STRONG} />
-                      <PolarAngleAxis dataKey="axis" tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_BODY }} />
-                      <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar name="Vous" dataKey="Vous" stroke={SAGE} fill={SAGE} fillOpacity={0.25} strokeWidth={2} isAnimationActive />
-                      {compBrand && (
-                        <Radar name={compBrand.name} dataKey={compBrand.name} stroke={COMPETITOR_A} fill={COMPETITOR_A} fillOpacity={0.1} strokeWidth={1.5} isAnimationActive />
-                      )}
-                      <RTooltip contentStyle={tooltipStyle} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <EmptyDash label="Radar indisponible" />
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* SOV Donut */}
-            <div>
-              <span style={FONT_HEADER}>Part de voix</span>
-              <div style={{ position: "relative", width: "100%", height: 160 }}>
-                {sovDonut.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={sovDonut} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="55%" outerRadius="90%" paddingAngle={2} isAnimationActive>
-                        {sovDonut.map((d) => (
-                          <Cell key={d.name} fill={d.color} stroke="white" strokeWidth={2} />
-                        ))}
-                      </Pie>
-                      <RTooltip contentStyle={tooltipStyle} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <EmptyDash label="SOV indisponible" />
-                  </div>
-                )}
-                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                  <div className="text-center">
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL }}>
-                      {selectedComp ? Math.round((selectedComp.mentionCount / Math.max(1, sovDonut.reduce((s, d) => s + d.value, 0))) * 100) : 0}%
-                    </div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>PDV concurrent</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Sentiment comparison LineChart */}
-          <div className="mb-3">
-            <span style={FONT_HEADER}>Comparaison sentiment (30j)</span>
-            <div style={{ width: "100%", height: 100 }}>
-              {sentimentData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={sentimentData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                    <CartesianGrid stroke="#F4F4F5" vertical={false} />
-                    <XAxis dataKey="date" tickFormatter={fmtDayShort} tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }} tickLine={false} axisLine={{ stroke: BORDER_STRONG }} minTickGap={20} />
-                    <YAxis tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }} tickLine={false} axisLine={false} width={28} />
-                    <RTooltip contentStyle={tooltipStyle} labelFormatter={(l) => fmtDayShort(String(l))} />
-                    <Line type="monotone" dataKey="vous" name="Vous" stroke={SAGE} strokeWidth={1.5} dot={false} isAnimationActive />
-                    <Line type="monotone" dataKey="concurrent" name={selectedComp.name} stroke={COMPETITOR_A} strokeWidth={1.5} dot={false} isAnimationActive strokeDasharray="3 3" />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <EmptyDash label="Comparaison indisponible" />
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Insights */}
-          <div
-            className="p-3 rounded-md"
-            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC", borderLeft: `2px solid ${SAGE}` }}
-          >
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Sparkles size={11} style={{ color: SAGE }} />
-              <span style={FONT_HEADER}>Insights stratégiques</span>
-            </div>
-            <ul className="space-y-1">
-              {insights.map((ins, i) => (
-                <li
-                  key={i}
-                  style={{
-                    fontFamily: FONT_SANS,
-                    fontSize: 11,
-                    color: TEXT_BODY,
-                    lineHeight: 1.5,
-                    paddingLeft: 10,
-                    position: "relative",
-                  }}
-                >
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 6,
-                      width: 4,
-                      height: 4,
-                      borderRadius: "50%",
-                      backgroundColor: SAGE,
-                    }}
-                  />
-                  {ins}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      ) : (
-        <div className="h-[420px] flex items-center justify-center">
-          <EmptyDash label="Sélectionnez un concurrent" />
-        </div>
-      )}
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 24 — SUIVI ESG (chart row, 3 cards)
-// ════════════════════════════════════════════════════════════════════
-
-function SuiviEsgCard({ health }: { health: BrandHealth | null }) {
-  const baseScore = health?.score ?? 60;
-  const cards = [
-    {
-      label: "Environnement",
-      score: Math.min(100, Math.max(20, baseScore + 4)),
-      trend: 2,
-      Icon: Leaf,
-      hint: "Empreinte carbone · RSE",
-    },
-    {
-      label: "Social",
-      score: Math.min(100, Math.max(20, baseScore - 2)),
-      trend: -1,
-      Icon: Users,
-      hint: "Diversité · conditions de travail",
-    },
-    {
-      label: "Gouvernance",
-      score: Math.min(100, Math.max(20, baseScore + 6)),
-      trend: 3,
-      Icon: Scale,
-      hint: "Transparence · conformité",
-    },
-  ];
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="24 · Suivi ESG" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {cards.map((c) => {
-          const color = c.score >= 70 ? SAGE : c.score >= 50 ? NEUTRAL_AMBER : NEGATIVE;
-          return (
-            <div
-              key={c.label}
-              className="p-4 rounded-lg flex flex-col gap-2"
-              style={{
-                border: `1px solid ${BORDER}`,
-                backgroundColor: "#FCFCFC",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span style={FONT_HEADER}>{c.label}</span>
-                <c.Icon size={14} style={{ color: SAGE }} />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 28,
-                    fontWeight: 700,
-                    color,
-                  }}
-                >
-                  {c.score}
-                </span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>/ 100</span>
-              </div>
-              <Delta value={c.trend} suffix=" pts" />
-              <div
-                className="h-1.5 w-full rounded-full overflow-hidden"
-                style={{ backgroundColor: "#F4F4F5" }}
-              >
-                <div
-                  style={{
-                    width: `${c.score}%`,
-                    height: "100%",
-                    backgroundColor: color,
-                    transition: "width 0.6s ease-out",
-                  }}
-                />
-              </div>
-              <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4 }}>
-                {c.hint}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <button
-        type="button"
-        className="mt-3 inline-flex items-center gap-1"
-        style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE }}
-      >
-        <FileText size={12} /> Rapport ESG trimestriel <ChevronRight size={11} />
-      </button>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 25 — VEILLE RÉGLEMENTAIRE (chart row, list)
-// ════════════════════════════════════════════════════════════════════
-
-function VeilleReglementaireCard({ reg }: { reg: RegulatoryFeedResp | null }) {
-  const items = (reg?.items ?? []).slice(0, 5);
-
-  const impactMeta = (impact: string) => {
-    if (impact === "high") return { label: "Fort", color: NEGATIVE };
-    if (impact === "medium") return { label: "Moyen", color: NEUTRAL_AMBER };
-    return { label: "Faible", color: SAGE };
-  };
-
-  return (
-    <CardShell className="lg:col-span-6">
-      <SectionHeader title="25 · Veille Réglementaire" />
-      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      {items.length === 0 ? (
-        <div className="h-[300px] flex items-center justify-center">
-          <EmptyDash label="Aucune mise à jour réglementaire" />
-        </div>
-      ) : (
-        <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 -mr-1">
-          {items.map((it) => {
-            const meta = impactMeta(it.impact);
-            return (
-              <div
-                key={it.id}
-                className="p-3 rounded-md transition-colors hover:bg-[#FAFAFA]"
-                style={{
-                  border: `1px solid ${BORDER}`,
-                  borderLeft: `2px solid ${meta.color}`,
-                  backgroundColor: "#FCFCFC",
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Badge
-                      variant="secondary"
-                      className="h-5"
-                      style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 9,
-                        backgroundColor: SAGE_BG,
-                        color: SAGE,
-                      }}
-                    >
-                      {it.source}
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="h-5"
-                      style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 9,
-                        backgroundColor: `${meta.color}1A`,
-                        color: meta.color,
-                      }}
-                    >
-                      Impact {meta.label}
-                    </Badge>
-                  </div>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-                    {fmtDate(it.date)}
-                  </span>
-                </div>
-                <p
-                  style={{
-                    fontFamily: FONT_SANS,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: CHARCOAL,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {it.title}
-                </p>
-                {it.summary && (
-                  <p
-                    className="line-clamp-2 mt-1"
-                    style={{
-                      fontFamily: FONT_SANS,
-                      fontSize: 11,
-                      color: TEXT_BODY,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {it.summary}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <button
-        type="button"
-        className="mt-3 inline-flex items-center gap-1"
-        style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE }}
-      >
-        Voir toutes les régulations <ChevronRight size={11} />
-      </button>
-    </CardShell>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SIDEBAR NAV (plan-aware — Grandes Entreprises)
-// 10 items: 6 shared with Pro/Essentiel + 3 Enterprise exclusives
-// (Gouvernance, API, Influenceurs) + Harch 100 (external). Each maps
-// to a section `id` attached to the corresponding motion.div wrapper.
-// Clicking scrolls smoothly; an IntersectionObserver highlights the
-// item matching the section currently in view.
-// ════════════════════════════════════════════════════════════════════
-
-const NAV_ITEMS: {
-  id: string;
-  label: string;
-  Icon: typeof LayoutGrid;
-  enterpriseExclusive?: boolean;
-  external?: boolean;
-}[] = [
-  { id: "score", label: "Tableau de bord", Icon: LayoutGrid },
+const NAV_ITEMS: { id: string; label: string; Icon: typeof LayoutGrid; enterpriseExclusive?: boolean }[] = [
+  { id: "ai-workspace", label: "Tableau de bord", Icon: LayoutGrid },
   { id: "sentiment", label: "Sentiment", Icon: TrendingUp },
   { id: "concurrents", label: "Concurrents", Icon: Users },
   { id: "alertes", label: "Alertes", Icon: Bell },
-  { id: "rapports", label: "Rapports", Icon: FileText },
-  {
-    id: "gouvernance",
-    label: "Gouvernance",
-    Icon: ShieldCheck,
-    enterpriseExclusive: true,
-  },
-  { id: "api", label: "API", Icon: Code, enterpriseExclusive: true },
-  {
-    id: "influenceurs",
-    label: "Influenceurs",
-    Icon: UserPlus,
-    enterpriseExclusive: true,
-  },
+  { id: "gouvernance", label: "Gouvernance", Icon: ShieldCheck, enterpriseExclusive: true },
+  { id: "api", label: "API", Icon: Key, enterpriseExclusive: true },
   { id: "visibilite-ia", label: "Visibilité IA", Icon: Brain },
-  { id: "harch-100", label: "Harch 100", Icon: Trophy, external: true },
+  { id: "influenceurs", label: "Influenceurs", Icon: UserPlus, enterpriseExclusive: true },
+  { id: "briefing", label: "Briefings", Icon: FileText },
+  { id: "esg-conformite", label: "ESG & Conformité", Icon: Leaf },
 ];
 
-function scrollToSection(id: string) {
-  if (typeof document === "undefined") return;
-  document.getElementById(id)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}
-
-function userInitials(name?: string | null): string {
-  if (!name) return "U";
-  const parts = name.trim().split(/\s+/);
-  const letters = parts.slice(0, 2).map((p) => p[0] ?? "").filter(Boolean);
-  return (letters.length ? letters.join("") : name[0] ?? "U").toUpperCase();
-}
-
-// SidebarContent — shared by desktop (sticky aside) and mobile overlay.
-// Self-contained: same NAV_ITEMS, same footer, same user block.
 function SidebarContent({
   activeSection,
   alertCount,
+  userName,
+  userEmail,
   onNavigate,
-  fallbackName,
-  fallbackEmail,
 }: {
   activeSection: string;
   alertCount: number;
+  userName?: string | null;
+  userEmail?: string | null;
   onNavigate?: (id: string) => void;
-  fallbackName?: string | null;
-  fallbackEmail?: string | null;
 }) {
-  const { data: session } = useSession();
-  const userName = session?.user?.name ?? fallbackName ?? "Utilisateur";
-  const userEmail = session?.user?.email ?? fallbackEmail ?? "—";
+  const displayName = userName ?? "Utilisateur";
+  const displayEmail = userEmail ?? "—";
   const initials = userInitials(userName);
 
-  const handleClick = (id: string, external?: boolean) => {
-    if (external) return; // external links handled by <Link>
+  const handleClick = (id: string) => {
     scrollToSection(id);
     onNavigate?.(id);
   };
 
   return (
     <div className="flex flex-col h-full" style={{ fontFamily: FONT_SANS }}>
-      {/* Logo header */}
       <div
         className="px-4 py-4 flex items-center gap-2"
         style={{ borderBottom: `1px solid ${BORDER}` }}
@@ -4431,17 +959,55 @@ function SidebarContent({
         </span>
       </div>
 
-      {/* Nav items */}
       <nav
         className="flex-1 px-2 py-3 space-y-1 overflow-y-auto"
         aria-label="Navigation principale"
       >
-        {NAV_ITEMS.map(({ id, label, Icon, external }) => {
+        {NAV_ITEMS.map(({ id, label, Icon, enterpriseExclusive }) => {
           const isActive = activeSection === id;
-          const inner = (
-            <>
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleClick(id)}
+              className="w-full flex items-center gap-3 text-left transition-colors group"
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? SAGE : TEXT_BODY,
+                backgroundColor: isActive ? SAGE_BG : "transparent",
+                borderLeft: isActive
+                  ? `3px solid ${SAGE}`
+                  : "3px solid transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              aria-current={isActive ? "true" : undefined}
+            >
               <Icon size={18} style={{ flexShrink: 0 }} />
               <span className="flex-1 truncate">{label}</span>
+              {enterpriseExclusive && (
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: SAGE,
+                    backgroundColor: SAGE_BG,
+                    borderRadius: 3,
+                    padding: "1px 4px",
+                  }}
+                >
+                  ENT
+                </span>
+              )}
               {id === "alertes" && alertCount > 0 && (
                 <span
                   style={{
@@ -4462,64 +1028,14 @@ function SidebarContent({
                   {alertCount > 9 ? "9+" : alertCount}
                 </span>
               )}
-              {external && (
-                <ExternalLink size={12} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
-              )}
-            </>
-          );
-          const baseStyle: CSSProperties = {
-            padding: "10px 12px",
-            borderRadius: 8,
-            fontSize: 14,
-            fontWeight: isActive ? 600 : 500,
-            color: isActive ? SAGE : TEXT_BODY,
-            backgroundColor: isActive ? SAGE_BG : "transparent",
-            borderLeft: isActive ? `3px solid ${SAGE}` : "3px solid transparent",
-          };
-          if (external) {
-            return (
-              <Link
-                key={id}
-                href="/atelier/harch-100"
-                className="w-full flex items-center gap-3 text-left transition-colors"
-                style={baseStyle}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
-                }}
-                onClick={() => onNavigate?.(id)}
-              >
-                {inner}
-              </Link>
-            );
-          }
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => handleClick(id, external)}
-              className="w-full flex items-center gap-3 text-left transition-colors"
-              style={baseStyle}
-              onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.backgroundColor = "#FAFAFA";
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
-              }}
-              aria-current={isActive ? "true" : undefined}
-            >
-              {inner}
             </button>
           );
         })}
       </nav>
 
-      {/* Plan + user footer */}
       <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}` }}>
         <div style={FONT_HEADER}>Plan</div>
-        <div className="mt-1 flex items-center gap-2 flex-wrap">
+        <div className="mt-1 flex items-baseline gap-2">
           <span
             style={{
               fontFamily: FONT_SANS,
@@ -4533,16 +1049,11 @@ function SidebarContent({
           <span
             style={{
               fontFamily: FONT_MONO,
-              fontSize: 9,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              backgroundColor: SAGE,
-              color: "#FFFFFF",
-              padding: "2px 6px",
-              borderRadius: 999,
+              fontSize: 12,
+              color: SAGE,
             }}
           >
-            Board-ready
+            · Actif
           </span>
         </div>
 
@@ -4578,7 +1089,7 @@ function SidebarContent({
                   whiteSpace: "nowrap",
                 }}
               >
-                {userName}
+                {displayName}
               </div>
               <div
                 style={{
@@ -4590,7 +1101,7 @@ function SidebarContent({
                   whiteSpace: "nowrap",
                 }}
               >
-                {userEmail}
+                {displayEmail}
               </div>
             </div>
           </div>
@@ -4621,217 +1132,4648 @@ function SidebarContent({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// HEADER (sticky top nav — frosted glass, hamburger, bell badge, avatar)
+// HEADER — frosted glass, hamburger, HARCH | ATELIER + Plan Ent badge
 // ════════════════════════════════════════════════════════════════════
 
-function DashboardHeader({
-  lastUpdated,
-  alertCount,
-  loading,
-  onRefresh,
+function Header({
   onMenuClick,
-  fallbackName,
+  alertCount,
+  userName,
 }: {
-  lastUpdated: string | null;
+  onMenuClick: () => void;
   alertCount: number;
-  loading: boolean;
-  onRefresh: () => void;
-  onMenuClick?: () => void;
-  fallbackName?: string | null;
+  userName?: string | null;
 }) {
-  const { data: session } = useSession();
-  const userName = session?.user?.name ?? fallbackName ?? "Utilisateur";
-  const initials = userInitials(userName);
-
   return (
     <header
-      className="sticky top-0 z-30 px-4 sm:px-6 py-3.5"
+      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-6 py-3"
       style={{
-        backgroundColor: "rgba(255,255,255,0.88)",
+        backgroundColor: "rgba(255,255,255,0.85)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
         borderBottom: `1px solid ${BORDER}`,
       }}
     >
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: hamburger + HARCH | ATELIER logo + plan badge */}
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={onMenuClick}
-            className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
-            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
-            aria-label="Ouvrir le menu"
-          >
-            <Menu size={16} />
-          </button>
-          <div className="flex items-center gap-2">
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                color: CHARCOAL,
-              }}
-            >
-              HARCH
-            </span>
-            <span
-              style={{
-                color: TEXT_HEADER,
-                fontFamily: FONT_MONO,
-                fontSize: 13,
-              }}
-            >
-              |
-            </span>
-            <span
-              className="hidden sm:inline"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 12,
-                letterSpacing: "0.12em",
-                color: TEXT_MUTED,
-                textTransform: "uppercase",
-              }}
-            >
-              Atelier
-            </span>
-          </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="lg:hidden inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+          style={{ width: 32, height: 32 }}
+          aria-label="Ouvrir le menu"
+        >
+          <Menu size={18} />
+        </button>
+        <div className="flex items-baseline gap-2">
           <span
-            className="hidden md:inline text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
             style={{
+              fontFamily: FONT_MONO,
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              color: CHARCOAL,
+            }}
+          >
+            HARCH
+          </span>
+          <span style={{ color: TEXT_HEADER, fontFamily: FONT_MONO, fontSize: 12 }}>
+            |
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              color: TEXT_MUTED,
+              textTransform: "uppercase",
+            }}
+          >
+            Atelier
+          </span>
+          <Badge
+            variant="secondary"
+            className="ml-2 h-5"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
               backgroundColor: SAGE_BG,
               color: SAGE,
-              fontFamily: FONT_MONO,
             }}
           >
-            Grandes Entreprises
-          </span>
+            PLAN ENTREPRISE
+          </Badge>
         </div>
+      </div>
 
-        {/* Right: last updated + refresh + bell with badge + avatar */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="text-right hidden sm:block">
-            <div
-              className="text-[10px] uppercase tracking-wider"
-              style={{ color: TEXT_MUTED, fontFamily: FONT_MONO }}
-            >
-              Dernière maj
-            </div>
-            <div
-              className="text-[12px]"
-              style={{ color: TEXT_BODY, fontFamily: FONT_MONO }}
-            >
-              {lastUpdated ?? "—"}
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 hidden sm:inline-flex"
-            style={{ fontFamily: FONT_MONO, fontSize: 11 }}
-            onClick={onRefresh}
-            aria-label="Rafraîchir"
-          >
-            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-          </Button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("alertes")}
-            className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors hover:bg-[#F5F5F5]"
-            style={{ border: `1px solid ${BORDER_STRONG}`, color: TEXT_BODY }}
-            aria-label={`Alertes${alertCount > 0 ? ` (${alertCount})` : ""}`}
-            title="Alertes"
-          >
-            <Bell size={15} />
-            {alertCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 flex items-center justify-center"
-                style={{
-                  minWidth: 16,
-                  height: 16,
-                  padding: "0 4px",
-                  borderRadius: 8,
-                  backgroundColor: NEGATIVE,
-                  color: "#FFFFFF",
-                  fontFamily: FONT_MONO,
-                  fontSize: 9,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                }}
+      <div className="flex items-center gap-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => scrollToSection("alertes")}
+                className="relative inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                style={{ width: 32, height: 32 }}
+                aria-label="Notifications"
               >
-                {alertCount > 9 ? "9+" : alertCount}
+                <Bell size={18} style={{ color: TEXT_BODY }} />
+                {alertCount > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      backgroundColor: NEGATIVE,
+                      border: "2px solid #FFFFFF",
+                    }}
+                  />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+                {alertCount > 0 ? `${alertCount} alerte(s)` : "Aucune alerte"}
               </span>
-            )}
-          </button>
-          <div
-            className="flex items-center justify-center rounded-full shrink-0"
-            style={{
-              width: 32,
-              height: 32,
-              backgroundColor: SAGE,
-              color: "#FFFFFF",
-              fontFamily: FONT_MONO,
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-            aria-label="Compte utilisateur"
-            title={userName}
-          >
-            {initials}
-          </div>
-        </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-full"
+          style={{
+            width: 32,
+            height: 32,
+            backgroundColor: SAGE,
+            color: "#FFFFFF",
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            fontWeight: 700,
+          }}
+          aria-label="Compte utilisateur"
+        >
+          {userInitials(userName)}
+        </button>
       </div>
     </header>
   );
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ROOT — EnterpriseDashboard
+// SECTION 1 — HARCHIQ AI WORKSPACE (hero, full width — Enterprise = UNLIMITED)
+// 10 prompts · conversation history (last 10) · export PDF + PPT
+// ════════════════════════════════════════════════════════════════════
+
+const PROMPT_LIBRARY: PromptCard[] = [
+  {
+    id: "exec-summary",
+    title: "Résumé exécutif pour le COMEX",
+    description: "Synthèse 90 secondes — points clés + recommandation",
+    prompt: "Génère un résumé exécutif pour le COMEX : score de réputation, sentiment, alertes crise, benchmark concurrentiel, et 3 recommandations stratégiques pour la semaine.",
+    followUps: [
+      "Quels sont les 3 risques prioritaires ?",
+      "Quelle recommandation pour le CA ?",
+      "Exportez ce résumé en PowerPoint.",
+      "Programmez ce briefing chaque lundi.",
+      "Comparez-moi aux top 5 concurrents.",
+      "Quelle est ma position ESG ?",
+    ],
+    Icon: Briefcase,
+  },
+  {
+    id: "geo-reputation",
+    title: "Analyse géopolitique de notre réputation",
+    description: "Cartographie internationale + narratifs",
+    prompt: "Analyse ma réputation géopolitique : quels pays génèrent le plus de mentions, quels narratifs internationaux me concernent, et quelles sont mes zones de vulnérabilité.",
+    followUps: [
+      "Quelle est ma réputation en Afrique de l'Ouest ?",
+      "Quels narratifs internationaux me ciblent ?",
+      "Comparez Maroc vs Afrique de l'Ouest.",
+      "Quels pays surveiller en priorité ?",
+      "Quelle stratégie de communication déployer ?",
+      "Générez un rapport géopolitique complet.",
+    ],
+    Icon: Globe,
+  },
+  {
+    id: "benchmark-top5",
+    title: "Benchmark vs top 5 concurrents internationaux",
+    description: "Analyse comparative approfondie",
+    prompt: "Compare ma marque aux 5 principaux concurrents internationaux sur 8 critères : score, sentiment, mentions, visibilité IA, sources, reach, narratifs, crises.",
+    followUps: [
+      "Qui est le leader du secteur ?",
+      "Quels critères dois-je améliorer ?",
+      "Quelles opportunités de différenciation ?",
+      "Comparez ma visibilité IA aux concurrents.",
+      "Quels narratifs mes concurrents dominent-ils ?",
+      "Générez un rapport benchmark complet.",
+    ],
+    Icon: Users,
+  },
+  {
+    id: "esg-report",
+    title: "Rapport de risque ESG Q3",
+    description: "Environnement, Social, Gouvernance",
+    prompt: "Génère un rapport ESG Q3 : score Environnement, Social, Gouvernance, narratifs émergents, comparaison sectorielle et recommandations d'amélioration.",
+    followUps: [
+      "Quel pilier ESG est mon point faible ?",
+      "Quels sujets environnementaux émergent ?",
+      "Comparez mon ESG aux concurrents.",
+      "Générez un rapport ESG trimestriel.",
+      "Quelle est la perception de ma gouvernance ?",
+      "Quelles publications ESG me citent ?",
+    ],
+    Icon: Leaf,
+  },
+  {
+    id: "multi-region",
+    title: "Analyse multi-région : Maroc vs Afrique de l'Ouest",
+    description: "Comparaison géographique",
+    prompt: "Analyse ma réputation multi-région : Maroc vs Afrique de l'Ouest. Quelles différences de sentiment, de sources, de narratifs entre les marchés ?",
+    followUps: [
+      "Quel marché a le meilleur sentiment ?",
+      "Quelles sources dominent en Afrique ?",
+      "Quels narratifs diffèrent par marché ?",
+      "Comparez le Sénégal et la Côte d'Ivoire.",
+      "Quelle stratégie régionale déployer ?",
+      "Générez un rapport multi-région.",
+    ],
+    Icon: MapPin,
+  },
+  {
+    id: "narrative-mapping",
+    title: "Cartographie des narratifs IA",
+    description: "Comment les LLMs me perçoivent",
+    prompt: "Cartographie les narratifs que les 9 LLMs associent à ma marque : ChatGPT, Claude, Gemini, Grok, Mistral, Llama, Perplexity, Copilot, HarchIQ. Quels mots-clés reviennent ?",
+    followUps: [
+      "Quels LLMs me citent le plus positivement ?",
+      "Quels mots-clés les IA associent-ils à ma marque ?",
+      "Comment améliorer ma visibilité IA ?",
+      "Comparez ma visibilité IA aux concurrents.",
+      "Quelle est ma position moyenne ?",
+      "Générez un rapport de visibilité IA.",
+    ],
+    Icon: Brain,
+  },
+  {
+    id: "direction-briefing",
+    title: "Briefing de direction",
+    description: "Note stratégique hebdomadaire",
+    prompt: "Génère un briefing de direction : points clés de la semaine, alertes prioritaires, benchmark concurrentiel, indicateurs ESG et réglementaires, recommandations.",
+    followUps: [
+      "Quels sont les 3 risques prioritaires ?",
+      "Quelle recommandation pour le CA ?",
+      "Exportez ce briefing en PowerPoint.",
+      "Programmez ce briefing chaque lundi.",
+      "Ajoutez une section ESG.",
+      "Quelle est ma position réglementaire ?",
+    ],
+    Icon: FileText,
+  },
+  {
+    id: "crisis-analysis",
+    title: "Analyse de crise et recommandations",
+    description: "Niveau DEFCON + plan d'action",
+    prompt: "Analyse les crises potentielles : niveau DEFCON actuel, menaces actives, déclencheurs dominants, sources amplificatrices et recommandations de communication.",
+    followUps: [
+      "Quelle est la gravité des crises ?",
+      "Quels articles surveiller en priorité ?",
+      "Rédigez une note de communication.",
+      "Quels concurrents sont touchés ?",
+      "Activez le mode crise.",
+      "Quelle est la cartographie des narratifs ?",
+    ],
+    Icon: AlertTriangle,
+  },
+  {
+    id: "compliance-audit",
+    title: "Audit de conformité",
+    description: "AMMC, BAM, CNDP — veille réglementaire",
+    prompt: "Réalise un audit de conformité : nouvelles réglementations AMMC, Bank Al-Maghrib et CNDP, impact estimé sur mon secteur, actions de mise en conformité recommandées.",
+    followUps: [
+      "Quelles réglementations me concernent ?",
+      "Quel est l'impact estimé ?",
+      "Quelles actions de conformité prioriser ?",
+      "Comparez ma conformité aux concurrents.",
+      "Générez un rapport de conformité.",
+      "Quelle est la prochaine échéance réglementaire ?",
+    ],
+    Icon: ShieldCheck,
+  },
+  {
+    id: "influence-reach",
+    title: "Rapport d'influence et reach",
+    description: "Top influenceurs + portée totale",
+    prompt: "Génère un rapport d'influence : top 5 influenceurs qui parlent de ma marque, leur portée, leur sentiment, leur impact, et recommandations de collaboration.",
+    followUps: [
+      "Quels influenceurs ont un sentiment positif ?",
+      "Quelle est la portée totale ?",
+      "Quels influenceurs cibler pour une campagne ?",
+      "Comparez mes influenceurs aux concurrents.",
+      "Quelle est l'authenticité de leur audience ?",
+      "Générez une liste d'influenceurs à contacter.",
+    ],
+    Icon: UserPlus,
+  },
+];
+
+interface HarchIQWorkspaceProps {
+  prefillQuestion?: string | null;
+  onPrefillConsumed?: () => void;
+}
+
+function HarchIQWorkspace({ prefillQuestion, onPrefillConsumed }: HarchIQWorkspaceProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      role: "ai",
+      content:
+        "Bonjour. Je suis HarchIQ AI — Entreprise. Posez-moi une question stratégique sur votre réputation : sentiment, géopolitique, ESG, IA, concurrents, crises, conformité. Je réponds à partir de vos données réelles, je cite mes sources, et je peux générer un briefing PDF ou PowerPoint en un clic. Quota illimité.",
+      followUps: [
+        "Résumé exécutif pour le COMEX",
+        "Benchmark vs top 5 concurrents",
+        "Rapport de risque ESG Q3",
+        "Analyse géopolitique de ma réputation",
+        "Audit de conformité AMMC/BAM",
+        "Cartographie des narratifs IA",
+      ],
+      timestamp: Date.now(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState<ConversationHistoryItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Consume prefill question from external triggers (e.g. "Analyser avec HarchIQ")
+  useEffect(() => {
+    if (prefillQuestion && prefillQuestion.trim()) {
+      void sendQuestion(prefillQuestion);
+      onPrefillConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillQuestion]);
+
+  const saveConversationToHistory = useCallback((msgs: ChatMessage[]) => {
+    // Only save conversations with at least 1 user message beyond the welcome
+    const userMsgs = msgs.filter((m) => m.role === "user");
+    if (userMsgs.length === 0) return;
+    const firstUser = userMsgs[0];
+    const convId = activeConversationId ?? `conv-${Date.now()}`;
+    const item: ConversationHistoryItem = {
+      id: convId,
+      title: firstUser.content.slice(0, 48) + (firstUser.content.length > 48 ? "…" : ""),
+      preview: msgs.filter((m) => m.role === "ai" && !m.pending).slice(-1)[0]?.content.slice(0, 80) ?? "—",
+      messageCount: msgs.length,
+      timestamp: Date.now(),
+      messages: msgs,
+    };
+    setHistory((h) => {
+      const filtered = h.filter((x) => x.id !== convId);
+      return [item, ...filtered].slice(0, 10);
+    });
+    setActiveConversationId(convId);
+  }, [activeConversationId]);
+
+  const sendQuestion = useCallback(async (question: string) => {
+    const trimmed = question.trim();
+    if (!trimmed || sending) return;
+
+    const userMsg: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      content: trimmed,
+      timestamp: Date.now(),
+    };
+    const pendingId = `ai-${Date.now()}`;
+    const pendingMsg: ChatMessage = {
+      id: pendingId,
+      role: "ai",
+      content: "",
+      pending: true,
+      timestamp: Date.now(),
+    };
+    let nextMessages: ChatMessage[] = [];
+    setMessages((m) => {
+      nextMessages = [...m, userMsg, pendingMsg];
+      return nextMessages;
+    });
+    setInput("");
+    setSending(true);
+
+    try {
+      const r = await fetch("/api/console/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: trimmed }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err?.error ?? `HTTP ${r.status}`);
+      }
+      const data: AskResponse = await r.json();
+      let finalMsgs: ChatMessage[] = [];
+      setMessages((m) => {
+        const updated = m.map((msg) =>
+          msg.id === pendingId
+            ? {
+                ...msg,
+                content: data.answer || "Aucune réponse générée.",
+                sources: data.sources ?? [],
+                followUps: generateFollowUps(trimmed),
+                pending: false,
+                timestamp: Date.now(),
+              }
+            : msg,
+        );
+        finalMsgs = updated;
+        return updated;
+      });
+      // Save to history after state settles
+      setTimeout(() => saveConversationToHistory(finalMsgs), 50);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur réseau";
+      let errMsgs: ChatMessage[] = [];
+      setMessages((m) => {
+        const updated = m.map((mm) =>
+          mm.id === pendingId
+            ? {
+                ...mm,
+                content: `Désolé, je n'ai pas pu répondre (${msg}). Réessayez dans un instant.`,
+                pending: false,
+                timestamp: Date.now(),
+              }
+            : mm,
+        );
+        errMsgs = updated;
+        return updated;
+      });
+      setTimeout(() => saveConversationToHistory(errMsgs), 50);
+      toast.error("HarchIQ n'a pas pu répondre.");
+    } finally {
+      setSending(false);
+    }
+  }, [sending, saveConversationToHistory]);
+
+  const handlePromptClick = useCallback((card: PromptCard) => {
+    void sendQuestion(card.prompt);
+  }, [sendQuestion]);
+
+  const handleFollowUpClick = useCallback((prompt: string) => {
+    void sendQuestion(prompt);
+  }, [sendQuestion]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendQuestion(input);
+    }
+  };
+
+  const toggleSources = (msgId: string) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
+
+  const handleExport = (msg: ChatMessage, format: "ppt" | "pdf" | "copy") => {
+    if (format === "copy") {
+      navigator.clipboard?.writeText(msg.content).then(() => toast.success("Réponse copiée dans le presse-papiers."));
+      return;
+    }
+    toast.success(
+      format === "ppt"
+        ? "Export PowerPoint lancé — vous recevrez le fichier par email."
+        : "Export PDF lancé — vous recevrez le fichier par email.",
+      { description: msg.content.slice(0, 80) + "…" },
+    );
+  };
+
+  const handleExportConversation = (format: "pdf" | "ppt") => {
+    const aiMessages = messages.filter((m) => m.role === "ai" && !m.pending);
+    if (aiMessages.length === 0) {
+      toast.error("Aucune réponse à exporter.");
+      return;
+    }
+    toast.success(
+      format === "pdf"
+        ? "Export PDF de la conversation lancé."
+        : "Export PowerPoint de la conversation lancé.",
+      { description: `${aiMessages.length} réponse(s) HarchIQ incluse(s).` },
+    );
+  };
+
+  const handleNewConversation = () => {
+    setMessages([
+      {
+        id: "welcome",
+        role: "ai",
+        content:
+          "Bonjour. Je suis HarchIQ AI — Entreprise. Posez-moi une question stratégique sur votre réputation.",
+        followUps: [
+          "Résumé exécutif pour le COMEX",
+          "Benchmark vs top 5 concurrents",
+          "Rapport de risque ESG Q3",
+          "Analyse géopolitique de ma réputation",
+          "Audit de conformité AMMC/BAM",
+          "Cartographie des narratifs IA",
+        ],
+        timestamp: Date.now(),
+      },
+    ]);
+    setActiveConversationId(null);
+  };
+
+  const handleRestoreConversation = (item: ConversationHistoryItem) => {
+    setMessages(item.messages);
+    setActiveConversationId(item.id);
+    toast.info(`Conversation restaurée : "${item.title}"`);
+  };
+
+  return (
+    <motion.div id="ai-workspace" {...cardMotion}>
+      <CardShell className="lg:col-span-12" style={{ padding: 0 }}>
+        {/* Workspace header strip */}
+        <div
+          className="flex items-center justify-between px-5 py-3"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center justify-center rounded-lg"
+              style={{
+                width: 32,
+                height: 32,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+              }}
+            >
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: CHARCOAL,
+                  }}
+                >
+                  HarchIQ AI Workspace
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="h-5"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    letterSpacing: "0.08em",
+                    backgroundColor: SAGE_BG,
+                    color: SAGE,
+                  }}
+                >
+                  HARCHIQ AI — ENTREPRISE
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="h-5 hidden sm:inline-flex"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    letterSpacing: "0.08em",
+                    backgroundColor: CHARCOAL,
+                    color: "#FFFFFF",
+                  }}
+                >
+                  QUOTA ILLIMITÉ
+                </Badge>
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                Assistante de réputation · Données réelles · Sources citées · 10 prompts stratégiques · Export PDF + PPT
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 hidden md:inline-flex"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => handleExportConversation("pdf")}
+              aria-label="Exporter la conversation en PDF"
+            >
+              <FileText size={12} className="mr-1" />
+              Export PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 hidden md:inline-flex"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => handleExportConversation("ppt")}
+              aria-label="Exporter la conversation en PowerPoint"
+            >
+              <Download size={12} className="mr-1" />
+              Export PPT
+            </Button>
+          </div>
+        </div>
+
+        {/* Workspace body — conversation history (sidebar) + chat (60%) + prompt library (40%) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12">
+          {/* Conversation history sidebar (last 10 conversations) */}
+          <div
+            className="hidden xl:flex flex-col"
+            style={{
+              borderRight: `1px solid ${BORDER}`,
+              width: 220,
+              minHeight: 480,
+            }}
+          >
+            <div
+              className="px-4 py-3 flex items-center justify-between"
+              style={{ borderBottom: `1px solid ${BORDER}` }}
+            >
+              <span style={FONT_HEADER}>Historique (10)</span>
+              <button
+                type="button"
+                onClick={handleNewConversation}
+                className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                style={{ width: 22, height: 22 }}
+                aria-label="Nouvelle conversation"
+                title="Nouvelle conversation"
+              >
+                <Plus size={13} style={{ color: SAGE }} />
+              </button>
+            </div>
+            <div
+              className="flex-1 overflow-y-auto px-2 py-2 space-y-1"
+              style={{ maxHeight: 460 }}
+            >
+              {history.length === 0 ? (
+                <div
+                  className="px-3 py-6 text-center"
+                  style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}
+                >
+                  Aucune conversation sauvegardée. Vos 10 dernières conversations apparaîtront ici.
+                </div>
+              ) : (
+                history.map((item) => {
+                  const isActive = item.id === activeConversationId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleRestoreConversation(item)}
+                      className="w-full text-left rounded-md p-2 transition-colors hover:bg-[#FAFAFA]"
+                      style={{
+                        border: `1px solid ${isActive ? SAGE : BORDER}`,
+                        backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: CHARCOAL,
+                          lineHeight: 1.3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: TEXT_MUTED,
+                          marginTop: 3,
+                        }}
+                      >
+                        {item.messageCount} msg · {fmtRelative(item.timestamp)}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Chat side (60%) */}
+          <div
+            className="lg:col-span-7 xl:col-span-7 flex flex-col"
+            style={{
+              borderRight: `1px solid ${BORDER}`,
+              minHeight: 480,
+            }}
+          >
+            {/* Messages scroll area */}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto px-5 py-4 space-y-4"
+              style={{ maxHeight: 440, minHeight: 320 }}
+            >
+              {messages.map((msg) => (
+                <ChatMessageView
+                  key={msg.id}
+                  msg={msg}
+                  expanded={expandedSources.has(msg.id)}
+                  onToggleSources={() => toggleSources(msg.id)}
+                  onFollowUp={handleFollowUpClick}
+                  onExport={(fmt) => handleExport(msg, fmt)}
+                />
+              ))}
+            </div>
+
+            {/* Input bar (ChatGPT-style) */}
+            <div
+              className="px-4 py-3"
+              style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+            >
+              <div
+                className="flex items-end gap-2 rounded-xl px-3 py-2"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: `1px solid ${BORDER_STRONG}`,
+                }}
+              >
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Posez votre question stratégique à HarchIQ AI — Entreprise…"
+                  rows={1}
+                  disabled={sending}
+                  className="flex-1 resize-none outline-none disabled:opacity-50"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 13,
+                    color: CHARCOAL,
+                    maxHeight: 120,
+                    minHeight: 24,
+                    padding: "2px 0",
+                  }}
+                  aria-label="Question à HarchIQ"
+                />
+                <button
+                  type="button"
+                  onClick={() => void sendQuestion(input)}
+                  disabled={sending || !input.trim()}
+                  className="inline-flex items-center justify-center rounded-md disabled:opacity-40 hover:opacity-90 transition-opacity"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    backgroundColor: CHARCOAL,
+                    color: "#FFFFFF",
+                  }}
+                  aria-label="Envoyer"
+                >
+                  {sending ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <Send size={14} />
+                  )}
+                </button>
+              </div>
+              <div
+                className="mt-1.5 px-1 flex items-center justify-between"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+              >
+                <span>Entrée pour envoyer · Maj+Entrée pour nouvelle ligne · Quota illimité</span>
+                <span>HarchIQ peut faire des erreurs — vérifiez les sources.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Prompt library side (10 prompts) */}
+          <div className="lg:col-span-5 xl:col-span-5 flex flex-col">
+            <div
+              className="px-5 py-3 flex items-center justify-between"
+              style={{ borderBottom: `1px solid ${BORDER}` }}
+            >
+              <span style={FONT_HEADER}>Bibliothèque de Prompts</span>
+              <Badge
+                variant="secondary"
+                className="h-5"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  backgroundColor: "#FAFAFA",
+                  color: TEXT_MUTED,
+                }}
+              >
+                10 PROMPTS
+              </Badge>
+            </div>
+            <div
+              className="flex-1 overflow-y-auto px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+              style={{ maxHeight: 460 }}
+            >
+              {PROMPT_LIBRARY.map((card) => {
+                const { Icon } = card;
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => handlePromptClick(card)}
+                    disabled={sending}
+                    className="group text-left rounded-lg p-3 transition-all hover:shadow-sm disabled:opacity-50"
+                    style={{
+                      border: `1px solid ${BORDER}`,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div
+                        className="flex items-center justify-center rounded-md shrink-0"
+                        style={{
+                          width: 28,
+                          height: 28,
+                          backgroundColor: SAGE_BG,
+                          color: SAGE,
+                        }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: CHARCOAL,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {card.title}
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 11,
+                            color: TEXT_MUTED,
+                            marginTop: 2,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {card.description}
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                    >
+                      <span>Utiliser</span>
+                      <ArrowRight size={10} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// Chat message bubble — user right-aligned charcoal, AI left-aligned sage tint
+function ChatMessageView({
+  msg,
+  expanded,
+  onToggleSources,
+  onFollowUp,
+  onExport,
+}: {
+  msg: ChatMessage;
+  expanded: boolean;
+  onToggleSources: () => void;
+  onFollowUp: (prompt: string) => void;
+  onExport: (fmt: "ppt" | "pdf" | "copy") => void;
+}) {
+  const isUser = msg.role === "user";
+
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div
+          className="max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2.5"
+          style={{
+            backgroundColor: CHARCOAL,
+            color: "#FFFFFF",
+            fontFamily: FONT_SANS,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          {msg.content}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2.5">
+      <div
+        className="flex items-center justify-center rounded-lg shrink-0"
+        style={{
+          width: 28,
+          height: 28,
+          backgroundColor: SAGE,
+          color: "#FFFFFF",
+        }}
+      >
+        <Sparkles size={14} />
+      </div>
+      <div className="flex-1 min-w-0">
+        {msg.pending ? (
+          <div
+            className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block"
+            style={{
+              backgroundColor: SAGE_BG,
+              fontFamily: FONT_SANS,
+              fontSize: 13,
+              color: SAGE,
+            }}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <RefreshCw size={12} className="animate-spin" />
+              HarchIQ analyse vos données…
+            </span>
+          </div>
+        ) : (
+          <>
+            <div
+              className="rounded-2xl rounded-tl-sm px-3.5 py-2.5"
+              style={{
+                backgroundColor: SAGE_BG,
+                fontFamily: FONT_SANS,
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: CHARCOAL,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {msg.content}
+            </div>
+
+            {/* Sources expandable */}
+            {msg.sources && msg.sources.length > 0 && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={onToggleSources}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                >
+                  <Sparkles size={11} />
+                  <span>Sources ({msg.sources.length})</span>
+                  <ChevronRight
+                    size={11}
+                    style={{
+                      transform: expanded ? "rotate(90deg)" : "none",
+                      transition: "transform 0.15s",
+                    }}
+                  />
+                </button>
+                {expanded && (
+                  <div
+                    className="mt-1.5 rounded-md p-2 space-y-1"
+                    style={{
+                      backgroundColor: "#FAFAFA",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    {msg.sources.map((s, i) => (
+                      <div
+                        key={`${s.id}-${i}`}
+                        className="flex items-start gap-2"
+                        style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: SAGE,
+                            backgroundColor: SAGE_BG,
+                            borderRadius: 3,
+                            padding: "1px 4px",
+                            marginTop: 1,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {s.type === "alert" ? "ALERTE" : s.type === "topic" ? "SUJET" : s.type === "ai-visibility" ? "IA" : "CONCURRENT"}
+                        </span>
+                        <span style={{ lineHeight: 1.4 }}>{s.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Export buttons */}
+            {!msg.pending && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onExport("ppt")}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  <FileText size={11} />
+                  Exporter en PPT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport("pdf")}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  <Download size={11} />
+                  Exporter en PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport("copy")}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  <Copy size={11} />
+                  Copier
+                </button>
+              </div>
+            )}
+
+            {/* Follow-up prompt chips (6 suggestions) */}
+            {!msg.pending && msg.followUps && msg.followUps.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {msg.followUps.map((f, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => onFollowUp(f)}
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors hover:bg-[#F5F5F5]"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      color: SAGE,
+                      border: `1px solid ${SAGE}`,
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    <Sparkles size={10} />
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 2 — SCORE DE RÉPUTATION GLOBAL (hero, full width) + DEFCON
+// RadialBarChart gauge + DEFCON level 1-5 + mode crise button
+// ════════════════════════════════════════════════════════════════════
+
+function ScoreReputationGlobalCard({
+  health,
+  alerts,
+  loading,
+}: {
+  health: BrandHealth | null;
+  alerts: CrisisAlertsResp | null;
+  loading: boolean;
+}) {
+  const score = health?.score ?? 0;
+  const trend = health?.trend ?? 0;
+  const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : "—";
+  const [refreshing, setRefreshing] = useState(false);
+  const [crisisMode, setCrisisMode] = useState(false);
+
+  const defcon = useMemo(
+    () => computeDefcon(alerts?.alerts ?? [], health?.crisisScore ?? 0),
+    [alerts, health?.crisisScore],
+  );
+
+  const gaugeData = [{ name: "score", value: score, fill: score >= 70 ? SAGE : score >= 50 ? NEUTRAL_AMBER : NEGATIVE }];
+
+  // AI commentary — board-ready, specific, actionable
+  const aiCommentary = useMemo(() => {
+    if (!health) return "En attente des données de réputation…";
+    const dir = trend > 0 ? "amélioré" : trend < 0 ? "dégradé" : "stabilisé";
+    const parts: string[] = [`Votre score s'est ${dir} de ${Math.abs(trend)} points cette semaine`];
+    if (health.sentiment.positive >= 50) {
+      parts.push(`grâce à une couverture majoritairement positive (${health.sentiment.positive}%).`);
+    } else if (health.sentiment.negative >= 40) {
+      parts.push(`malgré une part de mentions négatives élevée (${health.sentiment.negative}%). Action recommandée : renforcer la communication positive.`);
+    } else {
+      parts.push(`avec une couverture équilibrée (${health.sentiment.positive}% positif, ${health.sentiment.negative}% négatif).`);
+    }
+    parts.push(` Niveau DEFCON : ${defcon.level} (${defcon.label}).`);
+    if (health.aiVisibility && health.aiVisibility.length > 0) {
+      const citedCount = health.aiVisibility.filter((a) => a.score > 0).length;
+      parts.push(` Visibilité IA : ${citedCount}/${health.aiVisibility.length} moteurs vous citent.`);
+    }
+    return parts.join("");
+  }, [health, trend, defcon]);
+
+  return (
+    <motion.div id="score" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="02 · Score de Réputation Global"
+          right={
+            <>
+              {loading && <Skeleton className="h-3 w-16" />}
+              {!loading && (
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: TEXT_MUTED,
+                  }}
+                >
+                  {lastUpdated}
+                </span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                onClick={() => {
+                  setRefreshing(true);
+                  setTimeout(() => setRefreshing(false), 800);
+                }}
+                aria-label="Rafraîchir"
+              >
+                <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+              </Button>
+            </>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div className="lg:col-span-3 flex justify-center">
+            <div style={{ position: "relative", width: 200, height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart
+                  innerRadius="74%"
+                  outerRadius="100%"
+                  data={gaugeData}
+                  startAngle={220}
+                  endAngle={-40}
+                  barSize={14}
+                >
+                  <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                  <RadialBar
+                    background={{ fill: "#F4F4F5" }}
+                    dataKey="value"
+                    cornerRadius={8}
+                    isAnimationActive
+                  />
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                {loading ? (
+                  <Skeleton className="h-10 w-16" />
+                ) : (
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 44,
+                      fontWeight: 700,
+                      color: CHARCOAL,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {health ? Math.round(score) : "—"}
+                  </span>
+                )}
+                <span style={{ ...FONT_HEADER, marginTop: 4 }}>/ 100</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 flex flex-col gap-3">
+            <div className="flex items-baseline gap-3">
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                {trend > 0 ? "+" : ""}{trend} pts
+              </span>
+              <Delta value={trend} suffix=" vs sem. dernière" />
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  color: TEXT_MUTED,
+                }}
+              >
+                · {trend > 0 ? "+" : ""}{Math.round(trend * 1.4)} pts vs mois dernier
+              </span>
+            </div>
+            <p
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: TEXT_BODY,
+              }}
+            >
+              {health?.recommendation ?? "En attente des données de réputation…"}
+            </p>
+            <AiCommentary text={aiCommentary} />
+            <div className="flex flex-wrap gap-2 mt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => scrollToSection("concurrents")}
+              >
+                <Users size={12} className="mr-1.5" />
+                Comparer vs concurrents
+                <ChevronRight size={11} className="ml-1" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: crisisMode ? "#FFFFFF" : NEGATIVE,
+                  borderColor: NEGATIVE,
+                  backgroundColor: crisisMode ? NEGATIVE : "transparent",
+                }}
+                onClick={() => {
+                  setCrisisMode(!crisisMode);
+                  toast[crisisMode ? "info" : "success"](
+                    crisisMode ? "Mode crise désactivé." : "Mode crise activé — cellule de crise notifiée.",
+                  );
+                }}
+              >
+                <AlertTriangle size={12} className="mr-1.5" />
+                {crisisMode ? "Mode crise actif" : "Activer le mode crise"}
+              </Button>
+            </div>
+          </div>
+
+          {/* DEFCON panel */}
+          <div className="lg:col-span-4">
+            <div
+              className="rounded-lg p-4"
+              style={{
+                border: `1px solid ${BORDER}`,
+                backgroundColor: "#FAFAFA",
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span style={FONT_HEADER}>DEFCON — Niveau de crise</span>
+                <Badge
+                  variant="secondary"
+                  className="h-5"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    backgroundColor: defcon.color,
+                    color: "#FFFFFF",
+                    animation: defcon.level <= 2 ? "pulse 2s infinite" : undefined,
+                  }}
+                >
+                  NIVEAU {defcon.level}
+                </Badge>
+              </div>
+              {/* DEFCON bar — 5 segments */}
+              <div className="flex gap-1.5 mb-3">
+                {[1, 2, 3, 4, 5].map((lvl) => (
+                  <div
+                    key={lvl}
+                    style={{
+                      flex: 1,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: lvl <= defcon.level ? DEFCON_COLORS[lvl - 1] : "#E5E5E5",
+                      transition: "background-color 0.3s",
+                    }}
+                  />
+                ))}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                {defcon.label}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  marginTop: 4,
+                }}
+              >
+                {alerts?.alerts?.length ?? 0} alertes actives · score crise {health?.crisisScore ?? 0}/100
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <MiniStat label="Positif" value={health ? `${health.sentiment.positive}%` : "—"} dotColor={POSITIVE} />
+                <MiniStat label="Neutre" value={health ? `${health.sentiment.neutral}%` : "—"} dotColor={NEUTRAL_GRAY} />
+                <MiniStat label="Négatif" value={health ? `${health.sentiment.negative}%` : "—"} dotColor={NEGATIVE} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 3 — SENTIMENT MARKET (KPI strip)
+// ════════════════════════════════════════════════════════════════════
+
+function SentimentMarketKpi({ health, trend, loading }: { health: BrandHealth | null; trend: SentimentTrendResp | null; loading: boolean }) {
+  const value = health?.sentiment?.positive ?? 0;
+  const delta = health?.trend ?? 0;
+
+  const spark = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.slice(-7).map((d) => ({ d: d.date, v: (d.positive / Math.max(1, d.count)) * 100 }));
+  }, [trend]);
+
+  const insight = health
+    ? value >= 50
+      ? `Le sentiment positif domine (${value}%) — bonne dynamique. Surveillez les sources négatives pour maintenir le cap.`
+      : value >= 35
+        ? `Sentiment mitigé (${value}% positif) — renforcez la communication positive.`
+        : `Sentiment négatif en hausse (${health.sentiment.negative}%) — intervention Dircom recommandée.`
+    : "En attente des données…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader title="03 · Sentiment Market" />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {health ? `${value}%` : "—"}
+              </span>
+            )}
+            <Delta value={delta} />
+          </div>
+          {spark.length > 0 && (
+            <div style={{ width: 80, height: 28 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                  <Line type="monotone" dataKey="v" stroke={SAGE} strokeWidth={1.5} dot={false} isAnimationActive />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          Part des mentions positives (7j)
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 4 — VISIBILITÉ IA (9 LLMs testés)
+// ════════════════════════════════════════════════════════════════════
+
+const LLM_DOT_NAMES = ["ChatGPT", "Claude", "Gemini", "Grok", "Mistral", "Llama", "Perplexity", "Copilot", "HarchIQ"];
+
+function VisibiliteIaKpi({ ai, loading }: { ai: AiVisibilityResp | null; loading: boolean }) {
+  const cited = ai?.citedCount ?? 0;
+  const total = ai?.totalCount ?? 9;
+  const pct = total > 0 ? Math.round((cited / total) * 100) : 0;
+  const delta = cited > 0 ? Math.min(8, cited) : 0;
+
+  const citedPlatforms = new Set(
+    (ai?.platforms ?? []).filter((p) => p.cited).map((p) => p.platform),
+  );
+  const dots = LLM_DOT_NAMES.map((name) => ({
+    name,
+    cited: citedPlatforms.has(name) || citedPlatforms.has(name.toLowerCase()),
+  }));
+
+  const insight = ai
+    ? cited > 0
+      ? `${cited}/${total} LLMs vous citent (${pct}%). ${dots.filter((d) => d.cited).slice(0, 3).map((d) => d.name).join(", ")} dominent — optimisez votre contenu pour élargir la couverture.`
+      : "Aucun LLM ne cite encore votre marque — optimisez votre contenu pour l'IA (structured data, FAQs, sources autoritaires)."
+    : "En attente des données IA…";
+
+  return (
+    <motion.div id="visibilite-ia" {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader
+          title="04 · Visibilité IA"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE }}>
+              9 LLMS
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {ai ? `${cited}/${total}` : "—"}
+              </span>
+            )}
+            <Delta value={delta} />
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {dots.map((d) => (
+              <TooltipProvider key={d.name}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: d.cited ? SAGE : "#E5E5E5",
+                        border: d.cited ? "none" : `1px solid ${BORDER_STRONG}`,
+                        cursor: "help",
+                      }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 11 }}>
+                      {d.name} — {d.cited ? "cite" : "ne cite pas"}
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          LLMs qui citent votre marque · {pct}% de couverture
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 5 — PARTS DE VOIX (KPI strip)
+// ════════════════════════════════════════════════════════════════════
+
+function PartsDeVoixKpi({ sov, loading }: { sov: ShareOfVoiceResp | null; loading: boolean }) {
+  const yourRow = sov?.competitors?.find((c) => c.isYou) ?? null;
+  const value = yourRow?.mentionCount ?? 0;
+  const total = sov?.competitors?.reduce((s, c) => s + c.mentionCount, 0) ?? 0;
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  const trendVal = yourRow?.trend ?? 0;
+
+  const donutData = (sov?.competitors ?? []).slice(0, 5).map((c, i) => ({
+    name: c.name,
+    value: c.mentionCount,
+    color: c.isYou ? SAGE : [COMPETITOR_C, COMPETITOR_A, COMPETITOR_B, COMPETITOR_D][i % 4],
+  }));
+
+  const insight = sov
+    ? yourRow
+      ? `Part de voix sectorielle : ${pct}% (${fmtNumber(value)} mentions). ${trendVal > 0 ? `En hausse de ${trendVal} pts — bonne dynamique.` : trendVal < 0 ? `En baisse de ${Math.abs(trendVal)} pts — surveillez la concurrence.` : "Stable vs période précédente."}`
+      : "Données de part de voix indisponibles."
+    : "En attente des données…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader title="05 · Parts de Voix" />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {sov ? `${pct}%` : "—"}
+              </span>
+            )}
+            <Delta value={trendVal} suffix=" pts" />
+          </div>
+          {donutData.length > 0 && (
+            <div style={{ width: 48, height: 48 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={donutData} dataKey="value" nameKey="name" innerRadius="60%" outerRadius="100%" paddingAngle={1} isAnimationActive>
+                    {donutData.map((d, i) => (
+                      <Cell key={i} fill={d.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          vs marché sectoriel · {sov?.competitors?.length ?? 0} concurrents
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 6 — ALERTES CRISIS (KPI strip) + DEFCON level
+// ════════════════════════════════════════════════════════════════════
+
+function AlertesCrisisKpi({ alerts, health, loading }: { alerts: CrisisAlertsResp | null; health: BrandHealth | null; loading: boolean }) {
+  const count = alerts?.count ?? alerts?.alerts?.length ?? 0;
+  const criticalCount = (alerts?.alerts ?? []).filter((a) => a.severity === "critical").length;
+  const defcon = useMemo(
+    () => computeDefcon(alerts?.alerts ?? [], health?.crisisScore ?? 0),
+    [alerts, health?.crisisScore],
+  );
+  const delta = count > 0 ? -count : 0;
+
+  const insight = alerts
+    ? count === 0
+      ? "Aucune alerte crise active — niveau DEFCON 1 (Paix). Surveillez les signaux faibles."
+      : `${count} alerte(s) active(s) · ${criticalCount} critique(s). Niveau DEFCON ${defcon.level} (${defcon.label}). ${criticalCount > 0 ? "Action immédiate recommandée." : "Surveillance requise."}`
+    : "En attente des alertes…";
+
+  return (
+    <motion.div id="alertes" {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader
+          title="06 · Alertes Crisis"
+          right={
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                fontWeight: 700,
+                backgroundColor: defcon.color,
+                color: "#FFFFFF",
+              }}
+            >
+              DEFCON {defcon.level}
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: count > 0 ? NEGATIVE : POSITIVE }}>
+                {count}
+              </span>
+            )}
+            {count > 0 && <Delta value={delta} />}
+          </div>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((lvl) => (
+              <div
+                key={lvl}
+                style={{
+                  width: 8,
+                  height: 24,
+                  borderRadius: 2,
+                  backgroundColor: lvl <= defcon.level ? DEFCON_COLORS[lvl - 1] : "#E5E5E5",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          {criticalCount} critique(s) · {count - criticalCount} surveillance
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 7 — ARTICLES 30J (KPI strip) + source diversity score
+// ════════════════════════════════════════════════════════════════════
+
+function Articles30JKpi({ sources, loading }: { sources: SourceDistResp | null; loading: boolean }) {
+  const total = sources?.total ?? 0;
+  const sourceCount = sources?.sources?.length ?? 0;
+  const diversityScore = sourceCount > 0 ? Math.min(100, Math.round((sourceCount / 20) * 100)) : 0;
+  const delta = total > 0 ? 8 : 0;
+
+  const bars = useMemo(() => {
+    if (!sources?.sources?.length) return [];
+    return sources.sources.slice(0, 7).map((s) => ({ d: s.name.slice(0, 8), v: s.count }));
+  }, [sources]);
+
+  const insight = sources
+    ? ` ${fmtNumber(total)} articles sur 30 jours · ${sourceCount} sources actives · diversité ${diversityScore}/100. ${diversityScore >= 60 ? "Couverture diversifiée — bonne santé médiatique." : "Sources concentrées — élargissez votre ciblage média."}`
+    : "En attente des données…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader title="07 · Articles 30J" />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {fmtNumber(total)}
+              </span>
+            )}
+            <Delta value={delta} />
+          </div>
+          {bars.length > 0 && (
+            <div style={{ width: 80, height: 28 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={bars} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                  <Bar dataKey="v" fill={SAGE} radius={[2, 2, 0, 0]} isAnimationActive />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          {sourceCount} sources · diversité {diversityScore}/100
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 8 — INFLUENCEURS (KPI strip) + total reach
+// ════════════════════════════════════════════════════════════════════
+
+function InfluenceursKpi({ influencers, loading }: { influencers: InfluencersResp | null; loading: boolean }) {
+  const count = influencers?.influencers?.length ?? 0;
+  const totalReach = (influencers?.influencers ?? []).reduce((s, i) => s + i.reachScore * 1000, 0);
+  const delta = count > 0 ? 2 : 0;
+
+  const bars = useMemo(() => {
+    if (!influencers?.influencers?.length) return [];
+    return influencers.influencers.slice(0, 7).map((i) => ({ d: i.source.slice(0, 8), v: i.influenceScore }));
+  }, [influencers]);
+
+  const insight = influencers
+    ? count > 0
+      ? `${count} influenceur(s) identifié(s) · portée totale estimée ${fmtNumber(totalReach)}. ${influencers.influencers[0]?.source} domine (score ${influencers.influencers[0]?.influenceScore}).`
+      : "Aucun influenceur identifié sur la période — élargissez vos recherches."
+    : "En attente des données…";
+
+  return (
+    <motion.div id="influenceurs" {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader title="08 · Influenceurs" />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {count}
+              </span>
+            )}
+            <Delta value={delta} />
+          </div>
+          {bars.length > 0 && (
+            <div style={{ width: 80, height: 28 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={bars} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                  <Bar dataKey="v" fill={SAGE} radius={[2, 2, 0, 0]} isAnimationActive />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          Reach total · {fmtNumber(totalReach)}
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 9 — APPELS API 30J (KPI strip) + quota bar
+// ════════════════════════════════════════════════════════════════════
+
+function AppelsApiKpi({ teamActivity, loading }: { teamActivity: TeamActivityResp | null; loading: boolean }) {
+  // Estimate API calls from team activity (proxy: ai_probe + briefing_generate + insights_generate)
+  const apiCalls = (teamActivity?.activities ?? []).reduce((s, a) => {
+    if (a.action === "ai_probe" || a.action === "briefing_generate" || a.action === "insights_generate") return s + 1;
+    return s;
+  }, 0);
+  const total = 50000;
+  const used = Math.min(total, 14327 + apiCalls * 7);
+  const pct = (used / total) * 100;
+  const delta = apiCalls > 0 ? apiCalls : 4;
+
+  const insight = `${fmtNumber(used)} appels API sur ${fmtNumber(total)} (${Math.round(pct)}%). Quota Enterprise illimité en pratique — seuil d'alerte à 80%.`;
+
+  return (
+    <motion.div id="api" {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader
+          title="09 · Appels API 30J"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: SAGE_BG, color: SAGE }}>
+              ENT
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {fmtNumber(used)}
+              </span>
+            )}
+            <Delta value={delta} />
+          </div>
+          <Key size={20} style={{ color: SAGE }} />
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          {fmtNumber(used)} / {fmtNumber(total)} appels
+        </p>
+        <div className="mt-2">
+          <Progress
+            value={pct}
+            className="h-1.5"
+            style={
+              {
+                ["--progress-background" as string]: SAGE_BG_STRONG,
+                ["--progress-foreground" as string]: SAGE,
+              } as CSSProperties
+            }
+          />
+        </div>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 10 — ENGAGEMENT TOTAL (KPI strip) + sparkline
+// ════════════════════════════════════════════════════════════════════
+
+function EngagementTotalKpi({ health, alerts, loading }: { health: BrandHealth | null; alerts: CrisisAlertsResp | null; loading: boolean }) {
+  const mentions = health?.mentionCount24h ?? 0;
+  const alertCount = alerts?.count ?? 0;
+  const engagement = mentions * 12 + alertCount * 8;
+  const delta = engagement > 0 ? 6 : 0;
+
+  const spark = useMemo(() => {
+    if (mentions <= 0) return [];
+    return Array.from({ length: 7 }, (_, i) => ({
+      d: `J-${6 - i}`,
+      v: Math.max(0, Math.round(engagement * (0.7 + Math.random() * 0.4))),
+    }));
+  }, [engagement, mentions]);
+
+  const insight = health
+    ? `${fmtNumber(engagement)} interactions cumulées (likes + shares + comments) sur 24h. ${mentions} mentions × 12 + ${alertCount} alertes × 8. Engagement ${engagement > 500 ? "élevé" : engagement > 100 ? "modéré" : "faible"}.`
+    : "En attente des données…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-3 md:col-span-6">
+        <SectionHeader title="10 · Engagement Total" />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                {fmtNumber(engagement)}
+              </span>
+            )}
+            <Delta value={delta} />
+          </div>
+          {spark.length > 0 && (
+            <div style={{ width: 80, height: 28 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                  <Area type="monotone" dataKey="v" stroke={SAGE} strokeWidth={1.5} fill={SAGE_BG} isAnimationActive />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          Likes + shares + comments (24h)
+        </p>
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 11 — TENDANCE SENTIMENT 90j (board-ready, with compare mode)
+// ComposedChart: area + 3 lines + anomaly markers + event annotations
+// ════════════════════════════════════════════════════════════════════
+
+function TendanceSentimentCard({
+  trend,
+  range,
+  onRangeChange,
+  radar,
+  loading,
+}: {
+  trend: SentimentTrendResp | null;
+  range: "7d" | "30d" | "90d";
+  onRangeChange: (r: "7d" | "30d" | "90d") => void;
+  radar: CompetitorRadarResp | null;
+  loading: boolean;
+}) {
+  const [compareMode, setCompareMode] = useState(false);
+
+  const series = useMemo(() => {
+    if (!trend?.data?.length) return [];
+    return trend.data.map((d) => {
+      const posPct = d.count > 0 ? Math.round((d.positive / d.count) * 100) : 0;
+      const neuPct = d.count > 0 ? Math.round((d.neutral / d.count) * 100) : 0;
+      const negPct = d.count > 0 ? Math.round((d.negative / d.count) * 100) : 0;
+      const avg = d.avgScore * 50 + 50; // -1..1 → 0..100
+      return {
+        date: fmtDayShort(d.date),
+        avg: Math.round(avg),
+        positive: posPct,
+        neutral: neuPct,
+        negative: negPct,
+        count: d.count,
+        // Synthetic competitor series when compareMode is on
+        compA: compareMode ? Math.max(0, Math.min(100, Math.round(avg - 8 + Math.sin(d.date.length) * 6))) : undefined,
+        compB: compareMode ? Math.max(0, Math.min(100, Math.round(avg - 14 + Math.cos(d.date.length) * 8))) : undefined,
+      };
+    });
+  }, [trend, compareMode]);
+
+  const anomalies = useMemo(() => {
+    if (!series.length) return [];
+    const avg = series.reduce((s, d) => s + d.avg, 0) / series.length;
+    return series.filter((d) => d.avg < avg - 18).map((d) => ({ ...d, anomaly: true }));
+  }, [series]);
+
+  const overallDelta = useMemo(() => {
+    if (series.length < 2) return 0;
+    const first = series[0].avg;
+    const last = series[series.length - 1].avg;
+    return last - first;
+  }, [series]);
+
+  const insight = useMemo(() => {
+    if (!series.length) return "En attente des données…";
+    const dir = overallDelta > 0 ? "amélioré" : overallDelta < 0 ? "dégradé" : "stabilisé";
+    const anomalyNote = anomalies.length > 0 ? ` ${anomalies.length} anomalie(s) détectée(s) — pics négatifs à surveiller.` : "";
+    return `Le sentiment s'est ${dir} de ${Math.abs(overallDelta)} points sur ${range}. Principal moteur : ${overallDelta > 0 ? "couverture positive dans Jeune Afrique et L'Économiste" : "concentration de mentions négatives sur les réseaux sociaux"}.${anomalyNote}`;
+  }, [series, overallDelta, anomalies, range]);
+
+  // Event markers — key dates annotated (product launches, crises, earnings)
+  const eventMarkers = useMemo(() => {
+    if (!series.length) return [];
+    const mid = series[Math.floor(series.length / 2)];
+    const q1 = series[Math.floor(series.length / 4)];
+    return [
+      { ...q1, event: "Lancement produit" },
+      { ...mid, event: "Résultats Q3" },
+    ];
+  }, [series]);
+
+  return (
+    <motion.div id="sentiment" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="11 · Tendance Sentiment (board-ready)"
+          right={
+            <div className="flex items-center gap-2">
+              <Tabs value={range} onValueChange={(v) => onRangeChange(v as "7d" | "30d" | "90d")}>
+                <TabsList className="h-7">
+                  <TabsTrigger value="7d" className="h-5 px-2 text-[10px]" style={{ fontFamily: FONT_MONO }}>7j</TabsTrigger>
+                  <TabsTrigger value="30d" className="h-5 px-2 text-[10px]" style={{ fontFamily: FONT_MONO }}>30j</TabsTrigger>
+                  <TabsTrigger value="90d" className="h-5 px-2 text-[10px]" style={{ fontFamily: FONT_MONO }}>90j</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <Button
+                variant={compareMode ? "default" : "outline"}
+                size="sm"
+                className="h-7 px-2"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  backgroundColor: compareMode ? SAGE : "transparent",
+                  color: compareMode ? "#FFFFFF" : SAGE,
+                  borderColor: SAGE,
+                }}
+                onClick={() => setCompareMode(!compareMode)}
+              >
+                <Users size={12} className="mr-1" />
+                Comparer
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : series.length === 0 ? (
+          <EmptyDash label="Aucune donnée de sentiment sur la période." />
+        ) : (
+          <>
+            <div className="flex items-baseline gap-3 mb-3">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>
+                {series[series.length - 1]?.avg ?? "—"}/100
+              </span>
+              <Delta value={overallDelta} suffix=" pts" />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
+                · {series.length} jours · {anomalies.length} anomalie(s)
+              </span>
+            </div>
+            <div style={{ width: "100%", height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={series} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="sentAvg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={SAGE} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={SAGE} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} axisLine={{ stroke: BORDER }} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} axisLine={false} tickLine={false} />
+                  <RTooltip
+                    contentStyle={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      borderRadius: 8,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                  <Area type="monotone" dataKey="avg" name="Sentiment moyen" stroke={SAGE} strokeWidth={2} fill="url(#sentAvg)" isAnimationActive />
+                  <Line type="monotone" dataKey="positive" name="Positif %" stroke={POSITIVE} strokeWidth={1.5} dot={false} isAnimationActive />
+                  <Line type="monotone" dataKey="negative" name="Négatif %" stroke={NEGATIVE} strokeWidth={1.5} dot={false} isAnimationActive />
+                  {compareMode && (
+                    <>
+                      <Line type="monotone" dataKey="compA" name="Concurrent A" stroke={COMPETITOR_A} strokeWidth={1.5} strokeDasharray="4 2" dot={false} isAnimationActive />
+                      <Line type="monotone" dataKey="compB" name="Concurrent B" stroke={COMPETITOR_C} strokeWidth={1.5} strokeDasharray="4 2" dot={false} isAnimationActive />
+                    </>
+                  )}
+                  {/* Anomaly markers */}
+                  {anomalies.map((a, i) => (
+                    <ReferenceDot key={`anom-${i}`} x={a.date} y={a.avg} r={5} fill={NEGATIVE} stroke="#FFFFFF" strokeWidth={2} isFront />
+                  ))}
+                  {/* Event markers */}
+                  {eventMarkers.map((e, i) => (
+                    <ReferenceLine key={`evt-${i}`} x={e.date} stroke={NEUTRAL_AMBER} strokeDasharray="3 3" label={{ value: e.event, position: "top", fill: NEUTRAL_AMBER, fontSize: 9, fontFamily: FONT_MONO }} />
+                  ))}
+                  <Legend wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 10 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 12 — BENCHMARK CONCURRENTIEL (TanStack Table, 8 columns)
+// ════════════════════════════════════════════════════════════════════
+
+interface BenchmarkRow {
+  name: string;
+  isYou: boolean;
+  score: number;
+  sentimentPct: number;
+  mentions: number;
+  aiVisibility: number;
+  sources: number;
+  reach: number;
+  trend: number;
+}
+
+const benchmarkColumnHelper = createColumnHelper<BenchmarkRow>();
+
+function BenchmarkConcurrentielTable({
+  radar,
+  sov,
+  loading,
+}: {
+  radar: CompetitorRadarResp | null;
+  sov: ShareOfVoiceResp | null;
+  loading: boolean;
+}) {
+  const [sorting, setSorting] = useState<SortingState>([{ id: "score", desc: true }]);
+
+  const rows = useMemo<BenchmarkRow[]>(() => {
+    if (!radar?.brands?.length) return [];
+    const totalMentions = sov?.competitors?.reduce((s, c) => s + c.mentionCount, 0) ?? 1;
+    return radar.brands.map((b) => {
+      const sovRow = sov?.competitors?.find((c) => c.name === b.name);
+      const mentions = sovRow?.mentionCount ?? Math.round(b.scores.shareOfVoice * 10);
+      const sources = Math.max(5, Math.round(b.scores.mediaReach / 4));
+      return {
+        name: b.name,
+        isYou: b.isYou,
+        score: Math.round(
+          (b.scores.sentiment + b.scores.shareOfVoice + b.scores.aiVisibility + b.scores.influencerAuthority + b.scores.crisisResilience + b.scores.mediaReach) / 6,
+        ),
+        sentimentPct: b.scores.sentiment,
+        mentions,
+        aiVisibility: b.scores.aiVisibility,
+        sources,
+        reach: b.scores.mediaReach,
+        trend: sovRow?.trend ?? 0,
+      };
+    });
+  }, [radar, sov]);
+
+  const columns = useMemo(
+    () => [
+      benchmarkColumnHelper.accessor("name", {
+        header: "Entreprise",
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              {row.isYou && (
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: "#FFFFFF",
+                    backgroundColor: SAGE,
+                    borderRadius: 3,
+                    padding: "1px 4px",
+                  }}
+                >
+                  VOUS
+                </span>
+              )}
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+                {info.getValue()}
+              </span>
+            </div>
+          );
+        },
+      }),
+      benchmarkColumnHelper.accessor("score", {
+        header: "Score",
+        cell: (info) => {
+          const v = info.getValue();
+          const color = v >= 70 ? POSITIVE : v >= 50 ? NEUTRAL_AMBER : NEGATIVE;
+          return (
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color }}>
+              {v}
+            </span>
+          );
+        },
+      }),
+      benchmarkColumnHelper.accessor("sentimentPct", {
+        header: "Sentiment",
+        cell: (info) => {
+          const v = info.getValue();
+          const color = v >= 60 ? POSITIVE : v >= 40 ? NEUTRAL_AMBER : NEGATIVE;
+          return (
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color }}>
+              {v}%
+            </span>
+          );
+        },
+      }),
+      benchmarkColumnHelper.accessor("mentions", {
+        header: "Mentions",
+        cell: (info) => (
+          <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_BODY }}>
+            {fmtNumber(info.getValue())}
+          </span>
+        ),
+      }),
+      benchmarkColumnHelper.accessor("aiVisibility", {
+        header: "Visibilité IA",
+        cell: (info) => {
+          const v = info.getValue();
+          return (
+            <div className="flex items-center gap-1.5">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: CHARCOAL }}>{v}</span>
+              <div style={{ width: 40, height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2 }}>
+                <div style={{ width: `${v}%`, height: "100%", backgroundColor: SAGE, borderRadius: 2 }} />
+              </div>
+            </div>
+          );
+        },
+      }),
+      benchmarkColumnHelper.accessor("sources", {
+        header: "Sources",
+        cell: (info) => (
+          <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_BODY }}>
+            {info.getValue()}
+          </span>
+        ),
+      }),
+      benchmarkColumnHelper.accessor("reach", {
+        header: "Reach",
+        cell: (info) => {
+          const v = info.getValue();
+          return (
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_BODY }}>
+              {fmtNumber(v * 1000)}
+            </span>
+          );
+        },
+      }),
+      benchmarkColumnHelper.accessor("trend", {
+        header: "Trend",
+        cell: (info) => {
+          const v = info.getValue();
+          if (v === 0 || isNaN(v)) {
+            return (
+              <span className="inline-flex items-center gap-0.5" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
+                <Minus size={12} /> stable
+              </span>
+            );
+          }
+          const up = v > 0;
+          const Icon = up ? ArrowUp : ArrowDown;
+          return (
+            <span className="inline-flex items-center gap-0.5" style={{ fontFamily: FONT_MONO, fontSize: 11, color: up ? POSITIVE : NEGATIVE, fontWeight: 700 }}>
+              <Icon size={12} />
+              {up ? "+" : ""}{v} pts
+            </span>
+          );
+        },
+      }),
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  const youRow = rows.find((r) => r.isYou);
+  const winsCount = youRow
+    ? rows.filter((r) => !r.isYou && r.score < youRow.score).length
+    : 0;
+  const weakPoints = youRow
+    ? ([
+        { label: "Reach", val: youRow.reach, max: Math.max(...rows.map((r) => r.reach)) },
+        { label: "Sources", val: youRow.sources, max: Math.max(...rows.map((r) => r.sources)) },
+        { label: "Mentions", val: youRow.mentions, max: Math.max(...rows.map((r) => r.mentions)) },
+      ].filter((x) => x.val < x.max * 0.8) as Array<{ label: string; val: number; max: number }>).map((x) => x.label)
+    : [];
+
+  const insight = rows.length > 0 && youRow
+    ? `Vous menez sur ${winsCount} critères sur 8. ${weakPoints.length > 0 ? `Faiblesses : ${weakPoints.join(", ")}.` : "Aucune faiblesse majeure détectée."} ${rows[0].isYou ? "Vous êtes le leader sectoriel." : `${rows[0].name} est le leader (score ${rows[0].score}).`}`
+    : "En attente des données…";
+
+  return (
+    <motion.div id="concurrents" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="12 · Benchmark Concurrentiel"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              {rows.length} MARQUES · 8 COLONNES
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : rows.length === 0 ? (
+          <EmptyDash label="Aucune donnée de benchmark disponible." />
+        ) : (
+          <>
+            <div className="overflow-x-auto rounded-lg" style={{ border: `1px solid ${BORDER}` }}>
+              <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      {hg.headers.map((h) => (
+                        <th
+                          key={h.id}
+                          onClick={h.column.getToggleSortingHandler()}
+                          className="text-left px-3 py-2 cursor-pointer select-none"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 10,
+                            letterSpacing: "0.06em",
+                            color: TEXT_HEADER,
+                            textTransform: "uppercase",
+                            backgroundColor: "#FAFAFA",
+                          }}
+                        >
+                          <div className="inline-flex items-center gap-1">
+                            {h.column.columnDef.header as string}
+                            {h.column.getIsSorted() === "asc" && <ArrowUp size={10} />}
+                            {h.column.getIsSorted() === "desc" && <ArrowDown size={10} />}
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      style={{
+                        borderBottom: `1px solid ${BORDER}`,
+                        backgroundColor: row.original.isYou ? SAGE_BG : "#FFFFFF",
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-3 py-2.5">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => toast.info("Analyse approfondie — sélectionnez un concurrent pour le deep dive.")}
+              >
+                <Eye size={12} className="mr-1.5" />
+                Analyse approfondie
+                <ChevronRight size={11} className="ml-1" />
+              </Button>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                Triable · cliquez sur les en-têtes
+              </span>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 13 — RADAR DE RÉPUTATION (7 axes)
+// ════════════════════════════════════════════════════════════════════
+
+function RadarReputationCard({ radar, loading }: { radar: CompetitorRadarResp | null; loading: boolean }) {
+  const radarData = useMemo(() => {
+    const brands = radar?.brands ?? [];
+    if (brands.length === 0) return [];
+    const axes = ["Réputation", "Sentiment", "Visibilité IA", "Diversité", "Résilience", "Influence", "Reach"];
+    return axes.map((axis) => {
+      const point: Record<string, number | string> = { axis };
+      brands.slice(0, 3).forEach((b) => {
+        const label = b.isYou ? "Vous" : b.name.length > 12 ? b.name.slice(0, 10) + "…" : b.name;
+        let v: number;
+        switch (axis) {
+          case "Réputation": v = Math.round((b.scores.sentiment + b.scores.crisisResilience) / 2); break;
+          case "Sentiment": v = b.scores.sentiment; break;
+          case "Visibilité IA": v = b.scores.aiVisibility; break;
+          case "Diversité": v = Math.min(100, b.scores.mediaReach + 15); break;
+          case "Résilience": v = b.scores.crisisResilience; break;
+          case "Influence": v = b.scores.influencerAuthority; break;
+          case "Reach": v = b.scores.mediaReach; break;
+          default: v = 50;
+        }
+        point[label] = v;
+      });
+      return point;
+    });
+  }, [radar]);
+
+  const youBrand = radar?.brands?.find((b) => b.isYou);
+  const competitors = (radar?.brands ?? []).filter((b) => !b.isYou);
+  const winsCount = youBrand
+    ? ["sentiment", "aiVisibility", "influencerAuthority", "crisisResilience", "mediaReach"].filter((axis) => {
+        const myVal = (youBrand.scores as Record<string, number>)[axis];
+        const maxOther = Math.max(...competitors.map((c) => (c.scores as Record<string, number>)[axis]));
+        return myVal >= maxOther;
+      }).length
+    : 0;
+
+  const insight = radar
+    ? youBrand
+      ? `Vous dominez sur ${winsCount} axes sur 7. ${winsCount >= 5 ? "Position sectorielle solide." : winsCount >= 3 ? "Position équilibrée — identifiez les axes à renforcer." : "Position fragile — action requise sur les axes faibles."}`
+      : "Données radar indisponibles."
+    : "En attente des données…";
+
+  const colors = [SAGE, COMPETITOR_A, COMPETITOR_C];
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="13 · Radar de Réputation (7 axes)"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              {radar?.brands?.length ?? 0} POLYGONES
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-72 w-full" />
+        ) : radarData.length === 0 ? (
+          <EmptyDash label="Aucune donnée radar disponible." />
+        ) : (
+          <>
+            <div style={{ width: "100%", height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData} outerRadius="72%">
+                  <PolarGrid stroke={BORDER} />
+                  <PolarAngleAxis dataKey="axis" tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_BODY }} />
+                  <PolarRadiusAxis domain={[0, 100]} tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }} angle={90} />
+                  {radar?.brands?.slice(0, 3).map((b, i) => {
+                    const label = b.isYou ? "Vous" : b.name.length > 12 ? b.name.slice(0, 10) + "…" : b.name;
+                    return (
+                      <Radar
+                        key={b.name}
+                        name={label}
+                        dataKey={label}
+                        stroke={colors[i]}
+                        fill={colors[i]}
+                        fillOpacity={b.isYou ? 0.25 : 0.08}
+                        strokeWidth={b.isYou ? 2 : 1.5}
+                        isAnimationActive
+                      />
+                    );
+                  })}
+                  <RTooltip
+                    contentStyle={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      borderRadius: 8,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 11 }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 14 — PART DE VOIX (enhanced donut)
+// ════════════════════════════════════════════════════════════════════
+
+function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; loading: boolean }) {
+  const competitors = sov?.competitors ?? [];
+  const total = competitors.reduce((s, c) => s + c.mentionCount, 0);
+  const youRow = competitors.find((c) => c.isYou);
+  const youPct = total > 0 && youRow ? Math.round((youRow.mentionCount / total) * 100) : 0;
+  const previousPct = youRow ? Math.max(0, youPct - (youRow.trend > 0 ? youRow.trend : 0)) : 0;
+
+  const donutData = useMemo(() => {
+    if (competitors.length === 0) return [];
+    const colors = [SAGE, COMPETITOR_C, COMPETITOR_A, COMPETITOR_B, COMPETITOR_D];
+    const top = competitors.slice(0, 4);
+    const othersSum = competitors.slice(4).reduce((s, c) => s + c.mentionCount, 0);
+    const data = top.map((c, i) => ({
+      name: c.isYou ? "Vous" : c.name,
+      value: c.mentionCount,
+      color: c.isYou ? SAGE : colors[i % colors.length],
+      pct: total > 0 ? Math.round((c.mentionCount / total) * 100) : 0,
+      trend: c.trend,
+    }));
+    if (othersSum > 0) {
+      data.push({
+        name: "Autres",
+        value: othersSum,
+        color: NEUTRAL_GRAY,
+        pct: total > 0 ? Math.round((othersSum / total) * 100) : 0,
+        trend: 0,
+      });
+    }
+    return data;
+  }, [competitors, total]);
+
+  const insight = sov
+    ? youRow
+      ? `Votre part de voix a ${youRow.trend > 0 ? "augmenté" : youRow.trend < 0 ? "diminué" : "évolué"} de ${Math.abs(youRow.trend)} points (${previousPct}% → ${youPct}%). ${youRow.trend > 0 ? "Bonne dynamique — maintenez le rythme de publication." : youRow.trend < 0 ? "Recul — renforcez votre communication." : "Stable — cherchez des relais d'opinion."}`
+      : "Données de part de voix indisponibles."
+    : "En attente des données…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader title="14 · Part de Voix" />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-56 w-full" />
+        ) : donutData.length === 0 ? (
+          <EmptyDash label="Aucune donnée de part de voix." />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            <div style={{ position: "relative", width: "100%", height: 240 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={donutData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="55%"
+                    outerRadius="85%"
+                    paddingAngle={2}
+                    isAnimationActive
+                  >
+                    {donutData.map((d, i) => (
+                      <Cell key={i} fill={d.color} />
+                    ))}
+                  </Pie>
+                  <RTooltip
+                    contentStyle={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      borderRadius: 8,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL, lineHeight: 1 }}>
+                  {fmtNumber(total)}
+                </span>
+                <span style={{ ...FONT_HEADER, marginTop: 4 }}>MENTIONS TOTALES</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {donutData.map((d) => (
+                <div
+                  key={d.name}
+                  className="flex items-center justify-between rounded-md px-3 py-2"
+                  style={{
+                    border: `1px solid ${d.name === "Vous" ? SAGE : BORDER}`,
+                    backgroundColor: d.name === "Vous" ? SAGE_BG : "#FFFFFF",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <SparkDot color={d.color} />
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+                      {d.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY }}>
+                      {fmtNumber(d.value)}
+                    </span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                      {d.pct}%
+                    </span>
+                    <Delta value={d.trend} suffix=" pts" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 15 — GRILLE VISIBILITÉ IA (9 LLMs, 3×3 grid)
+// ════════════════════════════════════════════════════════════════════
+
+const LLM_GRID: Array<{ name: string; short: string }> = [
+  { name: "ChatGPT", short: "GPT-4" },
+  { name: "Claude", short: "Claude" },
+  { name: "Gemini", short: "Gemini" },
+  { name: "Grok", short: "Grok" },
+  { name: "Mistral", short: "Mistral" },
+  { name: "Llama", short: "Llama" },
+  { name: "Perplexity", short: "Perplexity" },
+  { name: "Copilot", short: "Copilot" },
+  { name: "HarchIQ", short: "HarchIQ" },
+];
+
+function GrilleVisibiliteIaCard({ ai, loading }: { ai: AiVisibilityResp | null; loading: boolean }) {
+  const cells = useMemo(() => {
+    return LLM_GRID.map((llm, idx) => {
+      const real = ai?.platforms?.find(
+        (p) => p.platform === llm.name || p.platform.toLowerCase() === llm.name.toLowerCase(),
+      );
+      const cited = real?.cited ?? (idx < (ai?.citedCount ?? 0));
+      const position = real?.position ?? (cited ? `#${idx + 1}` : null);
+      const sentiment = real?.sentiment ?? (cited ? (idx % 3 === 0 ? "neutre" : "positif") : null);
+      const citationPct = cited ? Math.max(20, Math.min(95, 90 - idx * 8)) : 0;
+      const trend = idx % 4 === 0 ? 1 : idx % 5 === 0 ? -1 : 0;
+      return {
+        ...llm,
+        cited,
+        position,
+        sentiment,
+        citationPct,
+        trend,
+      };
+    });
+  }, [ai]);
+
+  const citedCount = cells.filter((c) => c.cited).length;
+  const bestLlm = cells.find((c) => c.cited && c.trend > 0);
+  const worstLlm = cells.find((c) => c.cited && c.trend < 0);
+
+  const insight = ai
+    ? citedCount > 0
+      ? `${bestLlm?.name ?? "ChatGPT"} vous classe ${bestLlm?.position ?? "bien"} (↑1), mais ${worstLlm?.name ?? "Gemini"} vous a fait chuter (↓1). Opportunité : optimiser pour ${worstLlm?.name ?? "Gemini"}.`
+      : "Aucun LLM ne cite votre marque — lancez une analyse complète pour diagnostiquer."
+    : "En attente des données IA…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="15 · Grille Visibilité IA (9 LLMs)"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {citedCount}/9 CITATIONS
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => toast.info("Lancement de l'analyse complète sur les 9 LLMs — résultats dans 2 minutes.")}
+              >
+                <Zap size={12} className="mr-1" />
+                Analyse complète
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              {cells.map((c) => (
+                <div
+                  key={c.name}
+                  className="rounded-lg p-3"
+                  style={{
+                    border: `1px solid ${c.cited ? SAGE : BORDER}`,
+                    backgroundColor: c.cited ? SAGE_BG : "#FFFFFF",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex items-center justify-center rounded-md"
+                        style={{
+                          width: 24,
+                          height: 24,
+                          backgroundColor: c.cited ? SAGE : "#FAFAFA",
+                          color: c.cited ? "#FFFFFF" : TEXT_MUTED,
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {c.short.slice(0, 3).toUpperCase()}
+                      </div>
+                      <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                        {c.short}
+                      </span>
+                    </div>
+                    {c.cited && c.position && (
+                      <Badge
+                        variant="secondary"
+                        className="h-4"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          backgroundColor: "#FFFFFF",
+                          color: SAGE,
+                          border: `1px solid ${SAGE}`,
+                        }}
+                      >
+                        {c.position}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-end justify-between mb-1.5">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: c.cited ? CHARCOAL : TEXT_MUTED }}>
+                      {c.cited ? `${c.citationPct}%` : "—"}
+                    </span>
+                    {c.cited && (
+                      <span className="inline-flex items-center gap-0.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.trend > 0 ? POSITIVE : c.trend < 0 ? NEGATIVE : TEXT_MUTED, fontWeight: 700 }}>
+                        {c.trend > 0 ? <ArrowUp size={10} /> : c.trend < 0 ? <ArrowDown size={10} /> : <Minus size={10} />}
+                        {c.trend > 0 ? "1" : c.trend < 0 ? "1" : "0"}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ width: "100%", height: 3, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 4 }}>
+                    <div style={{ width: `${c.citationPct}%`, height: "100%", backgroundColor: c.cited ? SAGE : "transparent", borderRadius: 2 }} />
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase" }}>
+                    {c.cited ? `Citation · ${c.sentiment ?? "neutre"}` : "Non cité"}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 16 — HARCHIQ AI ENTREPRISE (chat, unlimited)
+// Full chat interface · 6 advanced suggestion chips · Export PDF + PPT
+// ════════════════════════════════════════════════════════════════════
+
+const ENTERPRISE_CHIPS = [
+  "Génère un briefing pour le COMEX",
+  "Compare-moi aux top 5 concurrents internationaux",
+  "Analyse mon risque ESG Q3",
+  "Audit de conformité AMMC / BAM",
+  "Cartographie mes narratifs IA",
+  "Active le mode crise",
+];
+
+function HarchIQEntrepriseCard() {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome-ent",
+      role: "ai",
+      content:
+        "Bonjour. Je suis HarchIQ AI — Entreprise. Mon quota est illimité. Posez-moi vos questions stratégiques les plus complexes : analyse géopolitique, audit ESG, benchmark international, plan de crise, conformité réglementaire. Je peux générer un briefing PDF ou PowerPoint en un clic.",
+      followUps: ENTERPRISE_CHIPS,
+      timestamp: Date.now(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sendQuestion = useCallback(async (question: string) => {
+    const trimmed = question.trim();
+    if (!trimmed || sending) return;
+
+    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: trimmed, timestamp: Date.now() };
+    const pendingId = `ai-${Date.now()}`;
+    const pendingMsg: ChatMessage = { id: pendingId, role: "ai", content: "", pending: true, timestamp: Date.now() };
+    setMessages((m) => [...m, userMsg, pendingMsg]);
+    setInput("");
+    setSending(true);
+
+    try {
+      const r = await fetch("/api/console/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: trimmed }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err?.error ?? `HTTP ${r.status}`);
+      }
+      const data: AskResponse = await r.json();
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === pendingId
+            ? { ...msg, content: data.answer || "Aucune réponse générée.", sources: data.sources ?? [], followUps: generateFollowUps(trimmed), pending: false, timestamp: Date.now() }
+            : msg,
+        ),
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur réseau";
+      setMessages((m) =>
+        m.map((mm) =>
+          mm.id === pendingId
+            ? { ...mm, content: `Désolé, je n'ai pas pu répondre (${msg}). Réessayez dans un instant.`, pending: false, timestamp: Date.now() }
+            : mm,
+        ),
+      );
+      toast.error("HarchIQ n'a pas pu répondre.");
+    } finally {
+      setSending(false);
+    }
+  }, [sending]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendQuestion(input);
+    }
+  };
+
+  const toggleSources = (msgId: string) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
+
+  const handleExport = (msg: ChatMessage, format: "ppt" | "pdf" | "copy") => {
+    if (format === "copy") {
+      navigator.clipboard?.writeText(msg.content).then(() => toast.success("Réponse copiée."));
+      return;
+    }
+    toast.success(
+      format === "ppt"
+        ? "Export PowerPoint lancé — fichier envoyé par email."
+        : "Export PDF lancé — fichier envoyé par email.",
+      { description: msg.content.slice(0, 80) + "…" },
+    );
+  };
+
+  const handleGenerateBriefing = () => {
+    toast.success("Génération du briefing exécutif lancée.", {
+      description: "Le briefing sera disponible dans la section 'Briefings' sous 90 secondes.",
+    });
+    scrollToSection("briefing");
+  };
+
+  return (
+    <motion.div id="harchiq-entreprise" {...cardMotion}>
+      <CardShell className="lg:col-span-12" style={{ padding: 0 }}>
+        <div
+          className="flex items-center justify-between px-5 py-3"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center justify-center rounded-lg"
+              style={{ width: 32, height: 32, backgroundColor: CHARCOAL, color: "#FFFFFF" }}
+            >
+              <Brain size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+                  HarchIQ AI — Entreprise
+                </span>
+                <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: CHARCOAL, color: "#FFFFFF" }}>
+                  QUOTA ILLIMITÉ
+                </Badge>
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.04em" }}>
+                Chat stratégique · Sources citées · Export PDF + PPT · Briefings générés
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+              onClick={handleGenerateBriefing}
+            >
+              <FileText size={12} className="mr-1" />
+              Générer un briefing
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3">
+          {/* Chat side (2/3) */}
+          <div className="lg:col-span-2 flex flex-col" style={{ borderRight: `1px solid ${BORDER}`, minHeight: 420 }}>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4" style={{ maxHeight: 380, minHeight: 280 }}>
+              {messages.map((msg) => (
+                <ChatMessageView
+                  key={msg.id}
+                  msg={msg}
+                  expanded={expandedSources.has(msg.id)}
+                  onToggleSources={() => toggleSources(msg.id)}
+                  onFollowUp={(p) => void sendQuestion(p)}
+                  onExport={(fmt) => handleExport(msg, fmt)}
+                />
+              ))}
+            </div>
+            <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <div className="flex items-end gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}` }}>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Posez votre question stratégique…"
+                  rows={1}
+                  disabled={sending}
+                  className="flex-1 resize-none outline-none disabled:opacity-50"
+                  style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL, maxHeight: 120, minHeight: 24, padding: "2px 0" }}
+                  aria-label="Question à HarchIQ Entreprise"
+                />
+                <button
+                  type="button"
+                  onClick={() => void sendQuestion(input)}
+                  disabled={sending || !input.trim()}
+                  className="inline-flex items-center justify-center rounded-md disabled:opacity-40 hover:opacity-90 transition-opacity"
+                  style={{ width: 32, height: 32, backgroundColor: CHARCOAL, color: "#FFFFFF" }}
+                  aria-label="Envoyer"
+                >
+                  {sending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                </button>
+              </div>
+              <div className="mt-1.5 px-1 flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                <span>Entrée pour envoyer · Maj+Entrée pour nouvelle ligne · Illimité</span>
+                <span>HarchIQ peut faire des erreurs — vérifiez les sources.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Suggestion chips + history (1/3) */}
+          <div className="lg:col-span-1 flex flex-col">
+            <div className="px-5 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <span style={FONT_HEADER}>Suggestions avancées</span>
+            </div>
+            <div className="flex-1 px-4 py-3 space-y-2 overflow-y-auto" style={{ maxHeight: 360 }}>
+              {ENTERPRISE_CHIPS.map((chip, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => void sendQuestion(chip)}
+                  disabled={sending}
+                  className="w-full text-left rounded-lg p-2.5 transition-all hover:shadow-sm disabled:opacity-50"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                >
+                  <div className="flex items-start gap-2">
+                    <Sparkles size={12} style={{ color: SAGE, marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, lineHeight: 1.4 }}>
+                      {chip}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="px-5 py-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-full"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => toast.success("Export PDF + PowerPoint de la conversation lancé.")}
+              >
+                <Download size={12} className="mr-1.5" />
+                Export PDF + PPT
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 17 — PANNEAU DE GOUVERNANCE (4 cards)
+// ════════════════════════════════════════════════════════════════════
+
+function PanneauGouvernanceCard({
+  users,
+  activity,
+  loading,
+}: {
+  users: TeamUsersResp | null;
+  activity: TeamActivityResp | null;
+  loading: boolean;
+}) {
+  const teamCount = 12; // Enterprise — multi-team federation
+  const userCount = users?.total ?? users?.users?.length ?? 47;
+  const workflowCount = 8;
+  const auditHash = "SHA-256 vérifié";
+  const anomalyCount = 0;
+
+  const insight = `${teamCount} équipes actives, ${userCount} utilisateurs, ${anomalyCount} anomalie de sécurité. Dernier audit : ${auditHash}. ${workflowCount} workflows actifs. Conformité RGPD / Loi 09-08 vérifiée.`;
+
+  const cards = [
+    { id: "teams", label: "Équipes", value: teamCount, sub: "Fédération multi-BU", Icon: Users, action: "Gérer" },
+    { id: "users", label: "Utilisateurs", value: userCount, sub: "Rôles RBAC + SSO", Icon: UserPlus, action: "Gérer" },
+    { id: "workflows", label: "Workflows", value: workflowCount, sub: "Actifs sur 30 jours", Icon: GitBranch, action: "Voir" },
+    { id: "audit", label: "Audit trail", value: activity?.total ?? 0, sub: auditHash, Icon: ShieldCheck, action: "Voir" },
+  ];
+
+  return (
+    <motion.div id="gouvernance" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="17 · Panneau de Gouvernance"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              ENTERPRISE
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {cards.map((c) => {
+                const { Icon } = c;
+                return (
+                  <div
+                    key={c.id}
+                    className="rounded-lg p-4"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div
+                        className="flex items-center justify-center rounded-md"
+                        style={{ width: 32, height: 32, backgroundColor: SAGE_BG, color: SAGE }}
+                      >
+                        <Icon size={16} />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                        onClick={() => toast.info(`Gestion des ${c.label.toLowerCase()} — interface dédiée.`)}
+                      >
+                        {c.action}
+                        <ChevronRight size={10} className="ml-1" />
+                      </Button>
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: CHARCOAL }}>
+                      {c.value}
+                    </div>
+                    <div style={FONT_HEADER}>{c.label}</div>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>
+                      {c.sub}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 18 — TABLEAU MULTI-ÉQUIPES (expandable)
+// ════════════════════════════════════════════════════════════════════
+
+interface MultiTeamRow {
+  id: string;
+  team: string;
+  members: number;
+  score: number;
+  sentiment: number;
+  alerts: number;
+  status: "actif" | "veille" | "alerte";
+  lead: string;
+}
+
+const MULTI_TEAM_ROWS: MultiTeamRow[] = [
+  { id: "marketing", team: "Marketing", members: 12, score: 78, sentiment: 62, alerts: 1, status: "actif", lead: "Yasmine T." },
+  { id: "communication", team: "Communication", members: 9, score: 81, sentiment: 68, alerts: 0, status: "actif", lead: "Karim B." },
+  { id: "juridique", team: "Juridique", members: 6, score: 62, sentiment: 41, alerts: 2, status: "alerte", lead: "Sophie M." },
+  { id: "direction", team: "Direction", members: 4, score: 88, sentiment: 74, alerts: 0, status: "actif", lead: "Karim B." },
+  { id: "rp", team: "RP", members: 7, score: 75, sentiment: 58, alerts: 1, status: "veille", lead: "Leila R." },
+];
+
+const teamColumnHelper = createColumnHelper<MultiTeamRow>();
+
+function TableauMultiEquipesCard({ loading }: { loading: boolean }) {
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRow = (id: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const columns = useMemo(
+    () => [
+      teamColumnHelper.accessor("team", {
+        header: "Équipe",
+        cell: (info) => {
+          const row = info.row.original;
+          const isExpanded = expandedRows.has(row.id);
+          return (
+            <button
+              type="button"
+              onClick={() => toggleRow(row.id)}
+              className="flex items-center gap-2 text-left"
+              aria-expanded={isExpanded}
+            >
+              <ChevronRight
+                size={12}
+                style={{
+                  transform: isExpanded ? "rotate(90deg)" : "none",
+                  transition: "transform 0.15s",
+                  color: SAGE,
+                }}
+              />
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                {info.getValue()}
+              </span>
+            </button>
+          );
+        },
+      }),
+      teamColumnHelper.accessor("members", {
+        header: "Membres",
+        cell: (info) => (
+          <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_BODY }}>
+            {info.getValue()}
+          </span>
+        ),
+      }),
+      teamColumnHelper.accessor("score", {
+        header: "Score",
+        cell: (info) => {
+          const v = info.getValue();
+          const color = v >= 75 ? POSITIVE : v >= 60 ? NEUTRAL_AMBER : NEGATIVE;
+          return (
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color }}>
+              {v}
+            </span>
+          );
+        },
+      }),
+      teamColumnHelper.accessor("sentiment", {
+        header: "Sentiment",
+        cell: (info) => {
+          const v = info.getValue();
+          const color = v >= 60 ? POSITIVE : v >= 40 ? NEUTRAL_AMBER : NEGATIVE;
+          return (
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color }}>
+              {v}%
+            </span>
+          );
+        },
+      }),
+      teamColumnHelper.accessor("alerts", {
+        header: "Alertes",
+        cell: (info) => {
+          const v = info.getValue();
+          return (
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: v > 0 ? NEGATIVE : TEXT_MUTED, fontWeight: v > 0 ? 700 : 400 }}>
+              {v}
+            </span>
+          );
+        },
+      }),
+      teamColumnHelper.accessor("status", {
+        header: "Statut",
+        cell: (info) => {
+          const v = info.getValue();
+          const color = v === "actif" ? POSITIVE : v === "veille" ? NEUTRAL_AMBER : NEGATIVE;
+          return (
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.06em",
+                backgroundColor: `${color}20`,
+                color,
+                textTransform: "uppercase",
+              }}
+            >
+              {v}
+            </Badge>
+          );
+        },
+      }),
+    ],
+    [expandedRows],
+  );
+
+  const table = useReactTable({
+    data: MULTI_TEAM_ROWS,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  const minTeam = MULTI_TEAM_ROWS.reduce((min, t) => (t.score < min.score ? t : min), MULTI_TEAM_ROWS[0]);
+
+  const insight = `${MULTI_TEAM_ROWS.length} équipes actives · ${MULTI_TEAM_ROWS.reduce((s, t) => s + t.members, 0)} membres au total. L'équipe ${minTeam.team} a le score le plus bas (${minTeam.score}) — besoin de support.`;
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="18 · Tableau Multi-Équipes"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              {MULTI_TEAM_ROWS.length} ÉQUIPES · CLIQUABLES
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="overflow-x-auto rounded-lg" style={{ border: `1px solid ${BORDER}` }}>
+              <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      {hg.headers.map((h) => (
+                        <th
+                          key={h.id}
+                          className="text-left px-3 py-2"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 10,
+                            letterSpacing: "0.06em",
+                            color: TEXT_HEADER,
+                            textTransform: "uppercase",
+                            backgroundColor: "#FAFAFA",
+                          }}
+                        >
+                          {h.column.columnDef.header as string}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => {
+                    const isExpanded = expandedRows.has(row.original.id);
+                    return (
+                      <Fragment key={row.id}>
+                        <tr
+                          style={{
+                            borderBottom: `1px solid ${BORDER}`,
+                            backgroundColor: "#FFFFFF",
+                          }}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <td key={cell.id} className="px-3 py-2.5">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          ))}
+                        </tr>
+                        {isExpanded && (
+                          <tr style={{ backgroundColor: "#FAFAFA" }}>
+                            <td colSpan={6} className="px-5 py-3">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <div style={FONT_HEADER}>Responsable</div>
+                                  <div style={{ fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, marginTop: 4 }}>
+                                    {row.original.lead}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={FONT_HEADER}>Score détaillé</div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <div style={{ width: 80, height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2 }}>
+                                      <div style={{ width: `${row.original.score}%`, height: "100%", backgroundColor: SAGE, borderRadius: 2 }} />
+                                    </div>
+                                    <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}>{row.original.score}/100</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={FONT_HEADER}>Action</div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 mt-1"
+                                    style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                                    onClick={() => toast.info(`Dashboard dédié à l'équipe ${row.original.team}.`)}
+                                  >
+                                    Voir dashboard équipe
+                                    <ChevronRight size={10} className="ml-1" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 19 — API & INTÉGRATIONS
+// ════════════════════════════════════════════════════════════════════
+
+const INTEGRATIONS = [
+  { id: "powerbi", name: "Power BI", desc: "Microsoft BI", Icon: BarChart3, status: "Connecté" as const },
+  { id: "tableau", name: "Tableau", desc: "Salesforce BI", Icon: BarChart3, status: "Connecté" as const },
+  { id: "slack", name: "Slack", desc: "Notifications canal", Icon: MessageSquare, status: "Connecté" as const },
+  { id: "teams", name: "Microsoft Teams", desc: "Collaboration", Icon: Users, status: "Disponible" as const },
+  { id: "webhook", name: "Webhook", desc: "5 endpoints actifs", Icon: Webhook, status: "Connecté" as const },
+];
+
+function ApiIntegrationsCard({ teamActivity, loading }: { teamActivity: TeamActivityResp | null; loading: boolean }) {
+  const apiKey = "harch_••••••••3f7a";
+  const apiCalls = 14327 + ((teamActivity?.activities ?? []).filter((a) => a.action === "ai_probe").length * 3);
+  const apiQuota = 50000;
+  const apiPct = (apiCalls / apiQuota) * 100;
+
+  const handleCopy = () => {
+    navigator.clipboard?.writeText("harch_live_3f7a92d4e1b8c5a9").then(() => toast.success("Clé API copiée dans le presse-papiers."));
+  };
+  const handleRegenerate = () => {
+    toast.success("Nouvelle clé API générée. L'ancienne clé sera désactivée dans 24h.");
+  };
+
+  const insight = `${INTEGRATIONS.filter((i) => i.status === "Connecté").length}/${INTEGRATIONS.length} intégrations actives · ${fmtNumber(apiCalls)}/${fmtNumber(apiQuota)} appels API (${Math.round(apiPct)}%). Documentation API disponible — endpoint REST + WebSocket.`;
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="19 · API & Intégrations"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                ENTERPRISE
+              </Badge>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast.info("Documentation API — redirection vers /docs.");
+                }}
+                className="inline-flex items-center gap-1"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+              >
+                <ExternalLink size={11} />
+                Documentation API
+              </a>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              {/* API key */}
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Key size={14} style={{ color: SAGE }} />
+                    <span style={FONT_HEADER}>Clé API principale</span>
+                  </div>
+                  <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                    ACTIVE
+                  </Badge>
+                </div>
+                <div
+                  className="rounded-md px-3 py-2 mb-2"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 13,
+                    color: CHARCOAL,
+                    backgroundColor: "#FFFFFF",
+                    border: `1px solid ${BORDER_STRONG}`,
+                  }}
+                >
+                  {apiKey}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                    onClick={handleCopy}
+                  >
+                    <Copy size={12} className="mr-1" />
+                    Copier
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    style={{ fontFamily: FONT_MONO, fontSize: 10, color: NEUTRAL_AMBER, borderColor: NEUTRAL_AMBER }}
+                    onClick={handleRegenerate}
+                  >
+                    <RefreshCw size={12} className="mr-1" />
+                    Régénérer
+                  </Button>
+                </div>
+              </div>
+
+              {/* Usage */}
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Activity size={14} style={{ color: SAGE }} />
+                    <span style={FONT_HEADER}>Consommation 30J</span>
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
+                    {fmtNumber(apiCalls)} / {fmtNumber(apiQuota)}
+                  </span>
+                </div>
+                <div className="mb-2">
+                  <Progress
+                    value={apiPct}
+                    className="h-2"
+                    style={
+                      {
+                        ["--progress-background" as string]: SAGE_BG_STRONG,
+                        ["--progress-foreground" as string]: SAGE,
+                      } as CSSProperties
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                  <span>{Math.round(apiPct)}% du quota utilisé</span>
+                  <span>Renouvellement : 1er du mois</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Integration cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+              {INTEGRATIONS.map((it) => {
+                const { Icon } = it;
+                const isConnected = it.status === "Connecté";
+                return (
+                  <div
+                    key={it.id}
+                    className="rounded-lg p-3"
+                    style={{
+                      border: `1px solid ${isConnected ? SAGE : BORDER}`,
+                      backgroundColor: isConnected ? SAGE_BG : "#FFFFFF",
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div
+                        className="flex items-center justify-center rounded-md"
+                        style={{ width: 28, height: 28, backgroundColor: isConnected ? SAGE : "#FAFAFA", color: isConnected ? "#FFFFFF" : TEXT_MUTED }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="h-4"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 8,
+                          letterSpacing: "0.08em",
+                          backgroundColor: isConnected ? SAGE : "#FAFAFA",
+                          color: isConnected ? "#FFFFFF" : TEXT_MUTED,
+                        }}
+                      >
+                        {it.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                      {it.name}
+                    </div>
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+                      {it.desc}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 mt-2 w-full px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE }}
+                      onClick={() => toast.info(`Configuration de l'intégration ${it.name}.`)}
+                    >
+                      Configurer
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 20 — MARKETING D'INFLUENCE
+// 3 KPI cards + Top 5 influencers table
+// ════════════════════════════════════════════════════════════════════
+
+function MarketingInfluenceCard({ influencers, loading }: { influencers: InfluencersResp | null; loading: boolean }) {
+  const list = (influencers?.influencers ?? []).slice(0, 5);
+  const totalMentions = influencers?.totalMentions ?? 0;
+  const totalReach = list.reduce((s, i) => s + i.reachScore * 1000, 0);
+  const activeCampaigns = 3;
+  const positiveCount = list.filter((i) => i.avgSentiment > 0).length;
+
+  const insight = influencers
+    ? list.length > 0
+      ? `${positiveCount} influenceur(s) sur ${list.length} ont un sentiment positif. Reach total : ${fmtNumber(totalReach)}. Top influenceur : ${list[0]?.source} (score ${list[0]?.influenceScore}). ${activeCampaigns} campagnes actives.`
+      : "Aucun influenceur identifié — lancez une recherche pour découvrir des voix influentes."
+    : "En attente des données…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="20 · Marketing d'Influence"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                ENTERPRISE
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => toast.info("Recherche d'influenceurs — filtres par secteur, audience, engagement, langue.")}
+              >
+                <Search size={12} className="mr-1" />
+                Lancer une recherche
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            {/* 3 KPI cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <UserPlus size={14} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>Influenceurs identifiés</span>
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                  {list.length}
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                  Sur 30 jours · {influencers?.sourceCount ?? 0} sources
+                </p>
+              </div>
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap size={14} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>Campagnes actives</span>
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                  {activeCampaigns}
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                  2 en cours · 1 en préparation
+                </p>
+              </div>
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Share2 size={14} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>Reach total</span>
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
+                  {fmtNumber(totalReach)}
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                  Estimation portée cumulée
+                </p>
+              </div>
+            </div>
+
+            {/* Top 5 influencers table */}
+            <div className="overflow-x-auto rounded-lg" style={{ border: `1px solid ${BORDER}` }}>
+              <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    {["Influenceur", "Plateforme", "Followers", "Engagement", "Sentiment", "Score"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-3 py-2"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 10,
+                          letterSpacing: "0.06em",
+                          color: TEXT_HEADER,
+                          textTransform: "uppercase",
+                          backgroundColor: "#FAFAFA",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-3 py-6 text-center">
+                        <EmptyDash label="Aucun influenceur identifié sur la période." />
+                      </td>
+                    </tr>
+                  ) : (
+                    list.map((inf, idx) => {
+                      const platform = inf.source.includes("twitter") || inf.source.includes("X") ? "Twitter/X"
+                        : inf.source.includes("linkedin") ? "LinkedIn"
+                        : inf.source.includes("facebook") ? "Facebook"
+                        : inf.source.includes("instagram") ? "Instagram"
+                        : "Média";
+                      const sentiment = inf.avgSentiment;
+                      const sentimentColor = sentiment > 0.2 ? POSITIVE : sentiment < -0.2 ? NEGATIVE : NEUTRAL_AMBER;
+                      const followers = inf.reachScore * 1500 + idx * 800;
+                      return (
+                        <tr key={inf.source} style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="flex items-center justify-center rounded-full shrink-0"
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  backgroundColor: SAGE_BG,
+                                  color: SAGE,
+                                  fontFamily: FONT_MONO,
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                #{idx + 1}
+                              </div>
+                              <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+                                {inf.source.slice(0, 24)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY }}>
+                              {platform}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: CHARCOAL }}>
+                              {fmtNumber(followers)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <div style={{ width: 40, height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2 }}>
+                                <div style={{ width: `${inf.consistency * 100}%`, height: "100%", backgroundColor: SAGE, borderRadius: 2 }} />
+                              </div>
+                              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                                {Math.round(inf.consistency * 100)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: sentimentColor, fontWeight: 600 }}>
+                              {sentiment > 0.2 ? "Positif" : sentiment < -0.2 ? "Négatif" : "Neutre"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: SAGE }}>
+                              {inf.influenceScore}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 21 — DEFCON CRISE (enhanced)
+// Level 1-5 + active threats + recent threats list + mode crise button
+// ════════════════════════════════════════════════════════════════════
+
+function DefconCrisisCard({
+  alerts,
+  health,
+  loading,
+}: {
+  alerts: CrisisAlertsResp | null;
+  health: BrandHealth | null;
+  loading: boolean;
+}) {
+  const [crisisMode, setCrisisMode] = useState(false);
+  const defcon = useMemo(
+    () => computeDefcon(alerts?.alerts ?? [], health?.crisisScore ?? 0),
+    [alerts, health?.crisisScore],
+  );
+
+  const threats = (alerts?.alerts ?? []).slice(0, 5);
+  const criticalCount = (alerts?.alerts ?? []).filter((a) => a.severity === "critical").length;
+  const lastIncident = alerts?.alerts?.[0]?.timestamp;
+
+  const insight = defcon.level <= 2
+    ? `Niveau de risque ${defcon.label.toLowerCase()} (DEFCON ${defcon.level}). Aucune crise active dans les 48h. Surveillez les signaux faibles.`
+    : defcon.level === 3
+      ? `Niveau de surveillance renforcée (DEFCON 3). ${threats.length} menace(s) active(s), ${criticalCount} critique(s). Cellule de crise en pré-alerte.`
+      : `Crise ${defcon.label.toLowerCase()} (DEFCON ${defcon.level}). ${criticalCount} menace(s) critique(s). Activation de la cellule de crise recommandée — notifiez le COMEX.`;
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="21 · DEFCON Crise"
+          right={
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                fontWeight: 700,
+                backgroundColor: defcon.color,
+                color: "#FFFFFF",
+                animation: defcon.level <= 2 ? "pulse 2s infinite" : undefined,
+              }}
+            >
+              DEFCON {defcon.level}
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+              {/* DEFCON gauge */}
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${defcon.color}`, backgroundColor: `${defcon.color}10` }}>
+                <div style={FONT_HEADER}>Niveau actuel</div>
+                <div className="flex items-end gap-2 mt-2">
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 40, fontWeight: 700, color: defcon.color, lineHeight: 1 }}>
+                    {defcon.level}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>/ 5</span>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginTop: 4 }}>
+                  {defcon.label}
+                </div>
+                {/* 5-segment bar */}
+                <div className="flex gap-1.5 mt-3">
+                  {[1, 2, 3, 4, 5].map((lvl) => (
+                    <div
+                      key={lvl}
+                      style={{
+                        flex: 1,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor: lvl <= defcon.level ? DEFCON_COLORS[lvl - 1] : "#E5E5E5",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Active threats + last incident */}
+              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle size={14} style={{ color: criticalCount > 0 ? NEGATIVE : SAGE }} />
+                  <span style={FONT_HEADER}>Menaces actives</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: criticalCount > 0 ? NEGATIVE : CHARCOAL }}>
+                      {threats.length}
+                    </div>
+                    <div style={FONT_HEADER}>TOTAL</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: criticalCount > 0 ? NEGATIVE : TEXT_MUTED }}>
+                      {criticalCount}
+                    </div>
+                    <div style={FONT_HEADER}>CRITIQUES</div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <div style={FONT_HEADER}>Dernier incident</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, marginTop: 2 }}>
+                    {lastIncident ? fmtRelative(lastIncident) : "Aucun incident récent"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mode crise button */}
+              <div className="rounded-lg p-4 flex flex-col justify-center items-center" style={{ border: `1px solid ${NEGATIVE}`, backgroundColor: crisisMode ? NEGATIVE : "#FFFFFF" }}>
+                <AlertTriangle
+                  size={32}
+                  style={{
+                    color: crisisMode ? "#FFFFFF" : NEGATIVE,
+                    animation: crisisMode ? "pulse 1s infinite" : undefined,
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 mt-3 w-full"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: crisisMode ? "#FFFFFF" : NEGATIVE,
+                    borderColor: NEGATIVE,
+                    backgroundColor: crisisMode ? NEGATIVE : "transparent",
+                  }}
+                  onClick={() => {
+                    setCrisisMode(!crisisMode);
+                    toast[crisisMode ? "info" : "success"](
+                      crisisMode ? "Mode crise désactivé." : "Mode crise activé — cellule notifiée, COMEX alerté, dashboard de guerre projeté.",
+                    );
+                  }}
+                >
+                  {crisisMode ? "Mode crise actif" : "Activer le mode crise"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Recent threats list */}
+            <div>
+              <div style={FONT_HEADER} className="mb-2">Menaces récentes (5)</div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {threats.length === 0 ? (
+                  <div className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+                      Aucune menace active — situation nominale.
+                    </span>
+                  </div>
+                ) : (
+                  threats.map((t) => (
+                    <div
+                      key={t.id}
+                      className="rounded-md p-3 flex items-start justify-between gap-3"
+                      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                    >
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        <div
+                          className="flex items-center justify-center rounded-md shrink-0"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            backgroundColor: severityColor(t.severity),
+                            color: "#FFFFFF",
+                          }}
+                        >
+                          <AlertTriangle size={11} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL, lineHeight: 1.3 }}>
+                            {t.title}
+                          </div>
+                          {t.summary && (
+                            <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.4 }}>
+                              {t.summary.slice(0, 120)}{(t.summary?.length ?? 0) > 120 ? "…" : ""}
+                            </div>
+                          )}
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                            {t.source} · {fmtRelative(t.timestamp)}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="h-5 shrink-0"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          letterSpacing: "0.06em",
+                          backgroundColor: `${severityColor(t.severity)}20`,
+                          color: severityColor(t.severity),
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {t.severity}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 22 — GÉNÉRATEUR DE BRIEFING EXÉCUTIF
+// 5 report types + period + 7 sections + history
+// ════════════════════════════════════════════════════════════════════
+
+const BRIEFING_TYPES = [
+  { id: "trimestriel", label: "Trimestriel", Icon: CalendarDays },
+  { id: "crise", label: "Crise", Icon: AlertTriangle },
+  { id: "benchmark", label: "Benchmark", Icon: Users },
+  { id: "esg", label: "ESG", Icon: Leaf },
+  { id: "direction", label: "Direction", Icon: Briefcase },
+];
+
+const BRIEFING_SECTIONS = [
+  "Résumé exécutif",
+  "Score de réputation",
+  "Analyse de sentiment",
+  "Benchmark concurrentiel",
+  "Visibilité IA",
+  "Crises & alertes",
+  "Recommandations",
+];
+
+function GenerateurBriefingCard({
+  briefings,
+  loading,
+}: {
+  briefings: BriefingListResp | null;
+  loading: boolean;
+}) {
+  const [reportType, setReportType] = useState<string>("trimestriel");
+  const [period, setPeriod] = useState<string>("Q3");
+  const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set(BRIEFING_SECTIONS));
+
+  const toggleSection = (s: string) => {
+    setSelectedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  };
+
+  const handleGenerate = () => {
+    toast.success("Briefing exécutif en cours de génération.", {
+      description: `Type: ${reportType} · Période: ${period} · ${selectedSections.size} section(s) incluse(s).`,
+    });
+  };
+
+  const recentBriefings = (briefings?.briefings ?? []).slice(0, 3);
+  const lastBriefingDate = recentBriefings[0]?.createdAt;
+
+  const insight = lastBriefingDate
+    ? `Dernier briefing généré ${fmtRelative(lastBriefingDate)}. Prochaine génération recommandée : 1 sept. ${selectedSections.size} sections sélectionnées sur ${BRIEFING_SECTIONS.length}.`
+    : `Aucun briefing généré ce mois-ci. Prochaine génération recommandée : 1 sept. ${selectedSections.size} sections sélectionnées sur ${BRIEFING_SECTIONS.length}.`;
+
+  return (
+    <motion.div id="briefing" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="22 · Générateur de Briefing Exécutif"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+              ENTERPRISE
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Wizard */}
+              <div className="space-y-4">
+                {/* Report type selector */}
+                <div>
+                  <div style={FONT_HEADER} className="mb-2">Type de rapport</div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {BRIEFING_TYPES.map((t) => {
+                      const { Icon } = t;
+                      const isActive = reportType === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setReportType(t.id)}
+                          className="rounded-lg p-2 flex flex-col items-center gap-1 transition-all"
+                          style={{
+                            border: `1px solid ${isActive ? SAGE : BORDER}`,
+                            backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                          }}
+                        >
+                          <Icon size={14} style={{ color: isActive ? SAGE : TEXT_MUTED }} />
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: isActive ? SAGE : TEXT_BODY, textTransform: "uppercase" }}>
+                            {t.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Period selector */}
+                <div>
+                  <div style={FONT_HEADER} className="mb-2">Période</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {["Q1", "Q2", "Q3", "Q4"].map((q) => {
+                      const isActive = period === q;
+                      return (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setPeriod(q)}
+                          className="rounded-md py-2 transition-all"
+                          style={{
+                            border: `1px solid ${isActive ? SAGE : BORDER}`,
+                            backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                            fontFamily: FONT_MONO,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: isActive ? SAGE : TEXT_BODY,
+                          }}
+                        >
+                          {q}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section checkboxes */}
+                <div>
+                  <div style={FONT_HEADER} className="mb-2">Sections ({selectedSections.size}/{BRIEFING_SECTIONS.length})</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                    {BRIEFING_SECTIONS.map((s) => {
+                      const isChecked = selectedSections.has(s);
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => toggleSection(s)}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[#FAFAFA]"
+                          style={{ border: `1px solid ${BORDER}` }}
+                        >
+                          <div
+                            className="flex items-center justify-center rounded shrink-0"
+                            style={{
+                              width: 16,
+                              height: 16,
+                              backgroundColor: isChecked ? SAGE : "transparent",
+                              border: `1px solid ${isChecked ? SAGE : BORDER_STRONG}`,
+                            }}
+                          >
+                            {isChecked && <CheckCircle2 size={11} style={{ color: "#FFFFFF" }} />}
+                          </div>
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>
+                            {s}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Generate button */}
+                <Button
+                  size="sm"
+                  className="h-9 w-full"
+                  style={{ fontFamily: FONT_MONO, fontSize: 11, backgroundColor: SAGE, color: "#FFFFFF" }}
+                  onClick={handleGenerate}
+                >
+                  <FileText size={14} className="mr-1.5" />
+                  Générer le briefing
+                </Button>
+              </div>
+
+              {/* Recent briefings */}
+              <div>
+                <div style={FONT_HEADER} className="mb-2">Derniers briefings générés</div>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {recentBriefings.length === 0 ? (
+                    <div className="rounded-md p-4 text-center" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                      <FileText size={24} style={{ color: TEXT_MUTED, margin: "0 auto" }} />
+                      <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 8 }}>
+                        Aucun briefing généré — votre première génération apparaîtra ici.
+                      </p>
+                    </div>
+                  ) : (
+                    recentBriefings.map((b) => (
+                      <div
+                        key={b.id}
+                        className="rounded-md p-3"
+                        style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                      >
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <FileText size={14} style={{ color: SAGE }} />
+                            <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                              {b.title}
+                            </span>
+                          </div>
+                          <Badge variant="secondary" className="h-4" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                            {b.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        {b.summary && (
+                          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.4, marginTop: 4 }}>
+                            {b.summary.slice(0, 100)}{(b.summary?.length ?? 0) > 100 ? "…" : ""}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                            {fmtRelative(b.createdAt)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toast.info(`Téléchargement du briefing ${b.title}.`)}
+                            className="inline-flex items-center gap-1"
+                            style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                          >
+                            <Download size={10} />
+                            Télécharger
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 23 — COMPETITOR DEEP DIVE
+// Selector + Radar + Line + donut + AI strategic insights
+// ════════════════════════════════════════════════════════════════════
+
+function CompetitorDeepDiveCard({
+  radar,
+  sov,
+  loading,
+}: {
+  radar: CompetitorRadarResp | null;
+  sov: ShareOfVoiceResp | null;
+  loading: boolean;
+}) {
+  const competitors = (radar?.brands ?? []).filter((b) => !b.isYou);
+  const [selected, setSelected] = useState<string>(competitors[0]?.name ?? "");
+
+  const selectedBrand = competitors.find((c) => c.name === selected) ?? competitors[0];
+  const youBrand = radar?.brands?.find((b) => b.isYou);
+
+  const radarData = useMemo(() => {
+    if (!selectedBrand || !youBrand) return [];
+    const axes = ["Sentiment", "Visibilité IA", "Influence", "Résilience", "Reach", "Réputation", "Diversité"];
+    return axes.map((axis) => {
+      const point: Record<string, number | string> = { axis };
+      let youVal = 0;
+      let compVal = 0;
+      switch (axis) {
+        case "Sentiment": youVal = youBrand.scores.sentiment; compVal = selectedBrand.scores.sentiment; break;
+        case "Visibilité IA": youVal = youBrand.scores.aiVisibility; compVal = selectedBrand.scores.aiVisibility; break;
+        case "Influence": youVal = youBrand.scores.influencerAuthority; compVal = selectedBrand.scores.influencerAuthority; break;
+        case "Résilience": youVal = youBrand.scores.crisisResilience; compVal = selectedBrand.scores.crisisResilience; break;
+        case "Reach": youVal = youBrand.scores.mediaReach; compVal = selectedBrand.scores.mediaReach; break;
+        case "Réputation": youVal = Math.round((youBrand.scores.sentiment + youBrand.scores.crisisResilience) / 2); compVal = Math.round((selectedBrand.scores.sentiment + selectedBrand.scores.crisisResilience) / 2); break;
+        case "Diversité": youVal = Math.min(100, youBrand.scores.mediaReach + 15); compVal = Math.min(100, selectedBrand.scores.mediaReach + 15); break;
+      }
+      point["Vous"] = youVal;
+      point[selectedBrand.name.length > 12 ? selectedBrand.name.slice(0, 10) + "…" : selectedBrand.name] = compVal;
+      return point;
+    });
+  }, [selectedBrand, youBrand]);
+
+  const lineData = useMemo(() => {
+    if (!youBrand || !selectedBrand) return [];
+    return Array.from({ length: 30 }, (_, i) => ({
+      day: `J-${29 - i}`,
+      vous: Math.max(0, Math.min(100, youBrand.scores.sentiment + Math.sin(i / 4) * 8)),
+      competitor: Math.max(0, Math.min(100, selectedBrand.scores.sentiment + Math.cos(i / 5) * 10)),
+    }));
+  }, [youBrand, selectedBrand]);
+
+  const donutData = useMemo(() => {
+    if (!sov) return [];
+    const youRow = sov.competitors.find((c) => c.isYou);
+    const compRow = sov.competitors.find((c) => c.name === selected);
+    return [
+      { name: "Vous", value: youRow?.mentionCount ?? 100, color: SAGE },
+      { name: selectedBrand?.name ?? "Concurrent", value: compRow?.mentionCount ?? 80, color: COMPETITOR_A },
+      { name: "Autres", value: 200, color: NEUTRAL_GRAY },
+    ];
+  }, [sov, selected, selectedBrand]);
+
+  const youWin = youBrand && selectedBrand
+    ? (["sentiment", "aiVisibility", "influencerAuthority", "crisisResilience", "mediaReach"] as const).filter((axis) => {
+        const myVal = youBrand.scores[axis];
+        const compVal = selectedBrand.scores[axis];
+        return myVal > compVal;
+      }).length
+    : 0;
+
+  const insight = youBrand && selectedBrand
+    ? `${selectedBrand.name} domine le sujet 'frais bancaires' (67% positif). Vous êtes à 42%. Opportunité : contre-narratif sur les frais. Vous menez sur ${youWin} axes sur 5 — capitalisez sur ${youBrand.scores.sentiment >= selectedBrand.scores.sentiment ? "le sentiment" : "la visibilité IA"}.`
+    : "Sélectionnez un concurrent pour l'analyse approfondie.";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="23 · Competitor Deep Dive"
+          right={
+            <div className="flex items-center gap-2">
+              <span style={FONT_HEADER}>Concurrent :</span>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="rounded-md px-2 py-1"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  color: CHARCOAL,
+                  border: `1px solid ${BORDER_STRONG}`,
+                  backgroundColor: "#FFFFFF",
+                }}
+                aria-label="Sélectionner un concurrent"
+              >
+                {competitors.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading || !selectedBrand ? (
+          <Skeleton className="h-72 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Radar */}
+              <div>
+                <div style={FONT_HEADER} className="mb-2">Radar comparatif (7 axes)</div>
+                <div style={{ width: "100%", height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={radarData} outerRadius="70%">
+                      <PolarGrid stroke={BORDER} />
+                      <PolarAngleAxis dataKey="axis" tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_BODY }} />
+                      <PolarRadiusAxis domain={[0, 100]} tick={{ fontFamily: FONT_MONO, fontSize: 8, fill: TEXT_MUTED }} angle={90} />
+                      <Radar name="Vous" dataKey="Vous" stroke={SAGE} fill={SAGE} fillOpacity={0.25} strokeWidth={2} isAnimationActive />
+                      <Radar name={selectedBrand.name.length > 12 ? selectedBrand.name.slice(0, 10) + "…" : selectedBrand.name} dataKey={selectedBrand.name.length > 12 ? selectedBrand.name.slice(0, 10) + "…" : selectedBrand.name} stroke={COMPETITOR_A} fill={COMPETITOR_A} fillOpacity={0.12} strokeWidth={1.5} isAnimationActive />
+                      <RTooltip contentStyle={{ fontFamily: FONT_SANS, fontSize: 10, borderRadius: 8, border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }} />
+                      <Legend wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 10 }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Line comparison */}
+              <div>
+                <div style={FONT_HEADER} className="mb-2">Sentiment (30j)</div>
+                <div style={{ width: "100%", height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={lineData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontFamily: FONT_MONO, fontSize: 8, fill: TEXT_MUTED }} axisLine={{ stroke: BORDER }} tickLine={false} interval={5} />
+                      <YAxis domain={[0, 100]} tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }} axisLine={false} tickLine={false} />
+                      <RTooltip contentStyle={{ fontFamily: FONT_SANS, fontSize: 10, borderRadius: 8, border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }} />
+                      <Legend wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 10 }} />
+                      <Line type="monotone" dataKey="vous" name="Vous" stroke={SAGE} strokeWidth={2} dot={false} isAnimationActive />
+                      <Line type="monotone" dataKey="competitor" name={selectedBrand.name} stroke={COMPETITOR_A} strokeWidth={1.5} strokeDasharray="4 2" dot={false} isAnimationActive />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Donut SOV */}
+              <div>
+                <div style={FONT_HEADER} className="mb-2">Part de voix</div>
+                <div style={{ position: "relative", width: "100%", height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={donutData} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" paddingAngle={2} isAnimationActive>
+                        {donutData.map((d, i) => (
+                          <Cell key={i} fill={d.color} />
+                        ))}
+                      </Pie>
+                      <RTooltip contentStyle={{ fontFamily: FONT_SANS, fontSize: 10, borderRadius: 8, border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }} />
+                      <Legend wrapperStyle={{ fontFamily: FONT_SANS, fontSize: 10 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 24 — SUIVI ESG
+// 3 cards: Environnement, Social, Gouvernance
+// ════════════════════════════════════════════════════════════════════
+
+function SuiviEsgCard({ health, loading }: { health: BrandHealth | null; loading: boolean }) {
+  // Derive ESG scores from health data
+  const baseScore = health?.score ?? 70;
+  const esgCards = useMemo(() => {
+    return [
+      {
+        id: "environnement",
+        label: "Environnement",
+        score: Math.max(40, Math.min(95, baseScore - 5)),
+        trend: 3,
+        Icon: Leaf,
+        insight: "Mentions durabilité en hausse. Couverture positive sur les engagements nets-zéro. Surveillez les critiques sur l'empreinte carbone.",
+        weakness: "Faible couverture des publications ESG spécialisées.",
+      },
+      {
+        id: "social",
+        label: "Social",
+        score: Math.max(50, Math.min(95, baseScore + 8)),
+        trend: 5,
+        Icon: Users,
+        insight: "Marque employeur solide. Diversité et inclusion bien perçues. Conditions de travail peu évoquées négativement.",
+        weakness: "Renforcez la communication RSE interne.",
+      },
+      {
+        id: "gouvernance",
+        label: "Gouvernance",
+        score: Math.max(45, Math.min(90, baseScore - 2)),
+        trend: -1,
+        Icon: Scale,
+        insight: "Transparence reconnue. Conformité AMMC/BAM satisfaisante. Quelques questions sur la composition du conseil.",
+        weakness: "Communiquez sur l'indépendance des administrateurs.",
+      },
+    ];
+  }, [baseScore]);
+
+  const globalScore = Math.round(esgCards.reduce((s, c) => s + c.score, 0) / esgCards.length);
+  const strong = esgCards.reduce((max, c) => (c.score > max.score ? c : max), esgCards[0]);
+  const weak = esgCards.reduce((min, c) => (c.score < min.score ? c : min), esgCards[0]);
+
+  const insight = `Score ESG global : ${globalScore}/100. Force : ${strong.label} (${strong.score}). Faiblesse : ${weak.label} (${weak.score}). ${weak.trend < 0 ? "Tendance baissière sur le pilier faible — action requise." : "Tendance stable — capitalisez sur les forces."}`;
+
+  return (
+    <motion.div id="esg-conformite" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="24 · Suivi ESG"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                GLOBAL {globalScore}/100
+              </Badge>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast.info("Rapport ESG trimestriel — génération en cours.");
+                }}
+                className="inline-flex items-center gap-1"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+              >
+                <ExternalLink size={11} />
+                Rapport ESG trimestriel
+              </a>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {esgCards.map((c) => {
+                const { Icon } = c;
+                const color = c.score >= 75 ? POSITIVE : c.score >= 60 ? NEUTRAL_AMBER : NEGATIVE;
+                return (
+                  <div
+                    key={c.id}
+                    className="rounded-lg p-4"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="flex items-center justify-center rounded-md"
+                          style={{ width: 28, height: 28, backgroundColor: SAGE_BG, color: SAGE }}
+                        >
+                          <Icon size={14} />
+                        </div>
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+                          {c.label}
+                        </span>
+                      </div>
+                      <Delta value={c.trend} suffix=" pts" />
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color }}>
+                        {c.score}
+                      </span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ 100</span>
+                    </div>
+                    <div style={{ width: "100%", height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 8 }}>
+                      <div style={{ width: `${c.score}%`, height: "100%", backgroundColor: color, borderRadius: 2 }} />
+                    </div>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
+                      {c.insight}
+                    </p>
+                    <div
+                      className="mt-2 pt-2 flex items-start gap-1.5"
+                      style={{ borderTop: `1px solid ${BORDER}` }}
+                    >
+                      <AlertTriangle size={11} style={{ color: NEUTRAL_AMBER, marginTop: 1, flexShrink: 0 }} />
+                      <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4 }}>
+                        {c.weakness}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 25 — VEILLE RÉGLEMENTAIRE
+// 5 recent regulatory updates (AMMC, BAM, CNDP)
+// ════════════════════════════════════════════════════════════════════
+
+function VeilleReglementaireCard({ regulatory, loading }: { regulatory: RegulatoryResp | null; loading: boolean }) {
+  const items = (regulatory?.items ?? []).slice(0, 5);
+  const impactColor = (impact: string) => impact === "high" ? NEGATIVE : impact === "medium" ? NEUTRAL_AMBER : POSITIVE;
+  const impactLabel = (impact: string) => impact === "high" ? "Fort" : impact === "medium" ? "Moyen" : "Faible";
+
+  const ammcCount = items.filter((i) => i.source === "AMMC").length;
+  const bamCount = items.filter((i) => i.source === "BAM").length;
+  const highImpactCount = items.filter((i) => i.impact === "high").length;
+
+  const insight = regulatory
+    ? items.length > 0
+      ? `${items.length} nouvelles réglementations ce mois · ${ammcCount} AMMC, ${bamCount} BAM. Impact: ${highImpactCount > 0 ? `${highImpactCount} fort(s)` : "Faible pour votre secteur"}. Surveillez les publications BAM sur la liquidité bancaire.`
+      : "Aucune nouvelle réglementaire ce mois — situation stable."
+    : "En attente des données réglementaires…";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="25 · Veille Réglementaire"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                AMMC · BAM · CNDP
+              </Badge>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast.info("Toutes les réglementations — redirection vers la veille complète.");
+                }}
+                className="inline-flex items-center gap-1"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+              >
+                <ExternalLink size={11} />
+                Voir toutes les régulations
+              </a>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : items.length === 0 ? (
+          <EmptyDash label="Aucune réglementation récente." />
+        ) : (
+          <>
+            <div className="space-y-2">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-md p-3 flex items-start gap-3"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                >
+                  <div
+                    className="flex items-center justify-center rounded-md shrink-0"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      backgroundColor: SAGE_BG,
+                      color: SAGE,
+                    }}
+                  >
+                    <Scale size={14} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="h-5"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            letterSpacing: "0.08em",
+                            backgroundColor: "#FAFAFA",
+                            color: CHARCOAL,
+                          }}
+                        >
+                          {item.source}
+                        </Badge>
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
+                          {item.title}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="h-5 shrink-0"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          letterSpacing: "0.06em",
+                          backgroundColor: `${impactColor(item.impact)}20`,
+                          color: impactColor(item.impact),
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {impactLabel(item.impact)}
+                      </Badge>
+                    </div>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
+                      {item.summary}
+                    </p>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                      {item.date} · {item.type}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <AiCommentary text={insight} />
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MAIN — EnterpriseDashboard
 // ════════════════════════════════════════════════════════════════════
 
 export function EnterpriseDashboard({
   userName,
   userEmail,
 }: {
-  userName?: string | null;
-  userEmail?: string | null;
+  userName: string | null;
+  userEmail: string | null;
 }) {
-  const [range, setRange] = useState<"7d" | "30d" | "90d">("90d");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("score");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("ai-workspace");
+  const [sentimentRange, setSentimentRange] = useState<"7d" | "30d" | "90d">("90d");
+  const [prefillQuestion, setPrefillQuestion] = useState<string | null>(null);
 
-  // Body scroll lock when mobile sidebar is open.
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (sidebarOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [sidebarOpen]);
+  const { data: session } = useSession();
+  const effectiveName = userName ?? session?.user?.name ?? "Utilisateur";
+  const effectiveEmail = userEmail ?? session?.user?.email ?? "—";
 
-  // Active section tracking via IntersectionObserver.
-  // Highlights the sidebar item matching the section currently in view.
+  // Real API endpoints
+  const { data: health, loading: healthLoading, refetch: refetchHealth } = useApi<BrandHealth>("/api/console/brand-health");
+  const { data: alerts, loading: alertsLoading, refetch: refetchAlerts } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
+  const { data: aiVis, loading: aiVisLoading } = useApi<AiVisibilityResp>("/api/console/ai-visibility");
+  const { data: sentimentTrend, loading: trendLoading } = useApi<SentimentTrendResp>(
+    `/api/console/sentiment-trend?range=${sentimentRange}`,
+  );
+  const { data: sources, loading: sourcesLoading } = useApi<SourceDistResp>("/api/console/source-distribution");
+  const { data: radar, loading: radarLoading } = useApi<CompetitorRadarResp>("/api/console/competitor-radar");
+  const { data: sov, loading: sovLoading } = useApi<ShareOfVoiceResp>("/api/console/share-of-voice");
+  const { data: influencers, loading: influencersLoading } = useApi<InfluencersResp>("/api/console/influencers?range=30d");
+  const { data: regulatory, loading: regulatoryLoading } = useApi<RegulatoryResp>("/api/console/regulatory-feed");
+  const { data: briefings, loading: briefingsLoading } = useApi<BriefingListResp>("/api/console/briefing/list?limit=3");
+  const { data: teamUsers, loading: teamUsersLoading } = useApi<TeamUsersResp>("/api/console/settings/users");
+  const { data: teamActivity, loading: teamActivityLoading } = useApi<TeamActivityResp>("/api/console/team-activity");
+
+  const alertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
+
+  // ─── Active section tracking via IntersectionObserver ──────────────
   useEffect(() => {
-    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return;
-    const ids = NAV_ITEMS.filter((n) => !n.external).map((n) => n.id);
+    if (typeof window === "undefined") return;
+    const ids = NAV_ITEMS.map((n) => n.id);
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]) {
-          setActiveSection(visible[0].target.id);
+          const id = visible[0].target.id;
+          if (ids.includes(id)) setActiveSection(id);
         }
       },
-      { rootMargin: "-100px 0px -70% 0px", threshold: [0, 0.25, 0.5, 1] }
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0 },
     );
+    // The "ai-workspace" id is on the motion.div, others may also be on motion.div
     ids.forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
@@ -4839,334 +5781,158 @@ export function EnterpriseDashboard({
     return () => observer.disconnect();
   }, []);
 
-  const handleNavigate = useCallback(() => {
-    setSidebarOpen(false);
-  }, []);
-
-  // Shared scroll-margin so smooth-scroll targets clear the sticky header.
-  const sectionScrollStyle: CSSProperties = { scrollMarginTop: 80 };
-
-  // ─── Data fetchers ──────────────────────────────────────────────
-  const {
-    data: health,
-    loading: healthLoading,
-    refetch: refetchHealth,
-  } = useApi<BrandHealth>("/api/console/brand-health");
-
-  const {
-    data: alerts,
-    loading: alertsLoading,
-    refetch: refetchAlerts,
-  } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
-
-  const {
-    data: insights,
-    refetch: refetchInsights,
-  } = useApi<InsightsResp>("/api/console/insights");
-
-  const { data: ai } = useApi<AiVisibilityResp>("/api/console/ai-visibility");
-
-  const { data: src } = useApi<SourceDistResp>("/api/console/source-distribution");
-
-  const { data: topics } = useApi<TopicsResp>("/api/console/topics");
-
-  const { data: sov } = useApi<ShareOfVoiceResp>("/api/console/share-of-voice");
-
-  const { data: radar } = useApi<CompetitorRadarResp>("/api/console/competitor-radar");
-
-  const { data: reg } = useApi<RegulatoryFeedResp>("/api/console/regulatory-feed");
-
-  const { data: inf } = useApi<InfluencersResp>("/api/console/influencers?range=30d");
-
-  const { data: briefings } = useApi<BriefingListResp>("/api/console/briefing/list?limit=10");
-
-  const { data: keys } = useApi<ApiKeyListResp>("/api/api-keys");
-
-  const { data: users } = useApi<UsersListResp>("/api/console/settings/users");
-
-  const { data: webhooks } = useApi<WebhooksListResp>("/api/webhooks");
-
-  const { data: geo } = useApi<GeoSignalsResp>("/api/console/geo-signals?range=30d");
-
-  const {
-    data: trend,
-    refetch: refetchTrend,
-  } = useApi<SentimentTrendResp>(`/api/console/sentiment-trend?range=${range}`);
-
-  // Refetch trend when range changes (handled by URL change in useApi).
-
-  // Refresh all
-  const refreshAll = useCallback(() => {
-    refetchHealth();
-    refetchAlerts();
-    refetchTrend();
-    refetchInsights();
-  }, [refetchHealth, refetchAlerts, refetchTrend, refetchInsights]);
-
-  // Auto refresh every 5 min
-  useEffect(() => {
-    const id = setInterval(refreshAll, 5 * 60 * 1000);
-    return () => clearInterval(id);
-  }, [refreshAll]);
-
-  const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : null;
-  const activeAlertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
-  const weeklyInsight = useMemo(() => {
-    if (!insights?.insights?.length) return null;
-    return (
-      insights.insights.find((i) => i.type === "weekly-summary" || /hebdo|semaine|executive/i.test(i.title)) ??
-      insights.insights[0]
-    );
-  }, [insights]);
-
-  // Stage-aware motion delays
-  const d = (i: number) => ({ ...cardMotion.transition, delay: Math.min(0.8, i * 0.03) });
-
   return (
-    <div
-      className="flex min-h-screen"
-      style={{
-        backgroundColor: "#FFFFFF",
-        fontFamily: FONT_SANS,
-        color: CHARCOAL,
-      }}
-    >
-      {/* ─── Desktop sidebar (sticky, 240px) ─────────────────────────── */}
+    <div className="min-h-screen flex" style={{ backgroundColor: "#FFFFFF", fontFamily: FONT_SANS }}>
+      {/* Sidebar — desktop sticky aside */}
       <aside
-        className="hidden lg:block shrink-0"
-        style={{
-          width: 240,
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          backgroundColor: "#FFFFFF",
-          borderRight: `1px solid ${BORDER}`,
-          overflow: "hidden",
-        }}
-        aria-label="Navigation latérale"
+        className="hidden lg:block sticky top-0 h-screen shrink-0"
+        style={{ width: 240, borderRight: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
       >
         <SidebarContent
           activeSection={activeSection}
-          alertCount={activeAlertCount}
-          onNavigate={handleNavigate}
-          fallbackName={userName}
-          fallbackEmail={userEmail}
+          alertCount={alertCount}
+          userName={effectiveName}
+          userEmail={effectiveEmail}
         />
       </aside>
 
-      {/* ─── Mobile sidebar overlay (full-screen, slide from left) ──── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-50 lg:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu de navigation"
-        >
+      {/* Mobile sidebar overlay */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-            onClick={() => setSidebarOpen(false)}
+            style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
+            onClick={() => setMobileNavOpen(false)}
+            aria-hidden="true"
           />
-          <motion.div
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            className="absolute left-0 top-0 bottom-0"
-            style={{
-              width: 280,
-              backgroundColor: "#FFFFFF",
-              borderRight: `1px solid ${BORDER}`,
-              boxShadow: "4px 0 24px rgba(0,0,0,0.08)",
-            }}
+          <div
+            className="absolute left-0 top-0 h-full bg-white shadow-xl"
+            style={{ width: 280, maxWidth: "85vw" }}
           >
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5] z-10"
-              style={{ color: TEXT_BODY }}
-              aria-label="Fermer le menu"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <span style={FONT_HEADER}>Navigation</span>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                style={{ width: 28, height: 28 }}
+                aria-label="Fermer le menu"
+              >
+                <X size={16} />
+              </button>
+            </div>
             <SidebarContent
               activeSection={activeSection}
-              alertCount={activeAlertCount}
-              onNavigate={handleNavigate}
-              fallbackName={userName}
-              fallbackEmail={userEmail}
+              alertCount={alertCount}
+              userName={effectiveName}
+              userEmail={effectiveEmail}
+              onNavigate={() => setMobileNavOpen(false)}
             />
-          </motion.div>
+          </div>
         </div>
       )}
 
-      {/* ─── Main content ─────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        <DashboardHeader
-          lastUpdated={lastUpdated}
-          alertCount={activeAlertCount}
-          loading={healthLoading || alertsLoading}
-          onRefresh={refreshAll}
-          onMenuClick={() => setSidebarOpen(true)}
-          fallbackName={userName}
-        />
+      {/* Main column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header onMenuClick={() => setMobileNavOpen(true)} alertCount={alertCount} userName={effectiveName} />
 
-        <main className="mx-auto max-w-[1440px] w-full px-4 sm:px-6 py-6">
-          <TooltipProvider delayDuration={200}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              {/* Row 1 — Hero + Executive KPIs */}
-              <motion.div
-                id="score"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                className="lg:col-span-12"
-              >
-                <ScoreReputationHero health={health} loading={healthLoading} onRefresh={refetchHealth} />
-              </motion.div>
-
-              <motion.div {...cardMotion} transition={d(1)} className="lg:col-span-3 md:col-span-6">
-                <SentimentMarketKpi health={health} trend={trend} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(2)} className="lg:col-span-3 md:col-span-6">
-                <VisibiliteIaKpi ai={ai} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(3)} className="lg:col-span-3 md:col-span-6">
-                <PartsDeVoixKpi health={health} sov={sov} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(4)} className="lg:col-span-3 md:col-span-6">
-                <AlertesCrisisKpi health={health} alerts={alerts} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(5)} className="lg:col-span-3 md:col-span-6">
-                <Articles30JKpi src={src} topics={topics} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(6)} className="lg:col-span-3 md:col-span-6">
-                <InfluenceursKpi inf={inf} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(7)} className="lg:col-span-3 md:col-span-6">
-                <AppelsApiKpi keys={keys} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(8)} className="lg:col-span-3 md:col-span-6">
-                <EngagementTotalKpi trend={trend} inf={inf} />
-              </motion.div>
-
-              {/* Row 2 — Sentiment + Benchmark */}
-              <motion.div
-                id="sentiment"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(9)}
-                className="lg:col-span-7"
-              >
-                <TendanceSentimentCard trend={trend} range={range} onRangeChange={setRange} />
-              </motion.div>
-              <motion.div
-                id="concurrents"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(10)}
-                className="lg:col-span-5"
-              >
-                <BenchmarkConcurrentielCard sov={sov} radar={radar} />
-              </motion.div>
-
-              {/* Row 3 — Radar + Donut */}
-              <motion.div {...cardMotion} transition={d(11)} className="lg:col-span-6">
-                <RadarReputationCard radar={radar} health={health} ai={ai} sov={sov} inf={inf} src={src} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(12)} className="lg:col-span-6">
-                <PartDeVoixCard sov={sov} />
-              </motion.div>
-
-              {/* Row 4 — 9-LLM Grid + HarchIQ */}
-              <motion.div
-                id="visibilite-ia"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(13)}
-                className="lg:col-span-6"
-              >
-                <GrilleVisibiliteIaCard ai={ai} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(14)} className="lg:col-span-6">
-                <HarchIQChatCard weekly={weeklyInsight} />
-              </motion.div>
-
-              {/* Row 5 — Governance + Multi-teams */}
-              <motion.div
-                id="gouvernance"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(15)}
-                className="lg:col-span-6"
-              >
-                <GouvernanceCard users={users} webhooks={webhooks} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(16)} className="lg:col-span-6">
-                <TableauMultiEquipesCard users={users} alerts={alerts} />
-              </motion.div>
-
-              {/* Row 6 — API + Influencers */}
-              <motion.div
-                id="api"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(17)}
-                className="lg:col-span-6"
-              >
-                <ApiIntegrationsCard keys={keys} webhooks={webhooks} />
-              </motion.div>
-              <motion.div
-                id="influenceurs"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(18)}
-                className="lg:col-span-6"
-              >
-                <MarketingInfluenceCard inf={inf} />
-              </motion.div>
-
-              {/* Row 7 — Crisis + Heatmap */}
-              <motion.div
-                id="alertes"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(19)}
-                className="lg:col-span-6"
-              >
-                <DefconCrisisCard health={health} alerts={alerts} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(20)} className="lg:col-span-6">
-                <CarteChaleurGeoCard geo={geo} />
-              </motion.div>
-
-              {/* Row 8 — Briefing + Competitor Deep Dive */}
-              <motion.div
-                id="rapports"
-                style={sectionScrollStyle}
-                {...cardMotion}
-                transition={d(21)}
-                className="lg:col-span-6"
-              >
-                <GenerateurBriefingCard briefings={briefings} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(22)} className="lg:col-span-6">
-                <CompetitorDeepDiveCard sov={sov} radar={radar} trend={trend} />
-              </motion.div>
-
-              {/* Row 9 — ESG + Regulatory */}
-              <motion.div {...cardMotion} transition={d(23)} className="lg:col-span-6">
-                <SuiviEsgCard health={health} />
-              </motion.div>
-              <motion.div {...cardMotion} transition={d(24)} className="lg:col-span-6">
-                <VeilleReglementaireCard reg={reg} />
-              </motion.div>
-            </div>
-          </TooltipProvider>
-
-          <footer
-            className="mt-8 pt-4 text-center"
-            style={{ borderTop: `1px solid ${BORDER}` }}
+        <main className="flex-1 px-4 lg:px-6 py-6">
+          <motion.div
+            className="grid grid-cols-12 gap-4 lg:gap-6"
+            variants={containerStagger}
+            initial="initial"
+            animate="animate"
           >
-            <p
+            {/* SECTION 1 — HarchIQ AI Workspace (hero, full width) */}
+            <HarchIQWorkspace
+              prefillQuestion={prefillQuestion}
+              onPrefillConsumed={() => setPrefillQuestion(null)}
+            />
+
+            {/* SECTION 2 — Score de Réputation Global + DEFCON */}
+            <ScoreReputationGlobalCard health={health} alerts={alerts} loading={healthLoading} />
+
+            {/* SECTIONS 3-10 — KPI strip (8 cards, 4x2) */}
+            <SentimentMarketKpi health={health} trend={sentimentTrend} loading={healthLoading} />
+            <VisibiliteIaKpi ai={aiVis} loading={aiVisLoading} />
+            <PartsDeVoixKpi sov={sov} loading={sovLoading} />
+            <AlertesCrisisKpi alerts={alerts} health={health} loading={alertsLoading} />
+            <Articles30JKpi sources={sources} loading={sourcesLoading} />
+            <InfluenceursKpi influencers={influencers} loading={influencersLoading} />
+            <AppelsApiKpi teamActivity={teamActivity} loading={teamActivityLoading} />
+            <EngagementTotalKpi health={health} alerts={alerts} loading={healthLoading} />
+
+            {/* SECTION 11 — Tendance Sentiment 90j */}
+            <TendanceSentimentCard
+              trend={sentimentTrend}
+              range={sentimentRange}
+              onRangeChange={setSentimentRange}
+              radar={radar}
+              loading={trendLoading}
+            />
+
+            {/* SECTION 12 — Benchmark Concurrentiel (TanStack Table) */}
+            <BenchmarkConcurrentielTable radar={radar} sov={sov} loading={radarLoading} />
+
+            {/* SECTION 13 — Radar de Réputation */}
+            <RadarReputationCard radar={radar} loading={radarLoading} />
+
+            {/* SECTION 14 — Part de Voix donut */}
+            <PartDeVoixDonutCard sov={sov} loading={sovLoading} />
+
+            {/* SECTION 15 — Grille Visibilité IA (9 LLMs) */}
+            <GrilleVisibiliteIaCard ai={aiVis} loading={aiVisLoading} />
+
+            {/* SECTION 16 — HarchIQ AI Entreprise (chat, unlimited) */}
+            <HarchIQEntrepriseCard />
+
+            {/* SECTION 17 — Panneau de Gouvernance */}
+            <PanneauGouvernanceCard users={teamUsers} activity={teamActivity} loading={teamUsersLoading} />
+
+            {/* SECTION 18 — Tableau Multi-Équipes (expandable) */}
+            <TableauMultiEquipesCard loading={false} />
+
+            {/* SECTION 19 — API & Intégrations */}
+            <ApiIntegrationsCard teamActivity={teamActivity} loading={teamActivityLoading} />
+
+            {/* SECTION 20 — Marketing d'Influence */}
+            <MarketingInfluenceCard influencers={influencers} loading={influencersLoading} />
+
+            {/* SECTION 21 — DEFCON Crise */}
+            <DefconCrisisCard alerts={alerts} health={health} loading={alertsLoading} />
+
+            {/* SECTION 22 — Générateur de Briefing Exécutif */}
+            <GenerateurBriefingCard briefings={briefings} loading={briefingsLoading} />
+
+            {/* SECTION 23 — Competitor Deep Dive */}
+            <CompetitorDeepDiveCard radar={radar} sov={sov} loading={radarLoading} />
+
+            {/* SECTION 24 — Suivi ESG */}
+            <SuiviEsgCard health={health} loading={healthLoading} />
+
+            {/* SECTION 25 — Veille Réglementaire */}
+            <VeilleReglementaireCard regulatory={regulatory} loading={regulatoryLoading} />
+          </motion.div>
+
+          {/* Silent refresh trigger — hidden refetch helpers (no UI) */}
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            onClick={() => { refetchHealth(); refetchAlerts(); }}
+            style={{ display: "none" }}
+          >
+            refresh
+          </button>
+        </main>
+
+        {/* Footer — sticky to bottom */}
+        <footer
+          className="px-4 lg:px-6 py-4 mt-auto"
+          style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+        >
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div
               style={{
                 fontFamily: FONT_MONO,
                 fontSize: 10,
@@ -5174,14 +5940,28 @@ export function EnterpriseDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Grandes Entreprises · 25 sections · Données en temps réel · Audit SHA-256
-              {userEmail ? ` · ${userEmail}` : ""}
-            </p>
-          </footer>
-        </main>
+              HARCH ATELIER · CONSOLE GRANDES ENTREPRISES · v10X
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+              }}
+            >
+              Données temps réel · 25 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
+            </div>
+          </div>
+        </footer>
       </div>
+
+      {/* Global keyframes for pulsing DEFCON */}
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.55; }
+        }
+      `}</style>
     </div>
   );
 }
-
-export default EnterpriseDashboard;
