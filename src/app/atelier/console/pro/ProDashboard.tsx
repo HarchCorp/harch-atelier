@@ -85,6 +85,7 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDown,
+  ArrowLeftRight,
   ArrowRight,
   ArrowUp,
   ArrowUpCircle,
@@ -93,6 +94,8 @@ import {
   Brain,
   CalendarClock,
   CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Cloud,
   CloudRain,
@@ -101,25 +104,33 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  Filter,
+  GripVertical,
   Hash,
   LayoutDashboard,
   LayoutGrid,
   Lightbulb,
+  ListChecks,
   LogOut,
+  Mail,
   Menu,
   MessageSquare,
   Minus,
   Newspaper,
+  Palette,
   PenSquare,
   Plus,
   Radio,
   RefreshCw,
+  RotateCcw,
   Save,
   Search,
   Send,
   Settings,
   Share2,
+  SlidersHorizontal,
   Sparkles,
+  Star,
   Sun,
   TrendingDown,
   TrendingUp,
@@ -129,6 +140,32 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS as DndCSS } from "@dnd-kit/utilities";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -513,6 +550,183 @@ interface BenchmarkRow {
   trend: number;
 }
 
+// ─── PRO ENV types (Task ID: ENV-PRO) ─────────────────────────────────
+
+interface CompetitorEntry {
+  id: string;
+  name: string;
+  industry: string;
+  addedAt: number;
+}
+
+type CompetitorKpi = "sov" | "sentiment" | "aiVisibility" | "mediaReach" | "engagement";
+
+type AlertChannel = "email" | "slack" | "teams" | "dashboard";
+
+interface CompetitorSetup {
+  competitors: CompetitorEntry[];
+  kpis: CompetitorKpi[];
+  alertThreshold: number; // 0-100
+  alertChannels: AlertChannel[];
+  completedAt: number | null;
+}
+
+type InfluencerSortKey = "reach" | "engagement" | "sentiment";
+
+type InfluencerPlatform =
+  | "TikTok"
+  | "Instagram"
+  | "X"
+  | "LinkedIn"
+  | "YouTube"
+  | "Facebook"
+  | "Presse"
+  | "Web";
+
+interface InfluencerEntry {
+  id: string;
+  name: string;
+  handle: string;
+  platform: InfluencerPlatform;
+  followers: number;
+  engagementRate: number; // %
+  sentiment: number; // -1..1
+  starred: boolean;
+  addedAt: number;
+}
+
+type ReportFormat = "pdf" | "excel" | "both";
+type ReportCadence = "weekly" | "monthly" | "custom";
+
+interface ReportSchedule {
+  cadence: ReportCadence;
+  dayOfWeek: number; // 0=dim, 1=lun, ... 6=sam
+  dayOfMonth: number; // 1-28
+  customDay: string; // ISO date for custom
+  customTime: string; // HH:MM
+  recipients: string[];
+  format: ReportFormat;
+  brandColor: string;
+  brandLogoName: string | null;
+  enabled: boolean;
+}
+
+interface ProFilters {
+  period: "7d" | "30d" | "90d";
+  sources: string[];
+  sentiment: { positive: boolean; neutral: boolean; negative: boolean };
+  language: Array<"fr" | "ar" | "en">;
+}
+
+const DEFAULT_PRO_FILTERS: ProFilters = {
+  period: "30d",
+  sources: [],
+  sentiment: { positive: true, neutral: true, negative: true },
+  language: ["fr", "ar", "en"],
+};
+
+const DEFAULT_COMPETITOR_SETUP: CompetitorSetup = {
+  competitors: [],
+  kpis: ["sov", "sentiment", "aiVisibility"],
+  alertThreshold: 35,
+  alertChannels: ["email", "dashboard"],
+  completedAt: null,
+};
+
+const DEFAULT_REPORT_SCHEDULE: ReportSchedule = {
+  cadence: "weekly",
+  dayOfWeek: 1,
+  dayOfMonth: 1,
+  customDay: "",
+  customTime: "08:00",
+  recipients: [],
+  format: "pdf",
+  brandColor: SAGE,
+  brandLogoName: null,
+  enabled: false,
+};
+
+const SEED_INFLUENCERS: InfluencerEntry[] = [
+  { id: "inf-seed-1", name: "Yassine Benchakroun", handle: "@ybench", platform: "LinkedIn", followers: 48200, engagementRate: 4.8, sentiment: 0.62, starred: true, addedAt: Date.now() - 86400000 * 14 },
+  { id: "inf-seed-2", name: "Salma El Idrissi", handle: "@salmareports", platform: "X", followers: 91500, engagementRate: 3.1, sentiment: 0.18, starred: false, addedAt: Date.now() - 86400000 * 9 },
+  { id: "inf-seed-3", name: "Karim Tahiri", handle: "@ktahiri", platform: "TikTok", followers: 215000, engagementRate: 6.4, sentiment: -0.12, starred: false, addedAt: Date.now() - 86400000 * 5 },
+  { id: "inf-seed-4", name: "Le Matin Éco", handle: "@lematineco", platform: "Presse", followers: 540000, engagementRate: 1.2, sentiment: 0.41, starred: true, addedAt: Date.now() - 86400000 * 21 },
+  { id: "inf-seed-5", name: "Hicham Mansouri", handle: "@hmansouri", platform: "Instagram", followers: 128400, engagementRate: 5.2, sentiment: 0.34, starred: false, addedAt: Date.now() - 86400000 * 3 },
+];
+
+const COMPANIES_DB: Array<{ name: string; industry: string }> = [
+  { name: "Maroc Telecom", industry: "Télécoms" },
+  { name: "Attijariwafa Bank", industry: "Banque" },
+  { name: "Banque Centrale Populaire", industry: "Banque" },
+  { name: "BMCE Bank of Africa", industry: "Banque" },
+  { name: "CIH Bank", industry: "Banque" },
+  { name: "OCP Group", industry: "Mines & Chimie" },
+  { name: "LafargeHolcim Maroc", industry: "Matériaux" },
+  { name: "Managem", industry: "Mines" },
+  { name: "Lydec", industry: "Services publics" },
+  { name: "Redal", industry: "Services publics" },
+  { name: "Inwi", industry: "Télécoms" },
+  { name: "Orange Maroc", industry: "Télécoms" },
+  { name: "Royal Air Maroc", industry: "Transport" },
+  { name: "ONCF", industry: "Transport" },
+  { name: "Marsa Maroc", industry: "Logistique" },
+  { name: "LesieurCristal", industry: "Agroalimentaire" },
+  { name: "Centrale Laitière", industry: "Agroalimentaire" },
+  { name: "Cosumar", industry: "Agroalimentaire" },
+  { name: "Label'Vie", industry: "Distribution" },
+  { name: "Marjane Holding", industry: "Distribution" },
+  { name: "BIM Maroc", industry: "Distribution" },
+  { name: "Auto Hall", industry: "Automobile" },
+  { name: "Stellantis Maroc", industry: "Automobile" },
+  { name: "Renault Tanger Med", industry: "Automobile" },
+  { name: "AFMA Index", industry: "Assurance" },
+  { name: "RMA Watanya", industry: "Assurance" },
+  { name: "Wafa Assurance", industry: "Assurance" },
+  { name: "Sanlam Maroc", industry: "Assurance" },
+  { name: "Delta Holding", industry: "Conglomérat" },
+  { name: "Ynna Holding", industry: "Conglomérat" },
+  { name: "SNI", industry: "Holding" },
+  { name: "Al Mada", industry: "Holding" },
+  { name: "L'Économiste", industry: "Média" },
+  { name: "Les Éco", industry: "Média" },
+  { name: "Médias24", industry: "Média" },
+  { name: "TelQuel", industry: "Média" },
+  { name: "Le360", industry: "Média" },
+  { name: "Hespress", industry: "Média" },
+  { name: "Aujourd'hui Le Maroc", industry: "Média" },
+  { name: "Le Matin", industry: "Média" },
+];
+
+const SOURCE_OPTIONS = [
+  "Presse nationale",
+  "Presse régionale",
+  "Presse internationale",
+  "Twitter/X",
+  "Facebook",
+  "LinkedIn",
+  "Instagram",
+  "TikTok",
+  "YouTube",
+  "Blogs",
+  "Forums",
+  "WhatsApp",
+];
+
+const KPI_LABELS: Record<CompetitorKpi, string> = {
+  sov: "Part de voix (SOV)",
+  sentiment: "Sentiment",
+  aiVisibility: "Visibilité IA",
+  mediaReach: "Reach média",
+  engagement: "Engagement",
+};
+
+const CHANNEL_LABELS: Record<AlertChannel, string> = {
+  email: "Email",
+  slack: "Slack",
+  teams: "Microsoft Teams",
+  dashboard: "Tableau de bord",
+};
+
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
 function fmtRelative(ts: number | string | undefined): string {
@@ -724,6 +938,7 @@ function usePersistentState<T>(
       const raw = window.localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw) as T;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(parsed);
       }
     } catch {
@@ -1174,10 +1389,16 @@ function Header({
   onMenuClick,
   alertCount,
   userName,
+  editMode,
+  onToggleEditMode,
+  onResetLayout,
 }: {
   onMenuClick: () => void;
   alertCount: number;
   userName?: string | null;
+  editMode: boolean;
+  onToggleEditMode: () => void;
+  onResetLayout: () => void;
 }) {
   return (
     <header
@@ -1242,6 +1463,60 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onToggleEditMode}
+                className="inline-flex items-center justify-center rounded-md transition-colors hover:bg-[#FAFAFA]"
+                style={{
+                  width: 32,
+                  height: 32,
+                  border: editMode ? `1px solid ${SAGE}` : "1px solid transparent",
+                  backgroundColor: editMode ? SAGE_BG : "transparent",
+                }}
+                aria-label={editMode ? "Quitter le mode édition" : "Personnaliser la disposition"}
+                aria-pressed={editMode}
+              >
+                <PenSquare size={16} style={{ color: editMode ? SAGE : TEXT_BODY }} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+                {editMode ? "Mode édition actif — glissez les widgets" : "Personnaliser la disposition"}
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {editMode && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onResetLayout}
+                  className="inline-flex items-center justify-center rounded-md transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                  aria-label="Réinitialiser la disposition"
+                >
+                  <RotateCcw size={14} style={{ color: TEXT_BODY }} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+                  Réinitialiser la disposition par défaut
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -2885,12 +3160,16 @@ function TendanceSentimentCard({
   onRangeChange,
   radar,
   loading,
+  periodCompare,
+  onPeriodCompareChange,
 }: {
   trend: SentimentTrendResp | null;
   range: "7d" | "30d" | "90d";
   onRangeChange: (r: "7d" | "30d" | "90d") => void;
   radar: CompetitorRadarResp | null;
   loading: boolean;
+  periodCompare: boolean;
+  onPeriodCompareChange: (v: boolean) => void;
 }) {
   const [compareMode, setCompareMode] = useState(false);
 
@@ -2913,6 +3192,32 @@ function TendanceSentimentCard({
       };
     });
   }, [trend, compareMode, radar]);
+
+  // Period compare data: split into halves, plot current vs previous
+  const periodCompareData = useMemo(() => {
+    if (!trend?.data?.length || trend.data.length < 4) return [];
+    const half = Math.floor(trend.data.length / 2);
+    const previous = trend.data.slice(0, half);
+    const current = trend.data.slice(half);
+    const len = Math.min(previous.length, current.length);
+    const arr: Array<{ date: string; current: number; previous: number }> = [];
+    for (let i = 0; i < len; i++) {
+      arr.push({
+        date: current[i].date,
+        current: Math.round(((current[i].avgScore + 1) / 2) * 100),
+        previous: Math.round(((previous[i].avgScore + 1) / 2) * 100),
+      });
+    }
+    return arr;
+  }, [trend]);
+
+  const periodDelta = useMemo(() => {
+    if (periodCompareData.length === 0) return 0;
+    const avgCurrent = periodCompareData.reduce((s, d) => s + d.current, 0) / periodCompareData.length;
+    const avgPrevious = periodCompareData.reduce((s, d) => s + d.previous, 0) / periodCompareData.length;
+    if (avgPrevious === 0) return 0;
+    return ((avgCurrent - avgPrevious) / avgPrevious) * 100;
+  }, [periodCompareData]);
 
   const anomalies = data.filter((d) => d.isAnomaly);
   const medianCount = trend?.data?.length ? trend.data.reduce((s, x) => s + x.count, 0) / trend.data.length : 0;
@@ -2942,6 +3247,7 @@ function TendanceSentimentCard({
           title="09 · Tendance Sentiment + Détection d'Anomalies"
           right={
             <div className="flex items-center gap-2">
+              <PeriodCompareToggle active={periodCompare} onToggle={onPeriodCompareChange} />
               <button
                 type="button"
                 onClick={() => setCompareMode((v) => !v)}
@@ -2956,7 +3262,7 @@ function TendanceSentimentCard({
                 aria-pressed={compareMode}
               >
                 <Users size={11} />
-                Comparer
+                Concurrent
               </button>
               <Tabs value={range} onValueChange={(v) => onRangeChange(v as typeof range)}>
                 <TabsList className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
@@ -2971,6 +3277,88 @@ function TendanceSentimentCard({
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <Skeleton className="h-[260px] w-full" />
+        ) : periodCompare ? (
+          <>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <DeltaBadge value={periodDelta} label="vs période précédente" />
+              <span
+                className="inline-flex items-center gap-1"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+              >
+                <span style={{ width: 10, height: 2, backgroundColor: SAGE }} />
+                Période courante
+              </span>
+              <span
+                className="inline-flex items-center gap-1"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+              >
+                <span style={{ width: 10, height: 2, backgroundColor: NEUTRAL_GRAY, borderTop: `2px dashed ${NEUTRAL_GRAY}` }} />
+                Période précédente
+              </span>
+            </div>
+            <div style={{ width: "100%", height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={periodCompareData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid stroke="#F4F4F5" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={fmtDayShort}
+                    tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                    tickLine={false}
+                    axisLine={{ stroke: BORDER_STRONG }}
+                    minTickGap={28}
+                  />
+                  <YAxis
+                    tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                    domain={[0, 100]}
+                  />
+                  <RTooltip
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                    }}
+                    labelFormatter={(l) => fmtDayShort(String(l))}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 8 }}
+                    iconType="circle"
+                    iconSize={6}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="current"
+                    name="Période courante"
+                    stroke={SAGE}
+                    strokeWidth={2.5}
+                    dot={false}
+                    isAnimationActive
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="previous"
+                    name="Période précédente"
+                    stroke={NEUTRAL_GRAY}
+                    strokeWidth={2}
+                    strokeDasharray="5 4"
+                    dot={false}
+                    isAnimationActive
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <AiCommentary
+              text={
+                periodCompareData.length === 0
+                  ? "Données insuffisantes pour la comparaison de périodes."
+                  : `Score courant vs période précédente : ${periodDelta > 0 ? "hausse" : periodDelta < 0 ? "baisse" : "stable"} de ${Math.abs(periodDelta).toFixed(1)}%. ${periodDelta > 0 ? "Dynamique positive — continuez sur cette lancée." : periodDelta < 0 ? "Surveillez les signaux négatifs et ajustez la stratégie." : "Performance identique d'une période à l'autre."}`
+              }
+            />
+          </>
         ) : data.length === 0 ? (
           <div className="h-[260px] flex items-center justify-center">
             <EmptyDash label="Aucune donnée" />
@@ -3084,10 +3472,12 @@ function BenchmarkConcurrentielTable({
   radar,
   sov,
   loading,
+  onOpenWizard,
 }: {
   radar: CompetitorRadarResp | null;
   sov: ShareOfVoiceResp | null;
   loading: boolean;
+  onOpenWizard: () => void;
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "score", desc: true }]);
 
@@ -3218,10 +3608,10 @@ function BenchmarkConcurrentielTable({
               size="sm"
               className="h-7 px-2"
               style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
-              onClick={() => toast.info("Modal d'ajout de concurrent — saisissez le nom de l'entreprise à suivre.")}
+              onClick={onOpenWizard}
             >
               <Plus size={12} className="mr-1" />
-              Ajouter
+              Configurer
             </Button>
           }
         />
@@ -5436,6 +5826,1768 @@ function PasserGrandesEntreprisesCard() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// PRO ENV — 6 client-side features (Task ID: ENV-PRO)
+//  1. Competitor Setup Wizard (modal 3 steps + autocomplete)
+//  2. Period Comparison Toggle (vs période précédente — dual lines)
+//  3. Custom Dashboard Layout (drag-reorder via @dnd-kit)
+//  4. Influencer Tracker Widget (top 5 + add manually + sort)
+//  5. Report Scheduler Panel (recipients + format + branding)
+//  6. Advanced Filter Bar (sticky — period/sources/sentiment/lang)
+// ════════════════════════════════════════════════════════════════════
+
+// ─── 1. Competitor Setup Wizard ────────────────────────────────────────
+
+const WIZARD_STEPS: Array<{ title: string; Icon: typeof Users }> = [
+  { title: "Ajoutez vos concurrents", Icon: Users },
+  { title: "Définissez vos KPIs", Icon: ListChecks },
+  { title: "Configurez l'alerting", Icon: Bell },
+];
+
+function CompetitorSetupWizard({
+  onClose,
+  onComplete,
+}: {
+  onClose: () => void;
+  onComplete: (setup: CompetitorSetup) => void;
+}) {
+  const [setup, setSetup] = usePersistentState<CompetitorSetup>(
+    "pro:competitor-setup",
+    DEFAULT_COMPETITOR_SETUP,
+  );
+  const [step, setStep] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredCompanies = useMemo(() => {
+    if (!searchQuery.trim()) return COMPANIES_DB.slice(0, 6);
+    const q = searchQuery.toLowerCase();
+    return COMPANIES_DB.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [searchQuery]);
+
+  const addCompetitor = (c: { name: string; industry: string }) => {
+    if (setup.competitors.length >= 5) {
+      toast.error("Maximum 5 concurrents autorisés.");
+      return;
+    }
+    if (setup.competitors.some((x) => x.name === c.name)) {
+      toast.error(`${c.name} est déjà dans la liste.`);
+      return;
+    }
+    setSetup((prev) => ({
+      ...prev,
+      competitors: [
+        ...prev.competitors,
+        {
+          id: `comp-${Date.now()}`,
+          name: c.name,
+          industry: c.industry,
+          addedAt: Date.now(),
+        },
+      ],
+    }));
+    setSearchQuery("");
+    toast.success(`${c.name} ajouté à votre benchmark.`);
+  };
+
+  const removeCompetitor = (id: string) => {
+    setSetup((prev) => ({
+      ...prev,
+      competitors: prev.competitors.filter((c) => c.id !== id),
+    }));
+  };
+
+  const toggleKpi = (k: CompetitorKpi) => {
+    setSetup((prev) => ({
+      ...prev,
+      kpis: prev.kpis.includes(k)
+        ? prev.kpis.filter((x) => x !== k)
+        : [...prev.kpis, k],
+    }));
+  };
+
+  const toggleChannel = (ch: AlertChannel) => {
+    setSetup((prev) => ({
+      ...prev,
+      alertChannels: prev.alertChannels.includes(ch)
+        ? prev.alertChannels.filter((x) => x !== ch)
+        : [...prev.alertChannels, ch],
+    }));
+  };
+
+  const handleComplete = () => {
+    const final: CompetitorSetup = { ...setup, completedAt: Date.now() };
+    setSetup(final);
+    onComplete(final);
+    onClose();
+    toast.success(`Benchmark configuré — ${final.competitors.length} concurrent(s) suivi(s).`);
+  };
+
+  const handleSkip = () => {
+    onClose();
+    toast.info("Configuration annulée — reprenez quand vous voulez.");
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Configuration du Benchmark Concurrentiel</DialogTitle>
+          <DialogDescription>
+            3 étapes · jusqu'à 5 concurrents · persistance locale
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Progress indicator */}
+        <div className="flex items-center gap-2 my-2">
+          {WIZARD_STEPS.map((s, i) => {
+            const Icon = s.Icon;
+            const isActive = i === step;
+            const isDone = i < step;
+            return (
+              <div key={s.title} className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      backgroundColor: isDone || isActive ? SAGE : "#F0F0F0",
+                      color: isDone || isActive ? "#FFFFFF" : TEXT_MUTED,
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {isDone ? <CheckCircle2 size={12} /> : <Icon size={11} />}
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: isActive ? CHARCOAL : TEXT_MUTED,
+                      fontWeight: isActive ? 700 : 400,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {s.title}
+                  </span>
+                </div>
+                {i < WIZARD_STEPS.length - 1 && (
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      backgroundColor: isDone ? SAGE : BORDER,
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Step content */}
+        <div className="min-h-[280px] py-2">
+          {step === 0 && (
+            <div className="space-y-3">
+              <Label>Rechercher une entreprise</Label>
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="absolute left-2.5 top-2.5"
+                  style={{ color: TEXT_MUTED }}
+                />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Ex : Attijariwafa Bank, Maroc Telecom…"
+                  className="pl-8"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && filteredCompanies[0]) {
+                      addCompetitor(filteredCompanies[0]);
+                    }
+                  }}
+                />
+              </div>
+              {filteredCompanies.length > 0 && (
+                <div className="rounded-md" style={{ border: `1px solid ${BORDER}` }}>
+                  {filteredCompanies.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => addCompetitor(c)}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-[#FAFAFA] text-left"
+                      style={{ borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: CHARCOAL,
+                          }}
+                        >
+                          {c.name}
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            color: TEXT_MUTED,
+                          }}
+                        >
+                          {c.industry}
+                        </div>
+                      </div>
+                      <Plus size={12} style={{ color: SAGE }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div>
+                <div style={FONT_HEADER}>
+                  Concurrents sélectionnés ({setup.competitors.length}/5)
+                </div>
+                <div className="space-y-1 mt-2">
+                  {setup.competitors.length === 0 ? (
+                    <div
+                      className="text-center py-4"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 11,
+                        color: TEXT_MUTED,
+                      }}
+                    >
+                      Aucun concurrent ajouté — recherchez ci-dessus.
+                    </div>
+                  ) : (
+                    setup.competitors.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between rounded-md px-3 py-2"
+                        style={{
+                          border: `1px solid ${BORDER}`,
+                          backgroundColor: "#FAFAFA",
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              color: SAGE,
+                              backgroundColor: SAGE_BG,
+                              borderRadius: 3,
+                              padding: "1px 4px",
+                            }}
+                          >
+                            {c.industry.slice(0, 4).toUpperCase()}
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: FONT_SANS,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: CHARCOAL,
+                            }}
+                          >
+                            {c.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeCompetitor(c.id)}
+                          className="inline-flex items-center justify-center rounded-md hover:bg-[#FEE2E2]"
+                          style={{ width: 22, height: 22 }}
+                          aria-label={`Retirer ${c.name}`}
+                        >
+                          <X size={12} style={{ color: NEGATIVE }} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-3">
+              <div style={FONT_HEADER}>Sélectionnez les KPIs à surveiller</div>
+              <div className="grid grid-cols-1 gap-2">
+                {(Object.keys(KPI_LABELS) as CompetitorKpi[]).map((k) => {
+                  const checked = setup.kpis.includes(k);
+                  return (
+                    <label
+                      key={k}
+                      className="flex items-center gap-3 rounded-md cursor-pointer px-3 py-2"
+                      style={{
+                        border: `1px solid ${checked ? SAGE : BORDER}`,
+                        backgroundColor: checked ? SAGE_BG : "#FFFFFF",
+                      }}
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => toggleKpi(k)}
+                      />
+                      <span
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: CHARCOAL,
+                        }}
+                      >
+                        {KPI_LABELS[k]}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-3 p-2 rounded-md" style={{ backgroundColor: SAGE_BG }}>
+                <p style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}>
+                  {setup.kpis.length} KPI(s) sélectionné(s) — le benchmark sera calculé sur ces axes.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <Label>Seuil d'alerte (score de sentiment)</Label>
+                <div className="flex items-center gap-3 mt-2">
+                  <input
+                    type="range"
+                    min={10}
+                    max={80}
+                    value={setup.alertThreshold}
+                    onChange={(e) =>
+                      setSetup((prev) => ({
+                        ...prev,
+                        alertThreshold: parseInt(e.target.value, 10),
+                      }))
+                    }
+                    className="flex-1"
+                    style={{ accentColor: SAGE }}
+                  />
+                  <span
+                    className="px-2 py-1 rounded-md"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: CHARCOAL,
+                      backgroundColor: SAGE_BG,
+                      minWidth: 50,
+                      textAlign: "center",
+                    }}
+                  >
+                    {setup.alertThreshold}%
+                  </span>
+                </div>
+                <p
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    marginTop: 4,
+                  }}
+                >
+                  Alerte déclenchée si le score descend sous ce seuil.
+                </p>
+              </div>
+              <div>
+                <Label>Canaux de notification</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {(Object.keys(CHANNEL_LABELS) as AlertChannel[]).map((ch) => {
+                    const checked = setup.alertChannels.includes(ch);
+                    return (
+                      <label
+                        key={ch}
+                        className="flex items-center gap-2 rounded-md cursor-pointer px-3 py-2"
+                        style={{
+                          border: `1px solid ${checked ? SAGE : BORDER}`,
+                          backgroundColor: checked ? SAGE_BG : "#FFFFFF",
+                        }}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleChannel(ch)}
+                        />
+                        <span
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: CHARCOAL,
+                          }}
+                        >
+                          {CHANNEL_LABELS[ch]}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <DialogFooter className="flex items-center justify-between sm:justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSkip}
+            style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}
+          >
+            Passer
+          </Button>
+          <div className="flex items-center gap-2">
+            {step > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStep((s) => s - 1)}
+                style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+              >
+                <ChevronLeft size={12} className="mr-1" />
+                Précédent
+              </Button>
+            )}
+            {step < 2 ? (
+              <Button
+                size="sm"
+                onClick={() => setStep((s) => s + 1)}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  backgroundColor: SAGE,
+                  color: "#FFFFFF",
+                }}
+              >
+                Suivant
+                <ChevronRight size={12} className="ml-1" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleComplete}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  backgroundColor: SAGE,
+                  color: "#FFFFFF",
+                }}
+              >
+                <CheckCircle2 size={12} className="mr-1" />
+                Terminer & lancer le benchmark
+              </Button>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── 2. Period Compare Toggle (reusable) ──────────────────────────────
+
+function PeriodCompareToggle({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => onToggle(!active)}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: active ? "#FFFFFF" : SAGE,
+              backgroundColor: active ? SAGE : "transparent",
+              border: `1px solid ${SAGE}`,
+            }}
+            aria-pressed={active}
+            aria-label="Comparer vs période précédente"
+          >
+            <ArrowLeftRight size={11} />
+            {active ? "vs période précédente" : "30 jours"}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+            {active
+              ? "Affichage dual-ligne : période courante vs précédente"
+              : "Activer la comparaison vs période précédente"}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function DeltaBadge({ value, label }: { value: number; label: string }) {
+  if (isNaN(value) || value === 0) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1"
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 10,
+          color: TEXT_MUTED,
+          backgroundColor: "#FAFAFA",
+          border: `1px solid ${BORDER}`,
+        }}
+      >
+        <Minus size={11} />
+        {label} stable
+      </span>
+    );
+  }
+  const up = value > 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1"
+      style={{
+        fontFamily: FONT_MONO,
+        fontSize: 10,
+        fontWeight: 700,
+        color: up ? POSITIVE : NEGATIVE,
+        backgroundColor: up ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+        border: `1px solid ${up ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+      }}
+    >
+      <Icon size={11} />
+      {up ? "+" : ""}
+      {value.toFixed(1)}% {label}
+    </span>
+  );
+}
+
+// ─── 3. Sortable Widget (drag-reorder wrapper) ────────────────────────
+
+function SortableWidget({
+  id,
+  editMode,
+  children,
+}: {
+  id: string;
+  editMode: boolean;
+  children: React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: CSSProperties = {
+    transform: DndCSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    position: "relative",
+    zIndex: isDragging ? 50 : "auto",
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {editMode && (
+        <div
+          {...listeners}
+          className="absolute -top-2 left-3 z-20 inline-flex items-center justify-center rounded-md"
+          style={{
+            width: 24,
+            height: 24,
+            backgroundColor: SAGE,
+            color: "#FFFFFF",
+            cursor: "grab",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+          }}
+          aria-label="Glisser pour réorganiser"
+        >
+          <GripVertical size={12} />
+        </div>
+      )}
+      {editMode ? (
+        <div
+          style={{
+            border: `2px dashed ${SAGE}`,
+            borderRadius: 12,
+            padding: 4,
+            transition: "all 0.2s",
+            backgroundColor: isDragging ? SAGE_BG : "transparent",
+          }}
+        >
+          {children}
+        </div>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
+// ─── 4. Influencer Tracker Widget ─────────────────────────────────────
+
+function InfluencerTrackerWidget() {
+  const [influencers, setInfluencers] = usePersistentState<InfluencerEntry[]>(
+    "pro:influencer-tracker",
+    SEED_INFLUENCERS,
+  );
+  const [sortKey, setSortKey] = useState<InfluencerSortKey>("reach");
+  const [showAll, setShowAll] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newHandle, setNewHandle] = useState("");
+  const [newPlatform, setNewPlatform] = useState<InfluencerPlatform>("LinkedIn");
+
+  const sorted = useMemo(() => {
+    const arr = [...influencers];
+    arr.sort((a, b) => {
+      if (sortKey === "reach") return b.followers - a.followers;
+      if (sortKey === "engagement") return b.engagementRate - a.engagementRate;
+      return b.sentiment - a.sentiment;
+    });
+    return arr;
+  }, [influencers, sortKey]);
+
+  const visible = showAll ? sorted : sorted.slice(0, 5);
+
+  const handleAdd = () => {
+    if (!newName.trim() || !newHandle.trim()) {
+      toast.error("Nom et handle requis.");
+      return;
+    }
+    const handle = newHandle.trim().startsWith("@") ? newHandle.trim() : `@${newHandle.trim()}`;
+    const entry: InfluencerEntry = {
+      id: `inf-${Date.now()}`,
+      name: newName.trim(),
+      handle,
+      platform: newPlatform,
+      followers: Math.floor(10000 + Math.random() * 100000),
+      engagementRate: Math.round((1 + Math.random() * 6) * 10) / 10,
+      sentiment: Math.round((Math.random() * 1.4 - 0.4) * 100) / 100,
+      starred: false,
+      addedAt: Date.now(),
+    };
+    setInfluencers((prev) => [entry, ...prev]);
+    setNewName("");
+    setNewHandle("");
+    setNewPlatform("LinkedIn");
+    setShowAddForm(false);
+    toast.success(`${entry.name} ajouté au tracker.`);
+  };
+
+  const toggleStar = (id: string) => {
+    setInfluencers((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, starred: !i.starred } : i)),
+    );
+  };
+
+  const removeInfluencer = (id: string) => {
+    setInfluencers((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const totalFollowers = influencers.reduce((s, i) => s + i.followers, 0);
+  const avgEngagement =
+    influencers.length > 0
+      ? influencers.reduce((s, i) => s + i.engagementRate, 0) / influencers.length
+      : 0;
+  const positiveRate =
+    influencers.length > 0
+      ? (influencers.filter((i) => i.sentiment > 0).length / influencers.length) * 100
+      : 0;
+
+  const insight = `${influencers.length} influenceur(s) suivi(s) — ${fmtNumber(totalFollowers)} followers cumulés, ${avgEngagement.toFixed(1)}% engagement moyen, ${Math.round(positiveRate)}% à sentiment positif. ${influencers.filter((i) => i.starred).length} marqué(s) favori(s).`;
+
+  const initialsFor = (name: string) =>
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0] ?? "")
+      .join("")
+      .toUpperCase() || "?";
+
+  const platformColor = (p: InfluencerPlatform): string => {
+    if (p === "TikTok") return "#000000";
+    if (p === "Instagram") return "#E1306C";
+    if (p === "X") return "#0A0A0A";
+    if (p === "LinkedIn") return SAGE;
+    if (p === "YouTube") return "#FF0000";
+    if (p === "Facebook") return "#1877F2";
+    if (p === "Presse") return CHARCOAL;
+    return TEXT_MUTED;
+  };
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="26 · Suivi Influenceurs Personnalisé"
+          right={
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={() => setShowAddForm((v) => !v)}
+              >
+                <UserPlus size={12} className="mr-1" />
+                Ajouter
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                onClick={() => setShowAll((v) => !v)}
+              >
+                {showAll ? "Voir top 5" : "Voir tout"}
+                <ChevronRight size={11} className="ml-1" />
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Stats strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          <MiniStat label="Influenceurs" value={String(influencers.length)} dotColor={SAGE} />
+          <MiniStat label="Followers cumulés" value={fmtNumber(totalFollowers)} dotColor={POSITIVE} />
+          <MiniStat label="Engagement moyen" value={`${avgEngagement.toFixed(1)}%`} dotColor={NEUTRAL_AMBER} />
+          <MiniStat label="Sentiment positif" value={`${Math.round(positiveRate)}%`} dotColor={SAGE_DIM} />
+        </div>
+
+        {/* Sort selector */}
+        <div className="flex items-center gap-2 mb-2">
+          <span style={FONT_HEADER}>Trier par</span>
+          {([
+            { key: "reach" as const, label: "Reach" },
+            { key: "engagement" as const, label: "Engagement" },
+            { key: "sentiment" as const, label: "Sentiment" },
+          ]).map(({ key, label }) => {
+            const active = sortKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSortKey(key)}
+                className="rounded-md px-2 py-0.5 transition-colors"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: active ? "#FFFFFF" : TEXT_BODY,
+                  backgroundColor: active ? SAGE : "#FAFAFA",
+                  border: `1px solid ${active ? SAGE : BORDER}`,
+                }}
+                aria-pressed={active}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Add form */}
+        {showAddForm && (
+          <div
+            className="rounded-md p-3 mb-3"
+            style={{ border: `1px dashed ${SAGE}`, backgroundColor: SAGE_BG }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+              <Input
+                placeholder="Nom complet"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+              />
+              <Input
+                placeholder="@handle"
+                value={newHandle}
+                onChange={(e) => setNewHandle(e.target.value)}
+                style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+              />
+              <select
+                value={newPlatform}
+                onChange={(e) => setNewPlatform(e.target.value as InfluencerPlatform)}
+                className="rounded-md px-3 py-2"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 12,
+                  border: `1px solid ${BORDER}`,
+                  backgroundColor: "#FFFFFF",
+                  color: CHARCOAL,
+                }}
+              >
+                {(["LinkedIn", "X", "TikTok", "Instagram", "YouTube", "Facebook", "Presse", "Web"] as InfluencerPlatform[]).map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                onClick={() => setShowAddForm(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }}
+                onClick={handleAdd}
+              >
+                <Plus size={11} className="mr-1" />
+                Ajouter
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Influencer list */}
+        {visible.length === 0 ? (
+          <div className="h-[160px] flex items-center justify-center">
+            <EmptyDash label="Aucun influenceur suivi" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visible.map((inf) => {
+              const sentColor =
+                inf.sentiment > 0.1 ? POSITIVE : inf.sentiment < -0.1 ? NEGATIVE : NEUTRAL_GRAY;
+              return (
+                <div
+                  key={inf.id}
+                  className="flex items-center gap-3 rounded-md p-2.5"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                >
+                  {/* Avatar with initials */}
+                  <div
+                    className="flex items-center justify-center rounded-full shrink-0"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      backgroundColor: SAGE_BG,
+                      color: SAGE,
+                      fontFamily: FONT_MONO,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {initialsFor(inf.name)}
+                  </div>
+                  {/* Name + handle */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: CHARCOAL,
+                        }}
+                      >
+                        {inf.name}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "#FFFFFF",
+                          backgroundColor: platformColor(inf.platform),
+                          borderRadius: 3,
+                          padding: "1px 5px",
+                        }}
+                      >
+                        {inf.platform}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: TEXT_MUTED,
+                      }}
+                    >
+                      {inf.handle}
+                    </div>
+                  </div>
+                  {/* Followers */}
+                  <div className="text-right shrink-0" style={{ minWidth: 70 }}>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: CHARCOAL,
+                      }}
+                    >
+                      {fmtNumber(inf.followers)}
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                      followers
+                    </div>
+                  </div>
+                  {/* Engagement */}
+                  <div className="text-right shrink-0" style={{ minWidth: 60 }}>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: CHARCOAL,
+                      }}
+                    >
+                      {inf.engagementRate.toFixed(1)}%
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                      engagement
+                    </div>
+                  </div>
+                  {/* Sentiment */}
+                  <div className="text-right shrink-0" style={{ minWidth: 60 }}>
+                    <div
+                      className="inline-flex items-center gap-1"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: sentColor,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          backgroundColor: sentColor,
+                        }}
+                      />
+                      {inf.sentiment > 0 ? "+" : ""}
+                      {inf.sentiment.toFixed(2)}
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                      sentiment
+                    </div>
+                  </div>
+                  {/* Star + remove */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleStar(inf.id)}
+                      className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                      style={{ width: 24, height: 24 }}
+                      aria-label={inf.starred ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    >
+                      <Star
+                        size={13}
+                        style={{
+                          color: inf.starred ? NEUTRAL_AMBER : TEXT_MUTED,
+                          fill: inf.starred ? NEUTRAL_AMBER : "transparent",
+                        }}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeInfluencer(inf.id)}
+                      className="inline-flex items-center justify-center rounded-md hover:bg-[#FEE2E2]"
+                      style={{ width: 24, height: 24 }}
+                      aria-label="Retirer"
+                    >
+                      <X size={13} style={{ color: NEGATIVE }} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ─── 5. Report Scheduler Panel ────────────────────────────────────────
+
+function ReportSchedulerPanel() {
+  const [schedule, setSchedule] = usePersistentState<ReportSchedule>(
+    "pro:report-schedule",
+    DEFAULT_REPORT_SCHEDULE,
+  );
+  const [newRecipient, setNewRecipient] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+
+  const addRecipient = () => {
+    const email = newRecipient.trim();
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Adresse email invalide.");
+      return;
+    }
+    if (schedule.recipients.includes(email)) {
+      toast.error("Destinataire déjà dans la liste.");
+      return;
+    }
+    setSchedule((prev) => ({ ...prev, recipients: [...prev.recipients, email] }));
+    setNewRecipient("");
+    toast.success(`${email} ajouté aux destinataires.`);
+  };
+
+  const removeRecipient = (email: string) => {
+    setSchedule((prev) => ({
+      ...prev,
+      recipients: prev.recipients.filter((r) => r !== email),
+    }));
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSchedule((prev) => ({ ...prev, brandLogoName: file.name }));
+      toast.success(`Logo "${file.name}" chargé (simulation).`);
+    }
+  };
+
+  const cadenceLabel = (): string => {
+    if (schedule.cadence === "weekly") {
+      const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+      return `Hebdomadaire · ${days[schedule.dayOfWeek]} ${schedule.customTime}`;
+    }
+    if (schedule.cadence === "monthly") {
+      return `Mensuel · ${schedule.dayOfMonth}er du mois ${schedule.customTime}`;
+    }
+    return `Personnalisé · ${schedule.customDay || "—"} ${schedule.customTime}`;
+  };
+
+  const formatLabel = (): string => {
+    if (schedule.format === "pdf") return "PDF";
+    if (schedule.format === "excel") return "Excel";
+    return "PDF + Excel";
+  };
+
+  const insight = schedule.enabled
+    ? `Rapport ${cadenceLabel()} · ${formatLabel()} · ${schedule.recipients.length} destinataire(s). ${schedule.brandLogoName ? `Branding : ${schedule.brandLogoName}` : "Branding par défaut (sage green)."}.`
+    : "Planification inactive. Configurez la cadence, les destinataires et activez la planification.";
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-5">
+        <SectionHeader
+          title="27 · Programmation Rapports"
+          right={
+            <div className="flex items-center gap-2">
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: schedule.enabled ? POSITIVE : TEXT_MUTED,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {schedule.enabled ? "Actif" : "Inactif"}
+              </span>
+              <Switch
+                checked={schedule.enabled}
+                onCheckedChange={(v) => {
+                  setSchedule((prev) => ({ ...prev, enabled: v }));
+                  if (v) toast.success("Planification activée.");
+                }}
+                aria-label="Activer la planification"
+              />
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="space-y-3">
+          {/* Cadence */}
+          <div>
+            <Label className="mb-1.5 block">Cadence</Label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { key: "weekly" as const, label: "Hebdo", sub: "lun. 8h" },
+                { key: "monthly" as const, label: "Mensuel", sub: "1er du mois" },
+                { key: "custom" as const, label: "Perso", sub: "date libre" },
+              ]).map(({ key, label, sub }) => {
+                const active = schedule.cadence === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSchedule((prev) => ({ ...prev, cadence: key }))}
+                    className="rounded-md px-2 py-1.5 text-center transition-colors"
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: active ? "#FFFFFF" : TEXT_BODY,
+                      backgroundColor: active ? SAGE : "#FFFFFF",
+                      border: `1px solid ${active ? SAGE : BORDER}`,
+                    }}
+                    aria-pressed={active}
+                  >
+                    <div>{label}</div>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 8,
+                        color: active ? "rgba(255,255,255,0.8)" : TEXT_MUTED,
+                      }}
+                    >
+                      {sub}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {schedule.cadence === "weekly" && (
+              <select
+                value={schedule.dayOfWeek}
+                onChange={(e) =>
+                  setSchedule((prev) => ({
+                    ...prev,
+                    dayOfWeek: parseInt(e.target.value, 10),
+                  }))
+                }
+                className="w-full mt-2 rounded-md px-3 py-1.5"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  border: `1px solid ${BORDER}`,
+                  backgroundColor: "#FFFFFF",
+                  color: CHARCOAL,
+                }}
+              >
+                {["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].map((d, i) => (
+                  <option key={d} value={i}>{d}</option>
+                ))}
+              </select>
+            )}
+            {schedule.cadence === "monthly" && (
+              <select
+                value={schedule.dayOfMonth}
+                onChange={(e) =>
+                  setSchedule((prev) => ({
+                    ...prev,
+                    dayOfMonth: parseInt(e.target.value, 10),
+                  }))
+                }
+                className="w-full mt-2 rounded-md px-3 py-1.5"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  border: `1px solid ${BORDER}`,
+                  backgroundColor: "#FFFFFF",
+                  color: CHARCOAL,
+                }}
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>Jour {d}</option>
+                ))}
+              </select>
+            )}
+            {schedule.cadence === "custom" && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Input
+                  type="date"
+                  value={schedule.customDay}
+                  onChange={(e) =>
+                    setSchedule((prev) => ({ ...prev, customDay: e.target.value }))
+                  }
+                  style={{ fontFamily: FONT_SANS, fontSize: 11 }}
+                />
+                <Input
+                  type="time"
+                  value={schedule.customTime}
+                  onChange={(e) =>
+                    setSchedule((prev) => ({ ...prev, customTime: e.target.value }))
+                  }
+                  style={{ fontFamily: FONT_SANS, fontSize: 11 }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Recipients */}
+          <div>
+            <Label className="mb-1.5 block">Destinataires ({schedule.recipients.length})</Label>
+            <div className="flex gap-1.5">
+              <Input
+                type="email"
+                placeholder="email@entreprise.com"
+                value={newRecipient}
+                onChange={(e) => setNewRecipient(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addRecipient();
+                  }
+                }}
+                className="flex-1"
+                style={{ fontFamily: FONT_SANS, fontSize: 11 }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-2"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={addRecipient}
+              >
+                <Plus size={12} />
+              </Button>
+            </div>
+            {schedule.recipients.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {schedule.recipients.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      color: SAGE,
+                      backgroundColor: SAGE_BG,
+                      border: `1px solid ${SAGE_DIM}`,
+                    }}
+                  >
+                    <Mail size={10} />
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => removeRecipient(email)}
+                      className="inline-flex items-center justify-center"
+                      style={{ width: 14, height: 14 }}
+                      aria-label={`Retirer ${email}`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Format */}
+          <div>
+            <Label className="mb-1.5 block">Format</Label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { key: "pdf" as const, label: "PDF" },
+                { key: "excel" as const, label: "Excel" },
+                { key: "both" as const, label: "Les deux" },
+              ]).map(({ key, label }) => {
+                const active = schedule.format === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSchedule((prev) => ({ ...prev, format: key }))}
+                    className="rounded-md px-2 py-1.5 text-center transition-colors"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: active ? "#FFFFFF" : TEXT_BODY,
+                      backgroundColor: active ? SAGE : "#FFFFFF",
+                      border: `1px solid ${active ? SAGE : BORDER}`,
+                    }}
+                    aria-pressed={active}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Branding */}
+          <div>
+            <Label className="mb-1.5 block">Branding</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+              >
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <div
+                  className="flex items-center justify-center rounded-md"
+                  style={{ width: 22, height: 22, backgroundColor: SAGE_BG }}
+                >
+                  <Plus size={11} style={{ color: SAGE }} />
+                </div>
+                <span
+                  className="truncate"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}
+                >
+                  {schedule.brandLogoName ?? "Logo (simulé)"}
+                </span>
+              </label>
+              <div className="flex items-center gap-2 rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER}` }}>
+                <Palette size={12} style={{ color: SAGE }} />
+                <input
+                  type="color"
+                  value={schedule.brandColor}
+                  onChange={(e) =>
+                    setSchedule((prev) => ({ ...prev, brandColor: e.target.value }))
+                  }
+                  className="rounded cursor-pointer"
+                  style={{ width: 24, height: 20, border: "none", padding: 0 }}
+                  aria-label="Couleur de marque"
+                />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                  {schedule.brandColor.toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+              onClick={() => setShowPreview((v) => !v)}
+            >
+              <Eye size={11} className="mr-1" />
+              {showPreview ? "Masquer l'aperçu" : "Aperçu"}
+            </Button>
+            <Button
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }}
+              onClick={() => {
+                if (!schedule.enabled) {
+                  toast.error("Activez la planification d'abord.");
+                  return;
+                }
+                if (schedule.recipients.length === 0) {
+                  toast.error("Ajoutez au moins un destinataire.");
+                  return;
+                }
+                toast.success(`Rapport de test envoyé à ${schedule.recipients[0]}.`);
+              }}
+            >
+              <Send size={11} className="mr-1" />
+              Envoyer test
+            </Button>
+          </div>
+
+          {showPreview && (
+            <div
+              className="rounded-md p-3"
+              style={{
+                border: `1px solid ${schedule.brandColor}`,
+                borderLeft: `4px solid ${schedule.brandColor}`,
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: schedule.brandColor,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                  }}
+                >
+                  Aperçu · Rapport Harch Atelier
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                  {formatLabel()}
+                </span>
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                Rapport Hebdomadaire de Réputation
+              </div>
+              <p
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  color: TEXT_BODY,
+                  marginTop: 4,
+                  lineHeight: 1.4,
+                }}
+              >
+                Cadence : {cadenceLabel()} · {schedule.recipients.length} destinataire(s)
+                {schedule.brandLogoName ? ` · Logo : ${schedule.brandLogoName}` : ""}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ─── 6. Advanced Filter Bar (sticky) ──────────────────────────────────
+
+function ProFilterBar({
+  value,
+  onChange,
+}: {
+  value: ProFilters;
+  onChange: (v: ProFilters) => void;
+}) {
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+
+  const activeCount = useMemo(() => {
+    let count = 0;
+    if (value.period !== "30d") count++;
+    if (value.sources.length > 0) count++;
+    if (!value.sentiment.positive || !value.sentiment.neutral || !value.sentiment.negative) count++;
+    if (value.language.length !== 3) count++;
+    return count;
+  }, [value]);
+
+  const reset = () => {
+    onChange(DEFAULT_PRO_FILTERS);
+    toast.info("Filtres réinitialisés.");
+  };
+
+  const toggleSource = (s: string) => {
+    onChange({
+      ...value,
+      sources: value.sources.includes(s)
+        ? value.sources.filter((x) => x !== s)
+        : [...value.sources, s],
+    });
+  };
+
+  const toggleSentiment = (k: "positive" | "neutral" | "negative") => {
+    onChange({
+      ...value,
+      sentiment: { ...value.sentiment, [k]: !value.sentiment[k] },
+    });
+  };
+
+  const toggleLanguage = (l: "fr" | "ar" | "en") => {
+    onChange({
+      ...value,
+      language: value.language.includes(l)
+        ? value.language.filter((x) => x !== l)
+        : [...value.language, l],
+    });
+  };
+
+  return (
+    <div
+      className="sticky z-20 px-4 lg:px-6 py-2.5"
+      style={{
+        top: 56,
+        backgroundColor: "rgba(255,255,255,0.95)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        borderBottom: `1px solid ${BORDER}`,
+      }}
+    >
+      <div className="flex items-center gap-2 flex-wrap">
+        <div
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1"
+          style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+        >
+          <SlidersHorizontal size={12} style={{ color: SAGE }} />
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              fontWeight: 700,
+              color: SAGE,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Filtres
+          </span>
+          {activeCount > 0 && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 16,
+                height: 16,
+                padding: "0 4px",
+                borderRadius: 8,
+                backgroundColor: SAGE,
+                color: "#FFFFFF",
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                fontWeight: 700,
+              }}
+            >
+              {activeCount}
+            </span>
+          )}
+        </div>
+
+        {/* Period */}
+        <div className="inline-flex items-center gap-1">
+          <span style={FONT_HEADER}>Période</span>
+          <Tabs
+            value={value.period}
+            onValueChange={(v) => onChange({ ...value, period: v as ProFilters["period"] })}
+          >
+            <TabsList className="h-6" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+              <TabsTrigger value="7d" className="h-5 px-2 text-[10px]">7j</TabsTrigger>
+              <TabsTrigger value="30d" className="h-5 px-2 text-[10px]">30j</TabsTrigger>
+              <TabsTrigger value="90d" className="h-5 px-2 text-[10px]">90j</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div style={{ width: 1, height: 22, backgroundColor: BORDER }} />
+
+        {/* Sources multi-select */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setSourcesOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: value.sources.length > 0 ? SAGE : TEXT_BODY,
+              border: `1px solid ${value.sources.length > 0 ? SAGE : BORDER}`,
+              backgroundColor: value.sources.length > 0 ? SAGE_BG : "#FFFFFF",
+            }}
+            aria-expanded={sourcesOpen}
+          >
+            <Filter size={11} />
+            Sources
+            {value.sources.length > 0 && (
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "#FFFFFF",
+                  backgroundColor: SAGE,
+                  borderRadius: 8,
+                  padding: "0 5px",
+                }}
+              >
+                {value.sources.length}
+              </span>
+            )}
+            <ChevronRight
+              size={10}
+              style={{
+                transform: sourcesOpen ? "rotate(90deg)" : "rotate(0deg)",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
+          {sourcesOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setSourcesOpen(false)}
+                aria-hidden="true"
+              />
+              <div
+                className="absolute z-20 mt-1 rounded-md shadow-lg max-h-64 overflow-y-auto"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: `1px solid ${BORDER_STRONG}`,
+                  minWidth: 220,
+                  padding: 4,
+                }}
+              >
+                {SOURCE_OPTIONS.map((s) => {
+                  const checked = value.sources.includes(s);
+                  return (
+                    <label
+                      key={s}
+                      className="flex items-center gap-2 rounded px-2 py-1.5 cursor-pointer hover:bg-[#FAFAFA]"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => toggleSource(s)}
+                      />
+                      <span
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 11,
+                          color: CHARCOAL,
+                        }}
+                      >
+                        {s}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ width: 1, height: 22, backgroundColor: BORDER }} />
+
+        {/* Sentiment toggles */}
+        <div className="inline-flex items-center gap-1">
+          <span style={FONT_HEADER}>Sentiment</span>
+          {([
+            { key: "positive" as const, label: "Pos", color: POSITIVE },
+            { key: "neutral" as const, label: "Neu", color: NEUTRAL_GRAY },
+            { key: "negative" as const, label: "Nég", color: NEGATIVE },
+          ]).map(({ key, label, color }) => {
+            const active = value.sentiment[key];
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleSentiment(key)}
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: active ? "#FFFFFF" : TEXT_MUTED,
+                  backgroundColor: active ? color : "#FFFFFF",
+                  border: `1px solid ${active ? color : BORDER}`,
+                }}
+                aria-pressed={active}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    backgroundColor: active ? "#FFFFFF" : color,
+                  }}
+                />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ width: 1, height: 22, backgroundColor: BORDER }} />
+
+        {/* Language */}
+        <div className="inline-flex items-center gap-1">
+          <span style={FONT_HEADER}>Langue</span>
+          {([
+            { key: "fr" as const, label: "FR" },
+            { key: "ar" as const, label: "AR" },
+            { key: "en" as const, label: "EN" },
+          ]).map(({ key, label }) => {
+            const active = value.language.includes(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleLanguage(key)}
+                className="rounded-md px-1.5 py-0.5 transition-colors"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: active ? "#FFFFFF" : TEXT_MUTED,
+                  backgroundColor: active ? SAGE : "#FFFFFF",
+                  border: `1px solid ${active ? SAGE : BORDER}`,
+                }}
+                aria-pressed={active}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Reset */}
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={reset}
+            className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: TEXT_MUTED,
+              border: `1px solid ${BORDER}`,
+            }}
+            aria-label="Réinitialiser les filtres"
+          >
+            <RotateCcw size={11} />
+            Réinitialiser
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Default widget order (ProDashboard layout) ───────────────────────
+const DEFAULT_WIDGET_ORDER: string[] = [
+  "ai-workspace",
+  "score-reputation",
+  "sentiment-kpi",
+  "mentions-kpi",
+  "citations-ia-kpi",
+  "parts-voix-kpi",
+  "sources-kpi",
+  "engagement-kpi",
+  "tendance-sentiment",
+  "benchmark-concurrents",
+  "radar-reputation",
+  "part-voix-donut",
+  "top-sujets",
+  "dernieres-mentions",
+  "comparaison-semaine",
+  "historique-rapports",
+  "report-scheduler",
+  "recherches-alertes",
+  "top-influenceurs",
+  "influencer-tracker",
+  "estimation-reach",
+  "carte-crise",
+  "heatmap",
+  "repartition-media",
+  "sujets-emergents",
+  "tableaux-personnalisables",
+  "upsell",
+];
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — ProDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -5448,8 +7600,23 @@ export default function ProDashboard({
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("ai-workspace");
-  const [sentimentRange, setSentimentRange] = useState<"7d" | "30d" | "90d">("30d");
   const [prefillQuestion, setPrefillQuestion] = useState<string | null>(null);
+
+  // ─── PRO ENV state (Task ID: ENV-PRO) ──────────────────────────────
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [periodCompare, setPeriodCompare] = usePersistentState<boolean>(
+    "pro:period-compare",
+    false,
+  );
+  const [filters, setFilters] = usePersistentState<ProFilters>(
+    "pro:filters",
+    DEFAULT_PRO_FILTERS,
+  );
+  const [widgetOrder, setWidgetOrder] = usePersistentState<string[]>(
+    "pro:dashboard-layout",
+    DEFAULT_WIDGET_ORDER,
+  );
 
   // Use session as a fallback for name/email (page.tsx already gates auth).
   const { data: session } = useSession();
@@ -5461,12 +7628,12 @@ export default function ProDashboard({
   const { data: alerts, loading: alertsLoading, refetch: refetchAlerts } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
   const { data: aiVis, loading: aiVisLoading } = useApi<AiVisibilityResp>("/api/console/ai-visibility");
   const { data: sentimentTrend, loading: trendLoading } = useApi<SentimentTrendResp>(
-    `/api/console/sentiment-trend?range=${sentimentRange}`,
+    `/api/console/sentiment-trend?range=${filters.period}`,
   );
   const { data: topics, loading: topicsLoading } = useApi<TopicsResp>("/api/console/topics");
   const { data: sources, loading: sourcesLoading } = useApi<SourceDistResp>("/api/console/source-distribution");
-  const { data: radar, loading: radarLoading } = useApi<CompetitorRadarResp>("/api/console/competitor-radar");
-  const { data: sov, loading: sovLoading } = useApi<ShareOfVoiceResp>("/api/console/share-of-voice");
+  const { data: radar, loading: radarLoading, refetch: refetchRadar } = useApi<CompetitorRadarResp>("/api/console/competitor-radar");
+  const { data: sov, loading: sovLoading, refetch: refetchSov } = useApi<ShareOfVoiceResp>("/api/console/share-of-voice");
   const { data: weekly, loading: weeklyLoading } = useApi<WeeklyComparisonResp>("/api/console/weekly-comparison");
   const { data: reports, loading: reportsLoading } = useApi<ReportsListResp>("/api/console/reports/list");
   const { data: influencers, loading: influencersLoading } = useApi<InfluencersResp>("/api/console/influencers?range=30d");
@@ -5496,6 +7663,115 @@ export default function ProDashboard({
     });
     return () => observer.disconnect();
   }, []);
+
+  // ─── DnD handlers + widget mapping (PRO ENV) ────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setWidgetOrder((prev) => {
+      const oldIndex = prev.indexOf(String(active.id));
+      const newIndex = prev.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  }, [setWidgetOrder]);
+
+  const handleResetLayout = useCallback(() => {
+    setWidgetOrder(DEFAULT_WIDGET_ORDER);
+    toast.success("Disposition réinitialisée à la valeur par défaut.");
+  }, [setWidgetOrder]);
+
+  const handleWizardComplete = useCallback((_setup: CompetitorSetup) => {
+    refetchRadar();
+    refetchSov();
+  }, [refetchRadar, refetchSov]);
+
+  // Widget mapping (id → JSX element)
+  const widgets: Record<string, React.ReactNode> = {
+    "ai-workspace": (
+      <HarchIQWorkspace
+        prefillQuestion={prefillQuestion}
+        onPrefillConsumed={() => setPrefillQuestion(null)}
+      />
+    ),
+    "score-reputation": <ScoreReputationCard health={health} loading={healthLoading} />,
+    "sentiment-kpi": <SentimentMoyenKpi health={health} trend={sentimentTrend} loading={healthLoading} />,
+    "mentions-kpi": <MentionsJourKpi health={health} trend={sentimentTrend} loading={healthLoading} />,
+    "citations-ia-kpi": <CitationsIaKpi ai={aiVis} loading={aiVisLoading} />,
+    "parts-voix-kpi": <PartsDeVoixKpi sov={sov} loading={sovLoading} />,
+    "sources-kpi": <SourcesDiversifieesKpi sources={sources} loading={sourcesLoading} />,
+    "engagement-kpi": <EngagementTotalKpi health={health} alerts={alerts} loading={healthLoading} />,
+    "tendance-sentiment": (
+      <TendanceSentimentCard
+        trend={sentimentTrend}
+        range={filters.period}
+        onRangeChange={(r) => setFilters((prev) => ({ ...prev, period: r }))}
+        radar={radar}
+        loading={trendLoading}
+        periodCompare={periodCompare}
+        onPeriodCompareChange={setPeriodCompare}
+      />
+    ),
+    "benchmark-concurrents": (
+      <BenchmarkConcurrentielTable
+        radar={radar}
+        sov={sov}
+        loading={radarLoading}
+        onOpenWizard={() => setWizardOpen(true)}
+      />
+    ),
+    "radar-reputation": <RadarReputationCard radar={radar} loading={radarLoading} />,
+    "part-voix-donut": <PartDeVoixDonutCard sov={sov} loading={sovLoading} />,
+    "top-sujets": <TopSujetsCard topics={topics} trend={sentimentTrend} loading={topicsLoading} />,
+    "dernieres-mentions": (
+      <DernieresMentionsCard
+        alerts={alerts}
+        loading={alertsLoading}
+        onAnalyze={(q) => {
+          setPrefillQuestion(q);
+          scrollToSection("ai-workspace");
+        }}
+      />
+    ),
+    "comparaison-semaine": <ComparaisonSemaineCard weekly={weekly} loading={weeklyLoading} />,
+    "historique-rapports": <HistoriqueRapportsCard reports={reports} loading={reportsLoading} />,
+    "report-scheduler": <ReportSchedulerPanel />,
+    "recherches-alertes": <RecherchesAlertesCard alertConfig={alertConfig} loading={alertConfigLoading} />,
+    "top-influenceurs": <TopInfluenceursCard influencers={influencers} loading={influencersLoading} />,
+    "influencer-tracker": <InfluencerTrackerWidget />,
+    "estimation-reach": <EstimationReachCard trend={sentimentTrend} loading={trendLoading} />,
+    "carte-crise": <CarteCriseCard trend={sentimentTrend} health={health} loading={trendLoading} />,
+    "heatmap": <HeatmapCard alerts={alerts} loading={alertsLoading} />,
+    "repartition-media": <RepartitionTypeMediaCard sources={sources} aiVis={aiVis} loading={sourcesLoading} />,
+    "sujets-emergents": <SujetsEmergentsCard topics={topics} loading={topicsLoading} />,
+    "tableaux-personnalisables": <TableauxPersonnalisablesCard />,
+    "upsell": <PasserGrandesEntreprisesCard />,
+  };
+
+  // Reconcile persisted widgetOrder with available widgets (drop missing, append new)
+  const orderedWidgets: Array<{ id: string; node: React.ReactNode }> = (() => {
+    const seen = new Set<string>();
+    const known = Object.keys(widgets);
+    const result: Array<{ id: string; node: React.ReactNode }> = [];
+    for (const id of widgetOrder) {
+      if (widgets[id] && !seen.has(id)) {
+        seen.add(id);
+        result.push({ id, node: widgets[id] });
+      }
+    }
+    for (const id of known) {
+      if (!seen.has(id)) {
+        result.push({ id, node: widgets[id] });
+      }
+    }
+    return result;
+  })();
+
+  const sortableItems = orderedWidgets.map((w) => w.id);
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: "#FFFFFF", fontFamily: FONT_SANS }}>
@@ -5550,96 +7826,57 @@ export default function ProDashboard({
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuClick={() => setMobileNavOpen(true)} alertCount={alertCount} userName={effectiveName} />
+        <Header
+          onMenuClick={() => setMobileNavOpen(true)}
+          alertCount={alertCount}
+          userName={effectiveName}
+          editMode={editMode}
+          onToggleEditMode={() => setEditMode((v) => !v)}
+          onResetLayout={handleResetLayout}
+        />
+
+        {/* PRO ENV — Advanced Filter Bar (sticky) */}
+        <ProFilterBar value={filters} onChange={setFilters} />
+
+        {/* PRO ENV — Edit mode banner */}
+        {editMode && (
+          <div
+            className="px-4 lg:px-6 py-1.5"
+            style={{
+              backgroundColor: SAGE_BG,
+              borderBottom: `1px solid ${SAGE_DIM}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <GripVertical size={12} style={{ color: SAGE }} />
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Mode édition actif
+            </span>
+            <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>
+              Glissez les widgets pour réorganiser. Cliquez sur le crayon pour quitter.
+            </span>
+          </div>
+        )}
 
         <main className="flex-1 px-4 lg:px-6 py-6">
-          <motion.div
-            className="grid grid-cols-12 gap-4 lg:gap-6"
-            variants={containerStagger}
-            initial="initial"
-            animate="animate"
-          >
-            {/* SECTION 1 — HarchIQ AI Workspace (hero, full width) */}
-            <HarchIQWorkspace
-              prefillQuestion={prefillQuestion}
-              onPrefillConsumed={() => setPrefillQuestion(null)}
-            />
-
-            {/* SECTION 2 — Score de Réputation */}
-            <ScoreReputationCard health={health} loading={healthLoading} />
-
-            {/* SECTIONS 3-8 — KPI strip (6 cards) */}
-            <SentimentMoyenKpi health={health} trend={sentimentTrend} loading={healthLoading} />
-            <MentionsJourKpi health={health} trend={sentimentTrend} loading={healthLoading} />
-            <CitationsIaKpi ai={aiVis} loading={aiVisLoading} />
-            <PartsDeVoixKpi sov={sov} loading={sovLoading} />
-            <SourcesDiversifieesKpi sources={sources} loading={sourcesLoading} />
-            <EngagementTotalKpi health={health} alerts={alerts} loading={healthLoading} />
-
-            {/* SECTION 9 — Tendance Sentiment (with anomaly + compare mode) */}
-            <TendanceSentimentCard
-              trend={sentimentTrend}
-              range={sentimentRange}
-              onRangeChange={setSentimentRange}
-              radar={radar}
-              loading={trendLoading}
-            />
-
-            {/* SECTION 10 — Benchmark Concurrentiel (TanStack Table) */}
-            <BenchmarkConcurrentielTable radar={radar} sov={sov} loading={radarLoading} />
-
-            {/* SECTION 11 — Radar de Réputation */}
-            <RadarReputationCard radar={radar} loading={radarLoading} />
-
-            {/* SECTION 12 — Part de Voix donut */}
-            <PartDeVoixDonutCard sov={sov} loading={sovLoading} />
-
-            {/* SECTION 13 — Top 5 Sujets */}
-            <TopSujetsCard topics={topics} trend={sentimentTrend} loading={topicsLoading} />
-
-            {/* SECTION 14 — Dernières Mentions (10 articles + filters) */}
-            <DernieresMentionsCard
-              alerts={alerts}
-              loading={alertsLoading}
-              onAnalyze={(q) => {
-                setPrefillQuestion(q);
-                scrollToSection("ai-workspace");
-              }}
-            />
-
-            {/* SECTION 15 — Comparaison Semaine vs Semaine */}
-            <ComparaisonSemaineCard weekly={weekly} loading={weeklyLoading} />
-
-            {/* SECTION 16 — Historique des Rapports */}
-            <HistoriqueRapportsCard reports={reports} loading={reportsLoading} />
-
-            {/* SECTION 17 — Recherches Sauvegardées + Alertes */}
-            <RecherchesAlertesCard alertConfig={alertConfig} loading={alertConfigLoading} />
-
-            {/* SECTION 18 — Top 5 Influenceurs */}
-            <TopInfluenceursCard influencers={influencers} loading={influencersLoading} />
-
-            {/* SECTION 19 — Estimation Reach Média */}
-            <EstimationReachCard trend={sentimentTrend} loading={trendLoading} />
-
-            {/* SECTION 20 — Carte de Crise */}
-            <CarteCriseCard trend={sentimentTrend} health={health} loading={trendLoading} />
-
-            {/* SECTION 21 — Heatmap Heure × Jour */}
-            <HeatmapCard alerts={alerts} loading={alertsLoading} />
-
-            {/* SECTION 22 — Répartition par Type de Média */}
-            <RepartitionTypeMediaCard sources={sources} aiVis={aiVis} loading={sourcesLoading} />
-
-            {/* SECTION 23 — Sujets Émergents */}
-            <SujetsEmergentsCard topics={topics} loading={topicsLoading} />
-
-            {/* SECTION 24 — Tableaux Personnalisables */}
-            <TableauxPersonnalisablesCard />
-
-            {/* SECTION 25 — Passer aux Grandes Entreprises (upsell) */}
-            <PasserGrandesEntreprisesCard />
-          </motion.div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
+              <motion.div
+                className="grid grid-cols-12 gap-4 lg:gap-6"
+                variants={containerStagger}
+                initial="initial"
+                animate="animate"
+              >
+                {orderedWidgets.map(({ id, node }) => (
+                  <SortableWidget key={id} id={id} editMode={editMode}>
+                    {node}
+                  </SortableWidget>
+                ))}
+              </motion.div>
+            </SortableContext>
+          </DndContext>
 
           {/* Silent refresh trigger — hidden refetch helpers (no UI) */}
           <button
@@ -5667,7 +7904,7 @@ export default function ProDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE PRO · v10X
+              HARCH ATELIER · CONSOLE PRO · v10X · ENV-PRO
             </div>
             <div
               style={{
@@ -5676,11 +7913,19 @@ export default function ProDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 25 sections · 200 questions IA/jour · Casablanca
+              Données temps réel · 27 sections · 200 questions IA/jour · Casablanca
             </div>
           </div>
         </footer>
       </div>
+
+      {/* PRO ENV — Competitor Setup Wizard (modal, conditional) */}
+      {wizardOpen && (
+        <CompetitorSetupWizard
+          onClose={() => setWizardOpen(false)}
+          onComplete={handleWizardComplete}
+        />
+      )}
     </div>
   );
 }

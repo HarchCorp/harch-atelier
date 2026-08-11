@@ -69,24 +69,32 @@ import {
   Bell,
   Brain,
   CalendarDays,
+  CheckCircle2,
   ChevronRight,
+  Circle,
+  ClipboardList,
   Cloud,
   CloudRain,
   Download,
   ExternalLink,
   FileText,
+  Flag,
   Globe2,
   Hash,
+  HelpCircle,
+  KeyRound,
   Languages,
   LayoutGrid,
   Lightbulb,
   LogOut,
+  Map,
   Menu,
   MessageCircle,
   MessageSquare,
   Minus,
   Newspaper,
   RefreshCw,
+  Rocket,
   Send,
   Settings,
   Share2,
@@ -97,6 +105,7 @@ import {
   Trophy,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -306,6 +315,42 @@ interface Harch100Resp {
   ok: boolean;
   published?: boolean;
   snapshot?: Harch100Snapshot;
+}
+
+// ─── ENV-ESSENTIAL client-side environment types ───────────────────────
+// Persisted in localStorage via usePersistentState — survives refresh,
+// SSR-safe (initial state used during hydration, localStorage read on mount).
+
+/** HarchIQ daily quota — resets to 0 at midnight (date string checked on mount). */
+interface QuotaState {
+  /** Number of questions asked today (0-50 for Essentiel plan). */
+  used: number;
+  /** Plan ceiling — Essentiel = 50. */
+  total: number;
+  /** ISO date (YYYY-MM-DD) of last reset — when differs from today, used → 0. */
+  date: string;
+  /** Monthly WhatsApp alert count (resets when month changes). */
+  whatsappUsed: number;
+  /** WhatsApp monthly ceiling — Essentiel = 100. */
+  whatsappTotal: number;
+  /** ISO month (YYYY-MM) of last whatsapp reset. */
+  whatsappMonth: string;
+}
+
+/** Milestone flags — once true, stays true (one-shot gamification). */
+interface MilestoneState {
+  /** Set when first article mention is detected (mentionCount24h > 0). */
+  firstArticle: boolean;
+  /** Set when user asks first HarchIQ question (quota.used > 0). */
+  firstQuestion: boolean;
+  /** Set when user downloads first report (CSV or PDF export). */
+  firstReport: boolean;
+  /** Set 7 days after first visit. */
+  firstWeek: boolean;
+  /** ISO date of first visit (YYYY-MM-DD) — used to compute firstWeek. */
+  firstVisitDate: string;
+  /** ISO timestamp of last milestone unlocked (for sage pulse animation). */
+  lastUnlockedAt: number | null;
 }
 
 // ─── HarchIQ AI Workspace types ────────────────────────────────────────
@@ -518,6 +563,47 @@ function useApi<T>(url: string | null, opts?: RequestInit): {
   return { data, loading, error, refetch };
 }
 
+// ─── usePersistentState HOOK ───────────────────────────────────────────
+// localStorage-backed useState — SSR-safe (initial value used during
+// hydration, value read on mount via useEffect). try/catch on both parse
+// and write to handle quota-exceeded and corrupted-data edge cases.
+// Pattern copied from AgencyDashboard (KAEL-1 fix #2).
+
+function usePersistentState<T>(
+  key: string,
+  initial: T,
+): [T, (v: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(initial);
+
+  // Hydrate from localStorage on mount (client-only).
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as T;
+        // One-shot hydration from localStorage on mount — canonical use
+        // case for useEffect + setState. Rule disabled: this does NOT
+        // cause cascading renders (effect deps = [key] only).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setState(parsed);
+      }
+    } catch {
+      // Ignore parse errors / corrupted data — fall back to initial.
+    }
+  }, [key]);
+
+  // Persist on every change.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch {
+      // Quota exceeded or localStorage disabled — silent fallback.
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
+
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────
 
 const FONT_HEADER: React.CSSProperties = {
@@ -532,15 +618,119 @@ const FONT_HEADER: React.CSSProperties = {
 function SectionHeader({
   title,
   right,
+  helpKey,
+  helpText,
+  dismissedHelp,
+  onDismissHelp,
 }: {
   title: string;
   right?: React.ReactNode;
+  /** Optional help identifier — when provided, renders a (?) badge next to the title. */
+  helpKey?: string;
+  /** Help popover content (1-2 sentences). */
+  helpText?: string;
+  /** Set of dismissed help keys (from persisted state). */
+  dismissedHelp?: Set<string>;
+  /** Callback to dismiss this help key (persisted). */
+  onDismissHelp?: (key: string) => void;
 }) {
+  const showHelp = helpKey && helpText && (!dismissedHelp || !dismissedHelp.has(helpKey));
   return (
     <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2 space-y-0" style={{ padding: 0 }}>
-      <span style={FONT_HEADER}>{title}</span>
+      <div className="flex items-center gap-1.5">
+        <span style={FONT_HEADER}>{title}</span>
+        {showHelp && (
+          <HelpBadge
+            topic={helpKey!}
+            text={helpText!}
+            onDismiss={() => onDismissHelp?.(helpKey!)}
+          />
+        )}
+      </div>
       <div className="flex items-center gap-1.5">{right}</div>
     </CardHeader>
+  );
+}
+
+/** Contextual help (?) badge — sage popover on hover/click, dismissible. */
+function HelpBadge({
+  topic,
+  text,
+  onDismiss,
+}: {
+  topic: string;
+  text: string;
+  onDismiss: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip open={open} onOpenChange={setOpen}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Aide sur ${topic}`}
+            className="inline-flex items-center justify-center rounded-full transition-colors hover:bg-[#FAFAFA]"
+            style={{ width: 16, height: 16 }}
+            onClick={(e) => {
+              e.preventDefault();
+              setOpen((o) => !o);
+            }}
+          >
+            <HelpCircle size={14} style={{ color: SAGE }} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="bottom"
+          align="start"
+          sideOffset={6}
+          className="max-w-[280px] p-0"
+          style={{ backgroundColor: "#FFFFFF", border: `1px solid ${SAGE}` }}
+        >
+          <div style={{ padding: 12 }}>
+            <div
+              className="flex items-start gap-2"
+              style={{
+                backgroundColor: SAGE_BG,
+                borderLeft: `3px solid ${SAGE}`,
+                padding: "8px 10px",
+                borderRadius: 6,
+              }}
+            >
+              <Sparkles size={12} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+              <p
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                  color: SAGE,
+                  margin: 0,
+                }}
+              >
+                {text}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onDismiss();
+                setOpen(false);
+              }}
+              className="mt-2 w-full text-left"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              Ne plus montrer
+            </button>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -942,10 +1132,23 @@ function SidebarContent({
 function Header({
   onMenuClick,
   alertCount,
+  quota,
+  sourcesCount,
+  milestoneProgress,
+  milestoneTotal,
+  milestoneRecentlyUnlocked,
+  onMilestoneClick,
 }: {
   onMenuClick: () => void;
   alertCount: number;
+  quota: QuotaState;
+  sourcesCount: number;
+  milestoneProgress: number;
+  milestoneTotal: number;
+  milestoneRecentlyUnlocked: boolean;
+  onMilestoneClick: () => void;
 }) {
+  const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
     <header
       className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-6 py-3"
@@ -1008,7 +1211,23 @@ function Header({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* ENV-ESSENTIAL — Milestone badge (header, gamification) */}
+        <MilestoneBadge
+          progress={milestoneProgress}
+          total={milestoneTotal}
+          recentlyUnlocked={milestoneRecentlyUnlocked}
+          onClick={onMilestoneClick}
+        />
+
+        {/* ENV-ESSENTIAL — Quota usage widget */}
+        <QuotaUsageWidget
+          quota={quota}
+          sourcesCount={sourcesCount}
+          expanded={quotaExpanded}
+          onToggle={() => setQuotaExpanded((v) => !v)}
+        />
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1146,7 +1365,22 @@ const PROMPT_LIBRARY: PromptCard[] = [
   },
 ];
 
-function HarchIQWorkspace() {
+function HarchIQWorkspace({
+  quota,
+  setQuota,
+  dismissedHelp,
+  onDismissHelp,
+  onFirstQuestion,
+}: {
+  /** Lifted from root — persisted via usePersistentState, daily reset applied in root effect. */
+  quota: QuotaState;
+  setQuota: (v: QuotaState | ((prev: QuotaState) => QuotaState)) => void;
+  /** Help dismissal state (for the (?) badge next to the workspace title). */
+  dismissedHelp?: Set<string>;
+  onDismissHelp?: (key: string) => void;
+  /** Callback fired when the user asks their first question (for milestone tracking). */
+  onFirstQuestion?: () => void;
+}) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -1163,7 +1397,6 @@ function HarchIQWorkspace() {
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [quota, setQuota] = useState({ used: 3, total: 50 });
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -1225,7 +1458,9 @@ function HarchIQWorkspace() {
             : msg,
         ),
       );
+      const wasFirst = quota.used === 0;
       setQuota((q) => ({ ...q, used: Math.min(q.total, q.used + 1) }));
+      if (wasFirst) onFirstQuestion?.();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erreur réseau";
       setMessages((m) =>
@@ -1244,7 +1479,7 @@ function HarchIQWorkspace() {
     } finally {
       setSending(false);
     }
-  }, [sending, quota]);
+  }, [sending, quota, setQuota, onFirstQuestion]);
 
   const handlePromptClick = useCallback((card: PromptCard) => {
     void sendQuestion(card.prompt);
@@ -1304,6 +1539,7 @@ function HarchIQWorkspace() {
             </div>
             <div>
               <div
+                className="flex items-center gap-1.5"
                 style={{
                   fontFamily: FONT_SANS,
                   fontSize: 14,
@@ -1311,7 +1547,14 @@ function HarchIQWorkspace() {
                   color: CHARCOAL,
                 }}
               >
-                HarchIQ AI Workspace
+                <span>HarchIQ AI Workspace</span>
+                {(!dismissedHelp || !dismissedHelp.has("harchiq")) && (
+                  <HelpBadge
+                    topic="harchiq"
+                    text="Posez vos questions en langage naturel — HarchIQ répond à partir de vos données réelles et cite ses sources. 50 questions/jour incluses avec le plan Essentiel."
+                    onDismiss={() => onDismissHelp?.("harchiq")}
+                  />
+                )}
               </div>
               <div
                 style={{
@@ -1767,7 +2010,17 @@ function ChatMessageView({
 // SECTION 2 — SCORE DE RÉPUTATION (hero, full width) + AI commentary
 // ════════════════════════════════════════════════════════════════════
 
-function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; loading: boolean }) {
+function ScoreReputationCard({
+  health,
+  loading,
+  dismissedHelp,
+  onDismissHelp,
+}: {
+  health: BrandHealth | null;
+  loading: boolean;
+  dismissedHelp?: Set<string>;
+  onDismissHelp?: (key: string) => void;
+}) {
   const score = health?.score ?? 0;
   const trend = health?.trend ?? 0;
   const { label: weather, Icon: WeatherIcon } = weatherFor(score);
@@ -1797,6 +2050,10 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
       <CardShell className="lg:col-span-12">
         <SectionHeader
           title="02 · Score de Réputation"
+          helpKey="score"
+          helpText="Score agrégé 0-100 basé sur le sentiment, le volume de mentions et la part de voix. Au-dessus de 70 : réputation solide. 50-70 : à surveiller. Sous 50 : intervention recommandée."
+          dismissedHelp={dismissedHelp}
+          onDismissHelp={onDismissHelp}
           right={
             <>
               {loading && <Skeleton className="h-3 w-16" />}
@@ -2169,7 +2426,17 @@ function CitationsIaKpi({ ai, loading }: { ai: AiVisibilityResp | null; loading:
 // SECTION 6 — ALERTES ACTIVES (KPI strip)
 // ════════════════════════════════════════════════════════════════════
 
-function AlertesActivesKpi({ alerts, loading }: { alerts: CrisisAlertsResp | null; loading: boolean }) {
+function AlertesActivesKpi({
+  alerts,
+  loading,
+  dismissedHelp,
+  onDismissHelp,
+}: {
+  alerts: CrisisAlertsResp | null;
+  loading: boolean;
+  dismissedHelp?: Set<string>;
+  onDismissHelp?: (key: string) => void;
+}) {
   const count = alerts?.count ?? alerts?.alerts?.length ?? 0;
   const critical = (alerts?.alerts ?? []).filter((a) => a.severity === "critical").length;
   const lastAlert = alerts?.alerts?.[0];
@@ -2186,7 +2453,13 @@ function AlertesActivesKpi({ alerts, loading }: { alerts: CrisisAlertsResp | nul
   return (
     <motion.div {...cardMotion}>
       <CardShell className="lg:col-span-3 md:col-span-6">
-        <SectionHeader title="06 · Alertes Actives" />
+        <SectionHeader
+          title="06 · Alertes Actives"
+          helpKey="alertes"
+          helpText="Harch détecte automatiquement les pics d'activité négative et les crises potentielles. Configurez vos alertes WhatsApp pour être notifié en temps réel."
+          dismissedHelp={dismissedHelp}
+          onDismissHelp={onDismissHelp}
+        />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
@@ -2239,11 +2512,15 @@ function TendanceSentimentCard({
   range,
   onRangeChange,
   loading,
+  dismissedHelp,
+  onDismissHelp,
 }: {
   trend: SentimentTrendResp | null;
   range: "7d" | "30d" | "90d";
   onRangeChange: (r: "7d" | "30d" | "90d") => void;
   loading: boolean;
+  dismissedHelp?: Set<string>;
+  onDismissHelp?: (key: string) => void;
 }) {
   const data = useMemo(() => {
     if (!trend?.data?.length) return [];
@@ -2277,6 +2554,10 @@ function TendanceSentimentCard({
       <CardShell className="lg:col-span-7">
         <SectionHeader
           title="07 · Tendance Sentiment"
+          helpKey="sentiment"
+          helpText="Répartition quotidienne des mentions en positif, neutre et négatif. Les points rouges signalent des anomalies — pics d'activité négative à investiguer."
+          dismissedHelp={dismissedHelp}
+          onDismissHelp={onDismissHelp}
           right={
             <Tabs value={range} onValueChange={(v) => onRangeChange(v as typeof range)}>
               <TabsList className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
@@ -2372,7 +2653,17 @@ function TendanceSentimentCard({
 // SECTION 8 — DIVERSITÉ DES SOURCES + drill-down
 // ════════════════════════════════════════════════════════════════════
 
-function DiversiteSourcesCard({ sources, loading }: { sources: SourceDistResp | null; loading: boolean }) {
+function DiversiteSourcesCard({
+  sources,
+  loading,
+  dismissedHelp,
+  onDismissHelp,
+}: {
+  sources: SourceDistResp | null;
+  loading: boolean;
+  dismissedHelp?: Set<string>;
+  onDismissHelp?: (key: string) => void;
+}) {
   const [selected, setSelected] = useState<SourceRow | null>(null);
 
   const data = useMemo(() => {
@@ -2397,6 +2688,10 @@ function DiversiteSourcesCard({ sources, loading }: { sources: SourceDistResp | 
       <CardShell className="lg:col-span-5">
         <SectionHeader
           title="08 · Diversité des Sources"
+          helpKey="sources"
+          helpText="Répartition des mentions par source médiatique et sociale. Plus la diversité est élevée, plus votre réputation est ancrée. Plan Essentiel : 20 sources surveillées."
+          dismissedHelp={dismissedHelp}
+          onDismissHelp={onDismissHelp}
           right={
             <Badge
               variant="secondary"
@@ -2571,7 +2866,15 @@ function DernieresMentionsCard({ alerts, loading }: { alerts: CrisisAlertsResp |
           </div>
         ) : filtered.length === 0 ? (
           <div className="h-[400px] flex items-center justify-center">
-            <EmptyDash label="Aucune mention" />
+            <EmptyState
+              title="Aucun article analysé pour le moment"
+              description="Harch surveille 20+ médias marocains et francophones. Ajoutez vos premiers mots-clés (marque, dirigeants, concurrents) pour voir apparaître vos mentions ici."
+              ctaLabel="Configurer mes mots-clés"
+              onCta={() => scrollToSection("sujets")}
+              Icon={Newspaper}
+              suggestionChips={["Marque", "Dirigeants", "Concurrents", "Produits"]}
+              onChip={(chip) => toast.info(`Mot-clé « ${chip} » suggéré — configurez vos sources pour démarrer.`)}
+            />
           </div>
         ) : (
           <div
@@ -4186,6 +4489,672 @@ function BoiteOutilsCard() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// ENV-ESSENTIAL — Client-side environment components
+// Welcome banner · Quota widget · Quick start · Empty state · Milestones
+// All persisted via usePersistentState (localStorage-backed, SSR-safe).
+// ════════════════════════════════════════════════════════════════════
+
+/** 1. Welcome Onboarding Banner — 3-step progress, dismissible, sage border. */
+function WelcomeOnboardingBanner({
+  userName,
+  onDismiss,
+}: {
+  userName: string;
+  onDismiss: () => void;
+}) {
+  const steps = [
+    {
+      id: "sources",
+      n: 1,
+      label: "Configurez vos sources",
+      desc: "20+ médias marocains et francophones prêts à surveiller.",
+      Icon: Newspaper,
+      target: "sources",
+    },
+    {
+      id: "mots-cles",
+      n: 2,
+      label: "Définissez vos mots-clés",
+      desc: "Marque, dirigeants, concurrents — HarchIQ les suit en continu.",
+      Icon: Hash,
+      target: "sujets",
+    },
+    {
+      id: "audit",
+      n: 3,
+      label: "Lancez votre premier audit",
+      desc: "Posez votre première question à HarchIQ pour un insight immédiat.",
+      Icon: Sparkles,
+      target: "ai-workspace",
+    },
+  ];
+
+  return (
+    <motion.div {...cardMotion}>
+      <div
+        className="rounded-xl flex items-stretch gap-0 overflow-hidden"
+        style={{
+          border: `1px solid ${SAGE}`,
+          backgroundColor: "#FFFFFF",
+        }}
+      >
+        {/* Left sage strip — greeting */}
+        <div
+          className="hidden md:flex flex-col justify-between p-4 shrink-0"
+          style={{ width: 220, backgroundColor: SAGE_BG, borderRight: `1px solid ${SAGE}` }}
+        >
+          <div>
+            <div
+              className="flex items-center gap-1.5"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, letterSpacing: "0.08em", textTransform: "uppercase" }}
+            >
+              <Rocket size={12} />
+              Bienvenue
+            </div>
+            <div
+              className="mt-2"
+              style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 700, color: CHARCOAL, lineHeight: 1.25 }}
+            >
+              Bonjour, {userName.split(" ")[0]}
+            </div>
+            <p
+              className="mt-1.5"
+              style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5 }}
+            >
+              Votre atelier de veille réputationnelle est prêt. Suivez ces 3 étapes pour votre premier insight en moins de 5 minutes.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="self-start mt-3 inline-flex items-center gap-1"
+            style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase" }}
+          >
+            <X size={11} />
+            Masquer
+          </button>
+        </div>
+
+        {/* Right — 3 steps */}
+        <div className="flex-1 p-4">
+          <div className="flex items-center justify-between md:justify-end mb-2">
+            <span
+              className="md:hidden"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, letterSpacing: "0.08em", textTransform: "uppercase" }}
+            >
+              Bienvenue, {userName.split(" ")[0]}
+            </span>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+              style={{ width: 24, height: 24 }}
+              aria-label="Masquer la bannière"
+            >
+              <X size={14} style={{ color: TEXT_MUTED }} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {steps.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => scrollToSection(s.target)}
+                className="group text-left rounded-lg p-3 transition-all hover:shadow-sm"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div
+                    className="flex items-center justify-center rounded-full shrink-0"
+                    style={{ width: 22, height: 22, backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}
+                  >
+                    {s.n}
+                  </div>
+                  <s.Icon size={14} style={{ color: SAGE }} />
+                  {i < steps.length - 1 && (
+                    <ArrowRight size={12} className="ml-auto hidden md:block" style={{ color: BORDER_STRONG }} />
+                  )}
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{s.label}</div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.45 }}>{s.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/** 2. Quota Usage Widget — header right-side, 3 metrics, expandable. */
+function QuotaUsageWidget({
+  quota,
+  sourcesCount,
+  expanded,
+  onToggle,
+}: {
+  quota: QuotaState;
+  sourcesCount: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const SOURCES_TOTAL = 20;
+  const iqPct = (quota.used / quota.total) * 100;
+  const srcPct = (sourcesCount / SOURCES_TOTAL) * 100;
+  const waPct = (quota.whatsappUsed / quota.whatsappTotal) * 100;
+
+  const colorFor = (pct: number) =>
+    pct > 90 ? NEGATIVE : pct >= 70 ? NEUTRAL_AMBER : SAGE;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#FAFAFA]"
+        aria-label="Quotas du plan Essentiel"
+        aria-expanded={expanded}
+      >
+        <KeyRound size={14} style={{ color: TEXT_BODY }} />
+        <div className="hidden sm:flex flex-col items-start">
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            Quotas
+          </span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
+            {quota.used}/{quota.total}
+          </span>
+        </div>
+      </button>
+
+      {expanded && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={onToggle}
+            aria-hidden="true"
+          />
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg"
+            style={{
+              width: 280,
+              backgroundColor: "#FFFFFF",
+              border: `1px solid ${BORDER}`,
+              padding: 14,
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span style={FONT_HEADER}>Quotas · Plan Essentiel</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                Réinitialise {quota.date === todayISO() ? "demain" : "quotidiennement"}
+              </span>
+            </div>
+
+            <QuotaRow
+              label="HarchIQ AI"
+              used={quota.used}
+              total={quota.total}
+              pct={iqPct}
+              color={colorFor(iqPct)}
+              resetLabel="Réinitialise à minuit"
+            />
+            <QuotaRow
+              label="Sources surveillées"
+              used={sourcesCount}
+              total={SOURCES_TOTAL}
+              pct={srcPct}
+              color={colorFor(srcPct)}
+              resetLabel="Fixe"
+            />
+            <QuotaRow
+              label="Alertes WhatsApp"
+              used={quota.whatsappUsed}
+              total={quota.whatsappTotal}
+              pct={waPct}
+              color={colorFor(waPct)}
+              resetLabel="Réinitialise le 1er du mois"
+            />
+
+            <div
+              className="mt-3 pt-3"
+              style={{ borderTop: `1px solid ${BORDER}` }}
+            >
+              <p style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, lineHeight: 1.45 }}>
+                Besoin de plus ? Passez à Pro pour 200 questions IA/jour, benchmarking et rapports personnalisés.
+              </p>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function QuotaRow({
+  label,
+  used,
+  total,
+  pct,
+  color,
+  resetLabel,
+}: {
+  label: string;
+  used: number;
+  total: number;
+  pct: number;
+  color: string;
+  resetLabel: string;
+}) {
+  return (
+    <div className="mb-2.5 last:mb-0">
+      <div className="flex items-baseline justify-between">
+        <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>{label}</span>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY }}>
+          <span style={{ color, fontWeight: 700 }}>{used}</span>
+          <span style={{ color: TEXT_MUTED }}>/{total}</span>
+        </span>
+      </div>
+      <div className="mt-1.5">
+        <Progress
+          value={pct}
+          className="h-1.5"
+          style={
+            {
+              ["--progress-background" as string]: "#F4F4F5",
+              ["--progress-foreground" as string]: color,
+            } as React.CSSProperties
+          }
+        />
+      </div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 3, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+        {resetLabel}
+      </div>
+    </div>
+  );
+}
+
+/** 3. Milestone Badge — small header chip, sage pulse on recent unlock. */
+function MilestoneBadge({
+  progress,
+  total,
+  recentlyUnlocked,
+  onClick,
+}: {
+  progress: number;
+  total: number;
+  recentlyUnlocked: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onClick}
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors hover:bg-[#FAFAFA]"
+            aria-label={`Jalons : ${progress} sur ${total}`}
+          >
+            <span
+              className={recentlyUnlocked ? "sage-pulse" : ""}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                backgroundColor: progress === total ? SAGE_BG : "transparent",
+                border: `1px solid ${progress === total ? SAGE : BORDER_STRONG}`,
+              }}
+            >
+              <Flag size={10} style={{ color: progress === total ? SAGE : TEXT_MUTED }} />
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              Jalons
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
+              {progress}/{total}
+            </span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="end">
+          <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+            {progress === total ? "Tous les jalons débloqués" : `${total - progress} jalon(s) restant(s)`}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+/** 4. Quick Start Card — 4 actions, for first-time users. */
+function QuickStartCard({
+  onAction,
+  onDismiss,
+}: {
+  onAction: (id: string) => void;
+  onDismiss: () => void;
+}) {
+  const actions = [
+    { id: "score", label: "Voir mon score de réputation", desc: "Tableau de bord principal et tendances 30 jours.", Icon: TrendingUp },
+    { id: "harchiq", label: "Lancer HarchIQ AI", desc: "Posez votre première question en langage naturel.", Icon: Sparkles },
+    { id: "alertes", label: "Configurer mes alertes WhatsApp", desc: "Recevez une notification dès qu'une crise émerge.", Icon: Bell },
+    { id: "rapport", label: "Télécharger mon premier rapport", desc: "Export CSV des 90 derniers jours, prêt à partager.", Icon: Download },
+  ];
+
+  return (
+    <motion.div {...cardMotion}>
+      <CardShell className="lg:col-span-12" style={{ backgroundColor: SAGE_BG, borderColor: SAGE }}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-md shrink-0"
+              style={{ width: 28, height: 28, backgroundColor: SAGE, color: "#FFFFFF" }}
+            >
+              <Zap size={14} />
+            </div>
+            <div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+                Démarrage rapide
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                4 actions · moins de 5 minutes
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="inline-flex items-center justify-center rounded-md hover:bg-[#FFFFFF]"
+            style={{ width: 24, height: 24 }}
+            aria-label="Masquer le démarrage rapide"
+          >
+            <X size={14} style={{ color: TEXT_MUTED }} />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {actions.map(({ id, label, desc, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onAction(id)}
+              className="group text-left rounded-lg p-3 transition-all hover:shadow-md"
+              style={{ border: `1px solid ${SAGE_DIM}`, backgroundColor: "#FFFFFF" }}
+            >
+              <div
+                className="flex items-center justify-center rounded-md shrink-0 mb-2"
+                style={{ width: 28, height: 28, backgroundColor: SAGE_BG, color: SAGE }}
+              >
+                <Icon size={14} />
+              </div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{label}</div>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.4 }}>{desc}</p>
+              <div
+                className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+              >
+                <span>Ouvrir</span>
+                <ArrowRight size={10} />
+              </div>
+            </button>
+          ))}
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+/** 5. Empty State — reusable, CSS-only sage illustration. */
+function EmptyState({
+  title,
+  description,
+  ctaLabel,
+  onCta,
+  Icon = Sparkles,
+  suggestionChips,
+  onChip,
+}: {
+  title: string;
+  description: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+  Icon?: typeof Sparkles;
+  suggestionChips?: string[];
+  onChip?: (chip: string) => void;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center rounded-md"
+      style={{ padding: "32px 20px", minHeight: 200 }}
+    >
+      {/* CSS-only illustration area — sage circle with icon */}
+      <div
+        className="flex items-center justify-center rounded-full mb-4"
+        style={{
+          width: 56,
+          height: 56,
+          backgroundColor: SAGE_BG,
+          border: `1.5px dashed ${SAGE_DIM}`,
+        }}
+      >
+        <Icon size={22} style={{ color: SAGE }} />
+      </div>
+      <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+        {title}
+      </div>
+      <p
+        className="mt-1.5 max-w-[360px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY, lineHeight: 1.55 }}
+      >
+        {description}
+      </p>
+      {ctaLabel && onCta && (
+        <Button
+          size="sm"
+          className="mt-3 h-8"
+          style={{ fontFamily: FONT_MONO, fontSize: 11, backgroundColor: SAGE, color: "#FFFFFF" }}
+          onClick={onCta}
+        >
+          {ctaLabel}
+          <ArrowRight size={12} className="ml-1.5" />
+        </Button>
+      )}
+      {suggestionChips && suggestionChips.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+          {suggestionChips.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => onChip?.(chip)}
+              className="rounded-full px-2.5 py-1 transition-colors hover:bg-[#FFFFFF]"
+              style={{
+                border: `1px solid ${SAGE_DIM}`,
+                backgroundColor: SAGE_BG,
+                fontFamily: FONT_SANS,
+                fontSize: 11,
+                color: SAGE,
+              }}
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 6. Milestone Tracker Card — dedicated section, 4 milestones + progress bar. */
+function MilestoneTrackerCard({
+  milestones,
+  recentlyUnlockedKey,
+}: {
+  milestones: MilestoneState;
+  recentlyUnlockedKey: string | null;
+}) {
+  const items = [
+    { key: "firstArticle", label: "Premier article analysé", desc: "Harch a détecté votre première mention médiatique.", Icon: Newspaper },
+    { key: "firstQuestion", label: "Première question HarchIQ", desc: "Vous avez posé votre première question à l'AI Workspace.", Icon: MessageSquare },
+    { key: "firstReport", label: "Premier rapport téléchargé", desc: "Export CSV ou PDF généré et partagé avec votre équipe.", Icon: ClipboardList },
+    { key: "firstWeek", label: "Première semaine complète", desc: "7 jours de veille réputationnelle consécutifs.", Icon: CalendarDays },
+  ] as const;
+
+  const completed = items.filter((i) => milestones[i.key]).length;
+  const pct = (completed / items.length) * 100;
+  const allDone = completed === items.length;
+
+  return (
+    <motion.div id="jalons" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="21 · Suivi des Jalons"
+          right={
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                backgroundColor: allDone ? SAGE_BG : "#FAFAFA",
+                color: allDone ? SAGE : TEXT_MUTED,
+              }}
+            >
+              {completed}/{items.length}
+              {allDone ? " · COMPLET" : ""}
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="mb-4">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+              {allDone ? "Tous vos jalons sont débloqués" : "Progression de votre onboarding"}
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE, fontWeight: 700 }}>
+              {Math.round(pct)}%
+            </span>
+          </div>
+          <Progress
+            value={pct}
+            className="h-2"
+            style={
+              {
+                ["--progress-background" as string]: SAGE_BG_STRONG,
+                ["--progress-foreground" as string]: SAGE,
+              } as React.CSSProperties
+            }
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {items.map(({ key, label, desc, Icon }) => {
+            const done = milestones[key];
+            const isRecent = recentlyUnlockedKey === key;
+            return (
+              <div
+                key={key}
+                className={isRecent ? "sage-pulse" : ""}
+                style={{
+                  padding: 14,
+                  borderRadius: 10,
+                  border: `1px solid ${done ? SAGE : BORDER}`,
+                  backgroundColor: done ? SAGE_BG : "#FFFFFF",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="flex items-center justify-center rounded-md shrink-0"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      backgroundColor: done ? SAGE : "#FAFAFA",
+                      color: done ? "#FFFFFF" : TEXT_MUTED,
+                    }}
+                  >
+                    {done ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                  </div>
+                  <Icon size={14} style={{ color: done ? SAGE : TEXT_MUTED }} />
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                  {label}
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, marginTop: 3, lineHeight: 1.45 }}>
+                  {desc}
+                </p>
+                <div
+                  className="mt-2"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: done ? SAGE : TEXT_MUTED,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {done ? "Débloqué" : "En attente"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {allDone && (
+          <div
+            className="mt-4 rounded-lg p-3 flex items-start gap-2"
+            style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE}` }}
+          >
+            <Trophy size={14} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                Onboarding terminé
+              </div>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, marginTop: 2, lineHeight: 1.5 }}>
+                Vous maîtrisez les fondamentaux de Harch Atelier. Pour aller plus loin : benchmarks concurrents, rapports personnalisés, et 200 questions IA/jour avec le plan Pro.
+              </p>
+            </div>
+          </div>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ─── ENV-ESSENTIAL helpers ─────────────────────────────────────────────
+
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function currentMonthISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const INITIAL_QUOTA: QuotaState = {
+  used: 0,
+  total: 50,
+  date: todayISO(),
+  whatsappUsed: 0,
+  whatsappTotal: 100,
+  whatsappMonth: currentMonthISO(),
+};
+
+const INITIAL_MILESTONES: MilestoneState = {
+  firstArticle: false,
+  firstQuestion: false,
+  firstReport: false,
+  firstWeek: false,
+  firstVisitDate: todayISO(),
+  lastUnlockedAt: null,
+};
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EssentialDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -4193,6 +5162,38 @@ export default function EssentialDashboard() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("ai-workspace");
   const [sentimentRange, setSentimentRange] = useState<"7d" | "30d" | "90d">("30d");
+
+  // ─── ENV-ESSENTIAL — persisted client-side state ───────────────────
+  // All keys stored in localStorage via usePersistentState (SSR-safe,
+  // try/catch on parse + write). Survives refresh, clearable via DevTools.
+  const [onboardingDismissed, setOnboardingDismissed] = usePersistentState<boolean>(
+    "essential:onboarding-dismissed",
+    false,
+  );
+  const [quickStartDismissed, setQuickStartDismissed] = usePersistentState<boolean>(
+    "essential:quickstart-dismissed",
+    false,
+  );
+  const [visits, setVisits] = usePersistentState<number>("essential:visits", 0);
+  const [quota, setQuota] = usePersistentState<QuotaState>("essential:quota", INITIAL_QUOTA);
+  const [milestones, setMilestones] = usePersistentState<MilestoneState>(
+    "essential:milestones",
+    INITIAL_MILESTONES,
+  );
+  const [helpDismissedArr, setHelpDismissedArr] = usePersistentState<string[]>(
+    "essential:help-dismissed",
+    [],
+  );
+  // Transient state for the sage-pulse animation on recently-unlocked milestone.
+  const [recentlyUnlockedKey, setRecentlyUnlockedKey] = useState<string | null>(null);
+
+  const helpDismissedSet = useMemo(() => new Set(helpDismissedArr), [helpDismissedArr]);
+  const dismissHelp = useCallback(
+    (key: string) => {
+      setHelpDismissedArr((arr) => (arr.includes(key) ? arr : [...arr, key]));
+    },
+    [setHelpDismissedArr],
+  );
 
   // Real API endpoints
   const { data: health, loading: healthLoading, refetch: refetchHealth } = useApi<BrandHealth>("/api/console/brand-health");
@@ -4207,6 +5208,137 @@ export default function EssentialDashboard() {
   const { data: harch100, loading: harch100Loading } = useApi<Harch100Resp>("/api/harch100/latest");
 
   const alertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
+  const sourcesCount = Math.min(20, sources?.sources?.length ?? 0);
+
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? "Utilisateur";
+
+  // ─── Daily quota reset (HarchIQ) + monthly reset (WhatsApp) ─────────
+  useEffect(() => {
+    const today = todayISO();
+    const thisMonth = currentMonthISO();
+    setQuota((q) => {
+      let next = q;
+      if (q.date !== today) {
+        next = { ...next, used: 0, date: today };
+      }
+      if (q.whatsappMonth !== thisMonth) {
+        next = { ...next, whatsappUsed: 0, whatsappMonth: thisMonth };
+      }
+      return next;
+    });
+  }, [setQuota]);
+
+  // ─── Bump visit counter on mount (used to hide QuickStart after 3 visits)
+  useEffect(() => {
+    setVisits((v) => v + 1);
+  }, [setVisits]);
+
+  // ─── Milestone: firstArticle (mentionCount24h > 0) ─────────────────
+  useEffect(() => {
+    if (!health) return;
+    if ((health.mentionCount24h ?? 0) > 0 && !milestones.firstArticle) {
+      setMilestones((m) => ({
+        ...m,
+        firstArticle: true,
+        lastUnlockedAt: Date.now(),
+      }));
+      setRecentlyUnlockedKey("firstArticle");
+      toast.success("Jalon débloqué · Premier article analysé", {
+        description: "Harch surveille maintenant votre réputation en continu.",
+      });
+      const t = setTimeout(() => setRecentlyUnlockedKey(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [health, milestones.firstArticle, setMilestones]);
+
+  // ─── Milestone: firstWeek (firstVisitDate >= 7 days ago) ───────────
+  useEffect(() => {
+    if (milestones.firstWeek) return;
+    if (!milestones.firstVisitDate) return;
+    const first = new Date(milestones.firstVisitDate);
+    if (isNaN(first.getTime())) return;
+    const days = (Date.now() - first.getTime()) / (1000 * 60 * 60 * 24);
+    if (days >= 7) {
+      setMilestones((m) => ({
+        ...m,
+        firstWeek: true,
+        lastUnlockedAt: Date.now(),
+      }));
+      setRecentlyUnlockedKey("firstWeek");
+      toast.success("Jalon débloqué · Première semaine complète", {
+        description: "7 jours de veille réputationnelle consécutifs.",
+      });
+      const t = setTimeout(() => setRecentlyUnlockedKey(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [milestones.firstWeek, milestones.firstVisitDate, setMilestones]);
+
+  const handleFirstQuestion = useCallback(() => {
+    setMilestones((m) => {
+      if (m.firstQuestion) return m;
+      setRecentlyUnlockedKey("firstQuestion");
+      toast.success("Jalon débloqué · Première question HarchIQ", {
+        description: "Votre assistant IA est maintenant actif.",
+      });
+      setTimeout(() => setRecentlyUnlockedKey(null), 4000);
+      return { ...m, firstQuestion: true, lastUnlockedAt: Date.now() };
+    });
+  }, [setMilestones]);
+
+  const handleReportDownload = useCallback(() => {
+    setMilestones((m) => {
+      if (m.firstReport) return m;
+      setRecentlyUnlockedKey("firstReport");
+      toast.success("Jalon débloqué · Premier rapport téléchargé", {
+        description: "Partagez-le avec votre équipe pour aligner la stratégie.",
+      });
+      setTimeout(() => setRecentlyUnlockedKey(null), 4000);
+      return { ...m, firstReport: true, lastUnlockedAt: Date.now() };
+    });
+  }, [setMilestones]);
+
+  const handleQuickAction = useCallback(
+    (id: string) => {
+      if (id === "score") scrollToSection("score");
+      else if (id === "harchiq") scrollToSection("ai-workspace");
+      else if (id === "alertes") scrollToSection("alertes");
+      else if (id === "rapport") {
+        // Trigger CSV export (mirrors BoiteOutilsCard handler) + milestone
+        (async () => {
+          try {
+            toast.info("Export CSV en cours…");
+            const r = await fetch("/api/console/export-csv?type=articles&days=90");
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const blob = await r.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `harch-articles-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success("Export CSV téléchargé");
+            handleReportDownload();
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "Erreur";
+            toast.error(`Export CSV échoué: ${msg}`);
+          }
+        })();
+      }
+    },
+    [handleReportDownload],
+  );
+
+  const milestoneProgress = useMemo(() => {
+    return (["firstArticle", "firstQuestion", "firstReport", "firstWeek"] as const).filter(
+      (k) => milestones[k],
+    ).length;
+  }, [milestones]);
+
+  const milestoneRecentlyUnlocked = recentlyUnlockedKey !== null;
+  const showQuickStart = !quickStartDismissed && visits <= 3;
 
   // ─── Active section tracking via IntersectionObserver ──────────────
   useEffect(() => {
@@ -4234,6 +5366,15 @@ export default function EssentialDashboard() {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: "#FFFFFF", fontFamily: FONT_SANS }}>
+      {/* ENV-ESSENTIAL — sage pulse keyframe + scoped global helper */}
+      <style>{`
+        @keyframes sage-pulse-kf {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74,123,95,0.4); }
+          50% { box-shadow: 0 0 0 6px rgba(74,123,95,0); }
+        }
+        .sage-pulse { animation: sage-pulse-kf 1.6s ease-out 2; border-radius: 10px; }
+      `}</style>
+
       {/* Sidebar — desktop sticky aside */}
       <aside
         className="hidden lg:block sticky top-0 h-screen shrink-0"
@@ -4269,9 +5410,28 @@ export default function EssentialDashboard() {
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuClick={() => setMobileNavOpen(true)} alertCount={alertCount} />
+        <Header
+          onMenuClick={() => setMobileNavOpen(true)}
+          alertCount={alertCount}
+          quota={quota}
+          sourcesCount={sourcesCount}
+          milestoneProgress={milestoneProgress}
+          milestoneTotal={4}
+          milestoneRecentlyUnlocked={milestoneRecentlyUnlocked}
+          onMilestoneClick={() => scrollToSection("jalons")}
+        />
 
         <main className="flex-1 px-4 lg:px-6 py-6">
+          {/* ENV-ESSENTIAL — Welcome onboarding banner (dismissible, persisted) */}
+          {!onboardingDismissed && (
+            <div className="mb-4 lg:mb-6">
+              <WelcomeOnboardingBanner
+                userName={userName}
+                onDismiss={() => setOnboardingDismissed(true)}
+              />
+            </div>
+          )}
+
           <motion.div
             className="grid grid-cols-12 gap-4 lg:gap-6"
             variants={containerStagger}
@@ -4279,16 +5439,40 @@ export default function EssentialDashboard() {
             animate="animate"
           >
             {/* SECTION 1 — HarchIQ AI Workspace (hero, full width) */}
-            <HarchIQWorkspace />
+            <HarchIQWorkspace
+              quota={quota}
+              setQuota={setQuota}
+              dismissedHelp={helpDismissedSet}
+              onDismissHelp={dismissHelp}
+              onFirstQuestion={handleFirstQuestion}
+            />
+
+            {/* ENV-ESSENTIAL — Quick Start card (first 3 visits, dismissible) */}
+            {showQuickStart && (
+              <QuickStartCard
+                onAction={handleQuickAction}
+                onDismiss={() => setQuickStartDismissed(true)}
+              />
+            )}
 
             {/* SECTION 2 — Score de Réputation */}
-            <ScoreReputationCard health={health} loading={healthLoading} />
+            <ScoreReputationCard
+              health={health}
+              loading={healthLoading}
+              dismissedHelp={helpDismissedSet}
+              onDismissHelp={dismissHelp}
+            />
 
             {/* SECTIONS 3-6 — KPI strip */}
             <SentimentMoyenKpi health={health} trend={sentimentTrend} loading={healthLoading} />
             <MentionsJourKpi health={health} trend={sentimentTrend} loading={healthLoading} />
             <CitationsIaKpi ai={aiVis} loading={aiVisLoading} />
-            <AlertesActivesKpi alerts={alerts} loading={alertsLoading} />
+            <AlertesActivesKpi
+              alerts={alerts}
+              loading={alertsLoading}
+              dismissedHelp={helpDismissedSet}
+              onDismissHelp={dismissHelp}
+            />
 
             {/* SECTIONS 7-8 — Chart row */}
             <TendanceSentimentCard
@@ -4296,8 +5480,15 @@ export default function EssentialDashboard() {
               range={sentimentRange}
               onRangeChange={setSentimentRange}
               loading={trendLoading}
+              dismissedHelp={helpDismissedSet}
+              onDismissHelp={dismissHelp}
             />
-            <DiversiteSourcesCard sources={sources} loading={sourcesLoading} />
+            <DiversiteSourcesCard
+              sources={sources}
+              loading={sourcesLoading}
+              dismissedHelp={helpDismissedSet}
+              onDismissHelp={dismissHelp}
+            />
 
             {/* SECTIONS 9-10 — Feed row */}
             <DernieresMentionsCard alerts={alerts} loading={alertsLoading} />
@@ -4403,6 +5594,12 @@ export default function EssentialDashboard() {
 
             {/* SECTION 20 — Boîte à outils + Upsell */}
             <BoiteOutilsCard />
+
+            {/* SECTION 21 — ENV-ESSENTIAL — Milestone tracker (gamification) */}
+            <MilestoneTrackerCard
+              milestones={milestones}
+              recentlyUnlockedKey={recentlyUnlockedKey}
+            />
           </motion.div>
 
           {/* Silent refresh trigger — hidden refetch helpers (no UI) */}
@@ -4431,7 +5628,7 @@ export default function EssentialDashboard() {
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE ESSENTIEL · v10X
+              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL
             </div>
             <div
               style={{

@@ -140,6 +140,12 @@ import {
   Webhook,
   X,
   Zap,
+  Clock,
+  FileCheck,
+  Flag,
+  Landmark,
+  Lock,
+  Trash2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1170,10 +1176,14 @@ function Header({
   onMenuClick,
   alertCount,
   userName,
+  milestoneProgress,
+  onMilestoneClick,
 }: {
   onMenuClick: () => void;
   alertCount: number;
   userName?: string | null;
+  milestoneProgress?: { done: number; total: number };
+  onMilestoneClick?: () => void;
 }) {
   return (
     <header
@@ -1238,6 +1248,43 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
+        {milestoneProgress && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onMilestoneClick}
+                  className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FAFAFA",
+                  }}
+                  aria-label={`Jalons exécutifs : ${milestoneProgress.done} sur ${milestoneProgress.total}`}
+                >
+                  <CheckCircle2 size={13} style={{ color: milestoneProgress.done === milestoneProgress.total ? SAGE : TEXT_MUTED }} />
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      letterSpacing: "0.08em",
+                      color: CHARCOAL,
+                      fontWeight: 700,
+                    }}
+                  >
+                    JALONS {milestoneProgress.done}/{milestoneProgress.total}
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>
+                  Jalons exécutifs — {milestoneProgress.done}/{milestoneProgress.total} validés
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -5754,6 +5801,1907 @@ function VeilleReglementaireCard({ regulatory, loading }: { regulatory: Regulato
 }
 
 // ════════════════════════════════════════════════════════════════════
+// SECTION 26 — GOVERNANCE COMMAND BAR (sticky, top of dashboard)
+// RBAC role display · DEFCON 1-5 toggle (accent → red when ≥ 4) ·
+// approval queue expandable · audit log shortcut
+// Persists: enterprise:defcon-level
+// ════════════════════════════════════════════════════════════════════
+
+type UserRole = "admin" | "compliance" | "ir" | "comms";
+
+interface ApprovalItem {
+  id: string;
+  title: string;
+  requester: string;
+  role: UserRole;
+  type: "briefing" | "crisis" | "api-key" | "compliance" | "report";
+  submittedAt: number;
+}
+
+const USER_ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Administrateur",
+  compliance: "Conformité",
+  ir: "Relations Investisseurs",
+  comms: "Communication",
+};
+
+const APPROVAL_TYPE_LABEL: Record<ApprovalItem["type"], string> = {
+  briefing: "Briefing",
+  crisis: "Crise",
+  "api-key": "Clé API",
+  compliance: "Conformité",
+  report: "Rapport",
+};
+
+const DEFAULT_APPROVALS: ApprovalItem[] = [
+  { id: "AP-001", title: "Briefing COMEX Q3 — publication", requester: "Karim B.", role: "comms", type: "briefing", submittedAt: Date.now() - 3600_000 * 4 },
+  { id: "AP-002", title: "Révocation clé API legacy", requester: "Sophie M.", role: "compliance", type: "api-key", submittedAt: Date.now() - 3600_000 * 11 },
+  { id: "AP-003", title: "Rapport ESG trimestriel — validation", requester: "Yasmine T.", role: "ir", type: "report", submittedAt: Date.now() - 3600_000 * 27 },
+  { id: "AP-004", title: "Sortie mode crise DEFCON 4", requester: "Karim B.", role: "comms", type: "crisis", submittedAt: Date.now() - 3600_000 * 49 },
+];
+
+function computeDefconLabel(lvl: 1 | 2 | 3 | 4 | 5): string {
+  return ["Paix", "Vigilance", "Surveillance renforcée", "Crise active", "Crise majeure"][lvl - 1];
+}
+
+function GovernanceCommandBar({
+  defconLevel,
+  onDefconChange,
+  userRole,
+  approvals,
+  onApprove,
+  onReject,
+  onAuditShortcut,
+}: {
+  defconLevel: 1 | 2 | 3 | 4 | 5;
+  onDefconChange: (lvl: 1 | 2 | 3 | 4 | 5) => void;
+  userRole: UserRole;
+  approvals: ApprovalItem[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onAuditShortcut: () => void;
+}) {
+  const [queueOpen, setQueueOpen] = useState(false);
+  const crisisActive = defconLevel >= 4;
+  const accent = crisisActive ? NEGATIVE : SAGE;
+
+  return (
+    <div
+      className="sticky z-20 mx-4 lg:mx-6 mt-2"
+      style={{
+        top: 56,
+        borderRadius: 10,
+        border: `1px solid ${crisisActive ? NEGATIVE : BORDER_STRONG}`,
+        backgroundColor: crisisActive ? "rgba(239,68,68,0.04)" : "#FFFFFF",
+        boxShadow: "0 1px 2px rgba(10,10,10,0.04)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-md"
+              style={{ width: 24, height: 24, backgroundColor: SAGE_BG, color: SAGE }}
+            >
+              <ShieldCheck size={13} />
+            </div>
+            <div className="leading-tight">
+              <div style={FONT_HEADER}>RÔLE</div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                {USER_ROLE_LABELS[userRole]}
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden sm:block" style={{ width: 1, height: 28, backgroundColor: BORDER }} />
+
+          <div className="flex items-center gap-2">
+            <div className="leading-tight">
+              <div style={FONT_HEADER}>MODE CRISE</div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: accent }}>
+                DEFCON {defconLevel} · {computeDefconLabel(defconLevel)}
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((lvl) => {
+                const isActive = lvl === defconLevel;
+                return (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => onDefconChange(lvl as 1 | 2 | 3 | 4 | 5)}
+                    className="rounded-md transition-all"
+                    style={{
+                      width: 24,
+                      height: 22,
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: isActive ? "#FFFFFF" : TEXT_MUTED,
+                      backgroundColor: isActive ? DEFCON_COLORS[lvl - 1] : "#FAFAFA",
+                      border: `1px solid ${isActive ? DEFCON_COLORS[lvl - 1] : BORDER}`,
+                    }}
+                    aria-label={`DEFCON ${lvl}`}
+                  >
+                    {lvl}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setQueueOpen(!queueOpen)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors hover:bg-[#FAFAFA]"
+            style={{
+              border: `1px solid ${approvals.length > 0 ? accent : BORDER}`,
+              backgroundColor: approvals.length > 0 ? `${accent}10` : "#FFFFFF",
+            }}
+          >
+            <GitBranch size={13} style={{ color: accent }} />
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: CHARCOAL, letterSpacing: "0.06em" }}>
+              APPROBATIONS
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 18,
+                height: 18,
+                padding: "0 5px",
+                borderRadius: 9,
+                backgroundColor: accent,
+                color: "#FFFFFF",
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                fontWeight: 700,
+              }}
+            >
+              {approvals.length}
+            </span>
+            <ChevronDown
+              size={12}
+              style={{
+                color: TEXT_MUTED,
+                transform: queueOpen ? "rotate(180deg)" : "none",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={onAuditShortcut}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors hover:bg-[#FAFAFA]"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+          >
+            <FileText size={13} style={{ color: TEXT_MUTED }} />
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: CHARCOAL, letterSpacing: "0.06em" }}>
+              AUDIT
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {queueOpen && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          transition={{ duration: 0.2 }}
+          style={{ borderTop: `1px solid ${BORDER}` }}
+        >
+          <div className="px-4 py-3">
+            <div style={FONT_HEADER} className="mb-2">File d'approbation ({approvals.length})</div>
+            {approvals.length === 0 ? (
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, padding: "12px 0" }}>
+                Aucune approbation en attente. Tous les workflows sont à jour.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {approvals.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex items-center justify-between gap-3 rounded-md px-3 py-2"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="h-4"
+                          style={{ fontFamily: FONT_MONO, fontSize: 8, backgroundColor: SAGE_BG, color: SAGE }}
+                        >
+                          {APPROVAL_TYPE_LABEL[a.type]}
+                        </Badge>
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {a.title}
+                        </span>
+                      </div>
+                      <div className="mt-0.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                        {a.requester} · {USER_ROLE_LABELS[a.role]} · {fmtRelative(a.submittedAt)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onApprove(a.id)}
+                        className="inline-flex items-center justify-center rounded-md"
+                        style={{ width: 26, height: 26, backgroundColor: SAGE, color: "#FFFFFF" }}
+                        aria-label="Approuver"
+                      >
+                        <CheckCircle2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onReject(a.id)}
+                        className="inline-flex items-center justify-center rounded-md"
+                        style={{ width: 26, height: 26, border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", color: TEXT_MUTED }}
+                        aria-label="Rejeter"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 27 — BOARD BRIEFING GENERATOR
+// 4 templates · one-click HarchIQ generate (POST /api/console/ask) ·
+// PDF-ready layout (exec summary / key risks / recommendations) ·
+// schedule next generation (monthly/quarterly)
+// Persists: enterprise:briefing-schedule
+// ════════════════════════════════════════════════════════════════════
+
+type BriefingTemplateId = "comex" | "esg" | "conformite" | "geopolitique";
+
+interface BriefingTemplate {
+  id: BriefingTemplateId;
+  label: string;
+  description: string;
+  prompt: string;
+  Icon: typeof FileText;
+}
+
+const BRIEFING_TEMPLATES_ENT: BriefingTemplate[] = [
+  {
+    id: "comex",
+    label: "Briefing COMEX",
+    description: "Synthèse exécutive pour le comité de direction",
+    prompt: "Rédigez un briefing COMEX exécutif : résumé stratégique (5 lignes), 3 risques clés, 3 recommandations actionnables, indicateurs à surveiller. Ton institutionnel, format board-ready.",
+    Icon: FileText,
+  },
+  {
+    id: "esg",
+    label: "Rapport risque ESG",
+    description: "Audit environnemental, social, gouvernance",
+    prompt: "Générez un rapport risque ESG : score par pilier (E/S/G), faiblesses identifiées, comparaison concurrents, recommandations de publication, conformité réglementaire.",
+    Icon: Leaf,
+  },
+  {
+    id: "conformite",
+    label: "Audit conformité",
+    description: "CNDP, AMMC, BAM, ESG — état des lieux",
+    prompt: "Produisez un audit conformité : statut CNDP (Loi 09-08), AMMC, BAM, ESG. Pour chaque régulateur : statut, dernière mise à jour, prochaine échéance, risque résiduel, action corrective prioritaire.",
+    Icon: Scale,
+  },
+  {
+    id: "geopolitique",
+    label: "Cartographie géopolitique",
+    description: "Risque pays · narratifs par marché francophone",
+    prompt: "Établissez une cartographie géopolitique de la réputation sur 8 marchés francophones (MA, FR, BE, CH, CA, TN, SN, CI) : sentiment par marché, narratifs dominants, risque pays, recommandations par zone.",
+    Icon: Globe,
+  },
+];
+
+type BriefingCadence = "mensuel" | "trimestriel" | "aucune";
+
+interface BriefingSchedule {
+  templateId: BriefingTemplateId;
+  cadence: Exclude<BriefingCadence, "aucune">;
+  nextRun: number;
+  lastRun: number | null;
+}
+
+interface GeneratedBriefing {
+  templateId: BriefingTemplateId;
+  templateLabel: string;
+  generatedAt: number;
+  content: string;
+  sources: AskSource[];
+}
+
+function BoardBriefingGeneratorCard({
+  schedule,
+  onScheduleChange,
+}: {
+  schedule: BriefingSchedule | null;
+  onScheduleChange: (s: BriefingSchedule | null) => void;
+}) {
+  const [selectedTemplate, setSelectedTemplate] = useState<BriefingTemplateId>("comex");
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<GeneratedBriefing | null>(null);
+  const [cadenceOpen, setCadenceOpen] = useState(false);
+
+  const template = BRIEFING_TEMPLATES_ENT.find((t) => t.id === selectedTemplate)!;
+
+  const handleGenerate = useCallback(async () => {
+    setGenerating(true);
+    setResult(null);
+    try {
+      const r = await fetch("/api/console/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: template.prompt }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err?.error ?? `HTTP ${r.status}`);
+      }
+      const data: AskResponse = await r.json();
+      setResult({
+        templateId: template.id,
+        templateLabel: template.label,
+        generatedAt: Date.now(),
+        content: data.answer || "Aucune réponse générée.",
+        sources: data.sources ?? [],
+      });
+      toast.success("Briefing généré par HarchIQ.", { description: template.label });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur réseau";
+      toast.error(`Échec de génération : ${msg}`);
+    } finally {
+      setGenerating(false);
+    }
+  }, [template]);
+
+  const handleSchedule = (cadence: BriefingCadence) => {
+    if (cadence === "aucune") {
+      onScheduleChange(null);
+      toast.info("Programmation désactivée.");
+    } else {
+      const next = new Date();
+      if (cadence === "mensuel") next.setMonth(next.getMonth() + 1);
+      else next.setMonth(next.getMonth() + 3);
+      onScheduleChange({
+        templateId: selectedTemplate,
+        cadence,
+        nextRun: next.getTime(),
+        lastRun: schedule?.lastRun ?? null,
+      });
+      toast.success(`Briefing programmé : ${cadence}.`, { description: `Prochaine génération : ${format(next, "d MMM yyyy", { locale: fr })}` });
+    }
+    setCadenceOpen(false);
+  };
+
+  const handleExportPdf = () => {
+    if (!result) return;
+    toast.success("Export PDF lancé — vous recevrez le fichier par email.", {
+      description: `${result.templateLabel} · ${result.content.length} caractères`,
+    });
+  };
+
+  const contentLines = useMemo(() => (result ? result.content.split("\n") : []), [result]);
+
+  return (
+    <motion.div id="briefing-board" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="26 · Générateur Briefing Board-Ready"
+          right={
+            <div className="flex items-center gap-2">
+              {schedule && (
+                <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                  <Clock size={10} className="mr-1" />
+                  {schedule.cadence.toUpperCase()}
+                </Badge>
+              )}
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                HARCHIQ · ILLIMITÉ
+              </Badge>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-4 space-y-3">
+            <div style={FONT_HEADER}>MODÈLE</div>
+            <div className="grid grid-cols-1 gap-2">
+              {BRIEFING_TEMPLATES_ENT.map((t) => {
+                const { Icon } = t;
+                const isActive = t.id === selectedTemplate;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTemplate(t.id)}
+                    className="text-left rounded-md p-3 transition-all"
+                    style={{
+                      border: `1px solid ${isActive ? SAGE : BORDER}`,
+                      backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                    }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div
+                        className="flex items-center justify-center rounded-md shrink-0"
+                        style={{ width: 28, height: 28, backgroundColor: isActive ? SAGE : "#FAFAFA", color: isActive ? "#FFFFFF" : TEXT_MUTED }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: isActive ? SAGE : CHARCOAL }}>
+                          {t.label}
+                        </div>
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+                          {t.description}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={FONT_HEADER} className="mt-4">ACTION</div>
+            <Button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+              className="w-full h-9"
+              style={{ fontFamily: FONT_MONO, fontSize: 11, backgroundColor: SAGE, color: "#FFFFFF" }}
+            >
+              {generating ? (
+                <>
+                  <RefreshCw size={13} className="mr-1.5 animate-spin" />
+                  GÉNÉRATION…
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} className="mr-1.5" />
+                  GÉNÉRER PAR HARCHIQ
+                </>
+              )}
+            </Button>
+
+            <div className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCadenceOpen(!cadenceOpen)}
+                className="w-full h-8"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+              >
+                <CalendarDays size={12} className="mr-1.5" />
+                PROGRAMMER LA PROCHAINE
+                <ChevronDown size={11} className="ml-1.5" style={{ transform: cadenceOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </Button>
+              {cadenceOpen && (
+                <div className="absolute z-10 mt-1 w-full rounded-md shadow-lg" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}>
+                  {(["mensuel", "trimestriel", "aucune"] as BriefingCadence[]).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleSchedule(c)}
+                      className="block w-full text-left px-3 py-2 hover:bg-[#FAFAFA]"
+                      style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      {c === "mensuel" ? "Mensuel (tous les mois)" : c === "trimestriel" ? "Trimestriel (tous les 3 mois)" : "Désactiver la programmation"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {schedule && (
+              <div className="rounded-md p-2.5" style={{ border: `1px solid ${SAGE_BG_STRONG}`, backgroundColor: SAGE_BG }}>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={11} style={{ color: SAGE }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, fontWeight: 700 }}>
+                    PROCHAINE · {format(schedule.nextRun, "d MMM yyyy", { locale: fr })}
+                  </span>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: SAGE, marginTop: 2 }}>
+                  {schedule.cadence} · {BRIEFING_TEMPLATES_ENT.find((t) => t.id === schedule.templateId)?.label}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-8">
+            <div className="flex items-center justify-between mb-2">
+              <div style={FONT_HEADER}>DOCUMENT GÉNÉRÉ — FORMAT BOARD-READY</div>
+              {result && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                  onClick={handleExportPdf}
+                >
+                  <Download size={12} className="mr-1" />
+                  EXPORTER PDF
+                </Button>
+              )}
+            </div>
+            <div
+              className="rounded-md p-4"
+              style={{
+                border: `1px solid ${BORDER}`,
+                backgroundColor: "#FFFFFF",
+                minHeight: 320,
+                maxHeight: 480,
+                overflowY: "auto",
+              }}
+            >
+              {!result && !generating && (
+                <div className="flex flex-col items-center justify-center text-center" style={{ paddingTop: 60 }}>
+                  <FileText size={28} style={{ color: TEXT_MUTED }} />
+                  <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 12, maxWidth: 320 }}>
+                    Sélectionnez un modèle puis cliquez sur « Générer par HarchIQ ». Le document sera structuré (résumé exécutif, risques clés, recommandations) et prêt pour le COMEX.
+                  </p>
+                </div>
+              )}
+              {generating && (
+                <div className="flex flex-col items-center justify-center" style={{ paddingTop: 60 }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ color: SAGE }} />
+                  <p style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE, marginTop: 12, letterSpacing: "0.08em" }}>
+                    HARCHIQ COMPILE LE BRIEFING…
+                  </p>
+                </div>
+              )}
+              {result && (
+                <div>
+                  <div className="mb-3 pb-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    <div style={FONT_HEADER}>DOCUMENT CONFIDENTIEL · COMEX</div>
+                    <h3 style={{ fontFamily: FONT_SANS, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 4 }}>
+                      {result.templateLabel}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                      <span>HARCH ATELIER</span>
+                      <span>·</span>
+                      <span>{format(result.generatedAt, "d MMM yyyy · HH:mm", { locale: fr })}</span>
+                      <span>·</span>
+                      <span>{result.content.length} caractères</span>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      color: TEXT_BODY,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {contentLines.map((line, i) => (
+                      <div key={i} style={{ marginBottom: 4 }}>
+                        {line || "\u00A0"}
+                      </div>
+                    ))}
+                  </div>
+                  {result.sources.length > 0 && (
+                    <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                      <div style={FONT_HEADER} className="mb-1.5">SOURCES ({result.sources.length})</div>
+                      <div className="space-y-1">
+                        {result.sources.slice(0, 5).map((s) => (
+                          <div key={s.id} style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                            · {s.title}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 28 — COMPLIANCE COCKPIT
+// 4 regulatory panels: CNDP (Loi 09-08), AMMC, BAM, ESG ·
+// status / last audit / next deadline / risk score ·
+// audit trail (last 10 actions) · export compliance report
+// Persists: enterprise:compliance
+// ════════════════════════════════════════════════════════════════════
+
+type ComplianceStatus = "conforme" | "surveillance" | "non-conforme";
+type ComplianceRegulator = "CNDP" | "AMMC" | "BAM" | "ESG";
+
+interface CompliancePanel {
+  regulator: ComplianceRegulator;
+  label: string;
+  law: string;
+  status: ComplianceStatus;
+  lastAudit: number;
+  nextDeadline: number;
+  riskScore: number;
+  notes: string;
+}
+
+interface ComplianceAuditEntry {
+  id: string;
+  regulator: ComplianceRegulator;
+  action: string;
+  user: string;
+  timestamp: number;
+}
+
+interface ComplianceState {
+  panels: CompliancePanel[];
+  auditTrail: ComplianceAuditEntry[];
+}
+
+const COMPLIANCE_INITIAL: ComplianceState = {
+  panels: [
+    {
+      regulator: "CNDP", label: "CNDP", law: "Loi 09-08",
+      status: "conforme",
+      lastAudit: Date.now() - 86400_000 * 42,
+      nextDeadline: Date.now() + 86400_000 * 38,
+      riskScore: 18,
+      notes: "Déclarations CIL à jour. Registre des traitements conforme. Autorisation n°2024-CDP-314 renouvelée.",
+    },
+    {
+      regulator: "AMMC", label: "AMMC", law: "Code de déontologie AMMC",
+      status: "surveillance",
+      lastAudit: Date.now() - 86400_000 * 95,
+      nextDeadline: Date.now() + 86400_000 * 12,
+      riskScore: 41,
+      notes: "Information privilégiée — délai de publication à surveiller. Obligation de déclaration des opérations dirigées à renforcer.",
+    },
+    {
+      regulator: "BAM", label: "BAM", law: "Circulaire BAM G-SIB",
+      status: "conforme",
+      lastAudit: Date.now() - 86400_000 * 18,
+      nextDeadline: Date.now() + 86400_000 * 72,
+      riskScore: 22,
+      notes: "Bâle III — ratios de solvabilité publiés. Reporting prudentiel mensuel conforme. Stress test semestriel validé.",
+    },
+    {
+      regulator: "ESG", label: "ESG", law: "CSRD · Taxonomie verte UE",
+      status: "surveillance",
+      lastAudit: Date.now() - 86400_000 * 120,
+      nextDeadline: Date.now() + 86400_000 * 25,
+      riskScore: 35,
+      notes: "Empreinte carbone Scope 3 à documenter. Diversité conseil — quota 30% atteint. Indépendance administrateurs à renforcer.",
+    },
+  ],
+  auditTrail: [
+    { id: "AU-001", regulator: "CNDP", action: "Renouvellement autorisation CDP-314", user: "Sophie M.", timestamp: Date.now() - 3600_000 * 6 },
+    { id: "AU-002", regulator: "AMMC", action: "Déclaration insider trading Q3", user: "Karim B.", timestamp: Date.now() - 3600_000 * 18 },
+    { id: "AU-003", regulator: "ESG", action: "Publication rapport RSE 2024", user: "Yasmine T.", timestamp: Date.now() - 3600_000 * 26 },
+    { id: "AU-004", regulator: "BAM", action: "Reporting prudentiel octobre", user: "Sophie M.", timestamp: Date.now() - 3600_000 * 38 },
+    { id: "AU-005", regulator: "CNDP", action: "Audit registre des traitements", user: "Leila R.", timestamp: Date.now() - 3600_000 * 49 },
+    { id: "AU-006", regulator: "AMMC", action: "Mise à jour info privilégiée", user: "Karim B.", timestamp: Date.now() - 3600_000 * 62 },
+    { id: "AU-007", regulator: "ESG", action: "Calcul Scope 2 — grid factor", user: "Yasmine T.", timestamp: Date.now() - 3600_000 * 71 },
+    { id: "AU-008", regulator: "BAM", action: "Stress test semestriel", user: "Sophie M.", timestamp: Date.now() - 3600_000 * 88 },
+    { id: "AU-009", regulator: "CNDP", action: "Désignation CIL suppléant", user: "Leila R.", timestamp: Date.now() - 3600_000 * 102 },
+    { id: "AU-010", regulator: "AMMC", action: "Déclaration dirigeants Q2", user: "Karim B.", timestamp: Date.now() - 3600_000 * 124 },
+  ],
+};
+
+const COMPLIANCE_STATUS_LABEL: Record<ComplianceStatus, string> = {
+  conforme: "Conforme",
+  surveillance: "Surveillance",
+  "non-conforme": "Non-conforme",
+};
+
+const COMPLIANCE_STATUS_COLOR: Record<ComplianceStatus, string> = {
+  conforme: POSITIVE,
+  surveillance: NEUTRAL_AMBER,
+  "non-conforme": NEGATIVE,
+};
+
+const COMPLIANCE_REGULATOR_ICON: Record<ComplianceRegulator, typeof ShieldCheck> = {
+  CNDP: Lock,
+  AMMC: Landmark,
+  BAM: Building2,
+  ESG: Leaf,
+};
+
+function ComplianceCockpitCard({
+  state,
+  onStateChange,
+}: {
+  state: ComplianceState;
+  onStateChange: (s: ComplianceState) => void;
+}) {
+  const [expandedReg, setExpandedReg] = useState<ComplianceRegulator | null>(null);
+
+  const cycleStatus = (reg: ComplianceRegulator) => {
+    const order: ComplianceStatus[] = ["conforme", "surveillance", "non-conforme"];
+    const currentPanel = state.panels.find((p) => p.regulator === reg);
+    if (!currentPanel) return;
+    const idx = order.indexOf(currentPanel.status);
+    const nextStatus = order[(idx + 1) % order.length];
+    const panels = state.panels.map((p) => p.regulator === reg ? { ...p, status: nextStatus } : p);
+    const newEntry: ComplianceAuditEntry = {
+      id: `AU-${String(state.auditTrail.length + 1).padStart(3, "0")}`,
+      regulator: reg,
+      action: `Statut mis à jour : ${COMPLIANCE_STATUS_LABEL[nextStatus]}`,
+      user: "Karim B.",
+      timestamp: Date.now(),
+    };
+    onStateChange({ panels, auditTrail: [newEntry, ...state.auditTrail].slice(0, 10) });
+    toast.success(`Statut ${reg} mis à jour : ${COMPLIANCE_STATUS_LABEL[nextStatus]}.`);
+  };
+
+  const handleExport = () => {
+    toast.success("Rapport de conformité exporté (PDF).", {
+      description: `${state.panels.length} régulateurs · ${state.auditTrail.length} entrées d'audit`,
+    });
+  };
+
+  const overallRisk = Math.round(state.panels.reduce((s, p) => s + p.riskScore, 0) / state.panels.length);
+  const nonConformeCount = state.panels.filter((p) => p.status === "non-conforme").length;
+  const surveillanceCount = state.panels.filter((p) => p.status === "surveillance").length;
+
+  return (
+    <motion.div id="compliance-cockpit" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="27 · Compliance Cockpit"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: overallRisk >= 40 ? `${NEGATIVE}15` : SAGE_BG, color: overallRisk >= 40 ? NEGATIVE : SAGE }}>
+                RISQUE GLOBAL · {overallRisk}/100
+              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={handleExport}
+              >
+                <Download size={12} className="mr-1" />
+                EXPORT PDF
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {state.panels.map((p) => {
+            const Icon = COMPLIANCE_REGULATOR_ICON[p.regulator];
+            const color = COMPLIANCE_STATUS_COLOR[p.status];
+            const isExpanded = expandedReg === p.regulator;
+            const deadlineSoon = p.nextDeadline < Date.now() + 86400_000 * 14;
+            return (
+              <div
+                key={p.regulator}
+                className="rounded-lg p-3"
+                style={{ border: `1px solid ${isExpanded ? color : BORDER}`, backgroundColor: isExpanded ? `${color}08` : "#FFFFFF" }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="flex items-center justify-center rounded-md"
+                      style={{ width: 26, height: 26, backgroundColor: SAGE_BG, color: SAGE }}
+                    >
+                      <Icon size={13} />
+                    </div>
+                    <div className="leading-tight">
+                      <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{p.label}</div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{p.law}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => cycleStatus(p.regulator)}
+                    className="rounded-md px-1.5 py-0.5"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "#FFFFFF",
+                      backgroundColor: color,
+                    }}
+                    aria-label={`Changer statut ${p.regulator}`}
+                  >
+                    {COMPLIANCE_STATUS_LABEL[p.status].toUpperCase()}
+                  </button>
+                </div>
+                <div className="flex items-baseline gap-1 mb-1.5">
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color }}>
+                    {p.riskScore}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>/100</span>
+                </div>
+                <div style={{ width: "100%", height: 3, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 8 }}>
+                  <div style={{ width: `${p.riskScore}%`, height: "100%", backgroundColor: color, borderRadius: 2 }} />
+                </div>
+                <div className="space-y-0.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                  <div className="flex items-center justify-between">
+                    <span style={{ color: TEXT_MUTED }}>DERN. AUDIT</span>
+                    <span>{format(p.lastAudit, "d MMM", { locale: fr })}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span style={{ color: TEXT_MUTED }}>ÉCHÉANCE</span>
+                    <span style={{ color: deadlineSoon ? NEGATIVE : CHARCOAL, fontWeight: deadlineSoon ? 700 : 400 }}>
+                      {format(p.nextDeadline, "d MMM", { locale: fr })}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedReg(isExpanded ? null : p.regulator)}
+                  className="mt-2 w-full text-left"
+                  style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}
+                >
+                  {isExpanded ? "MASQUER ↑" : "DÉTAILS ↓"}
+                </button>
+                {isExpanded && (
+                  <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                    <p style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY, lineHeight: 1.45 }}>
+                      {p.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <FileCheck size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>PISTE D'AUDIT — 10 DERNIÈRES ACTIONS</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              {nonConformeCount} non-conforme · {surveillanceCount} surveillance
+            </span>
+          </div>
+          <div className="space-y-1 max-h-44 overflow-y-auto">
+            {state.auditTrail.map((e) => (
+              <div key={e.id} className="flex items-center gap-2 text-left" style={{ padding: "4px 0", borderBottom: `1px solid ${BORDER}` }}>
+                <span
+                  className="inline-flex items-center justify-center rounded-md shrink-0"
+                  style={{ width: 36, height: 18, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, backgroundColor: SAGE_BG, color: SAGE }}
+                >
+                  {e.regulator}
+                </span>
+                <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {e.action}
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, flexShrink: 0 }}>
+                  {e.user} · {fmtRelative(e.timestamp)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 29 — API & INTEGRATION HUB
+// API key management (generate/revoke) · webhook config (add endpoint, event types) ·
+// MCP integrations (ServiceNow, Splunk, Tableau, Slack, Teams) ·
+// rate limit display (600 req/min enterprise tier)
+// Persists: enterprise:integrations
+// ════════════════════════════════════════════════════════════════════
+
+type MCPConnectorId = "servicenow" | "splunk" | "tableau" | "slack" | "teams";
+type WebhookEventType = "crisis" | "sentiment-shift" | "milestone";
+
+interface ApiKeyRow {
+  id: string;
+  label: string;
+  prefix: string;
+  masked: string;
+  createdAt: number;
+  lastUsed: number | null;
+  status: "active" | "revoked";
+  callsThisMonth: number;
+}
+
+interface WebhookConfig {
+  id: string;
+  url: string;
+  events: WebhookEventType[];
+  status: "active" | "paused";
+  createdAt: number;
+}
+
+interface MCPConnector {
+  id: MCPConnectorId;
+  label: string;
+  description: string;
+  Icon: typeof Plug;
+  enabled: boolean;
+  lastSync: number | null;
+}
+
+interface IntegrationState {
+  apiKeys: ApiKeyRow[];
+  webhooks: WebhookConfig[];
+  connectors: MCPConnector[];
+}
+
+const MCP_CONNECTOR_DEFS: Omit<MCPConnector, "enabled" | "lastSync">[] = [
+  { id: "servicenow", label: "ServiceNow", description: "Tickets d'incident + workflows ITSM", Icon: Network },
+  { id: "splunk", label: "Splunk", description: "SIEM — ingestion des logs Harch", Icon: Database },
+  { id: "tableau", label: "Tableau", description: "Dashboards BI — export métriques", Icon: BarChart3 },
+  { id: "slack", label: "Slack", description: "Notifications temps réel canal #crise", Icon: MessageSquare },
+  { id: "teams", label: "Microsoft Teams", description: "Alertes DEFCON + briefings COMEX", Icon: Users },
+];
+
+const INTEGRATION_INITIAL: IntegrationState = {
+  apiKeys: [
+    {
+      id: "KEY-001", label: "Production — SIEM",
+      prefix: "harch_live_", masked: "••••••••3f7a",
+      createdAt: Date.now() - 86400_000 * 42,
+      lastUsed: Date.now() - 3600_000 * 2,
+      status: "active", callsThisMonth: 14327,
+    },
+    {
+      id: "KEY-002", label: "BI — Tableau",
+      prefix: "harch_live_", masked: "••••••••a92e",
+      createdAt: Date.now() - 86400_000 * 18,
+      lastUsed: Date.now() - 3600_000 * 9,
+      status: "active", callsThisMonth: 2841,
+    },
+  ],
+  webhooks: [
+    {
+      id: "WH-001",
+      url: "https://siem.harch-corp.local/webhooks/harch",
+      events: ["crisis", "sentiment-shift"],
+      status: "active",
+      createdAt: Date.now() - 86400_000 * 30,
+    },
+  ],
+  connectors: MCP_CONNECTOR_DEFS.map((c, i) => ({
+    ...c,
+    enabled: i < 2,
+    lastSync: i < 2 ? Date.now() - 3600_000 * (i + 1) : null,
+  })),
+};
+
+const WEBHOOK_EVENT_LABEL: Record<WebhookEventType, string> = {
+  crisis: "Crise DEFCON ≥ 3",
+  "sentiment-shift": "Bascul. sentiment ≥ 15 pts",
+  milestone: "Jalon exécutif atteint",
+};
+
+function ApiIntegrationHubCard({
+  state,
+  onStateChange,
+}: {
+  state: IntegrationState;
+  onStateChange: (s: IntegrationState) => void;
+}) {
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [newWebhookEvents, setNewWebhookEvents] = useState<Set<WebhookEventType>>(new Set<WebhookEventType>(["crisis"]));
+
+  const totalCalls = state.apiKeys.reduce((s, k) => s + k.callsThisMonth, 0);
+  const rateLimitPerMin = 600;
+  const currentPerMin = 142;
+  const ratePct = (currentPerMin / rateLimitPerMin) * 100;
+
+  const handleGenerateKey = () => {
+    const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    const newKey: ApiKeyRow = {
+      id: `KEY-${String(state.apiKeys.length + 1).padStart(3, "0")}`,
+      label: `Clé ${state.apiKeys.length + 1}`,
+      prefix: "harch_live_",
+      masked: `••••••••${rand.slice(-4)}`,
+      createdAt: Date.now(),
+      lastUsed: null,
+      status: "active",
+      callsThisMonth: 0,
+    };
+    onStateChange({ ...state, apiKeys: [...state.apiKeys, newKey] });
+    toast.success("Nouvelle clé API générée.", { description: `${newKey.id} · secret affiché une seule fois` });
+  };
+
+  const handleRevokeKey = (id: string) => {
+    const apiKeys = state.apiKeys.map((k) => k.id === id ? { ...k, status: "revoked" as const } : k);
+    onStateChange({ ...state, apiKeys });
+    toast.info(`Clé ${id} révoquée. Désactivation effective sous 24h.`);
+  };
+
+  const handleCopyKey = (k: ApiKeyRow) => {
+    navigator.clipboard?.writeText(`${k.prefix}${k.masked.replace(/•/g, "x")}`).then(() => toast.success("Clé masquée copiée dans le presse-papiers."));
+  };
+
+  const handleToggleConnector = (id: MCPConnectorId) => {
+    const connectors = state.connectors.map((c) => c.id === id ? { ...c, enabled: !c.enabled, lastSync: !c.enabled ? Date.now() : c.lastSync } : c);
+    onStateChange({ ...state, connectors });
+    const conn = state.connectors.find((c) => c.id === id);
+    if (conn) toast.success(`${conn.label} ${conn.enabled ? "déconnecté" : "connecté"}.`);
+  };
+
+  const handleAddWebhook = () => {
+    if (!newWebhookUrl.trim() || newWebhookEvents.size === 0) {
+      toast.error("URL et au moins 1 événement requis.");
+      return;
+    }
+    if (!/^https?:\/\/.+/.test(newWebhookUrl.trim())) {
+      toast.error("URL invalide (https:// requis).");
+      return;
+    }
+    const newWh: WebhookConfig = {
+      id: `WH-${String(state.webhooks.length + 1).padStart(3, "0")}`,
+      url: newWebhookUrl.trim(),
+      events: Array.from(newWebhookEvents),
+      status: "active",
+      createdAt: Date.now(),
+    };
+    onStateChange({ ...state, webhooks: [...state.webhooks, newWh] });
+    setNewWebhookUrl("");
+    setNewWebhookEvents(new Set<WebhookEventType>(["crisis"]));
+    toast.success("Webhook configuré.", { description: `${newWh.id} · ${newWh.events.length} événement(s)` });
+  };
+
+  const handleToggleWebhook = (id: string) => {
+    const webhooks = state.webhooks.map((w) => w.id === id ? { ...w, status: w.status === "active" ? "paused" as const : "active" as const } : w);
+    onStateChange({ ...state, webhooks });
+  };
+
+  const handleToggleWebhookEvent = (ev: WebhookEventType) => {
+    setNewWebhookEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(ev)) next.delete(ev);
+      else next.add(ev);
+      return next;
+    });
+  };
+
+  return (
+    <motion.div id="api-hub" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="28 · API & Integration Hub"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {rateLimitPerMin} REQ/MIN
+              </Badge>
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                ENTERPRISE TIER
+              </Badge>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Zap size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>RATE LIMIT (REQ/MIN)</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>{currentPerMin}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ {rateLimitPerMin}</span>
+            </div>
+            <Progress
+              value={ratePct}
+              className="h-1.5 mt-2"
+              style={{ ["--progress-background" as string]: BORDER_STRONG, ["--progress-foreground" as string]: ratePct > 80 ? NEGATIVE : SAGE } as CSSProperties}
+            />
+          </div>
+          <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Activity size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>APPELS CE MOIS</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>{fmtNumber(totalCalls)}</span>
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+              {state.apiKeys.filter((k) => k.status === "active").length} clé(s) active(s)
+            </div>
+          </div>
+          <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Plug size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>INTÉGRATIONS MCP</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>
+                {state.connectors.filter((c) => c.enabled).length}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ {state.connectors.length}</span>
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+              {state.connectors.filter((c) => c.enabled).map((c) => c.label).join(" · ") || "Aucune"}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Key size={13} style={{ color: SAGE }} />
+                <span style={FONT_HEADER}>CLÉS API</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+                onClick={handleGenerateKey}
+              >
+                <Plus size={11} className="mr-1" />
+                GÉNÉRER
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {state.apiKeys.map((k) => (
+                <div key={k.id} className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: k.status === "active" ? "#FFFFFF" : "#FAFAFA" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{k.label}</span>
+                        <Badge
+                          variant="secondary"
+                          className="h-4"
+                          style={{ fontFamily: FONT_MONO, fontSize: 8, backgroundColor: k.status === "active" ? SAGE_BG : BORDER_STRONG, color: k.status === "active" ? SAGE : TEXT_MUTED }}
+                        >
+                          {k.status === "active" ? "ACTIVE" : "RÉVOQUÉE"}
+                        </Badge>
+                      </div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+                        {k.prefix}{k.masked}
+                      </div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>
+                        {k.id} · {fmtNumber(k.callsThisMonth)} appels · {k.lastUsed ? `dernier ${fmtRelative(k.lastUsed)}` : "jamais utilisée"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyKey(k)}
+                        disabled={k.status === "revoked"}
+                        className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] disabled:opacity-40"
+                        style={{ width: 24, height: 24, border: `1px solid ${BORDER}` }}
+                        aria-label="Copier la clé"
+                      >
+                        <Copy size={11} style={{ color: TEXT_MUTED }} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRevokeKey(k.id)}
+                        disabled={k.status === "revoked"}
+                        className="inline-flex items-center justify-center rounded-md hover:bg-[#FEF2F2] disabled:opacity-40"
+                        style={{ width: 24, height: 24, border: `1px solid ${BORDER}` }}
+                        aria-label="Révoquer la clé"
+                      >
+                        <Trash2 size={11} style={{ color: NEGATIVE }} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Webhook size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>WEBHOOKS</span>
+            </div>
+            <div className="space-y-2 mb-3">
+              {state.webhooks.length === 0 && (
+                <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, padding: "8px 0" }}>
+                  Aucun webhook configuré.
+                </div>
+              )}
+              {state.webhooks.map((w) => (
+                <div key={w.id} className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {w.url}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleWebhook(w.id)}
+                          className="rounded px-1.5 py-0.5 shrink-0"
+                          style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, backgroundColor: w.status === "active" ? SAGE_BG : BORDER_STRONG, color: w.status === "active" ? SAGE : TEXT_MUTED }}
+                        >
+                          {w.status === "active" ? "ACTIF" : "PAUSE"}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        {w.events.map((ev) => (
+                          <span key={ev} style={{ fontFamily: FONT_MONO, fontSize: 8, color: SAGE, backgroundColor: SAGE_BG, padding: "1px 4px", borderRadius: 3 }}>
+                            {WEBHOOK_EVENT_LABEL[ev]}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md p-2.5" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+              <div style={FONT_HEADER} className="mb-1.5">AJOUTER UN ENDPOINT</div>
+              <input
+                type="url"
+                value={newWebhookUrl}
+                onChange={(e) => setNewWebhookUrl(e.target.value)}
+                placeholder="https://…"
+                className="w-full rounded-md px-2 py-1.5 mb-2 outline-none"
+                style={{ fontFamily: FONT_MONO, fontSize: 11, border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}
+              />
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                {(["crisis", "sentiment-shift", "milestone"] as WebhookEventType[]).map((ev) => {
+                  const isOn = newWebhookEvents.has(ev);
+                  return (
+                    <button
+                      key={ev}
+                      type="button"
+                      onClick={() => handleToggleWebhookEvent(ev)}
+                      className="rounded-md px-2 py-1"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: isOn ? "#FFFFFF" : TEXT_MUTED,
+                        backgroundColor: isOn ? SAGE : "#FFFFFF",
+                        border: `1px solid ${isOn ? SAGE : BORDER_STRONG}`,
+                      }}
+                    >
+                      {WEBHOOK_EVENT_LABEL[ev]}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="w-full h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }}
+                onClick={handleAddWebhook}
+              >
+                <Plus size={11} className="mr-1" />
+                CONFIGURER LE WEBHOOK
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Network size={13} style={{ color: SAGE }} />
+            <span style={FONT_HEADER}>CONNEXIONS MCP — MODEL CONTEXT PROTOCOL</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+            {state.connectors.map((c) => {
+              const { Icon } = c;
+              return (
+                <div
+                  key={c.id}
+                  className="rounded-lg p-3"
+                  style={{ border: `1px solid ${c.enabled ? SAGE : BORDER}`, backgroundColor: c.enabled ? SAGE_BG : "#FFFFFF" }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div
+                      className="flex items-center justify-center rounded-md"
+                      style={{ width: 24, height: 24, backgroundColor: c.enabled ? SAGE : "#FAFAFA", color: c.enabled ? "#FFFFFF" : TEXT_MUTED }}
+                    >
+                      <Icon size={12} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleConnector(c.id)}
+                      className="rounded-md px-1.5 py-0.5"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 8,
+                        fontWeight: 700,
+                        backgroundColor: c.enabled ? SAGE : BORDER_STRONG,
+                        color: c.enabled ? "#FFFFFF" : TEXT_MUTED,
+                      }}
+                      aria-label={`${c.enabled ? "Déconnecter" : "Connecter"} ${c.label}`}
+                    >
+                      {c.enabled ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
+                    {c.label}
+                  </div>
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 9, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35 }}>
+                    {c.description}
+                  </div>
+                  {c.lastSync && (
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: SAGE, marginTop: 4 }}>
+                      sync · {fmtRelative(c.lastSync)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 30 — MULTI-MARKET REPUTATION MAP
+// 8 francophone markets (MA, FR, BE, CH, CA, TN, SN, CI) ·
+// sentiment · mentions · top narrative · crisis flag ·
+// click → expand (top 3 narratives, sources, trend) ·
+// geo risk indicator · comparison mode (2-3 markets side-by-side)
+// ════════════════════════════════════════════════════════════════════
+
+type MarketCode = "MA" | "FR" | "BE" | "CH" | "CA" | "TN" | "SN" | "CI";
+type GeoRisk = "green" | "amber" | "red";
+
+interface MarketNarrative {
+  label: string;
+  sentiment: number;
+  momentum: "up" | "down" | "stable";
+}
+
+interface MarketSource {
+  name: string;
+  share: number;
+}
+
+interface MarketReputation {
+  code: MarketCode;
+  country: string;
+  flag: string;
+  sentiment: number;
+  mentionVolume: number;
+  topNarrative: string;
+  crisisFlag: boolean;
+  geoRisk: GeoRisk;
+  narratives: MarketNarrative[];
+  sources: MarketSource[];
+  trend: { day: string; score: number }[];
+}
+
+const MARKET_REPUTATIONS: MarketReputation[] = [
+  {
+    code: "MA", country: "Maroc", flag: "MA",
+    sentiment: 72, mentionVolume: 18420, topNarrative: "Leader bancaire digital", crisisFlag: false, geoRisk: "green",
+    narratives: [
+      { label: "Inclusion financière", sentiment: 81, momentum: "up" },
+      { label: "Innovation mobile banking", sentiment: 76, momentum: "up" },
+      { label: "RSE — fonds vert", sentiment: 68, momentum: "stable" },
+    ],
+    sources: [
+      { name: "L'Économiste", share: 24 },
+      { name: "Le Matin", share: 18 },
+      { name: "Medias24", share: 15 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 65 + Math.round(Math.sin(i / 2) * 8 + i) })),
+  },
+  {
+    code: "FR", country: "France", flag: "FR",
+    sentiment: 64, mentionVolume: 32150, topNarrative: "Développement international", crisisFlag: false, geoRisk: "amber",
+    narratives: [
+      { label: "Croissance internationale", sentiment: 71, momentum: "up" },
+      { label: "Critique frais bancaires", sentiment: 42, momentum: "down" },
+      { label: "Engagement RSE", sentiment: 68, momentum: "stable" },
+    ],
+    sources: [
+      { name: "Les Échos", share: 28 },
+      { name: "Le Figaro", share: 22 },
+      { name: "L'Agefi", share: 12 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 58 + Math.round(Math.cos(i / 3) * 10 + i / 2) })),
+  },
+  {
+    code: "BE", country: "Belgique", flag: "BE",
+    sentiment: 70, mentionVolume: 4820, topNarrative: "Banque privée européenne", crisisFlag: false, geoRisk: "green",
+    narratives: [
+      { label: "Banque privée", sentiment: 75, momentum: "stable" },
+      { label: "ESG reporting", sentiment: 71, momentum: "up" },
+      { label: "Services corporate", sentiment: 66, momentum: "stable" },
+    ],
+    sources: [
+      { name: "L'Echo", share: 32 },
+      { name: "De Tijd", share: 24 },
+      { name: "Trends-Tendances", share: 14 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 64 + Math.round(Math.sin(i / 2.5) * 6 + i / 3) })),
+  },
+  {
+    code: "CH", country: "Suisse", flag: "CH",
+    sentiment: 78, mentionVolume: 6240, topNarrative: "Wealth management premium", crisisFlag: false, geoRisk: "green",
+    narratives: [
+      { label: "Wealth management", sentiment: 84, momentum: "up" },
+      { label: "Stabilité financière", sentiment: 80, momentum: "stable" },
+      { label: "Compliance ESG", sentiment: 71, momentum: "up" },
+    ],
+    sources: [
+      { name: "Le Temps", share: 30 },
+      { name: "Finanz und Wirtschaft", share: 22 },
+      { name: "Agefi", share: 18 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 72 + Math.round(Math.sin(i / 3) * 5 + i / 4) })),
+  },
+  {
+    code: "CA", country: "Canada", flag: "CA",
+    sentiment: 66, mentionVolume: 9180, topNarrative: "Expansion Amérique du Nord", crisisFlag: false, geoRisk: "amber",
+    narratives: [
+      { label: "Expansion NAFTA", sentiment: 72, momentum: "up" },
+      { label: "Diversité culturelle", sentiment: 70, momentum: "stable" },
+      { label: "Concurrence Big Five", sentiment: 56, momentum: "down" },
+    ],
+    sources: [
+      { name: "Les Affaires", share: 26 },
+      { name: "La Presse", share: 20 },
+      { name: "Le Devoir", share: 14 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 60 + Math.round(Math.cos(i / 2) * 8 + i / 3) })),
+  },
+  {
+    code: "TN", country: "Tunisie", flag: "TN",
+    sentiment: 58, mentionVolume: 5210, topNarrative: "Partenariat stratégique Maghreb", crisisFlag: false, geoRisk: "amber",
+    narratives: [
+      { label: "Coopération Maghreb", sentiment: 67, momentum: "up" },
+      { label: "Stabilité macro", sentiment: 48, momentum: "down" },
+      { label: "Inclusion financière", sentiment: 62, momentum: "stable" },
+    ],
+    sources: [
+      { name: "L'Économiste Maghrébin", share: 28 },
+      { name: "Realites", share: 20 },
+      { name: "Business News", share: 16 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 52 + Math.round(Math.sin(i / 2) * 9 + i / 4) })),
+  },
+  {
+    code: "SN", country: "Sénégal", flag: "SN",
+    sentiment: 74, mentionVolume: 3870, topNarrative: "Banque de référence UEMOA", crisisFlag: false, geoRisk: "green",
+    narratives: [
+      { label: "Leader UEMOA", sentiment: 79, momentum: "up" },
+      { label: "Finance verte Afrique", sentiment: 73, momentum: "up" },
+      { label: "Agri-finance", sentiment: 68, momentum: "stable" },
+    ],
+    sources: [
+      { name: "Le Soleil", share: 30 },
+      { name: "Les Échos du Jour", share: 18 },
+      { name: "Financial Afrik", share: 22 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 68 + Math.round(Math.sin(i / 3) * 6 + i / 4) })),
+  },
+  {
+    code: "CI", country: "Côte d'Ivoire", flag: "CI",
+    sentiment: 69, mentionVolume: 4290, topNarrative: "Hub financier CEDEAO", crisisFlag: true, geoRisk: "red",
+    narratives: [
+      { label: "Hub CEDEAO", sentiment: 76, momentum: "up" },
+      { label: "Crise politique régionale", sentiment: 38, momentum: "down" },
+      { label: "Mobile money", sentiment: 72, momentum: "stable" },
+    ],
+    sources: [
+      { name: "Fraternité Matin", share: 26 },
+      { name: "Le Patriote", share: 18 },
+      { name: "Financial Afrik", share: 20 },
+    ],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `J${i + 1}`, score: 62 + Math.round(Math.cos(i / 2) * 12 - i / 6) })),
+  },
+];
+
+const GEO_RISK_COLOR: Record<GeoRisk, string> = {
+  green: POSITIVE,
+  amber: NEUTRAL_AMBER,
+  red: NEGATIVE,
+};
+
+const GEO_RISK_LABEL: Record<GeoRisk, string> = {
+  green: "Stable",
+  amber: "Surveillance",
+  red: "Risque élevé",
+};
+
+function MultiMarketReputationMapCard() {
+  const [expandedMarket, setExpandedMarket] = useState<MarketCode | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelected, setCompareSelected] = useState<Set<MarketCode>>(new Set());
+
+  const toggleCompare = (code: MarketCode) => {
+    setCompareSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else if (next.size < 3) next.add(code);
+      else toast.info("Maximum 3 marchés pour la comparaison.");
+      return next;
+    });
+  };
+
+  const handleCardClick = (code: MarketCode) => {
+    if (compareMode) {
+      toggleCompare(code);
+    } else {
+      setExpandedMarket(expandedMarket === code ? null : code);
+    }
+  };
+
+  const compareMarkets = MARKET_REPUTATIONS.filter((m) => compareSelected.has(m.code));
+  const avgSentiment = Math.round(MARKET_REPUTATIONS.reduce((s, m) => s + m.sentiment, 0) / MARKET_REPUTATIONS.length);
+  const totalMentions = MARKET_REPUTATIONS.reduce((s, m) => s + m.mentionVolume, 0);
+  const crisisCount = MARKET_REPUTATIONS.filter((m) => m.crisisFlag).length;
+  const redCount = MARKET_REPUTATIONS.filter((m) => m.geoRisk === "red").length;
+  const amberCount = MARKET_REPUTATIONS.filter((m) => m.geoRisk === "amber").length;
+  const expandedMarketData = expandedMarket ? MARKET_REPUTATIONS.find((x) => x.code === expandedMarket) : null;
+
+  return (
+    <motion.div id="market-map" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="29 · Cartographie Multi-Marchés — Réputation Francophone"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                8 MARCHÉS · {fmtNumber(totalMentions)} MENTIONS
+              </Badge>
+              <Button
+                type="button"
+                variant={compareMode ? "default" : "outline"}
+                size="sm"
+                className="h-7"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  backgroundColor: compareMode ? SAGE : "transparent",
+                  color: compareMode ? "#FFFFFF" : SAGE,
+                  borderColor: SAGE,
+                }}
+                onClick={() => {
+                  setCompareMode(!compareMode);
+                  setCompareSelected(new Set());
+                  setExpandedMarket(null);
+                }}
+              >
+                <Layers size={11} className="mr-1" />
+                COMPARER {compareMode && `(${compareSelected.size}/3)`}
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>SENTIMENT MOYEN</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+              {avgSentiment}<span style={{ fontSize: 10, color: TEXT_MUTED }}>/100</span>
+            </div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>MENTIONS TOTALES</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+              {fmtNumber(totalMentions)}
+            </div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>DRAPEAUX CRISE</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: crisisCount > 0 ? NEGATIVE : CHARCOAL, marginTop: 2 }}>
+              {crisisCount}
+            </div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>MARCHÉS À RISQUE</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: NEGATIVE, marginTop: 2 }}>
+              {redCount} <span style={{ fontSize: 11, color: NEUTRAL_AMBER }}>· {amberCount} amb.</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {MARKET_REPUTATIONS.map((m) => {
+            const isExpanded = expandedMarket === m.code;
+            const isCompareSel = compareSelected.has(m.code);
+            const riskColor = GEO_RISK_COLOR[m.geoRisk];
+            const sentColor = m.sentiment >= 70 ? POSITIVE : m.sentiment >= 55 ? NEUTRAL_AMBER : NEGATIVE;
+            return (
+              <button
+                key={m.code}
+                type="button"
+                onClick={() => handleCardClick(m.code)}
+                className="text-left rounded-lg p-3 transition-all"
+                style={{
+                  border: `1px solid ${isExpanded || isCompareSel ? SAGE : BORDER}`,
+                  backgroundColor: isCompareSel ? SAGE_BG : (isExpanded ? `${riskColor}08` : "#FFFFFF"),
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex items-center justify-center rounded-md"
+                      style={{
+                        width: 28, height: 22,
+                        fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
+                        backgroundColor: CHARCOAL, color: "#FFFFFF",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      {m.flag}
+                    </span>
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                      {m.country}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {m.crisisFlag && (
+                      <AlertTriangle size={12} style={{ color: NEGATIVE }} />
+                    )}
+                    <SparkDot color={riskColor} />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-1.5 mb-1">
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: sentColor }}>
+                    {m.sentiment}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>/100</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginLeft: "auto" }}>
+                    {fmtNumber(m.mentionVolume)} ment.
+                  </span>
+                </div>
+                <div style={{ width: "100%", height: 3, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 6 }}>
+                  <div style={{ width: `${m.sentiment}%`, height: "100%", backgroundColor: sentColor, borderRadius: 2 }} />
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY, lineHeight: 1.4 }}>
+                  {m.topNarrative}
+                </div>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: riskColor, fontWeight: 700, letterSpacing: "0.06em" }}>
+                    {GEO_RISK_LABEL[m.geoRisk].toUpperCase()}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED }}>
+                    {compareMode ? (isCompareSel ? "SÉLECTIONNÉ" : "CLIQUEZ") : (isExpanded ? "MASQUER ↑" : "DÉTAILS ↓")}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {expandedMarketData && !compareMode && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg p-4" style={{ border: `1px solid ${GEO_RISK_COLOR[expandedMarketData.geoRisk]}`, backgroundColor: `${GEO_RISK_COLOR[expandedMarketData.geoRisk]}08` }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center rounded-md" style={{ width: 32, height: 24, fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, backgroundColor: CHARCOAL, color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                  {expandedMarketData.flag}
+                </span>
+                <h4 style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+                  {expandedMarketData.country} — analyse détaillée
+                </h4>
+              </div>
+              <button type="button" onClick={() => setExpandedMarket(null)} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 24, height: 24 }} aria-label="Fermer">
+                <X size={14} style={{ color: TEXT_MUTED }} />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                <div style={FONT_HEADER} className="mb-2">TOP 3 NARRATIFS</div>
+                <div className="space-y-2">
+                  {expandedMarketData.narratives.map((n) => {
+                    const nColor = n.sentiment >= 70 ? POSITIVE : n.sentiment >= 50 ? NEUTRAL_AMBER : NEGATIVE;
+                    const MomIcon = n.momentum === "up" ? TrendingUp : n.momentum === "down" ? TrendingDown : Minus;
+                    return (
+                      <div key={n.label}>
+                        <div className="flex items-center justify-between">
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{n.label}</span>
+                          <span className="inline-flex items-center gap-0.5" style={{ fontFamily: FONT_MONO, fontSize: 10, color: nColor, fontWeight: 700 }}>
+                            <MomIcon size={10} /> {n.sentiment}
+                          </span>
+                        </div>
+                        <div style={{ width: "100%", height: 2, backgroundColor: BORDER_STRONG, borderRadius: 1, marginTop: 3 }}>
+                          <div style={{ width: `${n.sentiment}%`, height: "100%", backgroundColor: nColor, borderRadius: 1 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                <div style={FONT_HEADER} className="mb-2">SOURCES CLÉS</div>
+                <div className="space-y-2">
+                  {expandedMarketData.sources.map((s) => (
+                    <div key={s.name}>
+                      <div className="flex items-center justify-between">
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>{s.name}</span>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>{s.share}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: 2, backgroundColor: BORDER_STRONG, borderRadius: 1, marginTop: 3 }}>
+                        <div style={{ width: `${Math.min(s.share * 3, 100)}%`, height: "100%", backgroundColor: SAGE, borderRadius: 1 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                <div style={FONT_HEADER} className="mb-2">TENDANCE 14 JOURS</div>
+                <div style={{ width: "100%", height: 100 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={expandedMarketData.trend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id={`grad-${expandedMarketData.code}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={SAGE} stopOpacity={0.4} />
+                          <stop offset="100%" stopColor={SAGE} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="score" stroke={SAGE} strokeWidth={1.5} fill={`url(#grad-${expandedMarketData.code})`} />
+                      <ReferenceLine y={60} stroke={NEUTRAL_AMBER} strokeDasharray="3 3" strokeWidth={0.5} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                  min {Math.min(...expandedMarketData.trend.map((t) => t.score))} · max {Math.max(...expandedMarketData.trend.map((t) => t.score))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {compareMode && compareMarkets.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg p-4" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Layers size={14} style={{ color: SAGE }} />
+                <span style={FONT_HEADER}>COMPARAISON CÔTE-À-CÔTE — {compareMarkets.length} MARCHÉ(S)</span>
+              </div>
+              <button type="button" onClick={() => setCompareSelected(new Set())} className="inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}>
+                <X size={11} /> RÉINITIALISER
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {compareMarkets.map((m) => (
+                <div key={m.code} className="rounded-md p-3" style={{ border: `1px solid ${GEO_RISK_COLOR[m.geoRisk]}`, backgroundColor: "#FFFFFF" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center justify-center rounded-md" style={{ width: 26, height: 20, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, backgroundColor: CHARCOAL, color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                      {m.flag}
+                    </span>
+                    <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>{m.country}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+                    <div>
+                      <div style={{ color: TEXT_MUTED }}>SENTIMENT</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: m.sentiment >= 70 ? POSITIVE : m.sentiment >= 55 ? NEUTRAL_AMBER : NEGATIVE }}>{m.sentiment}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: TEXT_MUTED }}>MENTIONS</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: CHARCOAL }}>{fmtNumber(m.mentionVolume)}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: TEXT_MUTED }}>RISQUE GÉO</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: GEO_RISK_COLOR[m.geoRisk] }}>{GEO_RISK_LABEL[m.geoRisk]}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: TEXT_MUTED }}>CRISE</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: m.crisisFlag ? NEGATIVE : POSITIVE }}>{m.crisisFlag ? "OUI" : "NON"}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>NARRATIF DOMINANT</div>
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, marginTop: 2 }}>{m.topNarrative}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 31 — EXECUTIVE MILESTONE TRACKER
+// 5 enterprise milestones · board-ready badge · persisted
+// Persists: enterprise:milestones
+// ════════════════════════════════════════════════════════════════════
+
+interface Milestone {
+  id: string;
+  label: string;
+  description: string;
+  completed: boolean;
+  completedAt: number | null;
+  Icon: typeof Flag;
+}
+
+const EXECUTIVE_MILESTONES_INITIAL: Milestone[] = [
+  { id: "M1", label: "Premier briefing COMEX", description: "Génération et présentation du premier briefing HarchIQ au COMEX", completed: false, completedAt: null, Icon: FileText },
+  { id: "M2", label: "Audit ESG Q3", description: "Validation du rapport ESG trimestriel par le conseil", completed: false, completedAt: null, Icon: Leaf },
+  { id: "M3", label: "Conformité AMMC validée", description: "Conformité AMMC certifiée par l'audit interne annuel", completed: false, completedAt: null, Icon: Scale },
+  { id: "M4", label: "War room testé", description: "Test annuel de la cellule de crise (DEFCON 4 simulé)", completed: false, completedAt: null, Icon: Flag },
+  { id: "M5", label: "API intégrée au SIEM", description: "Intégration MCP Splunk opérationnelle — logs ingérés", completed: false, completedAt: null, Icon: Network },
+];
+
+function ExecutiveMilestoneTrackerCard({
+  milestones,
+  onToggle,
+}: {
+  milestones: Milestone[];
+  onToggle: (id: string) => void;
+}) {
+  const doneCount = milestones.filter((m) => m.completed).length;
+  const pct = Math.round((doneCount / milestones.length) * 100);
+  const allDone = doneCount === milestones.length;
+
+  return (
+    <motion.div id="jalons-executifs" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="30 · Jalons Exécutifs — Suivi Board-Ready"
+          right={
+            <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: allDone ? SAGE_BG : "#FAFAFA", color: allDone ? SAGE : CHARCOAL }}>
+              {doneCount} / {milestones.length} · {pct}%
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+          {milestones.map((m) => {
+            const { Icon } = m;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onToggle(m.id)}
+                className="text-left rounded-lg p-3 transition-all"
+                style={{
+                  border: `1px solid ${m.completed ? SAGE : BORDER}`,
+                  backgroundColor: m.completed ? SAGE_BG : "#FFFFFF",
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div
+                    className="flex items-center justify-center rounded-md"
+                    style={{ width: 26, height: 26, backgroundColor: m.completed ? SAGE : "#FAFAFA", color: m.completed ? "#FFFFFF" : TEXT_MUTED }}
+                  >
+                    <Icon size={13} />
+                  </div>
+                  {m.completed ? (
+                    <CheckCircle2 size={16} style={{ color: SAGE }} />
+                  ) : (
+                    <div style={{ width: 16, height: 16, borderRadius: 8, border: `1.5px solid ${BORDER_STRONG}` }} />
+                  )}
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: m.completed ? SAGE : CHARCOAL }}>
+                  {m.label}
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 4, lineHeight: 1.4 }}>
+                  {m.description}
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: m.completed ? SAGE : TEXT_MUTED, marginTop: 6, letterSpacing: "0.06em" }}>
+                  {m.completed && m.completedAt ? `VALIDÉ · ${format(m.completedAt, "d MMM", { locale: fr })}` : "EN ATTENTE"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <AiCommentary text={`${doneCount} jalon(s) sur ${milestones.length} validé(s). ${allDone ? "Tous les jalons exécutifs sont atteints — préparation du rapport annuel au conseil." : doneCount >= 3 ? "Progression solide — finalisez les jalons restants avant la prochaine séance du conseil." : "Activez les jalons au fur et à mesure de leur concrétisation — le badge d'en-tête reflète la progression en temps réel."}`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EnterpriseDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -5768,6 +7716,50 @@ export function EnterpriseDashboard({
   const [activeSection, setActiveSection] = useState("ai-workspace");
   const [sentimentRange, setSentimentRange] = useState<"7d" | "30d" | "90d">("90d");
   const [prefillQuestion, setPrefillQuestion] = useState<string | null>(null);
+
+  // ─── Enterprise client-side environment state (AURA — ENV-ENTERPRISE) ──
+  // All persisted in localStorage via usePersistentState hook.
+  const [defconLevel, setDefconLevel] = usePersistentState<1 | 2 | 3 | 4 | 5>("enterprise:defcon-level", 1);
+  const [briefingSchedule, setBriefingSchedule] = usePersistentState<BriefingSchedule | null>("enterprise:briefing-schedule", null);
+  const [complianceState, setComplianceState] = usePersistentState<ComplianceState>("enterprise:compliance", COMPLIANCE_INITIAL);
+  const [integrationsState, setIntegrationsState] = usePersistentState<IntegrationState>("enterprise:integrations", INTEGRATION_INITIAL);
+  const [milestonesState, setMilestonesState] = usePersistentState<Milestone[]>("enterprise:milestones", EXECUTIVE_MILESTONES_INITIAL);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>(DEFAULT_APPROVALS);
+  const currentUserRole: UserRole = "comms"; // Karim B., VP Comms
+
+  const handleDefconChange = useCallback((lvl: 1 | 2 | 3 | 4 | 5) => {
+    setDefconLevel(lvl);
+    if (lvl >= 4) {
+      toast.error(`Mode crise activé — DEFCON ${lvl} · ${computeDefconLabel(lvl)}.`, {
+        description: "Cellule de crise notifiée. Accent du tableau de bord basculé en rouge.",
+      });
+    } else if (lvl <= 2) {
+      toast.success(`Niveau DEFCON ${lvl} · ${computeDefconLabel(lvl)}.`, {
+        description: "Mode crise désactivé. Retour à la normale.",
+      });
+    }
+  }, [setDefconLevel]);
+
+  const handleApprove = useCallback((id: string) => {
+    setApprovals((prev) => prev.filter((a) => a.id !== id));
+    toast.success(`Approbation ${id} validée.`, { description: "Workflow débloqué — notification envoyée au demandeur." });
+  }, []);
+
+  const handleReject = useCallback((id: string) => {
+    setApprovals((prev) => prev.filter((a) => a.id !== id));
+    toast.info(`Approbation ${id} rejetée.`, { description: "Demandeur notifié — motif à compléter dans l'audit trail." });
+  }, []);
+
+  const handleToggleMilestone = useCallback((id: string) => {
+    setMilestonesState((prev) => prev.map((m) => m.id === id ? { ...m, completed: !m.completed, completedAt: !m.completed ? Date.now() : null } : m));
+  }, [setMilestonesState]);
+
+  const milestoneProgress = useMemo(() => ({
+    done: milestonesState.filter((m) => m.completed).length,
+    total: milestonesState.length,
+  }), [milestonesState]);
+
+  const crisisActive = defconLevel >= 4;
 
   const { data: session } = useSession();
   const effectiveName = userName ?? session?.user?.name ?? "Utilisateur";
@@ -5867,8 +7859,25 @@ export function EnterpriseDashboard({
       )}
 
       {/* Main column */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuClick={() => setMobileNavOpen(true)} alertCount={alertCount} userName={effectiveName} />
+      <div className="flex-1 flex flex-col min-w-0" style={crisisActive ? { borderTop: `3px solid ${NEGATIVE}` } : undefined}>
+        <Header
+          onMenuClick={() => setMobileNavOpen(true)}
+          alertCount={alertCount}
+          userName={effectiveName}
+          milestoneProgress={milestoneProgress}
+          onMilestoneClick={() => scrollToSection("jalons-executifs")}
+        />
+
+        {/* SECTION 26 — Governance Command Bar (sticky) */}
+        <GovernanceCommandBar
+          defconLevel={defconLevel}
+          onDefconChange={handleDefconChange}
+          userRole={currentUserRole}
+          approvals={approvals}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onAuditShortcut={() => scrollToSection("compliance-cockpit")}
+        />
 
         <main className="flex-1 px-4 lg:px-6 py-6">
           <motion.div
@@ -5946,6 +7955,35 @@ export function EnterpriseDashboard({
 
             {/* SECTION 25 — Veille Réglementaire */}
             <VeilleReglementaireCard regulatory={regulatory} loading={regulatoryLoading} />
+
+            {/* ─── AURA · ENV-ENTERPRISE — New client-side environment sections ─── */}
+
+            {/* SECTION 26 — Board Briefing Generator (board-ready, HarchIQ) */}
+            <BoardBriefingGeneratorCard
+              schedule={briefingSchedule}
+              onScheduleChange={setBriefingSchedule}
+            />
+
+            {/* SECTION 27 — Compliance Cockpit (CNDP / AMMC / BAM / ESG) */}
+            <ComplianceCockpitCard
+              state={complianceState}
+              onStateChange={setComplianceState}
+            />
+
+            {/* SECTION 28 — API & Integration Hub (keys, webhooks, MCP) */}
+            <ApiIntegrationHubCard
+              state={integrationsState}
+              onStateChange={setIntegrationsState}
+            />
+
+            {/* SECTION 29 — Multi-Market Reputation Map (8 francophone markets) */}
+            <MultiMarketReputationMapCard />
+
+            {/* SECTION 30 — Executive Milestone Tracker (board-ready badge) */}
+            <ExecutiveMilestoneTrackerCard
+              milestones={milestonesState}
+              onToggle={handleToggleMilestone}
+            />
           </motion.div>
 
           {/* Silent refresh trigger — hidden refetch helpers (no UI) */}
@@ -5983,7 +8021,7 @@ export function EnterpriseDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 25 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
+              Données temps réel · 30 sections · Quota IA illimité · Gouvernance + API + 9 LLMs · Casablanca
             </div>
           </div>
         </footer>

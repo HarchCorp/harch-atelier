@@ -100,32 +100,41 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   ArrowUp,
   ArrowUpCircle,
   Bell,
   Brain,
   Building2,
+  Calculator,
   CalendarDays,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
   Columns,
   Copy,
+  Crown,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   FileBarChart,
   FileText,
   Filter,
   Gauge,
   Globe,
   Globe2,
+  GripVertical,
   Heart,
+  KanbanSquare,
   Layers,
   LayoutGrid,
   LineChart as LineChartIcon,
   LogOut,
+  Mail,
   Megaphone,
   Menu,
   MessageSquare,
@@ -144,6 +153,7 @@ import {
   TrendingUp,
   Trophy,
   Upload,
+  UserPlus,
   Users,
   X,
   Zap,
@@ -501,6 +511,69 @@ interface ConversationHistoryItem {
   messages: AgencyChatMessage[];
 }
 
+// ─── AGENCY CLIENT-SIDE ENVIRONMENT TYPES (Task ID: ENV-AGENCY) ────────
+// Drives the 6 client-side features: tier badge, onboarding wizard,
+// commission calculator, client portal preview, pitch pipeline kanban,
+// team workload balancer. All persisted in localStorage via
+// usePersistentState hook (AURA fix #2 — survives refresh + client switch).
+
+type AgencyTierLevel = "debutant" | "croissance" | "entreprise";
+
+interface AgencyTierInfo {
+  level: AgencyTierLevel;
+  label: string;
+  minClients: number;
+  maxClients: number | null;
+  commissionPct: number;
+  nextTier: AgencyTierLevel | null;
+  benefits: string[];
+  accentColor: string;
+  accentBg: string;
+}
+
+interface PendingClient {
+  id: string;
+  name: string;
+  sector: string;
+  domain: string;
+  primaryColor: string;
+  hideHarchBadge: boolean;
+  planTier: "essentiel" | "pro" | "enterprise";
+  accountManager: string;
+  createdAt: number;
+}
+
+interface CommissionCalcInput {
+  monthlyRetainer: number;
+  clientCount: number;
+}
+
+interface PortalPreviewConfig {
+  view: "agency" | "client";
+  hideAgencyFeatures: boolean;
+  portalUrl: string;
+}
+
+interface PitchPipelineItem {
+  id: string;
+  prospectName: string;
+  sector: string;
+  estimatedValue: number;
+  probability: number;
+  nextActionDate: string;
+  stage: "prospect" | "proposition" | "won";
+  notes?: string;
+}
+
+interface WorkloadMember {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  assignedClientIds: string[];
+  capacity: number;
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
 function fmtRelative(ts: number | string | undefined | null): string {
@@ -578,6 +651,90 @@ function agencySubLevel(clientCount: number): { label: string; color: string; bg
     return { label: "Croissance", color: "#B45309", bg: "rgba(245,158,11,0.10)" };
   }
   return { label: "Débutant", color: TEXT_BODY, bg: "#FAFAFA" };
+}
+
+// ─── TIER SYSTEM (Task ID: ENV-AGENCY) ────────────────────────────────
+// 3 tiers: Débutant (1-5) / Croissance (5-20) / Entreprise (20+).
+// Each tier unlocks: commission rate (20/25/30%), max clients, white-label
+// features, team size. Auto-detected from client count, manual override
+// available (persisted in localStorage "agency:tier-level").
+
+function getTierInfo(level: AgencyTierLevel): AgencyTierInfo {
+  switch (level) {
+    case "debutant":
+      return {
+        level,
+        label: "Débutant",
+        minClients: 1,
+        maxClients: 5,
+        commissionPct: 20,
+        nextTier: "croissance",
+        benefits: [
+          "1 à 5 clients",
+          "Commission 20%",
+          "Équipe 1-3 membres",
+          "White-label basique",
+        ],
+        accentColor: TEXT_BODY,
+        accentBg: "#FAFAFA",
+      };
+    case "croissance":
+      return {
+        level,
+        label: "Croissance",
+        minClients: 5,
+        maxClients: 20,
+        commissionPct: 25,
+        nextTier: "entreprise",
+        benefits: [
+          "5 à 20 clients",
+          "Commission 25%",
+          "Équipe 3-10 membres",
+          "White-label avancé + API",
+          "Pitch deck generator",
+        ],
+        accentColor: "#B45309",
+        accentBg: "rgba(245,158,11,0.10)",
+      };
+    case "entreprise":
+      return {
+        level,
+        label: "Entreprise",
+        minClients: 20,
+        maxClients: null,
+        commissionPct: 30,
+        nextTier: null,
+        benefits: [
+          "20+ clients",
+          "Commission 30%",
+          "Équipe 10+ multi-pays",
+          "White-label total + MCP",
+          "Gouvernance RBAC",
+          "SLA dédié",
+        ],
+        accentColor: SAGE_DEEP,
+        accentBg: SAGE_BG,
+      };
+  }
+}
+
+function tierFromClientCount(count: number): AgencyTierLevel {
+  if (count >= 20) return "entreprise";
+  if (count >= 5) return "croissance";
+  return "debutant";
+}
+
+function tierProgress(
+  count: number,
+  info: AgencyTierInfo,
+): { pct: number; toNext: number } {
+  if (!info.nextTier) return { pct: 100, toNext: 0 };
+  const nextInfo = getTierInfo(info.nextTier);
+  const span = nextInfo.minClients - info.minClients;
+  if (span <= 0) return { pct: 100, toNext: 0 };
+  const progressed = Math.max(0, count - info.minClients);
+  const pct = Math.min(100, Math.round((progressed / span) * 100));
+  return { pct, toNext: Math.max(0, nextInfo.minClients - count) };
 }
 
 function planTierLabel(tier: string | undefined | null): { label: string; color: string; bg: string } {
@@ -694,6 +851,10 @@ function usePersistentState<T>(
       const raw = window.localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw) as T;
+        // One-shot hydration from localStorage on mount — canonical use
+        // case for useEffect + setState. Rule disabled: this does NOT
+        // cause cascading renders (effect deps = [key] only).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(parsed);
       }
     } catch {
@@ -6958,6 +7119,1911 @@ function BoiteOutilsAgenceCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// ENV-AGENCY · FEATURE 1 — AGENCY TIER BADGE (prominent full-width banner)
+// 3 tiers (Débutant / Croissance / Entreprise), auto-detected from client
+// count with manual override. Drives commission rate (20/25/30%), max
+// clients, white-label features. Persisted in "agency:tier-level".
+// ════════════════════════════════════════════════════════════════════
+
+function AgencyTierBadgeCard({
+  clientCount,
+  tierOverride,
+  onTierOverride,
+  agencyCommissionPct,
+}: {
+  clientCount: number;
+  tierOverride: AgencyTierLevel | null;
+  onTierOverride: (level: AgencyTierLevel | null) => void;
+  agencyCommissionPct: number;
+}) {
+  const autoTier = tierFromClientCount(clientCount);
+  const activeLevel = tierOverride ?? autoTier;
+  const info = getTierInfo(activeLevel);
+  const nextInfo = info.nextTier ? getTierInfo(info.nextTier) : null;
+  const progress = tierProgress(clientCount, info);
+  const usingOverride = tierOverride !== null && tierOverride !== autoTier;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Niveau Agence · Tier Badge"
+        right={
+          <div className="flex items-center gap-2">
+            {usingOverride && (
+              <button
+                type="button"
+                onClick={() => onTierOverride(null)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors hover:bg-[#F0F0F0]"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: TEXT_MUTED,
+                  border: `1px solid ${BORDER}`,
+                }}
+              >
+                <RefreshCw size={10} /> Auto
+              </button>
+            )}
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                backgroundColor: info.accentBg,
+                color: info.accentColor,
+                fontWeight: 700,
+                textTransform: "uppercase",
+              }}
+            >
+              <Crown size={11} /> {info.label}
+            </span>
+          </div>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Tier identity + manual override */}
+        <div
+          className="p-4 rounded-md"
+          style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+        >
+          <div style={FONT_HEADER}>Niveau actuel</div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: info.accentColor }}>
+              {info.label}
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
+              {clientCount} client{clientCount > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(["debutant", "croissance", "entreprise"] as AgencyTierLevel[]).map((lvl) => {
+              const ti = getTierInfo(lvl);
+              const isActive = lvl === activeLevel;
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => onTierOverride(lvl)}
+                  className="inline-flex px-2 py-1 rounded-md transition-colors hover:bg-[#F0F0F0]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    letterSpacing: "0.04em",
+                    backgroundColor: isActive ? ti.accentBg : "transparent",
+                    color: isActive ? ti.accentColor : TEXT_MUTED,
+                    border: `1px solid ${isActive ? ti.accentColor : BORDER}`,
+                    fontWeight: 700,
+                  }}
+                  title={`Forcer le niveau ${ti.label}`}
+                >
+                  {ti.label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              color: TEXT_HEADER,
+              marginTop: 8,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            Cliquez pour forcer un niveau (override manuel)
+          </div>
+        </div>
+
+        {/* Progression to next tier */}
+        <div
+          className="p-4 rounded-md"
+          style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+        >
+          <div style={FONT_HEADER}>Progression niveau supérieur</div>
+          {nextInfo ? (
+            <>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: CHARCOAL }}>
+                  {progress.pct}%
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                  · {progress.toNext} client{progress.toNext > 1 ? "s" : ""} restant{progress.toNext > 1 ? "s" : ""} → {nextInfo.label}
+                </span>
+              </div>
+              <div
+                className="mt-2 rounded-full overflow-hidden"
+                style={{ height: 6, backgroundColor: BORDER }}
+              >
+                <div
+                  style={{
+                    width: `${progress.pct}%`,
+                    height: "100%",
+                    backgroundColor: nextInfo.accentColor,
+                    transition: "width 0.6s ease",
+                  }}
+                />
+              </div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, marginTop: 8 }}>
+                Avantage clé : commission {nextInfo.commissionPct}% (+{nextInfo.commissionPct - info.commissionPct} pts)
+              </div>
+            </>
+          ) : (
+            <div className="mt-3 flex items-center gap-2">
+              <CheckCircle2 size={16} style={{ color: SAGE }} />
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: SAGE_DEEP }}>
+                Niveau maximal atteint — tous les avantages débloqués
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Commission + benefits */}
+        <div
+          className="p-4 rounded-md"
+          style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+        >
+          <div style={FONT_HEADER}>Commission & avantages</div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: SAGE_DEEP }}>
+              {info.commissionPct}%
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              {agencyCommissionPct !== info.commissionPct ? `(config agence: ${agencyCommissionPct}%)` : "commission appliquée"}
+            </span>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {info.benefits.map((b, i) => (
+              <li key={i} className="flex items-start gap-1.5">
+                <Check size={11} style={{ color: SAGE, flexShrink: 0, marginTop: 2 }} />
+                <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.4 }}>
+                  {b}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <AiCommentary
+        text={
+          nextInfo
+            ? `Vous êtes à ${progress.pct}% du niveau ${nextInfo.label}. Atteindre ${nextInfo.minClients} clients débloquera une commission de ${nextInfo.commissionPct}% (+${nextInfo.commissionPct - info.commissionPct} pts) et ${nextInfo.benefits.length} avantages premium.`
+            : `Niveau ${info.label} atteint — commission ${info.commissionPct}%, ${info.benefits.length} avantages actifs. Portefeuille de ${clientCount} clients en régime de croisière.`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ENV-AGENCY · FEATURE 2 — CLIENT ONBOARDING WIZARD (4-step modal)
+// Triggered by "Ajouter un client". Steps: Infos → Branding → Plan → Team.
+// On complete: adds PendingClient to portfolio (local state). Persisted
+// in "agency:pending-clients". Progress indicator, skip option, ESC close.
+// ════════════════════════════════════════════════════════════════════
+
+function ClientOnboardingWizard({
+  onClose,
+  onComplete,
+  teamMembers,
+}: {
+  onClose: () => void;
+  onComplete: (client: PendingClient) => void;
+  teamMembers: TeamUser[];
+}) {
+  // Component is conditionally rendered by the parent (mounts only when
+  // open), so useState initial values apply on each open — no reset effect
+  // needed (avoids setState-in-effect cascading renders).
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [sector, setSector] = useState("");
+  const [domain, setDomain] = useState("");
+  const [primaryColor, setPrimaryColor] = useState(SAGE);
+  const [hideHarchBadge, setHideHarchBadge] = useState(true);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [planTier, setPlanTier] = useState<"essentiel" | "pro" | "enterprise">("pro");
+  const [accountManager, setAccountManager] = useState(
+    () => teamMembers[0]?.name ?? teamMembers[0]?.email ?? "",
+  );
+  const [done, setDone] = useState(false);
+
+  // ESC to close (component only mounted while open).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const steps = ["Infos client", "Branding white-label", "Quota & plan", "Team assignment"];
+  const canNext = step === 0 ? name.trim().length > 1 : true;
+
+  const handleFinish = () => {
+    const fallbackDomain = `${name.trim().toLowerCase().replace(/[^a-z0-9]/g, "-")}.harchcorp.com`;
+    const client: PendingClient = {
+      id: `pc-${Date.now()}`,
+      name: name.trim(),
+      sector: sector.trim() || "Secteur —",
+      domain: domain.trim() || fallbackDomain,
+      primaryColor,
+      hideHarchBadge,
+      planTier,
+      accountManager: accountManager || "Non assigné",
+      createdAt: Date.now(),
+    };
+    setDone(true);
+    setTimeout(() => {
+      onComplete(client);
+      onClose();
+    }, 1400);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Assistant d'onboarding client"
+    >
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(10,10,10,0.5)" }}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 280, damping: 28 }}
+        className="relative w-full max-w-2xl rounded-xl overflow-hidden"
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: `1px solid ${BORDER_STRONG}`,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          maxHeight: "92vh",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-3"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md"
+              style={{ backgroundColor: SAGE_BG, color: SAGE_DEEP }}
+            >
+              <UserPlus size={15} />
+            </div>
+            <div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+                Ajouter un client
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                Assistant d&apos;onboarding · 4 étapes
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5]"
+            aria-label="Fermer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Stepper */}
+        {!done && (
+          <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${BORDER}` }}>
+            {steps.map((s, i) => {
+              const isCurrent = i === step;
+              const isDone = i < step;
+              return (
+                <div key={s} className="flex items-center gap-2 flex-1">
+                  <div
+                    className="inline-flex items-center justify-center rounded-full shrink-0"
+                    style={{
+                      width: 22,
+                      height: 22,
+                      backgroundColor: isDone ? SAGE : isCurrent ? SAGE_BG : "#FAFAFA",
+                      color: isDone ? "#FFFFFF" : isCurrent ? SAGE_DEEP : TEXT_MUTED,
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      border: `1px solid ${isDone ? SAGE : isCurrent ? SAGE_DIM : BORDER}`,
+                    }}
+                  >
+                    {isDone ? <Check size={12} /> : i + 1}
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      fontWeight: isCurrent ? 700 : 500,
+                      color: isCurrent ? CHARCOAL : TEXT_MUTED,
+                    }}
+                    className="hidden sm:inline"
+                  >
+                    {s}
+                  </span>
+                  {i < steps.length - 1 && (
+                    <div
+                      className="flex-1 h-px"
+                      style={{ backgroundColor: isDone ? SAGE : BORDER }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="px-5 py-4 overflow-y-auto" style={{ maxHeight: "60vh" }}>
+          {done ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-8 text-center"
+            >
+              <div
+                className="inline-flex items-center justify-center rounded-full mb-4"
+                style={{ width: 56, height: 56, backgroundColor: SAGE_BG, color: SAGE_DEEP }}
+              >
+                <CheckCircle2 size={32} />
+              </div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 700, color: CHARCOAL }}>
+                Client « {name.trim()} » ajouté au portefeuille
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                En attente de validation par votre responsable de compte Harch
+              </div>
+              <div
+                className="mt-4 px-3 py-2 rounded-md"
+                style={{ backgroundColor: SAGE_BG, fontFamily: FONT_MONO, fontSize: 10, color: SAGE_DEEP }}
+              >
+                {domain.trim() || `${name.trim().toLowerCase().replace(/[^a-z0-9]/g, "-")}.harchcorp.com`} · Plan {planTier} · {accountManager || "Non assigné"}
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              {step === 0 && (
+                <div className="space-y-3">
+                  <div>
+                    <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Nom du client *</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Acme Maroc"
+                      autoFocus
+                      className="w-full px-3 py-2 rounded-md outline-none"
+                      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Secteur</label>
+                      <input
+                        type="text"
+                        value={sector}
+                        onChange={(e) => setSector(e.target.value)}
+                        placeholder="Banque & Finance"
+                        className="w-full px-3 py-2 rounded-md outline-none"
+                        style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Domaine</label>
+                      <input
+                        type="text"
+                        value={domain}
+                        onChange={(e) => setDomain(e.target.value)}
+                        placeholder="acme.harchcorp.com"
+                        className="w-full px-3 py-2 rounded-md outline-none"
+                        style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {step === 1 && (
+                <div className="space-y-3">
+                  <div>
+                    <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Logo (URL)</label>
+                    <input
+                      type="url"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="https://…/logo.png"
+                      className="w-full px-3 py-2 rounded-md outline-none"
+                      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Couleur primaire</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="h-9 w-9 rounded cursor-pointer"
+                          style={{ border: `1px solid ${BORDER}` }}
+                        />
+                        <input
+                          type="text"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="flex-1 px-2 py-2 rounded-md outline-none"
+                          style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                        />
+                      </div>
+                    </div>
+                    <label
+                      className="flex items-center justify-between p-3 rounded-md cursor-pointer mt-6"
+                      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+                    >
+                      <div>
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+                          Masquer le badge Harch
+                        </div>
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED }}>
+                          White-label complet
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={hideHarchBadge}
+                        onClick={() => setHideHarchBadge((v) => !v)}
+                        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+                        style={{ backgroundColor: hideHarchBadge ? SAGE : BORDER_STRONG }}
+                      >
+                        <span
+                          className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                          style={{ transform: hideHarchBadge ? "translateX(18px)" : "translateX(2px)" }}
+                        />
+                      </button>
+                    </label>
+                  </div>
+                  {/* Live preview */}
+                  <div
+                    className="rounded-md overflow-hidden mt-2"
+                    style={{ border: `1px solid ${BORDER_STRONG}` }}
+                  >
+                    <div
+                      className="flex items-center gap-2 px-3 py-2"
+                      style={{ borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      <div
+                        className="inline-flex items-center justify-center px-2 py-1 rounded"
+                        style={{ backgroundColor: primaryColor, color: "#FFFFFF" }}
+                      >
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}>
+                          {(name || "Agence")
+                            .split(/\s+/)
+                            .slice(0, 2)
+                            .map((w) => w[0]?.toUpperCase() ?? "")
+                            .join("")}
+                        </span>
+                      </div>
+                      <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                        {name || "Aperçu"}
+                      </span>
+                      {!hideHarchBadge && (
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
+                          Propulsé par Harch
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="h-2 rounded-full mb-2" style={{ backgroundColor: primaryColor, width: "60%" }} />
+                      <div className="h-2 rounded-full" style={{ backgroundColor: primaryColor + "40", width: "40%" }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {step === 2 && (
+                <div className="space-y-2">
+                  {([
+                    { key: "essentiel", label: "Essentiel", price: "2 500 MAD/mois", desc: "Veille + alertes + 3 utilisateurs" },
+                    { key: "pro", label: "Pro", price: "6 500 MAD/mois", desc: "Essentiel + HarchIQ + 10 utilisateurs" },
+                    { key: "enterprise", label: "Enterprise", price: "Sur devis", desc: "Pro + API + RBAC + SLA" },
+                  ] as const).map((p) => {
+                    const isActive = planTier === p.key;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => setPlanTier(p.key)}
+                        className="w-full text-left p-3 rounded-md transition-colors hover:bg-[#FAFAFA]"
+                        style={{
+                          border: `1px solid ${isActive ? SAGE : BORDER}`,
+                          backgroundColor: isActive ? SAGE_BG : "#FCFCFC",
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="inline-flex items-center justify-center rounded-full"
+                              style={{
+                                width: 18,
+                                height: 18,
+                                backgroundColor: isActive ? SAGE : "#FFFFFF",
+                                border: `1px solid ${isActive ? SAGE : BORDER_STRONG}`,
+                              }}
+                            >
+                              {isActive && <Check size={11} style={{ color: "#FFFFFF" }} />}
+                            </div>
+                            <div>
+                              <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+                                {p.label}
+                              </div>
+                              <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}>
+                                {p.desc}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE_DEEP, fontWeight: 700 }}>
+                            {p.price}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {step === 3 && (
+                <div className="space-y-3">
+                  <div>
+                    <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>Account manager</label>
+                    {teamMembers.length === 0 ? (
+                      <div
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 11,
+                          color: TEXT_MUTED,
+                          padding: 8,
+                          border: `1px solid ${BORDER}`,
+                          backgroundColor: "#FAFAFA",
+                          borderRadius: 6,
+                        }}
+                      >
+                        Aucun membre d&apos;équipe chargé. L&apos;assignation se fera après l&apos;onboarding.
+                      </div>
+                    ) : (
+                      <select
+                        value={accountManager}
+                        onChange={(e) => setAccountManager(e.target.value)}
+                        className="w-full px-3 py-2 rounded-md outline-none"
+                        style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL }}
+                      >
+                        {teamMembers.map((m) => (
+                          <option key={m.id} value={m.name ?? m.email}>
+                            {m.name ?? m.email.split("@")[0]} · {m.role}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div
+                    className="p-3 rounded-md"
+                    style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+                  >
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 12, color: SAGE_DEEP, fontWeight: 600 }}>
+                      Récapitulatif
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE_DEEP, marginTop: 4, lineHeight: 1.6 }}>
+                      Client: {name || "—"} · Secteur: {sector || "—"} · Domaine: {domain || "(auto)"} · Plan: {planTier} · AM: {accountManager || "—"}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!done && (
+          <div
+            className="flex items-center justify-between px-5 py-3"
+            style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div className="flex items-center gap-2">
+              {step > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+                  onClick={() => setStep((s) => Math.max(0, s - 1))}
+                >
+                  <ArrowLeft size={12} /> Précédent
+                </Button>
+              )}
+              {step > 0 && (
+                <button
+                  type="button"
+                  onClick={handleFinish}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors hover:bg-[#F0F0F0]"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                >
+                  Ignorer et terminer
+                </button>
+              )}
+            </div>
+            {step < 3 ? (
+              <Button
+                size="sm"
+                className="h-8"
+                style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11 }}
+                disabled={!canNext}
+                onClick={() => setStep((s) => s + 1)}
+              >
+                Suivant <ArrowRight size={12} />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="h-8"
+                style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11 }}
+                onClick={handleFinish}
+              >
+                <Check size={12} /> Terminer l&apos;onboarding
+              </Button>
+            )}
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ENV-AGENCY · FEATURE 3 — COMMISSION CALCULATOR WIDGET (full-width card)
+// Inputs: monthly retainer per client (MAD), client count, tier (auto).
+// Outputs: monthly commission, annual projection, tier upgrade impact.
+// Bar chart: sage = agency share, gray = Harch share. "Simuler tier
+// supérieur" button shows revenue uplift. Persisted in "agency:commission-calc".
+// ════════════════════════════════════════════════════════════════════
+
+function CommissionCalculatorCard({
+  tier,
+}: {
+  tier: AgencyTierInfo;
+}) {
+  const [inputs, setInputs] = usePersistentState<CommissionCalcInput>(
+    "agency:commission-calc",
+    { monthlyRetainer: 6500, clientCount: 8 },
+  );
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const monthlyRetainer = Math.max(0, inputs.monthlyRetainer);
+  const clientCount = Math.max(0, inputs.clientCount);
+
+  const totalRevenue = monthlyRetainer * clientCount;
+  const agencyShare = Math.round(totalRevenue * (tier.commissionPct / 100));
+  const harchShare = totalRevenue - agencyShare;
+
+  const nextTier = tier.nextTier ? getTierInfo(tier.nextTier) : null;
+  const upgradedAgencyShare = nextTier
+    ? Math.round(totalRevenue * (nextTier.commissionPct / 100))
+    : agencyShare;
+  const uplift = upgradedAgencyShare - agencyShare;
+
+  const chartData = useMemo(() => {
+    const samples = [
+      { name: "Client A", retainer: monthlyRetainer },
+      { name: "Client B", retainer: Math.round(monthlyRetainer * 1.4) },
+      { name: "Client C", retainer: Math.round(monthlyRetainer * 0.7) },
+      { name: "Client D", retainer: Math.round(monthlyRetainer * 1.8) },
+      { name: "Client E", retainer: monthlyRetainer },
+    ].slice(0, Math.min(5, Math.max(1, clientCount)));
+    return samples.map((s) => ({
+      name: s.name,
+      agency: Math.round(s.retainer * (tier.commissionPct / 100)),
+      harch: Math.round(s.retainer * (1 - tier.commissionPct / 100)),
+    }));
+  }, [monthlyRetainer, clientCount, tier.commissionPct]);
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Simulateur de Commission"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: tier.accentBg,
+                color: tier.accentColor,
+                fontWeight: 700,
+              }}
+            >
+              <Calculator size={10} /> Tier {tier.label}
+            </span>
+            {nextTier && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE, color: SAGE_DEEP }}
+                onClick={() => setShowUpgrade((v) => !v)}
+              >
+                <TrendingUp size={11} /> Simuler tier supérieur
+              </Button>
+            )}
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Inputs */}
+        <div className="space-y-3">
+          <div>
+            <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>
+              Retainer mensuel par client (MAD)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={500}
+              value={inputs.monthlyRetainer}
+              onChange={(e) => setInputs({ ...inputs, monthlyRetainer: Number(e.target.value) || 0 })}
+              className="w-full px-3 py-2 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 13, color: CHARCOAL }}
+            />
+          </div>
+          <div>
+            <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>
+              Nombre de clients
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={inputs.clientCount}
+              onChange={(e) => setInputs({ ...inputs, clientCount: Number(e.target.value) || 0 })}
+              className="w-full px-3 py-2 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 13, color: CHARCOAL }}
+            />
+          </div>
+          <div
+            className="p-3 rounded-md"
+            style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+          >
+            <div style={FONT_HEADER}>Commission appliquée</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+              {tier.commissionPct}%{showUpgrade && nextTier ? ` → ${nextTier.commissionPct}%` : ""}
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE_DEEP, marginTop: 2 }}>
+              Basé sur le niveau {tier.label} ({tier.minClients}
+              {tier.maxClients ? `-${tier.maxClients}` : "+"} clients)
+            </div>
+          </div>
+        </div>
+
+        {/* Outputs */}
+        <div className="space-y-3">
+          <div
+            className="p-3 rounded-md"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+          >
+            <div style={FONT_HEADER}>Commission mensuelle (agence)</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: SAGE_DEEP, marginTop: 4 }}>
+              {fmtMAD(showUpgrade && nextTier ? upgradedAgencyShare : agencyShare)}
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+              Part Harch: {fmtMAD(harchShare)} · Total facturé: {fmtMAD(totalRevenue)}
+            </div>
+          </div>
+          <div
+            className="p-3 rounded-md"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+          >
+            <div style={FONT_HEADER}>Projection annuelle</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL, marginTop: 4 }}>
+              {fmtMAD((showUpgrade && nextTier ? upgradedAgencyShare : agencyShare) * 12)}
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+              Basé sur le MRR actuel · 12 mois
+            </div>
+          </div>
+          {nextTier && (
+            <div
+              className="p-3 rounded-md"
+              style={{
+                border: `1px solid ${showUpgrade ? SAGE_DIM : BORDER}`,
+                backgroundColor: showUpgrade ? SAGE_BG : "#FCFCFC",
+              }}
+            >
+              <div style={FONT_HEADER}>Impact passage au tier {nextTier.label}</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: SAGE_DEEP, marginTop: 4 }}>
+                +{fmtMAD(uplift)}/mois
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE_DEEP, marginTop: 2 }}>
+                +{fmtMAD(uplift * 12)}/an · +{nextTier.commissionPct - tier.commissionPct} pts de commission
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Chart */}
+        <div>
+          <div style={FONT_HEADER}>Répartition par client</div>
+          <div style={{ width: "100%", height: 200, marginTop: 8 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                <CartesianGrid stroke="#F4F4F5" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={{ stroke: BORDER_STRONG }}
+                />
+                <YAxis
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
+                  tickFormatter={(v) => fmtNumber(v)}
+                />
+                <RTooltip
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                  }}
+                  formatter={(v: number, n) => [fmtMAD(v), n === "agency" ? "Agence" : "Harch"]}
+                />
+                <Bar dataKey="agency" stackId="a" fill={SAGE} radius={[0, 0, 0, 0]} barSize={22} isAnimationActive />
+                <Bar dataKey="harch" stackId="a" fill={NEUTRAL_GRAY} radius={[4, 4, 0, 0]} barSize={22} isAnimationActive />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-1.5">
+              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: SAGE }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Part agence</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: NEUTRAL_GRAY }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Part Harch</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <AiCommentary
+        text={
+          nextTier
+            ? `Avec ${clientCount} clients à ${fmtMAD(monthlyRetainer)}/mois, votre commission est ${fmtMAD(agencyShare)}/mois. Passer au tier ${nextTier.label} (+${nextTier.commissionPct - tier.commissionPct} pts) générerait +${fmtMAD(uplift * 12)}/an.`
+            : `Tier maximum atteint — commission ${tier.commissionPct}%, soit ${fmtMAD(agencyShare)}/mois sur ${clientCount} clients.`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ENV-AGENCY · FEATURE 4 — CLIENT PORTAL PREVIEW (full-width card)
+// Live preview of what the client sees: branded dashboard with their
+// logo + colors. Toggle: Vue agence / Vue client. In client view, hide
+// agency-specific features (commission, pitch deck, team assignments).
+// "Envoyer l'accès client" button simulates an email with portal URL.
+// Persisted in "agency:portal-preview".
+// ════════════════════════════════════════════════════════════════════
+
+function ClientPortalPreviewCard({
+  activeClient,
+  agency,
+}: {
+  activeClient: AgencyClient | null;
+  agency: AgencyMeta | null;
+}) {
+  const [config, setConfig] = usePersistentState<PortalPreviewConfig>(
+    "agency:portal-preview",
+    { view: "client", hideAgencyFeatures: true, portalUrl: "console.votre-agence.ma" },
+  );
+  const [sent, setSent] = useState(false);
+
+  const clientName = activeClient?.displayName ?? agency?.name ?? "Votre agence";
+  const primaryColor = activeClient?.branding?.primaryColor ?? agency?.primaryColor ?? SAGE;
+  const logoUrl = activeClient?.branding?.logoUrl ?? null;
+  const hideHarch = activeClient?.branding?.hideHarchBadge ?? false;
+  const isClientView = config.view === "client";
+  const featuresHidden = isClientView && config.hideAgencyFeatures;
+
+  const handleSendAccess = () => {
+    setSent(true);
+    setTimeout(() => setSent(false), 3500);
+  };
+
+  const navItems = [
+    "Veille",
+    "Sentiment",
+    "Alertes",
+    "Rapports",
+    ...(featuresHidden ? [] : ["Commission"]),
+    ...(featuresHidden ? [] : ["Pitch deck"]),
+    ...(featuresHidden ? [] : ["Équipe"]),
+  ];
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Aperçu Portail Client"
+        right={
+          <div
+            className="flex items-center gap-1 p-0.5 rounded-md"
+            style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}
+          >
+            {([
+              { key: "agency", label: "Vue agence", Icon: Eye },
+              { key: "client", label: "Vue client", Icon: EyeOff },
+            ] as const).map((opt) => {
+              const isActive = config.view === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setConfig({ ...config, view: opt.key })}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded transition-colors"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    letterSpacing: "0.04em",
+                    backgroundColor: isActive ? "#FFFFFF" : "transparent",
+                    color: isActive ? SAGE_DEEP : TEXT_MUTED,
+                    fontWeight: 700,
+                    boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                  }}
+                >
+                  <opt.Icon size={11} /> {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: settings */}
+        <div className="space-y-3">
+          <div>
+            <label style={{ ...FONT_HEADER, display: "block", marginBottom: 4 }}>URL du portail client</label>
+            <input
+              type="text"
+              value={config.portalUrl}
+              onChange={(e) => setConfig({ ...config, portalUrl: e.target.value })}
+              placeholder="console.votre-agence.ma"
+              className="w-full px-3 py-2 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+            />
+          </div>
+          <label
+            className="flex items-center justify-between p-3 rounded-md cursor-pointer"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+          >
+            <div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 600, color: CHARCOAL }}>
+                Masquer les fonctionnalités agence
+              </div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED }}>
+                Cache commission, pitch deck, assignations équipe
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={config.hideAgencyFeatures}
+              onClick={() => setConfig({ ...config, hideAgencyFeatures: !config.hideAgencyFeatures })}
+              className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+              style={{ backgroundColor: config.hideAgencyFeatures ? SAGE : BORDER_STRONG }}
+            >
+              <span
+                className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                style={{ transform: config.hideAgencyFeatures ? "translateX(18px)" : "translateX(2px)" }}
+              />
+            </button>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-3 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>Client</div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {clientName}
+              </div>
+            </div>
+            <div className="p-3 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>Badge Harch</div>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {featuresHidden || hideHarch ? "Masqué" : "Visible"}
+              </div>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="w-full"
+            style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11 }}
+            onClick={handleSendAccess}
+          >
+            {sent ? (
+              <>
+                <CheckCircle2 size={12} /> Accès envoyé
+              </>
+            ) : (
+              <>
+                <Mail size={12} /> Envoyer l&apos;accès client
+              </>
+            )}
+          </Button>
+          {sent && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-2 rounded-md"
+              style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+            >
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE_DEEP }}>
+                Email simulé envoyé à {clientName.toLowerCase().replace(/[^a-z0-9]/g, ".")}@exemple.ma
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE_DEEP, marginTop: 2 }}>
+                Lien: https://{config.portalUrl}/login?token=•••••
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Right: live portal preview */}
+        <div>
+          <div style={FONT_HEADER}>Aperçu en direct</div>
+          <div
+            className="mt-2 rounded-lg overflow-hidden"
+            style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}
+          >
+            {/* Portal header */}
+            <div
+              className="flex items-center gap-2 px-3 py-2"
+              style={{ borderBottom: `1px solid ${BORDER}` }}
+            >
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Logo" className="h-5 w-auto" style={{ objectFit: "contain" }} />
+              ) : (
+                <div
+                  className="inline-flex items-center justify-center px-2 py-1 rounded"
+                  style={{ backgroundColor: primaryColor, color: "#FFFFFF" }}
+                >
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}>
+                    {clientName
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((w) => w[0]?.toUpperCase() ?? "")
+                      .join("")}
+                  </span>
+                </div>
+              )}
+              <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                {clientName}
+              </span>
+              {!(featuresHidden || hideHarch) && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
+                  Propulsé par Harch
+                </span>
+              )}
+            </div>
+            {/* Portal body — KPIs */}
+            <div className="p-3">
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {[
+                  { label: "Score", value: "78" },
+                  { label: "Mentions 24h", value: "142" },
+                  { label: "Sentiment", value: "+12%" },
+                ].map((kpi) => (
+                  <div key={kpi.label} className="p-2 rounded" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 8,
+                        color: TEXT_HEADER,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {kpi.label}
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                      {kpi.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Portal nav — depends on view */}
+              <div className="flex flex-wrap gap-1.5">
+                {navItems.map((nav, i) => (
+                  <span
+                    key={nav}
+                    className="inline-flex px-2 py-0.5 rounded-full"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      backgroundColor: i === 0 ? primaryColor : "#FAFAFA",
+                      color: i === 0 ? "#FFFFFF" : TEXT_BODY,
+                      border: `1px solid ${i === 0 ? primaryColor : BORDER}`,
+                    }}
+                  >
+                    {nav}
+                  </span>
+                ))}
+              </div>
+              {/* Mini chart placeholder */}
+              <div className="mt-3 flex items-end gap-1" style={{ height: 40 }}>
+                {Array.from({ length: 14 }).map((_, i) => {
+                  const h = 20 + Math.abs(Math.sin(i * 0.7)) * 18;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        flex: 1,
+                        height: h,
+                        backgroundColor: primaryColor,
+                        opacity: 0.5 + (i / 14) * 0.5,
+                        borderRadius: 2,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+            {/* Footer */}
+            <div
+              className="px-3 py-1.5 flex items-center justify-between"
+              style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+            >
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                {config.portalUrl}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: isClientView ? SAGE_DEEP : TEXT_MUTED }}>
+                {isClientView ? "MODE CLIENT" : "MODE AGENCE"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <AiCommentary
+        text={`Aperçu du portail tel que vu par ${clientName}. ${featuresHidden ? "Les fonctionnalités agence (commission, pitch deck, équipe) sont masquées." : "Toutes les fonctionnalités sont visibles."} Envoyez l'accès client pour partager le lien sécurisé.`}
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ENV-AGENCY · FEATURE 5 — PITCH DECK PIPELINE (kanban, HTML5 drag-drop)
+// 3 stages: Prospect → Proposition → Won. Each card: prospect name,
+// sector, estimated value (MAD), probability %, next action date. Add
+// prospect manually. Drag between stages (native HTML5 DnD, no deps).
+// Persisted in "agency:pitch-pipeline".
+// ════════════════════════════════════════════════════════════════════
+
+function PitchPipelineCard({
+  activeClientName,
+}: {
+  activeClientName: string | null;
+}) {
+  const [items, setItems] = usePersistentState<PitchPipelineItem[]>(
+    "agency:pitch-pipeline",
+    [
+      { id: "pp-1", prospectName: "Atlas Logistics", sector: "Logistique", estimatedValue: 8500, probability: 30, nextActionDate: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10), stage: "prospect" },
+      { id: "pp-2", prospectName: "Casa Retail Group", sector: "Retail", estimatedValue: 12000, probability: 50, nextActionDate: new Date(Date.now() + 86400000 * 5).toISOString().slice(0, 10), stage: "prospect" },
+      { id: "pp-3", prospectName: "MedTech Solutions", sector: "Santé", estimatedValue: 15000, probability: 70, nextActionDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10), stage: "proposition" },
+      { id: "pp-4", prospectName: "Sahara Energy", sector: "Énergie", estimatedValue: 22000, probability: 85, nextActionDate: new Date(Date.now() + 86400000 * 1).toISOString().slice(0, 10), stage: "proposition" },
+      { id: "pp-5", prospectName: "Rabat Pharma", sector: "Pharma", estimatedValue: 9500, probability: 100, nextActionDate: new Date(Date.now() - 86400000 * 2).toISOString().slice(0, 10), stage: "won" },
+    ],
+  );
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newSector, setNewSector] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  const stages: Array<{ key: PitchPipelineItem["stage"]; label: string; color: string; bg: string }> = [
+    { key: "prospect", label: "Prospect", color: TEXT_BODY, bg: "#FAFAFA" },
+    { key: "proposition", label: "Proposition", color: "#B45309", bg: "rgba(245,158,11,0.10)" },
+    { key: "won", label: "Gagné", color: SAGE_DEEP, bg: SAGE_BG },
+  ];
+
+  const handleAdd = () => {
+    if (!newName.trim() || !newValue) return;
+    const item: PitchPipelineItem = {
+      id: `pp-${Date.now()}`,
+      prospectName: newName.trim(),
+      sector: newSector.trim() || "—",
+      estimatedValue: Number(newValue) || 0,
+      probability: 30,
+      nextActionDate: new Date(Date.now() + 86400000 * 7).toISOString().slice(0, 10),
+      stage: "prospect",
+    };
+    setItems([item, ...items]);
+    setNewName("");
+    setNewSector("");
+    setNewValue("");
+    setAdding(false);
+  };
+
+  const handleDrop = (stage: PitchPipelineItem["stage"]) => {
+    if (!dragId) return;
+    setItems(
+      items.map((it) =>
+        it.id === dragId
+          ? {
+              ...it,
+              stage,
+              probability: stage === "won" ? 100 : stage === "proposition" ? Math.max(it.probability, 60) : it.probability,
+            }
+          : it,
+      ),
+    );
+    setDragId(null);
+  };
+
+  const totalValue = items.reduce((s, i) => s + i.estimatedValue, 0);
+  const wonValue = items.filter((i) => i.stage === "won").reduce((s, i) => s + i.estimatedValue, 0);
+  const weightedPipeline = items
+    .filter((i) => i.stage !== "won")
+    .reduce((s, i) => s + (i.estimatedValue * i.probability) / 100, 0);
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Pipeline Pitch Deck · Kanban"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE,
+                fontWeight: 700,
+              }}
+            >
+              <KanbanSquare size={10} /> {items.length} prospects
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => setAdding((v) => !v)}
+            >
+              <Plus size={11} /> Prospect
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {/* Stats strip */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Pipeline total</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {fmtMAD(totalValue)}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Pipeline pondéré</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: "#B45309", marginTop: 2 }}>
+            {fmtMAD(Math.round(weightedPipeline))}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: SAGE_BG }}>
+          <div style={FONT_HEADER}>Gagné</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+            {fmtMAD(wonValue)}
+          </div>
+        </div>
+      </div>
+      {/* Add form */}
+      {adding && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mb-3 p-3 rounded-md"
+          style={{ border: `1px solid ${SAGE_DIM}`, backgroundColor: SAGE_BG }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <input
+              type="text"
+              placeholder="Nom du prospect"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="px-2 py-1.5 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+              autoFocus
+            />
+            <input
+              type="text"
+              placeholder="Secteur"
+              value={newSector}
+              onChange={(e) => setNewSector(e.target.value)}
+              className="px-2 py-1.5 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+            />
+            <input
+              type="number"
+              placeholder="Valeur estimée (MAD)"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              className="px-2 py-1.5 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+            />
+            <Button
+              size="sm"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11 }}
+              onClick={handleAdd}
+            >
+              <Check size={12} /> Ajouter
+            </Button>
+          </div>
+        </motion.div>
+      )}
+      {/* Kanban board */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {stages.map((stage) => {
+          const stageItems = items.filter((i) => i.stage === stage.key);
+          const stageValue = stageItems.reduce((s, i) => s + i.estimatedValue, 0);
+          return (
+            <div
+              key={stage.key}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(stage.key)}
+              className="rounded-md p-2"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC", minHeight: 180 }}
+            >
+              <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: stage.color }} />
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: stage.color,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {stage.label}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                    ({stageItems.length})
+                  </span>
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, fontWeight: 700 }}>
+                  {fmtNumber(stageValue)}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {stageItems.length === 0 ? (
+                  <div
+                    className="text-center py-6 rounded-md"
+                    style={{
+                      border: `1px dashed ${BORDER_STRONG}`,
+                      fontFamily: FONT_SANS,
+                      fontSize: 10,
+                      color: TEXT_MUTED,
+                    }}
+                  >
+                    Glissez une carte ici
+                  </div>
+                ) : (
+                  stageItems.map((item) => (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={() => setDragId(item.id)}
+                      onDragEnd={() => setDragId(null)}
+                      className="p-2.5 rounded-md cursor-grab active:cursor-grabbing transition-shadow hover:shadow-sm"
+                      style={{
+                        backgroundColor: "#FFFFFF",
+                        border: `1px solid ${BORDER_STRONG}`,
+                        opacity: dragId === item.id ? 0.5 : 1,
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div
+                            style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}
+                            className="truncate"
+                          >
+                            {item.prospectName}
+                          </div>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 1 }}>
+                            {item.sector}
+                          </div>
+                        </div>
+                        <GripVertical size={11} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: SAGE_DEEP }}>
+                          {fmtMAD(item.estimatedValue)}
+                        </span>
+                        <span
+                          className="inline-flex px-1.5 py-0.5 rounded-full"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            backgroundColor:
+                              item.probability >= 80 ? SAGE_BG : item.probability >= 50 ? "rgba(245,158,11,0.10)" : "#FAFAFA",
+                            color:
+                              item.probability >= 80 ? SAGE_DEEP : item.probability >= 50 ? "#B45309" : TEXT_BODY,
+                          }}
+                        >
+                          {item.probability}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <CalendarDays size={9} style={{ color: TEXT_MUTED }} />
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                          {fmtDayShort(item.nextActionDate)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <AiCommentary
+        text={`Pipeline de ${items.length} prospects · ${fmtMAD(Math.round(weightedPipeline))} en pipeline pondéré · ${fmtMAD(wonValue)} déjà gagné. ${activeClientName ? `Client actif : ${activeClientName}.` : "Glissez les cartes entre colonnes pour mettre à jour le stage."}`}
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ENV-AGENCY · FEATURE 6 — TEAM WORKLOAD BALANCER (full-width card)
+// Shows each team member: avatar (initials), name, role, assigned clients
+// (count + names), workload % (green/amber/red). "Rééquilibrer" button:
+// auto-suggest reassignment (move client from overloaded to underloaded).
+// Click member → see their client list with sentiment scores. Add team
+// member manually. Persisted in "agency:team-workload".
+// ════════════════════════════════════════════════════════════════════
+
+function TeamWorkloadBalancerCard({
+  users,
+  clients,
+  loading,
+  onInvite,
+}: {
+  users: TeamUser[];
+  clients: AgencyClient[];
+  loading: boolean;
+  onInvite: () => void;
+}) {
+  const [members, setMembers] = usePersistentState<WorkloadMember[]>(
+    "agency:team-workload",
+    [],
+  );
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newRole, setNewRole] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Bootstrap from real users when members list is empty (first run).
+  // Subsequent runs use the persisted assignments.
+  useEffect(() => {
+    if (members.length === 0 && users.length > 0) {
+      const initial: WorkloadMember[] = users.slice(0, 8).map((u, i) => ({
+        id: u.id,
+        name: u.name ?? u.email.split("@")[0],
+        role: u.role,
+        email: u.email,
+        assignedClientIds: clients
+          .filter((_, idx) => idx % Math.max(1, users.length) === i)
+          .map((c) => c.id),
+        capacity: 5,
+      }));
+      setMembers(initial);
+    }
+  }, [users, clients, members.length, setMembers]);
+
+  const workloadPct = (m: WorkloadMember): number => {
+    if (m.capacity === 0) return 0;
+    return Math.min(120, Math.round((m.assignedClientIds.length / m.capacity) * 100));
+  };
+
+  const workloadTone = (pct: number): { color: string; label: string } => {
+    if (pct <= 60) return { color: POSITIVE, label: "Sous-chargé" };
+    if (pct <= 100) return { color: SAGE, label: "Équilibré" };
+    if (pct <= 110) return { color: NEUTRAL_AMBER, label: "Chargé" };
+    return { color: NEGATIVE, label: "Surchargé" };
+  };
+
+  const handleAdd = () => {
+    if (!newName.trim() || !newEmail.trim()) return;
+    const m: WorkloadMember = {
+      id: `tm-${Date.now()}`,
+      name: newName.trim(),
+      role: newRole.trim() || "Consultant",
+      email: newEmail.trim(),
+      assignedClientIds: [],
+      capacity: 5,
+    };
+    setMembers([...members, m]);
+    setNewName("");
+    setNewRole("");
+    setNewEmail("");
+    setAdding(false);
+  };
+
+  const handleRebalance = () => {
+    if (members.length < 2) return;
+    // Algorithm: move 1 client from most-loaded to least-loaded member.
+    const sorted = [...members].sort((a, b) => workloadPct(b) - workloadPct(a));
+    const most = sorted[0];
+    const least = sorted[sorted.length - 1];
+    if (most.assignedClientIds.length === 0) return;
+    const clientIdToMove = most.assignedClientIds[most.assignedClientIds.length - 1];
+    setMembers(
+      members.map((m) => {
+        if (m.id === most.id) {
+          return { ...m, assignedClientIds: m.assignedClientIds.filter((id) => id !== clientIdToMove) };
+        }
+        if (m.id === least.id) {
+          return { ...m, assignedClientIds: [...m.assignedClientIds, clientIdToMove] };
+        }
+        return m;
+      }),
+    );
+  };
+
+  const avgWorkload =
+    members.length > 0
+      ? Math.round(members.reduce((s, m) => s + workloadPct(m), 0) / members.length)
+      : 0;
+  const overloadedCount = members.filter((m) => workloadPct(m) > 100).length;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Équilibreur de Charge Équipe"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: overloadedCount > 0 ? "rgba(239,68,68,0.10)" : SAGE_BG,
+                color: overloadedCount > 0 ? NEGATIVE : SAGE,
+                fontWeight: 700,
+              }}
+            >
+              <Users size={10} /> {members.length} membres · {overloadedCount} surchargé{overloadedCount > 1 ? "s" : ""}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => setAdding((v) => !v)}
+            >
+              <Plus size={11} /> Membre
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE, color: SAGE_DEEP }}
+              onClick={handleRebalance}
+              disabled={members.length < 2}
+            >
+              <RefreshCw size={11} /> Rééquilibrer
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={onInvite}
+            >
+              <UserPlus size={11} /> Inviter
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      {/* Add form */}
+      {adding && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mb-3 p-3 rounded-md"
+          style={{ border: `1px solid ${SAGE_DIM}`, backgroundColor: SAGE_BG }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <input
+              type="text"
+              placeholder="Nom"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="px-2 py-1.5 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+              autoFocus
+            />
+            <input
+              type="text"
+              placeholder="Rôle (ex: Account Manager)"
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+              className="px-2 py-1.5 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+            />
+            <input
+              type="email"
+              placeholder="email@agence.ma"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              className="px-2 py-1.5 rounded-md outline-none"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+            />
+            <Button
+              size="sm"
+              style={{ backgroundColor: SAGE, color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 11 }}
+              onClick={handleAdd}
+            >
+              <Check size={12} /> Ajouter
+            </Button>
+          </div>
+        </motion.div>
+      )}
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Charge moyenne</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {avgWorkload}%
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Clients assignés</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {members.reduce((s, m) => s + m.assignedClientIds.length, 0)} / {clients.length}
+          </div>
+        </div>
+        <div
+          className="p-2.5 rounded-md"
+          style={{
+            border: `1px solid ${BORDER}`,
+            backgroundColor: overloadedCount > 0 ? "rgba(239,68,68,0.06)" : "#FCFCFC",
+          }}
+        >
+          <div style={FONT_HEADER}>Surchargés</div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 14,
+              fontWeight: 700,
+              color: overloadedCount > 0 ? NEGATIVE : SAGE_DEEP,
+              marginTop: 2,
+            }}
+          >
+            {overloadedCount}
+          </div>
+        </div>
+      </div>
+      {loading && members.length === 0 ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : members.length === 0 ? (
+        <div className="py-8 text-center" style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+          Aucun membre. Cliquez sur « Membre » pour ajouter.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          {members.map((m) => {
+            const pct = workloadPct(m);
+            const tone = workloadTone(pct);
+            const isSelected = m.id === selectedId;
+            const assignedClients = clients.filter((c) => m.assignedClientIds.includes(c.id));
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setSelectedId(isSelected ? null : m.id)}
+                className="text-left p-3 rounded-md transition-colors hover:bg-[#FAFAFA]"
+                style={{
+                  border: `1px solid ${isSelected ? SAGE_DIM : BORDER}`,
+                  backgroundColor: isSelected ? SAGE_BG : "#FCFCFC",
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: SAGE_BG,
+                      color: SAGE_DEEP,
+                      fontFamily: FONT_MONO,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {m.name
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((w) => w[0]?.toUpperCase() ?? "")
+                      .join("")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}
+                        className="truncate"
+                      >
+                        {m.name}
+                      </span>
+                      <span
+                        className="inline-flex px-1.5 py-0.5 rounded-full"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 8,
+                          letterSpacing: "0.04em",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          backgroundColor:
+                            m.role === "agency-admin"
+                              ? SAGE_BG
+                              : m.role === "agency-manager"
+                                ? "rgba(245,158,11,0.10)"
+                                : "#FAFAFA",
+                          color:
+                            m.role === "agency-admin"
+                              ? SAGE_DEEP
+                              : m.role === "agency-manager"
+                                ? "#B45309"
+                                : TEXT_BODY,
+                        }}
+                      >
+                        {m.role}
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 1 }}>
+                      {m.email} · {m.assignedClientIds.length} client{m.assignedClientIds.length > 1 ? "s" : ""} / {m.capacity} max
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: tone.color }}>
+                      {pct}%
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 8,
+                        color: TEXT_MUTED,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {tone.label}
+                    </div>
+                  </div>
+                </div>
+                {/* Workload bar */}
+                <div
+                  className="mt-2 rounded-full overflow-hidden"
+                  style={{ height: 4, backgroundColor: BORDER }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.min(100, pct)}%`,
+                      height: "100%",
+                      backgroundColor: tone.color,
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+                {/* Selected detail */}
+                {isSelected && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-2 pt-2"
+                    style={{ borderTop: `1px solid ${BORDER}` }}
+                  >
+                    <div style={FONT_HEADER}>Clients assignés</div>
+                    {assignedClients.length === 0 ? (
+                      <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                        Aucun client — capacité disponible.
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {assignedClients.map((c) => {
+                          const score = derivedClientScore(c);
+                          const sentiment = derivedClientSentiment(c);
+                          const toneColor =
+                            sentiment.positive >= 50 ? POSITIVE : sentiment.negative >= 40 ? NEGATIVE : NEUTRAL_AMBER;
+                          return (
+                            <span
+                              key={c.id}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                              style={{
+                                backgroundColor: "#FFFFFF",
+                                border: `1px solid ${BORDER}`,
+                                fontFamily: FONT_MONO,
+                                fontSize: 9,
+                                color: TEXT_BODY,
+                              }}
+                              title={`Score ${score} · Sentiment ${sentiment.positive}%+ / ${sentiment.negative}%-`}
+                            >
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: "50%",
+                                  backgroundColor: toneColor,
+                                }}
+                              />
+                              {c.displayName} · {score}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <AiCommentary
+        text={`${members.length} membres · charge moyenne ${avgWorkload}%. ${overloadedCount > 0 ? `${overloadedCount} membre(s) surchargé(s) — cliquez « Rééquilibrer » pour déplacer un client du plus chargé vers le moins chargé.` : `Charge équilibrée — capacité disponible pour de nouveaux clients.`}`}
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // SIDEBAR NAV (plan-aware — Agences)
 // 10 items: 5 shared with Essentiel/Pro/Enterprise + 3 Agency exclusives
 // (Clients, Campagnes, White-Label) + Visibilité IA + Harch 100 (external).
@@ -7442,6 +9508,23 @@ export default function AgencyDashboard({
   const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
   const [exporting, setExporting] = useState(false);
 
+  // ─── ENV-AGENCY · client-side environment state ────────────────
+  // All persisted via usePersistentState (AURA fix #2 — survives refresh).
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [pendingClients, setPendingClients] = usePersistentState<PendingClient[]>(
+    "agency:pending-clients",
+    [],
+  );
+  const [tierOverride, setTierOverride] = usePersistentState<AgencyTierLevel | null>(
+    "agency:tier-level",
+    null,
+  );
+  // Active tier = manual override OR auto-detected from client count.
+  const activeTier = useMemo(
+    () => getTierInfo(tierOverride ?? tierFromClientCount(clients.length)),
+    [tierOverride, clients.length],
+  );
+
   // ─── Sidebar / nav state ───────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("score");
@@ -7715,11 +9798,23 @@ export default function AgencyDashboard({
   }, [pushToast]);
 
   const handleAddClient = useCallback(() => {
-    pushToast(
-      "Pour ajouter un client, contactez votre responsable de compte Harch.",
-      "info",
-    );
-  }, [pushToast]);
+    setWizardOpen(true);
+  }, []);
+
+  const handleWizardComplete = useCallback(
+    (client: PendingClient) => {
+      setPendingClients((prev) => [client, ...prev].slice(0, 50));
+      pushToast(
+        `Client « ${client.name} » ajouté au portefeuille (en attente de validation).`,
+        "success",
+      );
+    },
+    [pushToast, setPendingClients],
+  );
+
+  const handleWizardClose = useCallback(() => {
+    setWizardOpen(false);
+  }, []);
 
   const handleWhatsAppConfig = useCallback(() => {
     pushToast("Configuration des alertes WhatsApp ouverte.", "info");
@@ -7833,12 +9928,28 @@ export default function AgencyDashboard({
         <main className="mx-auto max-w-[1440px] w-full px-4 sm:px-6 py-6">
           <TooltipProvider delayDuration={200}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mt-6">
+              {/* ENV-AGENCY · FEATURE 1 — Tier Badge (prominent banner, full width) */}
+              <motion.div
+                id="tier-badge"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(0)}
+                className="lg:col-span-12"
+              >
+                <AgencyTierBadgeCard
+                  clientCount={clients.length}
+                  tierOverride={tierOverride}
+                  onTierOverride={setTierOverride}
+                  agencyCommissionPct={agency?.commissionPct ?? 20}
+                />
+              </motion.div>
+
               {/* Row 1 — SECTION 1: Client Switcher (30%) + HarchIQ AI Workspace (70%) — combined full width */}
               <motion.div
                 id="ai-workspace"
                 style={sectionScrollStyle}
                 {...cardMotion}
-                transition={d(0)}
+                transition={d(1)}
                 className="lg:col-span-12"
               >
                 <CardShell style={{ padding: 0 }} className="lg:col-span-12">
@@ -7984,8 +10095,19 @@ export default function AgencyDashboard({
                 <ClientComparisonCard clients={clients} onCompareOthers={handleCompareOthers} />
               </motion.div>
 
+              {/* ENV-AGENCY · FEATURE 3 — Commission Calculator (full width, after revenue) */}
+              <motion.div
+                id="commission-calc"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(12)}
+                className="lg:col-span-12"
+              >
+                <CommissionCalculatorCard tier={activeTier} />
+              </motion.div>
+
               {/* Row 5 — HarchIQ + Reports */}
-              <motion.div {...cardMotion} transition={d(12)} className="lg:col-span-6">
+              <motion.div {...cardMotion} transition={d(13)} className="lg:col-span-6">
                 <HarchIQChatCard
                   activeClientName={activeClient?.displayName ?? null}
                   weeklyInsight={weeklyInsight}
@@ -8029,6 +10151,28 @@ export default function AgencyDashboard({
                 />
               </motion.div>
 
+              {/* ENV-AGENCY · FEATURE 5 — Pitch Deck Pipeline (full width, after pitch deck) */}
+              <motion.div
+                id="pitch-pipeline"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(15)}
+                className="lg:col-span-12"
+              >
+                <PitchPipelineCard activeClientName={activeClient?.displayName ?? null} />
+              </motion.div>
+
+              {/* ENV-AGENCY · FEATURE 4 — Client Portal Preview (full width, after white-label) */}
+              <motion.div
+                id="portal-preview"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(15)}
+                className="lg:col-span-12"
+              >
+                <ClientPortalPreviewCard activeClient={activeClient} agency={agency} />
+              </motion.div>
+
               {/* Row 7 — Team + Assignment Matrix */}
               <motion.div {...cardMotion} transition={d(16)} className="lg:col-span-6">
                 <TeamAssignationsCard
@@ -8040,6 +10184,22 @@ export default function AgencyDashboard({
               </motion.div>
               <motion.div {...cardMotion} transition={d(17)} className="lg:col-span-6">
                 <MatriceAssignationCard users={users} clients={clients} onToast={pushToast} />
+              </motion.div>
+
+              {/* ENV-AGENCY · FEATURE 6 — Team Workload Balancer (full width, after team matrix) */}
+              <motion.div
+                id="workload-balancer"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(17)}
+                className="lg:col-span-12"
+              >
+                <TeamWorkloadBalancerCard
+                  users={users}
+                  clients={clients}
+                  loading={usersLoading}
+                  onInvite={handleInvite}
+                />
               </motion.div>
 
               {/* Row 8 — Sentiment + Sources */}
@@ -8127,13 +10287,23 @@ export default function AgencyDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Agences · 25 sections · Multi-clients · White-label ·
-              Commission {agency?.commissionPct ?? 20}%
+              Harch Atelier · Console Agences · 25 sections · 6 ENV-AGENCY features · Multi-clients · White-label ·
+              Commission {agency?.commissionPct ?? 20}% · Tier {activeTier.label}
+              {pendingClients.length > 0 ? ` · ${pendingClients.length} client(s) en attente` : ""}
               {userEmail ? ` · ${userEmail}` : ""}
             </p>
           </footer>
         </main>
       </div>
+
+      {/* ENV-AGENCY · FEATURE 2 — Client Onboarding Wizard (portal-level overlay) */}
+      {wizardOpen && (
+        <ClientOnboardingWizard
+          onClose={handleWizardClose}
+          onComplete={handleWizardComplete}
+          teamMembers={users}
+        />
+      )}
     </div>
   );
 }

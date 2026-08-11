@@ -25,7 +25,7 @@ declare module "next-auth" {
   interface User {
     id?: string;
     role?: string;
-    accountType?: string;  // brand-monitor | market-competitor | investment-bank | harch-alpha
+    accountType?: string;  // essential | pro | enterprise | agency (4 plans Harch Atelier)
     companyId?: string | null;
     status?: string;
     isDemo?: boolean;     // Task: domain-matching-demo-isolation — true for demo-*@harch.atelier

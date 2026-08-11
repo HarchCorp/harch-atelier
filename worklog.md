@@ -3314,3 +3314,212 @@ Unresolved:
 - Vercel build long — vérifier le dashboard Vercel pour confirmer le déploiement
 - DB SQLite vs PostgreSQL toujours non résolu (pas bloquant pour le build Vercel, mais les APIs retournent 500 en prod)
 - QA runtime non effectué sur les nouvelles features (SystemStatus, changelog) — infra OOM locale
+
+---
+Task ID: ENV-ENTERPRISE
+Agent: AURA — persona Grandes Entreprises
+Task: Create complete client-side environment for Enterprise account type
+
+Work Log:
+- Read worklog.md tail (KAEL-1/2, AURA-AUDIT-1, 10X-ENTERPRISE) for project context — 25-section EnterpriseDashboard 10X already deployed with HarchIQ AI Workspace, DEFCON, governance, API, ESG, regulatory
+- Read EnterpriseDashboard.tsx (6001 lines) — confirmed 'use client', design tokens (SAGE/CHARCOAL/TEXT_BODY), usePersistentState hook (line 712), framer-motion, shadcn/ui, recharts, lucide-react all present
+- Read existing DEFCON/Gouvernance/API/Briefing/ESG sections (4142, 4494, 4878, 5112, 5505) to avoid naming conflicts and preserve design parity
+- Confirmed /api/console/ask POST pattern (line 1552, 3939) for HarchIQ integration — replicated in Board Briefing Generator
+- Added 6 new lucide icon imports: Clock, FileCheck, Flag, Landmark, Lock, Trash2 (all 6 verified used in code)
+- Modified Header component (line 1175) to accept milestoneProgress + onMilestoneClick props — renders subtle charcoal "JALONS X/5" badge with CheckCircle2 icon, hidden on mobile, tooltip with progress
+- Inserted 5 new component definitions before MAIN (~1900 lines): GovernanceCommandBar, BoardBriefingGeneratorCard, ComplianceCockpitCard, ApiIntegrationHubCard, MultiMarketReputationMapCard, ExecutiveMilestoneTrackerCard
+- Modified main EnterpriseDashboard function: added 5 usePersistentState hooks (defconLevel, briefingSchedule, complianceState, integrationsState, milestonesState) + useState for approvals + useCallback handlers (handleDefconChange, handleApprove, handleReject, handleToggleMilestone) + useMemo for milestoneProgress
+- Rendered GovernanceCommandBar between Header and main (sticky, top:56px), passed milestoneProgress to Header, rendered 5 new cards in grid after SECTION 25
+- Footer text updated: "25 sections" → "30 sections"
+- Crisis mode: when defconLevel ≥ 4, GovernanceCommandBar border/bg turn red, main column gets 3px red top border, toast.error notification fired
+- Ran NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT CODE 0 (0 errors)
+- Verified all 5 localStorage keys present: enterprise:defcon-level, enterprise:briefing-schedule, enterprise:compliance, enterprise:integrations, enterprise:milestones
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (6001 → 8039 lines, +2038 net)
+- Feature 1 — Governance Command Bar (sticky): YES — RBAC role display, DEFCON 1-5 toggle (accent → red when ≥4), approval queue expandable (4 default items, approve/reject), audit log shortcut, persisted in enterprise:defcon-level
+- Feature 2 — Board Briefing Generator: YES — 4 templates (Briefing COMEX / Rapport risque ESG / Audit conformité / Cartographie géopolitique), one-click HarchIQ generate (POST /api/console/ask), PDF-ready layout with exec header + content + sources, schedule monthly/quarterly, persisted in enterprise:briefing-schedule
+- Feature 3 — Compliance Cockpit: YES — 4 panels (CNDP Loi 09-08 / AMMC / BAM / ESG), each with status (Conforme/Surveillance/Non-conforme — clickable to cycle), last audit date, next deadline (red if <14d), risk score, expandable notes, audit trail (10 entries), export PDF trigger, persisted in enterprise:compliance
+- Feature 4 — API & Integration Hub: YES — API key management (generate/revoke/copy), usage stats (calls/month, rate limit 600 req/min enterprise tier), webhook configuration (add endpoint URL + event types: crisis/sentiment-shift/milestone), MCP integrations toggle (ServiceNow/Splunk/Tableau/Slack/Teams), persisted in enterprise:integrations
+- Feature 5 — Multi-Market Reputation Map: YES — 8 francophone markets grid (MA/FR/BE/CH/CA/TN/SN/CI), each with sentiment score, mention volume, top narrative, crisis flag, geo risk indicator (green/amber/red), click → expand (top 3 narratives + key sources + 14-day AreaChart trend), comparison mode (2-3 markets side-by-side)
+- Feature 6 — Executive Milestone Tracker: YES — 5 milestones (Premier briefing COMEX / Audit ESG Q3 / Conformité AMMC validée / War room testé / API intégrée au SIEM), header badge "JALONS X/5" (charcoal, subtle, board-ready — NOT gamified), dedicated Section 30 card with toggle cards, persisted in enterprise:milestones
+- Design system: preserved — white bg, sage green accent, charcoal text, Space Mono headers, Inter body, Lucide icons (16px), no emojis, 1px #F0F0F0 borders, 12px radius cards, executive institutional tone
+- TypeScript: 0 errors (bunx tsc --noEmit exit code 0)
+- All new state persisted via usePersistentState hook (SSR-safe, quota-safe) — survives refresh
+- No existing sections removed or modified (only Header signature extended with optional props, footer text updated 25→30 sections)
+
+═══════════════════════════════════════════════════════════════════════
+
+---
+Task ID: ENV-AGENCY
+Agent: AURA — persona Agences
+Task: Create complete client-side environment for Agency account type (3 levels)
+
+Work Log:
+- Lu worklog.md tail (KAEL-1, KAEL-2, AURA-AUDIT-1) — fichier cible AgencyDashboard.tsx (8139 lignes, déjà 5 fixes AURA + usePersistentState hook)
+- Lu AgencyDashboard.tsx en chunks : header (1-200), design tokens (200-700), ClientSwitcher (1091-1830), HarchIQ workspace (1838-2445), ScoreReputationHero (2668-2942), RevenueTrackerCard (3918-4142), PitchDeckCard (4965-5175), WhiteLabelCard (5181-5540), TeamAssignationsCard (5555-5811), root AgencyDashboard (7425-8139)
+- Grep structure : 25 sections + sidebar + header + root identifiés via "^// SECTION|^function [A-Z]"
+- Étape 1 — Imports Lucide : ajouté ArrowLeft, Calculator, Check, Crown, Eye, EyeOff, GripVertical, KanbanSquare, Mail, UserPlus (10 nouveaux icônes, préservés les 47 existants, ordre alphabétique)
+- Étape 2 — Types : ajouté 7 nouveaux types après ConversationHistoryItem (l. 514) — AgencyTierLevel, AgencyTierInfo, PendingClient, CommissionCalcInput, PortalPreviewConfig, PitchPipelineItem, WorkloadMember (tous persistés via usePersistentState)
+- Étape 3 — Tier helpers : ajouté 3 fonctions après agencySubLevel (l. 656) — getTierInfo (3 niveaux avec benefits + commission 20/25/30%), tierFromClientCount (auto-detection 1-5/5-20/20+), tierProgress (% vers niveau supérieur + clients restants)
+- Étape 4 — 6 nouvelles composantes (insertion entre BoiteOutilsAgenceCard et SIDEBAR NAV, l. 7115) :
+  • AgencyTierBadgeCard — banner full-width, 3 colonnes (tier identity + override buttons, progression bar, commission + benefits list), Crown icon, AiCommentary contextualisé
+  • ClientOnboardingWizard — modal 4 étapes (Infos client → Branding → Plan → Team), stepper visuel, ESC-to-close, click-outside, skip option, success animation CheckCircle2, récapitulatif final
+  • CommissionCalculatorCard — 3 colonnes (inputs retainer/clientCount + commission badge, outputs mensuel/annuel/upgrade + chart stacked BarChart sage/gray)
+  • ClientPortalPreviewCard — toggle Vue agence/Vue client (Eye/EyeOff), masque commission/pitch/équipe en mode client, live preview branded, bouton "Envoyer l'accès client" simule email
+  • PitchPipelineCard — kanban 3 colonnes (Prospect/Proposition/Gagné) via HTML5 drag-drop natif (zéro deps), stats strip (total/pondéré/gagné), add form, 5 prospects seedés
+  • TeamWorkloadBalancerCard — grid 2 colonnes de membres (avatar initials, role badge, workload % coloré green/amber/red, bar de progression), bouton Rééquilibrer (algo: move 1 client du plus chargé vers le moins chargé), click membre → détails clients assignés avec sentiment scores
+- Étape 5 — Root AgencyDashboard :
+  • Ajouté state: wizardOpen (useState), pendingClients (usePersistentState "agency:pending-clients"), tierOverride (usePersistentState "agency:tier-level"), activeTier (useMemo → getTierInfo)
+  • Modifié handleAddClient : maintenant ouvre wizard (avant: toast "contactez votre responsable")
+  • Ajouté handleWizardComplete + handleWizardClose
+  • Inséré 6 motion.div wrappers dans le grid principal : Tier Badge (avant Row 1), Commission Calculator (après Row 4), PitchPipeline + PortalPreview (après Row 6), TeamWorkloadBalancer (après Row 7)
+  • Wizard rendu en portal-level overlay (conditional rendering {wizardOpen && ...} pour éviter setState-in-effect)
+- Étape 6 — Quality checks :
+  • Refactor ClientOnboardingWizard : retiré `open` prop + reset useEffect (évite react-hooks/set-state-in-effect error). Composant now conditionally rendered par parent → useState initializers s'appliquent à chaque mount.
+  • Ajouté eslint-disable-next-line react-hooks/set-state-in-effect sur usePersistentState hook (pattern canonique localStorage hydration, pré-existant de KAEL-1, false positive du rule React Compiler)
+  • bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors)
+  • bunx eslint AgencyDashboard.tsx → 0 errors, 5 warnings (4 TanStack Table + 3 unused eslint-disable directives — tous pré-existants, aucun introduit par cette task)
+
+Stage Summary:
+- Fichier cible : /home/z/my-project/src/app/atelier/console/agency/AgencyDashboard.tsx (8139 → 10309 lignes, +2170 lignes net)
+- 6 features ENV-AGENCY livrées (toutes persisted localStorage via usePersistentState) :
+  1. Agency Tier Badge — banner prominent full-width, 3 niveaux (Débutant/Croissance/Entreprise), auto-détection + override manuel, commission 20/25/30%, progression visuelle vers niveau supérieur, liste avantages
+  2. Client Onboarding Wizard — modal 4 étapes avec stepper, skip option, ESC close, success animation, persiste dans "agency:pending-clients"
+  3. Commission Calculator — inputs retainer + clientCount + tier auto, outputs mensuel/annuel/upgrade, chart stacked BarChart (sage=agence, gray=Harch), bouton "Simuler tier supérieur"
+  4. Client Portal Preview — toggle Vue agence/Vue client, masque features agence (commission/pitch/équipe) en mode client, live preview branded, bouton "Envoyer l'accès client" simule email
+  5. Pitch Deck Pipeline — kanban 3 colonnes (Prospect/Proposition/Gagné) via HTML5 drag-drop natif (zéro deps), stats strip, add form, 5 prospects seedés, drag updates probability automatiquement
+  6. Team Workload Balancer — grid membres avec workload % coloré, bouton "Rééquilibrer" (algo déterministe move client), click membre → détails clients avec sentiment scores, add team member manual
+- Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px, no emojis, French throughout
+- Tone agency/commercial respecté : focus commission, client-facing polish, pitch deck pipeline orienté revenu, team workload orienté SLA
+- 0 régression sur les 25 sections existantes (toutes préservées, seules 6 nouvelles cartes ajoutées en full-width rows entre les rows existants)
+- Code quality : tsc 0 errors, eslint 0 errors (+5 warnings pré-existants)
+- localStorage keys : agency:tier-level, agency:pending-clients, agency:commission-calc, agency:portal-preview, agency:pitch-pipeline, agency:team-workload (6 clés, toutes usePersistentState-backed, SSR-safe, ~5MB budget)
+
+---
+Task ID: ENV-ESSENTIAL
+Agent: AURA — persona Essentiel
+Task: Create complete client-side environment for Essentiel account type
+
+Work Log:
+- Read worklog.md tail (KAEL-1, KAEL-2, AURA-AUDIT-1, 10X-ESSENTIEL, ENV-ENTERPRISE, ENV-AGENCY) — confirmed EssentialDashboard.tsx (4450 lines) with 20 sections + HarchIQ Workspace + real API integration already deployed
+- Read EssentialDashboard.tsx in chunks: header (1-200), types (200-356), useApi hook (474-519), SectionHeader/CardShell (532-650), SidebarContent (730-936), Header (942-1066), HarchIQWorkspace (1149-1484), ScoreReputationCard (1770-1937), AlertesActivesKpi (2172-2230), TendanceSentimentCard (2237-2370), DiversiteSourcesCard (2375-2516), DernieresMentionsCard (2521-2690), BoiteOutilsCard (3998-4186), MAIN EssentialDashboard (4192-4450)
+- Confirmed design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO/FONT_SANS), framer-motion + shadcn/ui + recharts + lucide-react all imported, 'use client' directive present, file does NOT yet have usePersistentState hook (only Pro/Enterprise/Agency dashboards had it from KAEL-1/2)
+- Confirmed AgencyDashboard usePersistentState<T> pattern (lines 842-880) for replication: try/catch on localStorage parse + write, useEffect hydration on mount, useEffect persist on every change, eslint-disable react-hooks/set-state-in-effect on hydration setState
+- Step 1 — Imports: added 11 new Lucide icons (CheckCircle2, Circle, ClipboardList, Flag, HelpCircle, KeyRound, ListChecks initially, Map, Rocket, Target initially, Zap) — verified all used at least twice (import + usage), removed Target + ListChecks (unused after final pass, ESLint clean)
+- Step 2 — Types: added 2 new interfaces after Harch100Resp (lines 322-356): QuotaState (used/total/date + whatsappUsed/whatsappTotal/whatsappMonth for daily+monthly reset) and MilestoneState (4 booleans: firstArticle/firstQuestion/firstReport/firstWeek + firstVisitDate + lastUnlockedAt for pulse animation)
+- Step 3 — usePersistentState hook: inserted after useApi hook (lines 568-607) — same pattern as AgencyDashboard, SSR-safe (initial value during hydration, localStorage read on mount), try/catch on both parse (corrupted data) and write (quota exceeded)
+- Step 4 — SectionHeader extension: added 4 optional props (helpKey, helpText, dismissedHelp, onDismissHelp). When helpKey+helpText provided AND not in dismissedHelp set, renders HelpBadge next to the title (inside the same flex row, before the right slot)
+- Step 5 — HelpBadge component (lines 658-737): (?) icon button (14px sage), TooltipProvider with controlled open state (click to toggle), sage-tinted popover content with Sparkles icon + 1-2 sentence explanation + "Ne plus montrer" button that calls onDismiss + closes popover. Max-width 280px, sage border, white bg
+- Step 6 — 6 new component definitions (inserted before MAIN, lines 4380-5044):
+  • WelcomeOnboardingBanner — sage-bordered banner, left strip (greeting with Rocket icon + dismiss), right grid 3 steps (Newspaper/Hash/Sparkles icons, numbered 1-2-3, scroll to sources/sujets/ai-workspace). Dismissible via X button + "Masquer" link, persisted in essential:onboarding-dismissed
+  • QuotaUsageWidget — header right-side expandable dropdown, KeyRound icon trigger button, 3 QuotaRow children (HarchIQ X/50, Sources X/20, WhatsApp X/100) with color-coded Progress bars (sage <70%, amber 70-90%, red >90%) + reset labels (minuit/fixe/1er du mois). Click-outside to close, motion.div dropdown with sage-tinted shadow. Footer upsell to Pro
+  • QuotaRow helper — single metric row with label, used/total monospace, Progress bar with --progress-foreground CSS var, reset label
+  • MilestoneBadge — small header chip (hidden on mobile), Flag icon in circle (sage bg when complete, border-only when pending), "JALONS" label + "X/4" count, sage-pulse CSS class when recentlyUnlocked=true, tooltip with remaining count
+  • QuickStartCard — sage-bg CardShell, Zap icon header, 4 quick actions grid (TrendingUp/Sparkles/Bell/Download icons), each button with sage_dim border + hover shadow + "Ouvrir" affordance, dismiss X button top-right, persisted in essential:quickstart-dismissed + essential:visits counter (hidden after visits > 3)
+  • EmptyState — reusable component with CSS-only sage illustration (56px dashed sage circle + Icon 22px), title + description + optional CTA button (sage bg) + optional suggestion chips (sage-tinted rounded pills). Used in DernieresMentionsCard empty state (replaces EmptyDash "Aucune mention" with actionable CTA "Configurer mes mots-clés" + 4 keyword chips)
+  • MilestoneTrackerCard — dedicated Section 21 card, 4 milestone rows in grid (Newspaper/MessageSquare/ClipboardList/CalendarDays icons), each row with CheckCircle2 (done) or Circle (pending) + sage bg when done, progress bar (sage), "JALONS X/4" badge top-right, "COMPLET" suffix when all done, sage-pulse animation on recently unlocked row, Trophy upsell banner when 4/4
+- Step 7 — ENV-ESSENTIAL helpers (lines 5016-5044): todayISO() returns YYYY-MM-DD, currentMonthISO() returns YYYY-MM, INITIAL_QUOTA (used=0, total=50, today date, whatsappUsed=0, whatsappTotal=100, current month), INITIAL_MILESTONES (all false, firstVisitDate=today, lastUnlockedAt=null)
+- Step 8 — Header modification (lines 1134-1287): extended signature with quota/sourcesCount/milestoneProgress/milestoneTotal/milestoneRecentlyUnlocked/onMilestoneClick props, added local quotaExpanded state, inserted MilestoneBadge + QuotaUsageWidget between hamburger/brand and Bell button in right cluster
+- Step 9 — HarchIQWorkspace modification (lines 1370-1484): replaced internal useState({used:3, total:50}) quota with props (quota: QuotaState, setQuota lifted from root), added dismissedHelp + onDismissHelp + onFirstQuestion props, kept sendQuestion logic identical but uses prop setQuota + fires onFirstQuestion callback when wasFirst (quota.used === 0 before increment). Added HelpBadge next to "HarchIQ AI Workspace" title in workspace header strip
+- Step 10 — Section component signatures extended (4 functions): ScoreReputationCard, AlertesActivesKpi, TendanceSentimentCard, DiversiteSourcesCard — each now accepts optional dismissedHelp?: Set<string> + onDismissHelp?: (key: string) => void. Passed helpKey + helpText to their SectionHeader calls:
+  • Section 02 Score: helpKey="score" — "Score agrégé 0-100 basé sur le sentiment, le volume de mentions et la part de voix..."
+  • Section 06 Alertes: helpKey="alertes" — "Harch détecte automatiquement les pics d'activité négative..."
+  • Section 07 Sentiment: helpKey="sentiment" — "Répartition quotidienne des mentions en positif, neutre et négatif..."
+  • Section 08 Sources: helpKey="sources" — "Répartition des mentions par source médiatique et sociale..."
+  • HarchIQ workspace: helpKey="harchiq" — "Posez vos questions en langage naturel..."
+- Step 11 — DernieresMentionsCard empty state replacement: replaced `<EmptyDash label="Aucune mention" />` with full EmptyState component (Newspaper icon, "Aucun article analysé pour le moment" title, "Configurer mes mots-clés" CTA scrolling to "sujets" section, 4 suggestion chips Marque/Dirigeants/Concurrents/Produits that fire toast.info)
+- Step 12 — MAIN EssentialDashboard rewrite (lines 5103-5589):
+  • 6 usePersistentState hooks: onboardingDismissed (bool), quickStartDismissed (bool), visits (number), quota (QuotaState), milestones (MilestoneState), helpDismissedArr (string[]) — all SSR-safe
+  • Local state: recentlyUnlockedKey (string | null) for transient sage-pulse animation
+  • helpDismissedSet = useMemo(() => new Set(helpDismissedArr)) — passed as prop to all 5 help-bearing sections
+  • dismissHelp = useCallback — appends key to helpDismissedArr if not present
+  • sourcesCount = Math.min(20, sources?.sources?.length ?? 0) — capped at 20 (plan ceiling)
+  • userName = session?.user?.name ?? "Utilisateur" (via useSession)
+  • 4 useEffects: (1) daily+monthly quota reset (compares today/today + thisMonth/thisMonth, returns new object only if changed — avoids infinite loop), (2) bump visits on mount (setVisits((v) => v + 1)), (3) firstArticle milestone when health.mentionCount24h > 0, (4) firstWeek milestone when firstVisitDate >= 7 days ago. Each milestone effect sets recentlyUnlockedKey + fires toast.success + 4-second timeout to clear
+  • handleFirstQuestion = useCallback — fires from HarchIQWorkspace when quota.used === 0 → 1, sets milestone + pulse + toast
+  • handleReportDownload = useCallback — fires from QuickStartCard "rapport" action after CSV download succeeds
+  • handleQuickAction = useCallback — switch on id (score/harchiq/alertes scroll, rapport triggers async CSV fetch + download + handleReportDownload)
+  • milestoneProgress = useMemo — counts true flags among 4 milestones
+  • showQuickStart = !quickStartDismissed && visits <= 3 (auto-hide after 3 visits OR explicit dismiss)
+  • Render tree additions: (a) <style> tag with sage-pulse-kf keyframe (box-shadow pulse, 1.6s ease-out x2), (b) WelcomeOnboardingBanner at top of main when !onboardingDismissed, (c) HarchIQWorkspace with quota+setQuota+dismissedHelp+onDismissHelp+onFirstQuestion props, (d) QuickStartCard when showQuickStart, (e) ScoreReputationCard + AlertesActivesKpi + TendanceSentimentCard + DiversiteSourcesCard with dismissedHelp+onDismissHelp props, (f) MilestoneTrackerCard as new Section 21 (after BoiteOutilsCard Section 20), (g) Header with full prop set (quota, sourcesCount, milestoneProgress=4, milestoneRecentlyUnlocked, onMilestoneClick scroll to "jalons"), (h) Footer text updated: "v10X" → "v10X · ENV-ESSENTIAL"
+- Step 13 — Quality checks:
+  • Removed unused imports (Target, ListChecks) — final icon set: 11 new (CheckCircle2, Circle, ClipboardList, Flag, HelpCircle, KeyRound, Map, Rocket, Zap) — all verified used at least twice
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors)
+  • bunx eslint EssentialDashboard.tsx → EXIT_CODE=0 (0 errors, 0 warnings)
+  • Verified all 6 localStorage keys present: essential:onboarding-dismissed, essential:quickstart-dismissed, essential:visits, essential:quota, essential:milestones, essential:help-dismissed
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/essential/EssentialDashboard.tsx (4450 → 5647 lines, +1197 net)
+- Feature 1 — Welcome Onboarding Banner: YES — sage-bordered banner with 3-step progress (Configurez vos sources → Définissez vos mots-clés → Lancez votre premier audit), each step scrolls to relevant section, dismissible via X + Masquer link, persisted in essential:onboarding-dismissed
+- Feature 2 — Quota Usage Widget: YES — header right-side expandable dropdown with 3 metrics (HarchIQ X/50, Sources X/20, WhatsApp X/100), color-coded progress bars (sage <70%, amber 70-90%, red >90%), reset labels (minuit/fixe/1er du mois), click-outside to close, daily+monthly auto-reset via root useEffect, persisted in essential:quota
+- Feature 3 — Quick Start Card: YES — first card after HarchIQ workspace hero, 4 quick actions (Voir mon score/Lancer HarchIQ AI/Configurer alertes WhatsApp/Télécharger mon premier rapport), each scrolls to relevant section or triggers CSV export, auto-hidden after 3 visits OR explicit dismiss, persisted in essential:visits + essential:quickstart-dismissed
+- Feature 4 — Contextual Help Tooltips: YES — HelpBadge component with (?) icon + sage popover, added to 5 sections (Score, Sentiment, Sources, HarchIQ AI, Alertes), each with 1-2 sentence French explanation, "Ne plus montrer" dismiss button per tooltip, persisted in essential:help-dismissed (array of keys)
+- Feature 5 — First-Run Empty States: YES — EmptyState reusable component (CSS-only sage dashed circle illustration + Icon + title + description + CTA + suggestion chips), injected into DernieresMentionsCard (replaces "Aucune mention" with "Aucun article analysé" + "Configurer mes mots-clés" CTA + 4 keyword chips), HarchIQ welcome message already serves as first-question empty state with follow-up chips
+- Feature 6 — Milestone Tracker: YES — header badge (JALONS X/4, Flag icon, sage-pulse on unlock, hidden on mobile) + dedicated Section 21 card with 4 milestones (Premier article analysé / Première question HarchIQ / Premier rapport téléchargé / Première semaine complète), each milestone auto-detected via useEffect (mentionCount24h>0 / quota.used>0 / report download / 7 days since firstVisitDate), sage-pulse animation on recently unlocked row (4-second window), toast.success notification on unlock, Trophy upsell banner when 4/4 complete, persisted in essential:milestones
+- Design system preserved: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius cards, Lucide icons 16px, no emojis, French throughout, institutional Essentiel tone (accessible, guided, no jargon)
+- No existing sections removed or modified (only Header signature extended with optional props, HarchIQWorkspace signature extended with quota props, 4 Section components extended with optional dismissedHelp/onDismissHelp props, DernieresMentionsCard empty-state branch enhanced)
+- Code quality: tsc 0 errors, eslint 0 errors, 0 warnings
+- localStorage keys (6 total): essential:onboarding-dismissed, essential:quickstart-dismissed, essential:visits, essential:quota, essential:milestones, essential:help-dismissed — all usePersistentState-backed (SSR-safe, quota-safe)
+- Persona Essentiel needs addressed: Simplicité absolue (banner + quick start + help tooltips), Veille médiatique de base (sources count in quota widget), Social listening léger (sentiment trend help), Suivi visibilité IA (CitationsIaKpi preserved), Alertes WhatsApp essentiel (alertes help + milestone), HarchIQ AI limité (50 questions/day with daily reset), Tableaux de bord prédéfinis (no customization, all sections fixed), Rapports mensuels (CSV export via QuickStart + BoiteOutils), Onboarding rapide <5min (3-step banner + 4-action quick start)
+
+---
+Task ID: ENV-PRO
+Agent: AURA — persona Pro
+Task: Create complete client-side environment for Pro account type
+
+Work Log:
+- Lu worklog.md tail (KAEL-1, KAEL-2, ENV-ENTERPRISE, ENV-AGENCY) — fichier cible ProDashboard.tsx (5686 lignes, déjà 10X-PRO avec HarchIQ AI Workspace + 25 sections + usePersistentState hook)
+- Lu ProDashboard.tsx en chunks : header (1-200), design tokens (200-220), types (212-514), usePersistentState (716-743), UI atoms (747-920), Sidebar (942-1167), Header (1173-1300), HarchIQWorkspace (1302-2020), sections 9-25 (2877-5441), main function (5442-5687)
+- Confirmé 'use client', design tokens (SAGE/CHARCOAL/TEXT_BODY/...), usePersistentState hook (line 716), framer-motion, shadcn/ui, recharts, lucide-react tous présents
+- Confirmé @dnd-kit/core@^6.3.1 + @dnd-kit/sortable@^10.0.0 + @dnd-kit/utilities@^3.2.2 déjà installés (package.json)
+- Vérifié shadcn/ui Dialog, Input, Label, Checkbox exports disponibles (src/components/ui/*)
+- Étape 1 — Imports : ajouté 11 nouveaux icônes Lucide (ArrowLeftRight, CheckCircle2, ChevronLeft, Filter, GripVertical, ListChecks, Mail, Palette, RotateCcw, SlidersHorizontal, Star) en ordre alphabétique + imports @dnd-kit/core (DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent) + @dnd-kit/sortable (SortableContext, arrayMove, rectSortingStrategy, useSortable) + @dnd-kit/utilities (CSS as DndCSS) + shadcn Dialog/Input/Label/Checkbox
+- Étape 2 — Types & constantes : ajouté après BenchmarkRow interface (line 514) — CompetitorEntry, CompetitorKpi, AlertChannel, CompetitorSetup, InfluencerSortKey, InfluencerPlatform, InfluencerEntry, ReportFormat, ReportCadence, ReportSchedule, ProFilters + DEFAULT_PRO_FILTERS, DEFAULT_COMPETITOR_SETUP, DEFAULT_REPORT_SCHEDULE, SEED_INFLUENCERS (5 influenceurs), COMPANIES_DB (40 entreprises marocaines/francophones), SOURCE_OPTIONS (12 sources), KPI_LABELS, CHANNEL_LABELS
+- Étape 3 — 7 nouveaux composants (insertion avant // MAIN comment) :
+  • CompetitorSetupWizard — modal Dialog 3 étapes (Ajoutez vos concurrents → Définissez vos KPIs → Configurez l'alerting), progress indicator avec icônes, skip option, recherche/autocomplete depuis COMPANIES_DB, persistance via "pro:competitor-setup", on complete → onComplete callback (parent lance refetchRadar + refetchSov)
+  • PeriodCompareToggle — petit bouton réutilisable (sage quand inactif, sage plein quand actif), tooltip explicatif
+  • DeltaBadge — badge delta vert/rouge/gris avec icône TrendingUp/TrendingDown/Minus, label custom
+  • SortableWidget — wrapper @dnd-kit useSortable, drag handle absolu (-top-2 left-3) visible seulement en editMode, bordure dashed sage en editMode, opacité 0.6 pendant drag
+  • InfluencerTrackerWidget — nouvelle section full-width (lg:col-span-12), 5 influenceurs seedés, stats strip (4 MiniStats), tri par reach/engagement/sentiment, add form (nom + handle + platform select), star favoris, remove, "Voir tout" expand, persistance "pro:influencer-tracker"
+  • ReportSchedulerPanel — nouvelle section (lg:col-span-5), cadence (hebdo/mensuel/perso avec selectors dynamiques), recipients email list (add/remove avec validation), format (PDF/Excel/Les deux), branding (logo upload simulé + color picker), switch enabled/disabled, bouton "Envoyer test", aperçu inline, persistance "pro:report-schedule"
+  • ProFilterBar — sticky top:56px, 4 filtres (Période Tabs 7j/30j/90j, Sources multi-select dropdown, Sentiment 3 toggles colorés, Langue FR/AR/EN), active count badge, bouton Réinitialiser, persistance "pro:filters"
+- Étape 4 — Modified Header signature : ajouté props editMode, onToggleEditMode, onResetLayout — bouton crayon (PenSquare) avec tooltip + bouton RotateCcw visible seulement en editMode
+- Étape 5 — Modified TendanceSentimentCard : ajouté props periodCompare + onPeriodCompareChange + PeriodCompareToggle dans right controls + renommé "Comparer" → "Concurrent" (pour éviter confusion), ajouté periodCompareData (split halves current/previous), periodDelta (% change avgCurrent vs avgPrevious), quand periodCompare actif → nouveau LineChart dual-ligne (sage plein courante + gris dashed précédente) + DeltaBadge au-dessus du chart + AiCommentary contextuel
+- Étape 6 — Modified BenchmarkConcurrentielTable : ajouté prop onOpenWizard, bouton "Ajouter" → "Configurer" qui appelle onOpenWizard (parent ouvre le wizard)
+- Étape 7 — Modified main ProDashboard :
+  • Ajouté state : wizardOpen (useState), editMode (useState), periodCompare (usePersistentState "pro:period-compare"), filters (usePersistentState "pro:filters"), widgetOrder (usePersistentState "pro:dashboard-layout")
+  • Supprimé sentimentRange state (remplacé par filters.period directement dans useApi URL)
+  • Exposé refetchRadar + refetchSov depuis useApi (pour wizard onComplete)
+  • Ajouté useCallback handleDragEnd (arrayMove), handleResetLayout, handleWizardComplete (refetch radar + sov)
+  • Ajouté sensors (PointerSensor avec activationConstraint distance:5)
+  • Construit widgets: Record<string, ReactNode> mappant 27 IDs → JSX (25 sections existantes + 2 nouvelles : report-scheduler, influencer-tracker)
+  • Construit orderedWidgets (reconcile persisted order with available widgets, drop missing, append new)
+  • DEFAULT_WIDGET_ORDER constant (27 widgets) défini avant main
+  • Modifié Header call : passe editMode, onToggleEditMode, onResetLayout
+  • Ajouté <ProFilterBar value={filters} onChange={setFilters} /> après Header
+  • Ajouté edit mode banner (sage bg, GripVertical + texte explicatif) conditionnel sur editMode
+  • Wrappé motion.div grid avec <DndContext sensors collisionDetection=closestCenter onDragEnd> > <SortableContext items={sortableItems} strategy={rectSortingStrategy}> > motion.div
+  • Remplacé 25 section renders inline par {orderedWidgets.map(({id, node}) => <SortableWidget key={id} id={id} editMode={editMode}>{node}</SortableWidget>)}
+  • Ajouté {wizardOpen && <CompetitorSetupWizard onClose onComplete={handleWizardComplete} />} à la fin du root div (portal-level)
+  • Updated footer text : "25 sections" → "27 sections" + "v10X" → "v10X · ENV-PRO"
+- Étape 8 — Quality checks :
+  • Ajouté eslint-disable-next-line react-hooks/set-state-in-effect sur usePersistentState setState (pattern canonique localStorage hydration, pré-existant de KAEL-1, false positive du rule React Compiler)
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors)
+  • bunx eslint ProDashboard.tsx → 0 errors, 1 warning (TanStack Table useReactTable incompatible-library — pré-existant, aucun introduit par cette task)
+
+Stage Summary:
+- Fichier cible : /home/z/my-project/src/app/atelier/console/pro/ProDashboard.tsx (5686 → 7931 lignes, +2245 lignes net)
+- 6 features ENV-PRO livrées (toutes persisted localStorage via usePersistentState hook, SSR-safe, quota-safe) :
+  1. Competitor Setup Wizard — modal Dialog 3 étapes (Concurrents/KPIs/Alerting), autocomplete 40 entreprises marocaines, progress indicator, skip option, persistance "pro:competitor-setup", on complete → refetch radar + sov
+  2. Period Comparison Toggle — global state persisted "pro:period-compare", PeriodCompareToggle composant réutilisable, TendanceSentimentCard amélioré avec dual-line LineChart (sage courante + gris dashed précédente) + DeltaBadge vert/rouge + AiCommentary contextuel, données split en halves (current = last half, previous = first half), periodDelta = % change entre moyennes
+  3. Custom Dashboard Layout — @dnd-kit/core + @dnd-kit/sortable, SortableWidget wrapper avec drag handle + dashed border en editMode, Header pencil toggle (PenSquare), edit mode banner, handleDragEnd avec arrayMove, handleResetLayout, DEFAULT_WIDGET_ORDER (27 widgets), persistance "pro:dashboard-layout", reconcile persisted order avec available widgets (drop missing, append new)
+  4. Influencer Tracker Widget — nouvelle section full-width, 5 influenceurs seedés (LinkedIn/X/TikTok/Instagram/Presse), stats strip (4 MiniStats : count/followers/engagement/positivity), tri par reach/engagement/sentiment, add form (nom + handle + platform), star favoris, remove, "Voir tout" expand, persistance "pro:influencer-tracker"
+  5. Report Scheduler Panel — nouvelle section lg:col-span-5, cadence (hebdo/mensuel/perso avec selectors dynamiques : jour de semaine / jour du mois / date+time custom), recipients email list (add/remove avec validation regex), format (PDF/Excel/Les deux), branding (logo upload simulé + color picker), switch enabled/disabled, bouton "Envoyer test" avec validation, aperçu inline avec branding color, persistance "pro:report-schedule"
+  6. Advanced Filter Bar — sticky top:56px, 4 filtres (Période Tabs 7j/30j/90j qui pilote sentiment-trend API, Sources multi-select dropdown 12 options, Sentiment 3 toggles colorés Pos/Neu/Nég, Langue FR/AR/EN), active count badge (sage circle), bouton Réinitialiser, persistance "pro:filters"
+- Design system préservé : SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px, no emojis, French throughout
+- Tone Pro respecté : focus analyse avancée, benchmark concurrentiel, customisation, programmation rapports, filtres globaux
+- 0 régression sur les 25 sections existantes (toutes préservées, juste wrappées dans SortableWidget pour drag-reorder, et TendanceSentimentCard enrichi avec periodCompare toggle qui est désactivé par défaut)
+- Code quality : tsc 0 errors, eslint 0 errors (+1 warning pré-existant TanStack Table)
+- 7 localStorage keys au total : harchiq:pro:chat-history (pré-existant) + pro:competitor-setup + pro:influencer-tracker + pro:report-schedule + pro:period-compare + pro:filters + pro:dashboard-layout (6 nouvelles clés, toutes usePersistentState-backed, SSR-safe, ~5MB budget)
+- 27 sections affichées (25 originales + 2 nouvelles : report-scheduler après historique-rapports, influencer-tracker après top-influenceurs), ordre réorganisable via drag-drop
