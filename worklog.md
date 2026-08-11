@@ -5402,3 +5402,52 @@ Stage Summary:
 - Aucun fichier hors EnterpriseDashboard.tsx touché
 - NAV sidebar préservé : id="esg-conformite" déplacé sur la carte consolidée ESG
 - Persistance localStorage préservée : enterprise:reg-calendar, enterprise:reg-feed, enterprise:integrations, enterprise:esg-scorecard tous inchangés
+
+---
+Task ID: P3-DB-MIGRATION
+Agent: VORTEX
+Task: Migrate DB accountType from legacy to new system + add Prisma migration
+Work Log:
+- Lecture prisma/schema.prisma — 3 champs accountType identifiés : User (L716), AccessRequest (L947), Invitation (L978). Tous String @default("brand-monitor") avec commentaire legacy.
+- Mise à jour prisma/schema.prisma : 3 commentaires remplacés par "essential | pro | enterprise | agency (4 plans Harch Atelier)" + 3 defaults changés de "brand-monitor" → "essential" pour aligner les nouveaux rows sur le système canonique. Type String conservé (pas d'enum Prisma) — aucune migration de schéma requise.
+- Mise à jour src/lib/constants.ts (ACCOUNT_TYPES L129-178) : 4 entrées legacy (brand-monitor/Competitor Intel/Investor Desk/Alpha Desk) remplacées par 4 nouveaux plans Harch Atelier :
+  • essential — "Essentiel" — persona "Dircom / PR Manager starter" — tagline "La Vigilance Sereine" — color sage green (#4A7B5F) — icon shield — desc "Petites équipes com/marketing"
+  • pro — "Pro" — persona "PR Manager avancé" — tagline "L'Avantage Concurrentiel" — color sage green (#4A7B5F) — icon radar — desc "Équipes régionales"
+  • enterprise — "Enterprise"/"Grandes Entreprises" — persona "COMEX / IR / Risk" — tagline "La Gouvernance Certifiée" — color charcoal (#1F2937) — icon terminal — desc "Marques leaders internationales"
+  • agency — "Agency"/"Agences" — persona "Agency Director" — tagline "Multi-Clients, White-Label" — color terracotta (#C45A3F) — icon cockpit — desc "Agences RP & cabinets conseil"
+  Structure conservée (id, name, nameFr, persona, tagline, color, bgColor, sections, description, icon). `as const` préservé.
+- Création /api/console/migrate-account-types/route.ts (NEW) :
+  • POST — admin-only (role === "admin" || "super_admin"), 403 sinon. Session via getServerSession(authOptions).
+  • Boucle sur les 4 types legacy (brand-monitor, market-competitor, investment-bank, harch-alpha) — pour chacun : findMany(where: accountType=oldType, select id+email) puis loop prisma.user.update individuel. Erreurs par-user capturées sans abort du batch (compteur errors incrémenté, logError émis).
+  • Mapping local LEGACY_TO_NEW dupliqué (mirror de src/lib/auth/rbac.ts) pour éviter import circulaire.
+  • Idempotence garantie : si aucune ligne legacy, retourne migrated:0 + details avec count:0 par type. Where clause sur accountType=oldType filtre les rows déjà migrés.
+  • Réponse 200 : { success: true, migrated: <total>, details: [{ oldType, newType, count, errors }, ...] }
+  • Bonus GET (read-only, admin-only) : groupBy accountType + flag isLegacy → dry-run d'inspection avant mutation. Pratique pour vérifier l'état post-migration.
+  • maxDuration:60 (4 types × N users × update individuel peut être lent si grosse base), runtime nodejs, dynamic force-dynamic.
+  • Pas d'AuditAction dédiée dans le type union (AuditAction) — log via logInfo avec IP+UA capturés (extractIp/extractUserAgent) pour traceabilité Loi 09-08.
+- TypeScript : NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 erreur).
+- Contraintes respectées : pas de `prisma migrate` / `prisma db push`, français sans emojis, role check pour le guard (cohérent avec /api/admin/create-account/route.ts).
+Stage Summary:
+- 3 fichiers touchés (1 schema + 1 constants + 1 route NEW). 0 erreur TS.
+- Source de vérité DB alignée sur le système canonique (essential/pro/enterprise/agency). Les nouveaux User/Invitation/AccessRequest créés auront default="essential" au lieu de "brand-monitor".
+- Route de migration one-shot idempote opérationnelle — un curl POST admin déclenche la conversion des rows legacy restants. Route GET fournit le dry-run d'inspection.
+- Le helper RBAC isAccountTypeAllowed() (P0-2) reste le bouclier runtime — il normalise toujours les éventuels rows legacy résiduels, mais la source DB est maintenant propre après un appel à /api/console/migrate-account-types.
+- Next action (hors scope P3) : src/app/api/admin/create-account/route.ts L45-50 a encore `VALID_ACCOUNT_TYPES = new Set(["brand-monitor","market-competitor","investment-bank","harch-alpha"])` avec fallback "brand-monitor" — doit être migré vers les nouveaux types dans un patch ultérieur (P4-ADMIN-CREATE-ACCOUNT) pour que le formulaire admin crée directement des rows au nouveau format. Pour l'instant, isAccountTypeAllowed() gère la compatibilité runtime.
+
+---
+Task ID: P3-GLM4-WHATSAPP-CONSOLE
+Agent: NEXUS
+Task: Surface GLM-4 WhatsApp Import feature on the mounted agency console
+Work Log:
+- Read worklog tail (P0-1 mounted /atelier/console/agency/AgencyDashboard.tsx → 16898 lines).
+- Audited Surface A source: /src/app/atelier/agency/AgencyDashboard.tsx (WhatsAppImportModal @ L428-680) + backend /src/app/api/agency/whatsapp-import/route.ts (340 lines, Zod ExtractedDataSchema + strict() + price-clamp per tier).
+- Extracted the killer flow: paste/upload WhatsApp conversation → POST /api/agency/whatsapp-import → GLM-4 chat.completions.create (thinking disabled) → JSON.parse → validateExtractedData (Zod) → optional createAccount=true → AgencyClient + AgencyBranding + AgencyQuota + invited User.
+- Inspected mounted console: confirmed design tokens (SAGE/CHARCOAL/TEXT_BODY/FONT_MONO/FONT_HEADER), CardShell/SectionHeader/Separator/AiCommentary atoms, cardMotion preset, usePersistentState hook (L1158), framer-motion modal pattern (ClientOnboardingWizard @ L8249).
+- INSERT 1 (before ClientOnboardingWizard, ~L8242): added types WhatsAppPlanTier, WhatsAppExtracted, WhatsAppImportResult, WhatsAppImportStats + constants WHATSAPP_PLAN_LABELS / WHATSAPP_PLAN_DEFAULT_PRICE + 2 components WhatsAppImportCard (compact card with sage CTA "Importer une conversation", persisted stats display, ZOD badge, AiCommentary) and WhatsAppImportModal (full overlay: drag-drop .txt zone + paste textarea + "Importer et analyser" → loading state with "5 à 15 secondes" hint → review grid (société/contact/email/téléphone/plan/pricing + topic chips + competitor chips + use_case + notes) → "Confirmer la création" → success state with plan/price; ESC close; AlertTriangle inline error for Zod/validation/network failures; ShieldCheck security note explaining plan whitelist + price clamp + strict key set).
+- INSERT 2 (after handleWizardClose, L17133): added whatsappImportOpen useState + whatsappImportStats usePersistentState("agency:whatsapp-import-stats", {count:0,lastAt:null}) + handleWhatsAppImportOpen / handleWhatsAppImportClose / handleWhatsAppImportCreated callbacks (bumps stats, toasts success, calls fetchClients to refresh portfolio).
+- INSERT 3 (before BoiteOutilsAgenceCard, L17777): added motion.div #whatsapp-import (lg:col-span-12) wrapping WhatsAppImportCard with sectionScrollStyle + cardMotion + d(24) delay.
+- INSERT 4 (after wizardOpen block, L17833): rendered WhatsAppImportModal conditionally on whatsappImportOpen.
+- INSERT 5 (footer counter, L17815): "34 sections" → "35 sections" + added "WhatsApp Import (GLM-4)" to the feature roll-up.
+- Type-check: NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors).
+Stage Summary:
+- The GLM-4 WhatsApp Import → auto-create sub-client feature (the B2B2B killer feature with Zod prompt-injection defense) is now exposed on the mounted /atelier/console/agency dashboard. New dedicated section "Import WhatsApp · Auto-Création Client" sits right above the existing Boîte à Outils Agence (Section 25), opens a 3-state modal (input → review → success) that mirrors the Surface A flow but uses the mounted console's white/sage/charcoal/Space Mono design system, Lucide icons (MessageSquare, Upload, ShieldCheck, Sparkles, AlertTriangle, CheckCircle2, RefreshCw, X, Check), no emojis, French throughout. Backend /api/agency/whatsapp-import is reused as-is (no API changes). Persisted client-side stats (count + lastAt) via usePersistentState survive refresh. On successful sub-client creation the portfolio table auto-refetches. Zod validation errors and GLM-4 extraction failures are surfaced inline with the specific server message (data.detail / data.error). 0 TypeScript errors. No other dashboard files touched.

@@ -713,7 +713,7 @@ model User {
   name          String?
   passwordHash  String?
   role          String   @default("user")        // user | admin | company-admin
-  accountType   String   @default("brand-monitor") // brand-monitor | market-competitor | investment-bank | harch-alpha (ISOLATED)
+  accountType   String   @default("essential") // essential | pro | enterprise | agency (4 plans Harch Atelier)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -944,7 +944,7 @@ model AccessRequest {
   name          String
   company       String?
   role          String?
-  accountType   String?  @default("brand-monitor") // brand-monitor | market-competitor | investment-bank | harch-alpha
+  accountType   String?  @default("essential") // essential | pro | enterprise | agency (4 plans Harch Atelier)
   companySize   String?  // startup | sme | mid-market | enterprise
   useCase       String?  // what they want to monitor
   budget        String?  // monthly budget range
@@ -975,7 +975,7 @@ model Invitation {
   email         String
   name          String
   passwordHash  String    // bcrypt hash of admin-generated password (NEVER plaintext)
-  accountType   String    @default("brand-monitor")  // brand-monitor | market-competitor | investment-bank | harch-alpha
+  accountType   String    @default("essential")  // essential | pro | enterprise | agency (4 plans Harch Atelier)
   role          String    @default("user")        // user | admin | company-admin
   company       String?
   message       String?   // optional personal message from admin

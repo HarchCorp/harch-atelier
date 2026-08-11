@@ -8240,6 +8240,895 @@ function AgencyTierBadgeCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// WHATSAPP IMPORT — GLM-4 auto-create sub-client (B2B2B killer feature)
+//
+//  Agency pastes / uploads a WhatsApp conversation with a prospect →
+//  GLM-4 extracts structured client info → Zod schema validates the
+//  LLM output (prompt-injection defense: plan_tier whitelist, price
+//  clamp, length caps, strict key set) → one click creates the
+//  AgencyClient workspace via POST /api/agency/whatsapp-import.
+//
+//  Mirrors the Surface A (/atelier/agency) modal but adapted to the
+//  mounted console design system (white · sage · charcoal · Space Mono).
+//  Two-phase flow: (1) analyze → review extracted data, (2) confirm →
+//  create sub-client. Errors from Zod validation or LLM failures are
+//  surfaced inline.
+// ════════════════════════════════════════════════════════════════════
+
+type WhatsAppPlanTier = "emergence" | "corporate" | "sovereign" | "custom" | null;
+
+interface WhatsAppExtracted {
+  company_name: string | null;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  plan_tier: WhatsAppPlanTier;
+  pricing_mad: number | null;
+  topics: string[];
+  competitors: string[];
+  use_case: string | null;
+  notes: string | null;
+}
+
+interface WhatsAppImportResult {
+  extracted?: WhatsAppExtracted;
+  created?: boolean;
+  error?: string;
+  detail?: string;
+  message?: string;
+  agencyClientId?: string;
+  displayName?: string;
+  monthlyPriceMAD?: number;
+  planTier?: string;
+  existingClientId?: string;
+}
+
+const WHATSAPP_PLAN_LABELS: Record<NonNullable<WhatsAppPlanTier>, string> = {
+  emergence: "Emergence",
+  corporate: "Corporate",
+  sovereign: "Sovereign",
+  custom: "Custom",
+};
+
+const WHATSAPP_PLAN_DEFAULT_PRICE: Record<NonNullable<WhatsAppPlanTier>, number> = {
+  emergence: 15000,
+  corporate: 40000,
+  sovereign: 75000,
+  custom: 0,
+};
+
+interface WhatsAppImportStats {
+  count: number;
+  lastAt: number | null;
+}
+
+// Compact card surfaced in the dashboard grid — opens the modal.
+function WhatsAppImportCard({
+  onOpen,
+  stats,
+}: {
+  onOpen: () => void;
+  stats: WhatsAppImportStats;
+}) {
+  const lastLabel = useMemo(() => {
+    if (!stats.lastAt) return null;
+    const days = Math.floor((Date.now() - stats.lastAt) / 86_400_000);
+    if (days < 1) return "aujourd'hui";
+    if (days === 1) return "hier";
+    if (days < 30) return `il y a ${days}j`;
+    return `il y a ${Math.floor(days / 30)}mo`;
+  }, [stats.lastAt]);
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Import WhatsApp · Auto-Création Client"
+        right={
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              backgroundColor: SAGE_BG,
+              color: SAGE_DEEP,
+              fontWeight: 700,
+            }}
+          >
+            <ShieldCheck size={10} /> ZOD
+          </span>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+        <div className="lg:col-span-8">
+          <div className="flex items-start gap-3">
+            <div
+              className="inline-flex items-center justify-center w-10 h-10 rounded-md shrink-0"
+              style={{ backgroundColor: SAGE_BG, color: SAGE_DEEP }}
+            >
+              <MessageSquare size={18} />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                Importez une conversation WhatsApp avec un prospect
+              </div>
+              <div
+                className="mt-1"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 12,
+                  color: TEXT_BODY,
+                  lineHeight: 1.5,
+                }}
+              >
+                HarchIQ AI (GLM-4) extrait automatiquement les informations client
+                (société, contact, plan, pricing, sujets, concurrents) et crée le
+                compte. Validation Zod stricte — immunisé contre l&apos;injection de
+                prompt.
+              </div>
+              {stats.count > 0 && (
+                <div
+                  className="mt-2"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                >
+                  {stats.count} import{stats.count > 1 ? "s" : ""} effectué{stats.count > 1 ? "s" : ""}
+                  {lastLabel ? ` · dernier ${lastLabel}` : ""}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="lg:col-span-4 flex lg:justify-end">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md transition-all hover:shadow-sm"
+            style={{
+              backgroundColor: SAGE,
+              color: "#FFFFFF",
+              fontFamily: FONT_SANS,
+              fontSize: 13,
+              fontWeight: 600,
+              border: "none",
+            }}
+          >
+            <Upload size={14} /> Importer une conversation
+          </button>
+        </div>
+      </div>
+      <AiCommentary text="Déposez un export .txt de WhatsApp (Android : Paramètres → Historique des discussions → Exporter). GLM-4 analyse en 5 à 15 secondes. La création du sous-client nécessite votre confirmation explicite — aucune action automatique." />
+    </CardShell>
+  );
+}
+
+// Full modal — file upload + paste + analyze + review + confirm.
+function WhatsAppImportModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [conversation, setConversation] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [extracted, setExtracted] = useState<WhatsAppExtracted | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<WhatsAppImportResult | null>(null);
+
+  // ESC to close (component only mounted while open).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const handleFile = useCallback((file: File) => {
+    setError(null);
+    if (
+      !file.name.toLowerCase().endsWith(".txt") &&
+      file.type !== "text/plain"
+    ) {
+      setError(
+        "Seuls les fichiers .txt sont acceptés. Exportez la discussion WhatsApp en texte brut.",
+      );
+      return;
+    }
+    if (file.size > 200_000) {
+      setError(
+        "Fichier trop volumineux (> 200 Ko). Réduisez la conversation à l'essentiel.",
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setConversation(text);
+      setFileName(file.name);
+    };
+    reader.onerror = () => setError("Lecture du fichier impossible.");
+    reader.readAsText(file);
+  }, []);
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) handleFile(f);
+    // Reset input value so the same file can be re-selected later.
+    e.target.value = "";
+  };
+
+  const onDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) handleFile(f);
+  };
+
+  const analyze = async () => {
+    if (conversation.trim().length < 10) return;
+    setLoading(true);
+    setError(null);
+    setExtracted(null);
+    try {
+      const res = await fetch("/api/agency/whatsapp-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation }),
+        credentials: "same-origin",
+      });
+      const data: WhatsAppImportResult = await res
+        .json()
+        .catch(() => ({
+          extracted: undefined,
+          created: false,
+          error: "Réponse invalide du serveur.",
+        }));
+      if (!res.ok) {
+        setError(
+          data.detail ?? data.error ?? `Erreur ${res.status} — analyse impossible.`,
+        );
+        return;
+      }
+      if (data.error) {
+        setError(data.error);
+        // If extracted is still attached (e.g. existing-client warning),
+        // surface it so the agency can review.
+        if (data.extracted) setExtracted(data.extracted);
+        return;
+      }
+      if (data.extracted) {
+        setExtracted(data.extracted);
+        const empty =
+          !data.extracted.company_name &&
+          !data.extracted.contact_name &&
+          !data.extracted.email &&
+          !data.extracted.plan_tier;
+        if (empty) {
+          setError(
+            "GLM-4 n'a pas pu extraire d'informations exploitables. Complétez la conversation et relancez l'analyse.",
+          );
+        }
+      } else {
+        setError("GLM-4 n'a pas retourné de données exploitables.");
+      }
+    } catch {
+      setError("Échec de l'analyse — vérifiez votre connexion.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createAccount = async () => {
+    if (!conversation.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/agency/whatsapp-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation, createAccount: true }),
+        credentials: "same-origin",
+      });
+      const data: WhatsAppImportResult = await res
+        .json()
+        .catch(() => ({
+          extracted: undefined,
+          created: false,
+          error: "Réponse invalide du serveur.",
+        }));
+      if (data.created) {
+        setResult(data);
+        setTimeout(() => onCreated(), 2200);
+      } else if (data.error) {
+        setError(data.error);
+      } else {
+        setError("Création échouée — réessayez.");
+      }
+    } catch {
+      setError("Création échouée — vérifiez votre connexion.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    padding: "8px 10px",
+    border: `1px solid ${BORDER}`,
+    borderRadius: 6,
+    fontSize: 13,
+    fontFamily: FONT_SANS,
+    background: "#FAFAFA",
+    color: CHARCOAL,
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
+  const labelStyle: CSSProperties = {
+    ...FONT_HEADER,
+    display: "block",
+    marginBottom: 4,
+    fontSize: 9,
+  };
+
+  const hasExtracted = Boolean(
+    extracted &&
+      (extracted.company_name ||
+        extracted.contact_name ||
+        extracted.email ||
+        extracted.plan_tier),
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Import WhatsApp et auto-création client"
+    >
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(10,10,10,0.5)" }}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 280, damping: 28 }}
+        className="relative w-full max-w-2xl rounded-xl overflow-hidden"
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: `1px solid ${BORDER_STRONG}`,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          maxHeight: "92vh",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-3"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md"
+              style={{ backgroundColor: SAGE_BG, color: SAGE_DEEP }}
+            >
+              <MessageSquare size={15} />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                Import WhatsApp → Auto-Création Client
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                HarchIQ AI · GLM-4 · Validation Zod stricte
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[#F5F5F5]"
+            aria-label="Fermer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-4 overflow-y-auto" style={{ maxHeight: "78vh" }}>
+          {result ? (
+            /* ─── Success state ─── */
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-8 text-center"
+            >
+              <div
+                className="inline-flex items-center justify-center rounded-full mb-4"
+                style={{ width: 56, height: 56, backgroundColor: SAGE_BG, color: SAGE_DEEP }}
+              >
+                <CheckCircle2 size={32} />
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                Sous-client créé
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  color: TEXT_BODY,
+                  marginTop: 6,
+                  maxWidth: 420,
+                }}
+              >
+                {result.message ??
+                  `« ${result.displayName ?? "Client"} » créé avec succès.`}
+              </div>
+              <div
+                className="mt-4 px-3 py-2 rounded-md"
+                style={{
+                  backgroundColor: SAGE_BG,
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: SAGE_DEEP,
+                }}
+              >
+                Plan {result.planTier ?? "—"} · {result.monthlyPriceMAD ?? "—"} MAD/mo
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  marginTop: 12,
+                }}
+              >
+                Rafraîchissement du portefeuille en cours…
+              </div>
+            </motion.div>
+          ) : extracted && hasExtracted ? (
+            /* ─── Review state ─── */
+            <div className="space-y-3">
+              <div
+                className="flex items-start gap-2 p-3 rounded-md"
+                style={{ backgroundColor: SAGE_BG }}
+              >
+                <Sparkles
+                  size={14}
+                  style={{ color: SAGE_DEEP, flexShrink: 0, marginTop: 2 }}
+                />
+                <div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: SAGE_DEEP,
+                    }}
+                  >
+                    Extraction GLM-4 terminée — vérifiez avant de créer
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      color: TEXT_BODY,
+                      marginTop: 2,
+                    }}
+                  >
+                    Les valeurs ci-dessous ont été validées par le schéma Zod.
+                    Modifiez la conversation et relancez l&apos;analyse pour
+                    corriger.
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label style={labelStyle}>Société</label>
+                  <input value={extracted.company_name ?? ""} readOnly style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Contact</label>
+                  <input value={extracted.contact_name ?? ""} readOnly style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Email</label>
+                  <input value={extracted.email ?? ""} readOnly style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Téléphone</label>
+                  <input value={extracted.phone ?? ""} readOnly style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Plan</label>
+                  <input
+                    value={
+                      extracted.plan_tier
+                        ? WHATSAPP_PLAN_LABELS[extracted.plan_tier]
+                        : "emergence (défaut)"
+                    }
+                    readOnly
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Pricing (MAD/mo)</label>
+                  <input
+                    value={
+                      extracted.pricing_mad != null
+                        ? String(extracted.pricing_mad)
+                        : extracted.plan_tier
+                          ? String(WHATSAPP_PLAN_DEFAULT_PRICE[extracted.plan_tier])
+                          : "—"
+                    }
+                    readOnly
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {Array.isArray(extracted.topics) && extracted.topics.length > 0 && (
+                <div>
+                  <label style={labelStyle}>Sujets à surveiller</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {extracted.topics.map((t, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex px-2 py-0.5 rounded"
+                        style={{
+                          backgroundColor: SAGE_BG,
+                          fontFamily: FONT_MONO,
+                          fontSize: 10,
+                          color: SAGE_DEEP,
+                        }}
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(extracted.competitors) &&
+                extracted.competitors.length > 0 && (
+                  <div>
+                    <label style={labelStyle}>Concurrents à traquer</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {extracted.competitors.map((c, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex px-2 py-0.5 rounded"
+                          style={{
+                            backgroundColor: "#FAFAFA",
+                            fontFamily: FONT_MONO,
+                            fontSize: 10,
+                            color: TEXT_BODY,
+                            border: `1px solid ${BORDER}`,
+                          }}
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {extracted.use_case && (
+                <div>
+                  <label style={labelStyle}>Cas d&apos;usage</label>
+                  <p
+                    className="m-0 px-3 py-2 rounded-md"
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 12,
+                      color: TEXT_BODY,
+                      background: "#FAFAFA",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    {extracted.use_case}
+                  </p>
+                </div>
+              )}
+
+              {extracted.notes && (
+                <div>
+                  <label style={labelStyle}>Notes</label>
+                  <p
+                    className="m-0 px-3 py-2 rounded-md italic"
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      color: TEXT_MUTED,
+                      background: "#FAFAFA",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    {extracted.notes}
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <div
+                  className="flex items-start gap-2 p-3 rounded-md"
+                  style={{
+                    backgroundColor: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                  }}
+                >
+                  <AlertTriangle
+                    size={14}
+                    style={{ color: NEGATIVE, flexShrink: 0, marginTop: 2 }}
+                  />
+                  <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: NEGATIVE }}>
+                    {error}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExtracted(null);
+                    setError(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors hover:bg-[#F5F5F5]"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 12,
+                    color: TEXT_BODY,
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  <RefreshCw size={12} /> Réanalyser
+                </button>
+                <button
+                  type="button"
+                  onClick={createAccount}
+                  disabled={creating}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md transition-all hover:shadow-sm disabled:opacity-60"
+                  style={{
+                    backgroundColor: creating ? SAGE_DIM : SAGE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_SANS,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    border: "none",
+                  }}
+                >
+                  {creating ? (
+                    <>
+                      <RefreshCw size={12} className="animate-spin" /> Création en cours…
+                    </>
+                  ) : (
+                    <>
+                      <Check size={12} /> Confirmer la création
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ─── Input state ─── */
+            <div className="space-y-3">
+              {/* Drop zone */}
+              <label
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+                className="block cursor-pointer rounded-md transition-colors"
+                style={{
+                  border: `1.5px dashed ${dragOver ? SAGE : BORDER_STRONG}`,
+                  backgroundColor: dragOver ? SAGE_BG : "#FAFAFA",
+                  padding: 18,
+                  textAlign: "center",
+                }}
+              >
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  onChange={onInputChange}
+                  className="hidden"
+                />
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-md"
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      color: SAGE_DEEP,
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <Upload size={16} />
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: CHARCOAL,
+                    }}
+                  >
+                    {fileName
+                      ? `Fichier chargé : ${fileName}`
+                      : "Déposez un export .txt ici ou cliquez pour parcourir"}
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                    Export WhatsApp · Paramètres → Historique → Exporter · max 200 Ko
+                  </div>
+                </div>
+              </label>
+
+              {/* Textarea */}
+              <div>
+                <label style={labelStyle}>Ou collez la conversation ci-dessous</label>
+                <textarea
+                  value={conversation}
+                  onChange={(e) => {
+                    setConversation(e.target.value);
+                    if (e.target.value) setFileName(null);
+                  }}
+                  placeholder={
+                    "[10:14] Salma: Bonjour, on cherche un outil de veille pour Attijariwafa\n[10:15] Omocto: Parfait, on a Harch Atelier. Plan Corporate à 40K MAD/mois ?\n[10:16] Salma: Oui, on veut suivre « frais bancaires », « service client »\n[10:17] Salma: Nos concurrents : BCP, Bank of Africa, CIH\n[10:18] Omocto: Je vous crée le compte. Email ?"
+                  }
+                  className="w-full px-3 py-2 rounded-md outline-none"
+                  style={{
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FAFAFA",
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: CHARCOAL,
+                    minHeight: 160,
+                    resize: "vertical",
+                    lineHeight: 1.5,
+                  }}
+                />
+              </div>
+
+              {error && (
+                <div
+                  className="flex items-start gap-2 p-3 rounded-md"
+                  style={{
+                    backgroundColor: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                  }}
+                >
+                  <AlertTriangle
+                    size={14}
+                    style={{ color: NEGATIVE, flexShrink: 0, marginTop: 2 }}
+                  />
+                  <span style={{ fontFamily: FONT_SANS, fontSize: 12, color: NEGATIVE }}>
+                    {error}
+                  </span>
+                </div>
+              )}
+
+              {/* Security note */}
+              <div
+                className="flex items-start gap-2 p-3 rounded-md"
+                style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}
+              >
+                <ShieldCheck
+                  size={14}
+                  style={{ color: SAGE, flexShrink: 0, marginTop: 2 }}
+                />
+                <div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: CHARCOAL,
+                    }}
+                  >
+                    Validation Zod stricte — immunisé contre l&apos;injection de prompt
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      color: TEXT_BODY,
+                      marginTop: 2,
+                    }}
+                  >
+                    Le schéma côté serveur whitelist les plans (emergence /
+                    corporate / sovereign / custom), borne le prix mensuel au
+                    minimum du plan et rejette toute clé inattendue. Un prospect
+                    malveillant ne peut pas s&apos;auto-attribuer un plan privilégié.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors hover:bg-[#F5F5F5]"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 12,
+                    color: TEXT_BODY,
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={analyze}
+                  disabled={loading || conversation.trim().length < 10}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md transition-all hover:shadow-sm disabled:opacity-60"
+                  style={{
+                    backgroundColor: loading ? SAGE_DIM : SAGE,
+                    color: "#FFFFFF",
+                    fontFamily: FONT_SANS,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    border: "none",
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw size={12} className="animate-spin" /> Analyse GLM-4…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={12} /> Importer et analyser
+                    </>
+                  )}
+                </button>
+              </div>
+              {loading && (
+                <div
+                  className="text-center"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                >
+                  L&apos;analyse peut prendre 5 à 15 secondes. Ne fermez pas la fenêtre.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // ENV-AGENCY · FEATURE 2 — CLIENT ONBOARDING WIZARD (4-step modal)
 // Triggered by "Ajouter un client". Steps: Infos → Branding → Plan → Team.
 // On complete: adds PendingClient to portfolio (local state). Persisted
@@ -16245,6 +17134,39 @@ export default function AgencyDashboard({
     setWizardOpen(false);
   }, []);
 
+  // ─── WHATSAPP IMPORT (GLM-4 auto-create sub-client) ─────────────
+  // Modal state + persisted stats (count + lastAt) — survives refresh.
+  // On successful creation: bumps stats, refetches /api/agency/clients
+  // so the new sub-client appears in the portfolio table, and toasts.
+  const [whatsAppImportOpen, setWhatsAppImportOpen] = useState(false);
+  const [whatsAppImportStats, setWhatsAppImportStats] =
+    usePersistentState<WhatsAppImportStats>("agency:whatsapp-import-stats", {
+      count: 0,
+      lastAt: null,
+    });
+
+  const handleWhatsAppImportOpen = useCallback(() => {
+    setWhatsAppImportOpen(true);
+  }, []);
+
+  const handleWhatsAppImportClose = useCallback(() => {
+    setWhatsAppImportOpen(false);
+  }, []);
+
+  const handleWhatsAppImportCreated = useCallback(() => {
+    setWhatsAppImportOpen(false);
+    setWhatsAppImportStats((prev) => ({
+      count: prev.count + 1,
+      lastAt: Date.now(),
+    }));
+    pushToast(
+      "Sous-client créé via WhatsApp Import — portefeuille actualisé.",
+      "success",
+    );
+    // Refetch the portfolio so the new client appears immediately.
+    fetchClients();
+  }, [pushToast, setWhatsAppImportStats, fetchClients]);
+
   const handleWhatsAppConfig = useCallback(() => {
     pushToast("Configuration des alertes WhatsApp ouverte.", "info");
   }, [pushToast]);
@@ -16852,6 +17774,20 @@ export default function AgencyDashboard({
                 <ActiviteReseauCard trend={trend} clients={clients} isAggregate={isAggregate} />
               </motion.div>
 
+              {/* WhatsApp Import — GLM-4 auto-create sub-client (B2B2B killer feature) */}
+              <motion.div
+                id="whatsapp-import"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(24)}
+                className="lg:col-span-12"
+              >
+                <WhatsAppImportCard
+                  onOpen={handleWhatsAppImportOpen}
+                  stats={whatsAppImportStats}
+                />
+              </motion.div>
+
               <motion.div {...cardMotion} transition={d(24)} className="lg:col-span-12">
                 <BoiteOutilsAgenceCard
                   onExport={handleExport}
@@ -16876,7 +17812,7 @@ export default function AgencyDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Agences · 34 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · 3 R3-AGENCY-A features · 3 R4-AGENCY-A features · Multi-clients · White-label ·
+              Harch Atelier · Console Agences · 35 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · 3 R3-AGENCY-A features · 3 R4-AGENCY-A features · WhatsApp Import (GLM-4) · Multi-clients · White-label ·
               Commission {agency?.commissionPct ?? 20}% · Tier {activeTier.label}
               {pendingClients.length > 0 ? ` · ${pendingClients.length} client(s) en attente` : ""}
               {userEmail ? ` · ${userEmail}` : ""}
@@ -16891,6 +17827,14 @@ export default function AgencyDashboard({
           onClose={handleWizardClose}
           onComplete={handleWizardComplete}
           teamMembers={users}
+        />
+      )}
+
+      {/* WhatsApp Import — GLM-4 auto-create sub-client (portal-level overlay) */}
+      {whatsAppImportOpen && (
+        <WhatsAppImportModal
+          onClose={handleWhatsAppImportClose}
+          onCreated={handleWhatsAppImportCreated}
         />
       )}
     </div>
