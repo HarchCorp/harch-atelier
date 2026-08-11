@@ -680,6 +680,39 @@ function useApi<T>(url: string | null, opts?: RequestInit): {
   return { data, loading, error, refetch };
 }
 
+// ─── usePersistentState — localStorage-backed useState (AURA fix #2) ───
+// Prevents data loss on page refresh / client switch. SSR-safe.
+function usePersistentState<T>(
+  key: string,
+  initial: T,
+): [T, (v: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(initial);
+
+  // Load from localStorage on mount (client-only, runs once)
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as T;
+        setState(parsed);
+      }
+    } catch {
+      // Ignore parse errors / corrupted data — fall back to initial
+    }
+  }, [key]);
+
+  // Persist on every change
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch {
+      // Quota exceeded (~5MB) or localStorage disabled — fail silently
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
+
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────
 
 const FONT_HEADER: CSSProperties = {
@@ -1827,7 +1860,11 @@ function HarchIQAgencyWorkspace({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
-  const [history, setHistory] = useState<ConversationHistoryItem[]>([]);
+  // AURA fix #2 — persist conversation history to localStorage (cap 50, survives refresh)
+  const [history, setHistory] = usePersistentState<ConversationHistoryItem[]>(
+    "harchiq:agency:workspace-history",
+    [],
+  );
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -1856,7 +1893,7 @@ function HarchIQAgencyWorkspace({
       };
       setHistory((h) => {
         const filtered = h.filter((x) => x.id !== convId);
-        return [item, ...filtered].slice(0, 5); // 5 conversations
+        return [item, ...filtered].slice(0, 50); // 50 conversations (AURA fix #2)
       });
       setActiveConversationId(convId);
     },
@@ -2176,7 +2213,7 @@ function HarchIQAgencyWorkspace({
               <div
                 className="flex items-center justify-between mb-2"
               >
-                <span style={FONT_HEADER}>Historique (5 max)</span>
+                <span style={FONT_HEADER}>Historique (50 max)</span>
                 <button
                   type="button"
                   onClick={() => setShowHistory(false)}
@@ -2757,6 +2794,20 @@ function ScoreReputationHero({
                   cornerRadius={8}
                   isAnimationActive
                 />
+                <RTooltip
+                  cursor={false}
+                  contentStyle={{
+                    backgroundColor: "#FFFFFF",
+                    border: `1px solid ${BORDER_STRONG}`,
+                    borderRadius: 8,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: CHARCOAL,
+                    padding: "6px 10px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  }}
+                  formatter={(value: number) => [`${Math.round(Number(value))}/100`, "Score"]}
+                />
               </RadialBarChart>
             </ResponsiveContainer>
             <div
@@ -2867,7 +2918,16 @@ function ScoreReputationHero({
         className="mt-3 flex items-center justify-between"
         style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
       >
-        <span>Dernière maj · {lastUpdated}</span>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-1 transition-colors hover:text-[#4A7B5F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4A7B5F] rounded"
+          style={{ fontFamily: FONT_MONO, fontSize: 10, color: "inherit" }}
+          aria-label="Rafraîchir les données"
+        >
+          Dernière maj · {lastUpdated}
+          <RefreshCw size={10} className={refreshing ? "animate-spin" : ""} />
+        </button>
         <span>
           {isAggregate
             ? "Proxy utilisation quota"
@@ -3544,7 +3604,15 @@ function PortfolioClientsTable({
                 <tr
                   key={row.id}
                   onClick={() => onSwitch(row.original.id)}
-                  className="cursor-pointer transition-colors hover:bg-[#FAFAFA]"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSwitch(row.original.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`Ouvrir le client ${row.original.displayName ?? "—"}`}
+                  className="cursor-pointer transition-colors hover:bg-[#FAFAFA] focus-visible:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#4A7B5F]"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
@@ -4292,7 +4360,11 @@ function HarchIQChatCard({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
-  const [history, setHistory] = useState<ConversationHistoryItem[]>([]);
+  // AURA fix #2 — persist conversation history to localStorage (cap 50, survives refresh)
+  const [history, setHistory] = usePersistentState<ConversationHistoryItem[]>(
+    "harchiq:agency:chat-history",
+    [],
+  );
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -4321,7 +4393,7 @@ function HarchIQChatCard({
       };
       setHistory((h) => {
         const filtered = h.filter((x) => x.id !== convId);
-        return [item, ...filtered].slice(0, 5);
+        return [item, ...filtered].slice(0, 50); // 50 conversations (AURA fix #2)
       });
       setActiveConversationId(convId);
     },
@@ -4549,7 +4621,7 @@ function HarchIQChatCard({
           }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span style={FONT_HEADER}>Historique (5 max)</span>
+            <span style={FONT_HEADER}>Historique (50 max)</span>
             <button
               type="button"
               onClick={() => setShowHistory(false)}
@@ -4653,26 +4725,54 @@ function HarchIQChatCard({
         ))}
       </div>
 
-      {/* Input + Generate report CTA */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Posez une question à HarchIQ…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void send(input);
-          }}
-          className="flex-1 px-3 py-2 rounded-md outline-none"
-          style={{
-            border: `1px solid ${BORDER_STRONG}`,
-            backgroundColor: "#FAFAFA",
-            fontFamily: FONT_SANS,
-            fontSize: 12,
-            color: CHARCOAL,
-          }}
-          aria-label="Question à HarchIQ"
-        />
+      {/* Input + Generate report CTA — textarea with Shift+Enter + char counter (AURA fix #1) */}
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 flex flex-col gap-1">
+          <textarea
+            placeholder="Posez une question à HarchIQ…"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Auto-grow (capped at 120px ≈ 6 lines)
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send(input);
+              }
+            }}
+            rows={1}
+            className="px-3 py-2 rounded-md outline-none resize-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#4A7B5F]"
+            style={{
+              border: `1px solid ${BORDER_STRONG}`,
+              backgroundColor: "#FAFAFA",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: CHARCOAL,
+              minHeight: 36,
+              maxHeight: 120,
+              overflow: "hidden",
+            }}
+            aria-label="Question à HarchIQ"
+          />
+          <div className="flex justify-between items-center px-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_HEADER, letterSpacing: "0.04em" }}>
+              ENTRER ENVOYE · MAJ+ENTRER = NOUVELLE LIGNE
+            </span>
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: input.length > 1800 ? NEUTRAL_AMBER : TEXT_HEADER,
+                fontWeight: 700,
+              }}
+            >
+              {input.length} / 2000
+            </span>
+          </div>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -4995,7 +5095,7 @@ function PitchDeckCard({
                 className="h-7 shrink-0"
                 style={{ fontFamily: FONT_MONO, fontSize: 10 }}
                 onClick={() => launch(t.key, t.prompt)}
-                disabled={running !== null}
+                disabled={running === t.key}
               >
                 {running === t.key ? (
                   <>
@@ -5010,25 +5110,66 @@ function PitchDeckCard({
             </div>
             {results[t.key] && (
               <div
-                className="mt-2 p-2.5 rounded-md whitespace-pre-wrap"
+                className="mt-2 rounded-md overflow-hidden"
                 style={{
                   backgroundColor: "#FFFFFF",
                   border: `1px solid ${SAGE_DIM}`,
-                  fontFamily: FONT_SANS,
-                  fontSize: 11,
-                  lineHeight: 1.5,
-                  color: CHARCOAL,
-                  maxHeight: 180,
-                  overflowY: "auto",
                 }}
               >
-                {results[t.key]}
+                <div
+                  className="flex items-center justify-between px-2.5 py-1.5"
+                  style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+                >
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: TEXT_HEADER,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Résultat · {(results[t.key] ?? "").split(/\s+/).filter(Boolean).length} mots
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (results[t.key]) {
+                        navigator.clipboard?.writeText(results[t.key]).catch(() => {});
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors hover:bg-[#F0F0F0] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#4A7B5F]"
+                    style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+                    aria-label="Copier le résultat"
+                  >
+                    <Copy size={10} /> Copier
+                  </button>
+                </div>
+                <div
+                  className="p-2.5 whitespace-pre-wrap"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    lineHeight: 1.5,
+                    color: CHARCOAL,
+                    maxHeight: 160,
+                    overflowY: "auto",
+                  }}
+                >
+                  {results[t.key]}
+                </div>
               </div>
             )}
           </div>
         ))}
       </div>
-      <AiCommentary text="Pitch deck généré pour prospect [X]. 15 slides, 3 recommandations stratégiques. Exportez en PowerPoint via HarchIQ AI." />
+      <AiCommentary
+        text={
+          Object.keys(results).length === 0
+            ? "3 outils disponibles : analyse paysage, pitch deck prospect, benchmark concurrentiel. Lancez un outil pour générer un livrable data-backed."
+            : `${Object.keys(results).length} livrable(s) généré(s) · copiez le texte dans votre template PowerPoint/Google Slides. Suggestions : ajoutez le logo client, data sources en footer.`
+        }
+      />
     </CardShell>
   );
 }

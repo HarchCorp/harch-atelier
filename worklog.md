@@ -3187,3 +3187,92 @@ Stage Summary:
 - 25 sections (each 10x with AI commentary): YES
 - Campaign ROI + revenue tracker + pitch deck + white-label: YES
 - 0 TypeScript errors
+
+---
+Task ID: AURA-AUDIT-1
+Agent: AURA (Lead Product & UX Strategist)
+Task: Audit AgencyDashboard UX and propose 5 concrete improvements
+
+Work Log:
+- Read worklog.md tail (lines 2889-3189) for project context (10X-AGENCY, 25 sections, 0 TS errors)
+- Read AgencyDashboard.tsx header (1-80) to confirm design tokens & 25-section layout
+- Read UI Atoms (lines 683-855): CardShell, SectionHeader, Delta, MiniStat, EmptyDash, SparkDot, AiCommentary, cardMotion
+- Read Section 1: ClientSwitcherBar (1055-1387) + HarchIQAgencyWorkspace (1800-1979) for keyboard-handler comparison
+- Read AgencyChatMessageView (2409-2618): AI bubble, sources expand, PPT/PDF/Copy buttons, follow-up chips
+- Read Section 2: ScoreReputationHero (2627-2880): RadialBarChart gauge + 6 MiniStats + AiCommentary
+- Read Sections 3-5: KpiClientsActifs / KpiAlertesCrisis / KpiScoreMoyen (2886-3005) — confirmed "—" placeholder pattern
+- Read Section 9: PortfolioClientsTable (3167-3571) — TanStack Table with row onClick but no tabIndex/onKeyDown
+- Read Section 13: HarchIQChatCard (4269-4705) + Section 15: PitchDeckCard (4865-5033) + main composition (7600-7940)
+- Grep audit: 0 matches for localStorage/sessionStorage/focus-visible/tabIndex — confirms history is volatile & focus rings absent
+- Grep audit: hover:bg-[#FAFAFA] used 8+ times but no focus: equivalent — keyboard users lack visible affordance
+- Compiled 5 concrete UX improvements + 7 missing-feature gaps vs Meltwater/Cision/Brandwatch/Talkwalker
+- No code modified (research-only mission)
+
+Stage Summary:
+- File audited: /home/z/my-project/src/app/atelier/console/agency/AgencyDashboard.tsx (7998 lines, 25 sections)
+- 5 concrete UX improvements identified (all referenced to exact line numbers + line counts + priority)
+- 7 missing-feature gaps documented vs top-tier agency SaaS competitors
+- Highest-priority finding: Section 13 input regression (uses <input> not <textarea>, no Shift+Enter) vs Section 1 parity
+- Second priority: volatile conversation history (no localStorage) — quality-of-life defect for daily agency users
+- Third priority: keyboard a11y — table rows + buttons lack focus-visible rings, dataTable rows are click-only
+- Bloomberg-quality gaps: no sparkline on hero score, no real-time alert escalation, no journalist CRM, no boolean saved searches, no crisis-mode war room
+- Full report delivered in agent final message (not appended to worklog due to length)
+
+---
+Task ID: KAEL-1
+Agent: Kaelen "Kael" Vance (Principal Software Architect)
+Task: Diagnostic infrastructure + implémentation 5 fixes AURA sur AgencyDashboard
+
+Work Log:
+- Diagnostic serveur dev : OOM systématique sur 3.9Gi RAM + 0 swap. Turbopack compile le middleware (next-intl + next-auth/jwt) + pages lourdes (4-8k lignes/dashboard) → next-server child tué par SIGKILL (kernel OOM killer, non loggable).
+- Solution stabilité : NODE_OPTIONS=--max-old-space-size=4096 + Turbopack. Le serveur compile /atelier/login en 6.4s (HTTP 200) mais meurt après 1-2 compilations. Chrome headless (agent-browser) consomme 1.2GB en parallèle, aggravant l'OOM.
+- Créé scripts/dev-watchdog.sh (relance le serveur en boucle, méthode validée par vlm-capture-with-server.ts du worklog Task ID: 7).
+- DB : DATABASE_URL=file:/home/z/my-project/db/custom.db (SQLite) mais schema.prisma provider=postgresql → Prisma rejette. Schema utilise String[] (9+ champs) incompatible SQLite. Pas de quick fix local (pas de sudo pour swap, pas de psql). DB non bloquante pour QA visuel pages publiques.
+- Demo accounts DÉSACTIVÉS (src/lib/demo-session.ts : isDemoEmail retourne false). QA consoles auth-gated nécessiterait création d'user réel en DB.
+- Ajouté NEXTAUTH_URL + NEXTAUTH_SECRET au .env (manquants → getServerSession retournait null, worklog Task ID: 7 mentionnait ce fix).
+
+AURA AUDIT (sub-agent) — 5 améliorations identifiées + 7 missing features vs Meltwater/Cision/Brandwatch/Talkwalker. Voir Task ID: AURA-AUDIT-1 ci-dessus.
+
+5 FIXES IMPLÉMENTÉS (AgencyDashboard.tsx, src/app/atelier/console/agency/) :
+
+Fix #1 (HIGH) — Section 13 HarchIQChatCard input regression :
+  - AVANT : <input type="text"> single-line, Enter déclenche send (pas de Shift+Enter pour newline). Parité cassée vs Section 1 qui utilise <textarea>.
+  - APRÈS : <textarea> auto-grow (rows=1, max 120px ≈ 6 lignes), Shift+Enter pour newline, Enter pour send, char counter "N / 2000" (couleur amber si >1800), hint "ENTRER ENVOYE · MAJ+ENTRER = NOUVELLE LIGNE".
+  - Impact : un directeur d'agence peut composer des prompts multi-lignes (analyses à puces).
+
+Fix #2 (HIGH) — HarchIQ history volatile (data loss on refresh) :
+  - AVANT : useState<ConversationHistoryItem[]>([]) dans 2 sections (HarchIQAgencyWorkspace + HarchIQChatCard). Cap à 5. Refresh = perte totale.
+  - APRÈS : Hook usePersistentState<T>(key, initial) — localStorage-backed, SSR-safe (try/catch sur parse + quota). Cap 5→50. Clés : "harchiq:agency:workspace-history" (Section 1) + "harchiq:agency:chat-history" (Section 13). Labels "Historique (5 max)" → "Historique (50 max)".
+  - Impact : 50 conversations persistées (~5MB localStorage budget), survit refresh/switch client.
+
+Fix #3 (MEDIUM) — Section 2 ScoreReputationHero gauge passive :
+  - AVANT : RadialBarChart 200×200 décoratif (pas de tooltip), footer "Dernière maj" non-cliquable.
+  - APRÈS : <RTooltip> sur le gauge (formatter "N/100", style monospace, shadow). Footer "Dernière maj · {lastUpdated}" devient <button> cliquable (déclenche handleRefresh, RefreshCw icon spin, hover sage green, focus-visible ring).
+  - Impact : signal density +1 (tooltip révèle le score exact au hover), discoverability refresh +1.
+
+Fix #4 (MEDIUM) — Section 15 PitchDeckCard serial-lock + fake empty state + no export :
+  - AVANT : disabled={running !== null} (sérialise 3 outils → 24s au lieu de 8s parallèle). Résultat raw <div> sans copy/export. AiCommentary statique "Pitch deck généré pour prospect [X]" affiché AVANT toute génération (fake content).
+  - APRÈS : disabled={running === t.key} (parallèle). Résultat avec header "Résultat · N mots" + bouton Copy (clipboard API, focus-visible ring). AiCommentary conditionnel : empty-state = "3 outils disponibles…" / post-result = "N livrable(s) généré(s) · copiez le texte…".
+  - Impact : parallélisme workflow, export clipboard, plus de fake content.
+
+Fix #5 (MEDIUM) — Keyboard a11y manquante (WCAG 2.1 Level A) :
+  - AVANT : <tr onClick> sans tabIndex/onKeyDown/role. Aucun focus-visible dans le dashboard (grep : 0 matches pour focus-visible avant fix).
+  - APRÈS : <tr> avec tabIndex={0} + onKeyDown (Enter/Space → onSwitch) + aria-label + focus-visible:bg-[#F5F5F5] + focus-visible:outline-2 outline-[#4A7B5F]. Textarea et boutons Copy ont aussi focus-visible.
+  - Impact : keyboard users peuvent naviguer + activer les rows du Portfolio Clients table.
+
+Quality:
+  • bunx tsc --noEmit --pretty false → 0 errors (exit 0)
+  • bunx eslint AgencyDashboard.tsx → 0 errors, 5 warnings (4 TanStack Table useReactTable memoization attendus + 0 unused directives après cleanup)
+  • Aucune régression : design system préservé (sage green, charcoal, Space Mono, no emojis, white bg)
+
+Stage Summary:
+- 5 fixes AURA implémentés sur AgencyDashboard (7998→8170 lignes, +172 lignes net)
+- Code quality : 0 TypeScript errors, 0 lint errors
+- Infrastructure : watchdog script créé, NEXTAUTH configuré, diagnostic OOM documenté
+- Non résolu : DB SQLite vs PostgreSQL (pas de quick fix local), QA runtime bloqué par OOM (serveur meurt après 1-2 compilations sur 3.9GB RAM)
+
+Unresolved Issues:
+- QA runtime non effectué : le serveur dev OOM après 1-2 compilations de pages. Chrome headless (agent-browser) consomme 1.2GB en parallèle. Recommandation : exécuter sur machine avec ≥8GB RAM, ou utiliser le script vlm-capture-with-server.ts (Playwright) qui gère le cycle serveur.
+- DB : DATABASE_URL=file: (SQLite) incompatible avec schema.prisma provider=postgresql. Les APIs qui font des requêtes DB retournent 500. Pour QA complet, configurer une DB PostgreSQL accessible (Neon ou locale).
+- 7 missing features identifiées par AURA (saved-search library, journalist CRM, coverage reporting, alert escalation, crisis war room, sentiment-by-entity, annotated clipping) — backlog pour sprints futurs.
+- Recommandation priorité suivante : implémenter Fix #1-#5 sur les 3 autres consoles (EssentialDashboard, ProDashboard, EnterpriseDashboard) pour cohérence cross-console. Puis missing feature #1 (Boolean saved-search library) qui est le plus gros gap vs Meltwater/Cision.
