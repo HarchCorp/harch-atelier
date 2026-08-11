@@ -41,6 +41,7 @@ import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
 import { logError } from "@/lib/logger";
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoInsightsResponse } from "@/lib/demo-console-api";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -68,6 +69,14 @@ export async function GET(req: NextRequest) {
     );
   }
   const userId = session.user.id;
+
+  // ─── RBAC — P0-2 FIX (KAEL): accept all 4 new account types ──
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
+    return NextResponse.json(
+      { error: "Forbidden — insufficient account permissions" },
+      { status: 403 },
+    );
+  }
 
   // ─── DEMO BYPASS ─────────────────────────────────────────────
   if (session.user.isDemo || isDemoEmail(session.user.email)) {

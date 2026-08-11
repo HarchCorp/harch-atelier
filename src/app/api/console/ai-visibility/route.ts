@@ -9,6 +9,7 @@ import {
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoAiVisibilityResponse } from "@/lib/demo-console-api";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/ai-visibility
@@ -29,10 +30,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — this data is for brand-monitor, market-competitor and investment-bank accounts only" },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 }
     );
   }

@@ -318,3 +318,95 @@ export function roleLabel(role: string | undefined | null): string {
   };
   return labels[normalized];
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  ACCOUNT TYPE RBAC — P0-2 FIX (KAEL — Protocole Leverage Maximal)
+//
+//  Bouclier hermétique pour les 4 plans Harch Atelier.
+//  Compatibilité ancien/nouveau système pendant la migration.
+//
+//  Mappage legacy → nouveau:
+//    brand-monitor      → essential   (petite équipe, veille marque)
+//    market-competitor  → pro         (équipe régionale, benchmark)
+//    investment-bank    → enterprise  (marque leader, gouvernance)
+//    harch-alpha        → agency      (multi-clients, white-label)
+//
+//  Les routes qui vérifient l'accountType doivent utiliser
+//  isAccountTypeAllowed() au lieu d'un check manuel de tableau.
+//  Cela garantit que les utilisateurs anciens ET nouveaux sont
+//  correctement habilités pendant la transition.
+// ═══════════════════════════════════════════════════════════════════
+
+export const NEW_ACCOUNT_TYPES = ["essential", "pro", "enterprise", "agency"] as const;
+export type NewAccountType = (typeof NEW_ACCOUNT_TYPES)[number];
+
+export const LEGACY_ACCOUNT_TYPES = [
+  "brand-monitor",
+  "market-competitor",
+  "investment-bank",
+  "harch-alpha",
+] as const;
+export type LegacyAccountType = (typeof LEGACY_ACCOUNT_TYPES)[number];
+
+export type AnyAccountType = NewAccountType | LegacyAccountType;
+
+/** Map any accountType (legacy or new) to the new canonical type. */
+const LEGACY_TO_NEW: Record<LegacyAccountType, NewAccountType> = {
+  "brand-monitor": "essential",
+  "market-competitor": "pro",
+  "investment-bank": "enterprise",
+  "harch-alpha": "agency",
+};
+
+/** Normalize any accountType string to the new canonical system. */
+export function normalizeAccountType(
+  accountType: string | undefined | null,
+): NewAccountType | null {
+  if (!accountType) return null;
+  if ((NEW_ACCOUNT_TYPES as readonly string[]).includes(accountType)) {
+    return accountType as NewAccountType;
+  }
+  if ((LEGACY_ACCOUNT_TYPES as readonly string[]).includes(accountType)) {
+    return LEGACY_TO_NEW[accountType as LegacyAccountType];
+  }
+  return null;
+}
+
+/**
+ * Check if a session's accountType is allowed, with legacy compatibility.
+ *
+ * Usage in API routes:
+ *   const session = await getServerSession(authOptions);
+ *   if (!isAccountTypeAllowed(session, ["essential", "pro"])) {
+ *     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+ *   }
+ *
+ * Accepts BOTH new types ("essential") and legacy types ("brand-monitor")
+ * in the allowedTypes array — both resolve to the same canonical type
+ * before comparison. This means:
+ *   isAccountTypeAllowed(session, ["essential"])
+ * passes for users with accountType "essential" OR "brand-monitor".
+ *
+ * Admins bypass the check entirely (full access).
+ */
+export function isAccountTypeAllowed(
+  session: { user?: { accountType?: string | null; role?: string | null } } | null,
+  allowedTypes: Array<NewAccountType | LegacyAccountType>,
+): boolean {
+  if (!session?.user) return false;
+
+  // Admins always pass (full access to all account-type-gated routes)
+  if (session.user.role === "admin" || session.user.role === "super_admin") {
+    return true;
+  }
+
+  const userNormalized = normalizeAccountType(session.user.accountType);
+  if (!userNormalized) return false;
+
+  // Normalize each allowed type and check membership
+  const allowedNormalized = new Set<NewAccountType>(
+    allowedTypes.map((t) => normalizeAccountType(t) ?? (t as NewAccountType)),
+  );
+
+  return allowedNormalized.has(userNormalized);
+}
