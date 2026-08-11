@@ -1581,6 +1581,17 @@ interface HarchIQWorkspaceProps {
   onPrefillConsumed?: () => void;
 }
 
+// ─── P2-11-DEDUP — HarchIQ consolidation ───────────────────────────────
+// HarchIQWorkspace is the PRIMARY chat instance (Feature 1, hero).
+// Two specialized views delegate to it:
+//   • HarchIQEntrepriseCard  (Feature 16) → compact "Quick Ask" widget
+//     that routes questions to this workspace via prefillQuestion + scroll
+//   • BoardBriefingGeneratorCard (Feature 27) → specialized HarchIQ view
+//     pre-filling a board-ready briefing prompt (4 templates)
+// All three POST to /api/console/ask, but only this one maintains a chat
+// surface. The two specialized views exist to give Karim contextual entry
+// points without duplicating the conversational UI.
+// ─────────────────────────────────────────────────────────────────────────
 function HarchIQWorkspace({ prefillQuestion, onPrefillConsumed }: HarchIQWorkspaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -4013,8 +4024,12 @@ function GrilleVisibiliteIaCard({ ai, loading }: { ai: AiVisibilityResp | null; 
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SECTION 16 — HARCHIQ AI ENTREPRISE (chat, unlimited)
-// Full chat interface · 6 advanced suggestion chips · Export PDF + PPT
+// SECTION 16 — HARCHIQ AI ENTREPRISE — Quick Ask delegating widget
+// P2-11-DEDUP: This was a full duplicate chat (POST /api/console/ask).
+// Consolidated into a compact "Quick Ask" widget that delegates to the
+// primary HarchIQWorkspace (SECTION 1) via prefillQuestion + scroll.
+// Preserves: 6 advanced suggestion chips, "Générer un briefing" CTA,
+// quota illimité badge, executive entry point. No longer POSTs directly.
 // ════════════════════════════════════════════════════════════════════
 
 const ENTERPRISE_CHIPS = [
@@ -4026,106 +4041,26 @@ const ENTERPRISE_CHIPS = [
   "Active le mode crise",
 ];
 
-function HarchIQEntrepriseCard() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome-ent",
-      role: "ai",
-      content:
-        "Bonjour. Je suis HarchIQ AI — Entreprise. Mon quota est illimité. Posez-moi vos questions stratégiques les plus complexes : analyse géopolitique, audit ESG, benchmark international, plan de crise, conformité réglementaire. Je peux générer un briefing PDF ou PowerPoint en un clic.",
-      followUps: ENTERPRISE_CHIPS,
-      timestamp: Date.now(),
-    },
-  ]);
+interface HarchIQEntrepriseCardProps {
+  onQuickAsk: (question: string) => void;
+  onGenerateBriefing: () => void;
+}
+
+function HarchIQEntrepriseCard({ onQuickAsk, onGenerateBriefing }: HarchIQEntrepriseCardProps) {
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const sendQuestion = useCallback(async (question: string) => {
+  const submit = useCallback((question: string) => {
     const trimmed = question.trim();
-    if (!trimmed || sending) return;
-
-    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: trimmed, timestamp: Date.now() };
-    const pendingId = `ai-${Date.now()}`;
-    const pendingMsg: ChatMessage = { id: pendingId, role: "ai", content: "", pending: true, timestamp: Date.now() };
-    setMessages((m) => [...m, userMsg, pendingMsg]);
+    if (!trimmed) return;
+    onQuickAsk(trimmed);
     setInput("");
-    setSending(true);
-
-    try {
-      const r = await fetch("/api/console/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: trimmed }),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err?.error ?? `HTTP ${r.status}`);
-      }
-      const data: AskResponse = await r.json();
-      setMessages((m) =>
-        m.map((msg) =>
-          msg.id === pendingId
-            ? { ...msg, content: data.answer || "Aucune réponse générée.", sources: data.sources ?? [], followUps: generateFollowUps(trimmed), pending: false, timestamp: Date.now() }
-            : msg,
-        ),
-      );
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur réseau";
-      setMessages((m) =>
-        m.map((mm) =>
-          mm.id === pendingId
-            ? { ...mm, content: `Désolé, je n'ai pas pu répondre (${msg}). Réessayez dans un instant.`, pending: false, timestamp: Date.now() }
-            : mm,
-        ),
-      );
-      toast.error("HarchIQ n'a pas pu répondre.");
-    } finally {
-      setSending(false);
-    }
-  }, [sending]);
+  }, [onQuickAsk]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void sendQuestion(input);
+      submit(input);
     }
-  };
-
-  const toggleSources = (msgId: string) => {
-    setExpandedSources((prev) => {
-      const next = new Set(prev);
-      if (next.has(msgId)) next.delete(msgId);
-      else next.add(msgId);
-      return next;
-    });
-  };
-
-  const handleExport = (msg: ChatMessage, format: "ppt" | "pdf" | "copy") => {
-    if (format === "copy") {
-      navigator.clipboard?.writeText(msg.content).then(() => toast.success("Réponse copiée."));
-      return;
-    }
-    toast.success(
-      format === "ppt"
-        ? "Export PowerPoint lancé — fichier envoyé par email."
-        : "Export PDF lancé — fichier envoyé par email.",
-      { description: msg.content.slice(0, 80) + "…" },
-    );
-  };
-
-  const handleGenerateBriefing = () => {
-    toast.success("Génération du briefing exécutif lancée.", {
-      description: "Le briefing sera disponible dans la section 'Briefings' sous 90 secondes.",
-    });
-    scrollToSection("briefing");
   };
 
   return (
@@ -4148,11 +4083,11 @@ function HarchIQEntrepriseCard() {
                   HarchIQ AI — Entreprise
                 </span>
                 <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.08em", backgroundColor: CHARCOAL, color: "#FFFFFF" }}>
-                  QUOTA ILLIMITÉ
+                  QUICK ASK · ILLIMITÉ
                 </Badge>
               </div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.04em" }}>
-                Chat stratégique · Sources citées · Export PDF + PPT · Briefings générés
+                Saisie rapide · 6 prompts stratégiques · Achemine vers l'espace de travail HarchIQ
               </div>
             </div>
           </div>
@@ -4162,7 +4097,7 @@ function HarchIQEntrepriseCard() {
               size="sm"
               className="h-7 px-2"
               style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
-              onClick={handleGenerateBriefing}
+              onClick={onGenerateBriefing}
             >
               <FileText size={12} className="mr-1" />
               Générer un briefing
@@ -4171,42 +4106,32 @@ function HarchIQEntrepriseCard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3">
-          {/* Chat side (2/3) */}
-          <div className="lg:col-span-2 flex flex-col" style={{ borderRight: `1px solid ${BORDER}`, minHeight: 420 }}>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4" style={{ maxHeight: 380, minHeight: 280 }}>
-              {messages.map((msg) => (
-                <ChatMessageView
-                  key={msg.id}
-                  msg={msg}
-                  expanded={expandedSources.has(msg.id)}
-                  onToggleSources={() => toggleSources(msg.id)}
-                  onFollowUp={(p) => void sendQuestion(p)}
-                  onExport={(fmt) => handleExport(msg, fmt)}
-                />
-              ))}
-            </div>
-            <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+          {/* Compact Quick Ask input (2/3) */}
+          <div className="lg:col-span-2 flex flex-col" style={{ borderRight: `1px solid ${BORDER}` }}>
+            <div className="px-5 py-4">
+              <div className="mb-3" style={FONT_HEADER}>
+                QUICK ASK — VOTRE QUESTION EST ACHEMINÉE VERS L'ESPACE DE TRAVAIL HARCHIQ
+              </div>
               <div className="flex items-end gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}` }}>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Posez votre question stratégique…"
-                  rows={1}
-                  disabled={sending}
-                  className="flex-1 resize-none outline-none disabled:opacity-50"
-                  style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL, maxHeight: 120, minHeight: 24, padding: "2px 0" }}
+                  placeholder="Posez votre question stratégique (Entrée pour envoyer)…"
+                  rows={2}
+                  className="flex-1 resize-none outline-none"
+                  style={{ fontFamily: FONT_SANS, fontSize: 13, color: CHARCOAL, maxHeight: 120, minHeight: 48, padding: "2px 0" }}
                   aria-label="Question à HarchIQ Entreprise"
                 />
                 <button
                   type="button"
-                  onClick={() => void sendQuestion(input)}
-                  disabled={sending || !input.trim()}
+                  onClick={() => submit(input)}
+                  disabled={!input.trim()}
                   className="inline-flex items-center justify-center rounded-md disabled:opacity-40 hover:opacity-90 transition-opacity"
-                  style={{ width: 32, height: 32, backgroundColor: CHARCOAL, color: "#FFFFFF" }}
-                  aria-label="Envoyer"
+                  style={{ width: 36, height: 36, backgroundColor: CHARCOAL, color: "#FFFFFF" }}
+                  aria-label="Envoyer vers HarchIQ"
                 >
-                  {sending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                  <Send size={14} />
                 </button>
               </div>
               <div className="mt-1.5 px-1 flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
@@ -4216,19 +4141,18 @@ function HarchIQEntrepriseCard() {
             </div>
           </div>
 
-          {/* Suggestion chips + history (1/3) */}
+          {/* Suggestion chips (1/3) */}
           <div className="lg:col-span-1 flex flex-col">
             <div className="px-5 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
               <span style={FONT_HEADER}>Suggestions avancées</span>
             </div>
-            <div className="flex-1 px-4 py-3 space-y-2 overflow-y-auto" style={{ maxHeight: 360 }}>
+            <div className="flex-1 px-4 py-3 space-y-2 overflow-y-auto" style={{ maxHeight: 320 }}>
               {ENTERPRISE_CHIPS.map((chip, i) => (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => void sendQuestion(chip)}
-                  disabled={sending}
-                  className="w-full text-left rounded-lg p-2.5 transition-all hover:shadow-sm disabled:opacity-50"
+                  onClick={() => submit(chip)}
+                  className="w-full text-left rounded-lg p-2.5 transition-all hover:shadow-sm"
                   style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
                 >
                   <div className="flex items-start gap-2">
@@ -4246,10 +4170,10 @@ function HarchIQEntrepriseCard() {
                 size="sm"
                 className="h-7 w-full"
                 style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
-                onClick={() => toast.success("Export PDF + PowerPoint de la conversation lancé.")}
+                onClick={() => onQuickAsk("Reprends la dernière conversation HarchIQ et propose un brief exécutif en 5 points.")}
               >
-                <Download size={12} className="mr-1.5" />
-                Export PDF + PPT
+                <ArrowRight size={12} className="mr-1.5" />
+                Rouvrir l'espace de travail
               </Button>
             </div>
           </div>
@@ -4604,201 +4528,14 @@ function TableauMultiEquipesCard({ loading }: { loading: boolean }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SECTION 19 — API & INTÉGRATIONS
+// SECTION 19 — API & INTÉGRATIONS  [P2-11-DEDUP — removed]
+// This card was a duplicate of SECTION 29 (ApiIntegrationHubCard).
+// All functionality has been merged into ApiIntegrationHubCard with 4
+// tabs (Clés API · Webhooks · MCP · Consommation & SIEM). Power BI was
+// added to MCP_CONNECTOR_DEFS; the 30-day consumption bar, rate limit
+// display and API documentation link were merged into the Consommation
+// tab. See ApiIntegrationHubCard for the unified implementation.
 // ════════════════════════════════════════════════════════════════════
-
-const INTEGRATIONS = [
-  { id: "powerbi", name: "Power BI", desc: "Microsoft BI", Icon: BarChart3, status: "Connecté" as const },
-  { id: "tableau", name: "Tableau", desc: "Salesforce BI", Icon: BarChart3, status: "Connecté" as const },
-  { id: "slack", name: "Slack", desc: "Notifications canal", Icon: MessageSquare, status: "Connecté" as const },
-  { id: "teams", name: "Microsoft Teams", desc: "Collaboration", Icon: Users, status: "Disponible" as const },
-  { id: "webhook", name: "Webhook", desc: "5 endpoints actifs", Icon: Webhook, status: "Connecté" as const },
-];
-
-function ApiIntegrationsCard({ teamActivity, loading }: { teamActivity: TeamActivityResp | null; loading: boolean }) {
-  const apiKey = "harch_••••••••3f7a";
-  const apiCalls = 14327 + ((teamActivity?.activities ?? []).filter((a) => a.action === "ai_probe").length * 3);
-  const apiQuota = 50000;
-  const apiPct = (apiCalls / apiQuota) * 100;
-
-  const handleCopy = () => {
-    navigator.clipboard?.writeText("harch_live_3f7a92d4e1b8c5a9").then(() => toast.success("Clé API copiée dans le presse-papiers."));
-  };
-  const handleRegenerate = () => {
-    toast.success("Nouvelle clé API générée. L'ancienne clé sera désactivée dans 24h.");
-  };
-
-  const insight = `${INTEGRATIONS.filter((i) => i.status === "Connecté").length}/${INTEGRATIONS.length} intégrations actives · ${fmtNumber(apiCalls)}/${fmtNumber(apiQuota)} appels API (${Math.round(apiPct)}%). Documentation API disponible — endpoint REST + WebSocket.`;
-
-  return (
-    <motion.div {...cardMotion}>
-      <CardShell className="lg:col-span-12">
-        <SectionHeader
-          title="19 · API & Intégrations"
-          right={
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
-                ENTERPRISE
-              </Badge>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  toast.info("Documentation API — redirection vers /docs.");
-                }}
-                className="inline-flex items-center gap-1"
-                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
-              >
-                <ExternalLink size={11} />
-                Documentation API
-              </a>
-            </div>
-          }
-        />
-        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-        {loading ? (
-          <Skeleton className="h-48 w-full" />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-              {/* API key */}
-              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Key size={14} style={{ color: SAGE }} />
-                    <span style={FONT_HEADER}>Clé API principale</span>
-                  </div>
-                  <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
-                    ACTIVE
-                  </Badge>
-                </div>
-                <div
-                  className="rounded-md px-3 py-2 mb-2"
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 13,
-                    color: CHARCOAL,
-                    backgroundColor: "#FFFFFF",
-                    border: `1px solid ${BORDER_STRONG}`,
-                  }}
-                >
-                  {apiKey}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7"
-                    style={{ fontFamily: FONT_MONO, fontSize: 10 }}
-                    onClick={handleCopy}
-                  >
-                    <Copy size={12} className="mr-1" />
-                    Copier
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7"
-                    style={{ fontFamily: FONT_MONO, fontSize: 10, color: NEUTRAL_AMBER, borderColor: NEUTRAL_AMBER }}
-                    onClick={handleRegenerate}
-                  >
-                    <RefreshCw size={12} className="mr-1" />
-                    Régénérer
-                  </Button>
-                </div>
-              </div>
-
-              {/* Usage */}
-              <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Activity size={14} style={{ color: SAGE }} />
-                    <span style={FONT_HEADER}>Consommation 30J</span>
-                  </div>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
-                    {fmtNumber(apiCalls)} / {fmtNumber(apiQuota)}
-                  </span>
-                </div>
-                <div className="mb-2">
-                  <Progress
-                    value={apiPct}
-                    className="h-2"
-                    style={
-                      {
-                        ["--progress-background" as string]: SAGE_BG_STRONG,
-                        ["--progress-foreground" as string]: SAGE,
-                      } as CSSProperties
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-                  <span>{Math.round(apiPct)}% du quota utilisé</span>
-                  <span>Renouvellement : 1er du mois</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Integration cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-              {INTEGRATIONS.map((it) => {
-                const { Icon } = it;
-                const isConnected = it.status === "Connecté";
-                return (
-                  <div
-                    key={it.id}
-                    className="rounded-lg p-3"
-                    style={{
-                      border: `1px solid ${isConnected ? SAGE : BORDER}`,
-                      backgroundColor: isConnected ? SAGE_BG : "#FFFFFF",
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div
-                        className="flex items-center justify-center rounded-md"
-                        style={{ width: 28, height: 28, backgroundColor: isConnected ? SAGE : "#FAFAFA", color: isConnected ? "#FFFFFF" : TEXT_MUTED }}
-                      >
-                        <Icon size={14} />
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="h-4"
-                        style={{
-                          fontFamily: FONT_MONO,
-                          fontSize: 8,
-                          letterSpacing: "0.08em",
-                          backgroundColor: isConnected ? SAGE : "#FAFAFA",
-                          color: isConnected ? "#FFFFFF" : TEXT_MUTED,
-                        }}
-                      >
-                        {it.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
-                      {it.name}
-                    </div>
-                    <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
-                      {it.desc}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 mt-2 w-full px-2"
-                      style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE }}
-                      onClick={() => toast.info(`Configuration de l'intégration ${it.name}.`)}
-                    >
-                      Configurer
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-            <AiCommentary text={insight} />
-          </>
-        )}
-      </CardShell>
-    </motion.div>
-  );
-}
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 20 — MARKETING D'INFLUENCE
@@ -5622,167 +5359,285 @@ function CompetitorDeepDiveCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SECTION 24 — SUIVI ESG
-// 3 cards: Environnement, Social, Gouvernance
+// SECTION 24 — SUIVI ESG  [P2-11-DEDUP — removed]
+// This card was a duplicate of SECTION 41 (EsgScorecardCard).
+// The simpler 3-card scorecard (Environnement / Social / Gouvernance)
+// has been merged into EsgScorecardCard as a "Vue synthèse" toggle.
+// The detailed sub-metrics + radar + benchmark view remains the default
+// "Vue détaillée". The `id="esg-conformite"` anchor was moved onto the
+// consolidated card so the sidebar NAV still resolves.
 // ════════════════════════════════════════════════════════════════════
 
-function SuiviEsgCard({ health, loading }: { health: BrandHealth | null; loading: boolean }) {
-  // Derive ESG scores from health data
-  const baseScore = health?.score ?? 70;
-  const esgCards = useMemo(() => {
-    return [
-      {
-        id: "environnement",
-        label: "Environnement",
-        score: Math.max(40, Math.min(95, baseScore - 5)),
-        trend: 3,
-        Icon: Leaf,
-        insight: "Mentions durabilité en hausse. Couverture positive sur les engagements nets-zéro. Surveillez les critiques sur l'empreinte carbone.",
-        weakness: "Faible couverture des publications ESG spécialisées.",
-      },
-      {
-        id: "social",
-        label: "Social",
-        score: Math.max(50, Math.min(95, baseScore + 8)),
-        trend: 5,
-        Icon: Users,
-        insight: "Marque employeur solide. Diversité et inclusion bien perçues. Conditions de travail peu évoquées négativement.",
-        weakness: "Renforcez la communication RSE interne.",
-      },
-      {
-        id: "gouvernance",
-        label: "Gouvernance",
-        score: Math.max(45, Math.min(90, baseScore - 2)),
-        trend: -1,
-        Icon: Scale,
-        insight: "Transparence reconnue. Conformité AMMC/BAM satisfaisante. Quelques questions sur la composition du conseil.",
-        weakness: "Communiquez sur l'indépendance des administrateurs.",
-      },
-    ];
-  }, [baseScore]);
+// ════════════════════════════════════════════════════════════════════
+// SECTION 25 — VEILLE RÉGLEMENTAIRE (P2-11-DEDUP — unified)
+// Single card with 3 view modes consuming one live API source
+// (/api/console/regulatory-feed):
+//   • Liste     — 5 most recent items (original Feature 25 behavior)
+//   • Calendrier — month grid with API items as colored dots on their
+//     `date` field + sidebar to add custom user-defined échéances
+//     (preserves Feature 32 RegCalendarState + "Ajouter une échéance")
+//   • Flux      — feed-style rendering with watchlist toggle +
+//     impact-analysis modal (preserves Feature 38 RegFeedState)
+// Standalone RegulatoryCalendarCard and RegulatoryChangeFeedCard were
+// removed; their state hooks (regCalendarState, regFeedState) are now
+// threaded into this card as overlay/annotation layers on top of the
+// live API data.
+// ════════════════════════════════════════════════════════════════════
 
-  const globalScore = Math.round(esgCards.reduce((s, c) => s + c.score, 0) / esgCards.length);
-  const strong = esgCards.reduce((max, c) => (c.score > max.score ? c : max), esgCards[0]);
-  const weak = esgCards.reduce((min, c) => (c.score < min.score ? c : min), esgCards[0]);
+type VeilleViewMode = "liste" | "calendrier" | "flux";
 
-  const insight = `Score ESG global : ${globalScore}/100. Force : ${strong.label} (${strong.score}). Faiblesse : ${weak.label} (${weak.score}). ${weak.trend < 0 ? "Tendance baissière sur le pilier faible — action requise." : "Tendance stable — capitalisez sur les forces."}`;
-
-  return (
-    <motion.div id="esg-conformite" {...cardMotion}>
-      <CardShell className="lg:col-span-12">
-        <SectionHeader
-          title="24 · Suivi ESG"
-          right={
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
-                GLOBAL {globalScore}/100
-              </Badge>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  downloadBoardPdf("esg-report", "Rapport ESG trimestriel");
-                }}
-                className="inline-flex items-center gap-1"
-                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
-              >
-                <ExternalLink size={11} />
-                Rapport ESG trimestriel
-              </a>
-            </div>
-          }
-        />
-        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-        {loading ? (
-          <Skeleton className="h-48 w-full" />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {esgCards.map((c) => {
-                const { Icon } = c;
-                const color = c.score >= 75 ? POSITIVE : c.score >= 60 ? NEUTRAL_AMBER : NEGATIVE;
-                return (
-                  <div
-                    key={c.id}
-                    className="rounded-lg p-4"
-                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="flex items-center justify-center rounded-md"
-                          style={{ width: 28, height: 28, backgroundColor: SAGE_BG, color: SAGE }}
-                        >
-                          <Icon size={14} />
-                        </div>
-                        <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
-                          {c.label}
-                        </span>
-                      </div>
-                      <Delta value={c.trend} suffix=" pts" />
-                    </div>
-                    <div className="flex items-baseline gap-1 mb-2">
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color }}>
-                        {c.score}
-                      </span>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ 100</span>
-                    </div>
-                    <div style={{ width: "100%", height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 8 }}>
-                      <div style={{ width: `${c.score}%`, height: "100%", backgroundColor: color, borderRadius: 2 }} />
-                    </div>
-                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
-                      {c.insight}
-                    </p>
-                    <div
-                      className="mt-2 pt-2 flex items-start gap-1.5"
-                      style={{ borderTop: `1px solid ${BORDER}` }}
-                    >
-                      <AlertTriangle size={11} style={{ color: NEUTRAL_AMBER, marginTop: 1, flexShrink: 0 }} />
-                      <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4 }}>
-                        {c.weakness}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <AiCommentary text={insight} />
-          </>
-        )}
-      </CardShell>
-    </motion.div>
-  );
+interface VeilleReglementaireCardProps {
+  regulatory: RegulatoryResp | null;
+  loading: boolean;
+  deadlines: RegDeadline[];
+  onDeadlinesChange: (d: RegDeadline[]) => void;
+  feedState: RegFeedState;
+  onFeedStateChange: (s: RegFeedState) => void;
 }
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 25 — VEILLE RÉGLEMENTAIRE
-// 5 recent regulatory updates (AMMC, BAM, CNDP)
-// ════════════════════════════════════════════════════════════════════
+// Map a RegulatoryItem.impact ("low"|"medium"|"high") to a unified
+// RegFeedImpact ("Faible"|"Modéré"|"Élevé") so the Flux view labels are
+// consistent with the former Feature 38 seed data.
+function mapImpactToFr(impact: "low" | "medium" | "high"): RegFeedImpact {
+  if (impact === "high") return "Élevé";
+  if (impact === "medium") return "Modéré";
+  return "Faible";
+}
 
-function VeilleReglementaireCard({ regulatory, loading }: { regulatory: RegulatoryResp | null; loading: boolean }) {
-  const items = (regulatory?.items ?? []).slice(0, 5);
+// Map an API RegulatoryItem to the RegChange shape used by the Flux
+// view so we can reuse the watchlist + impact-analysis modal logic.
+function mapRegItemToFeedChange(item: RegulatoryItem): {
+  id: string;
+  regulator: RegFeedRegulator;
+  title: string;
+  summary: string;
+  effectiveDate: number;
+  impact: RegFeedImpact;
+  publishedAt: number;
+} {
+  // The API `source` field is more varied than RegFeedRegulator. Coerce
+  // known regulators and bucket anything else under "AMMC" (the most
+  // generic francophone regulator). This is a display-only mapping.
+  const regulator = ((): RegFeedRegulator => {
+    const s = item.source.toUpperCase();
+    if (s.startsWith("AMMC")) return "AMMC";
+    if (s.startsWith("BAM")) return "BAM";
+    if (s.startsWith("CNDP")) return "CNDP";
+    if (s.includes("ESG") || s.includes("CSRD")) return "ESG";
+    return "AMMC";
+  })();
+  const parsed = parseISO(item.date).getTime();
+  const effectiveDate = isNaN(parsed) ? Date.now() : parsed;
+  return {
+    id: item.id,
+    regulator,
+    title: item.title,
+    summary: item.summary,
+    effectiveDate,
+    impact: mapImpactToFr(item.impact),
+    publishedAt: effectiveDate,
+  };
+}
+
+function VeilleReglementaireCard({
+  regulatory,
+  loading,
+  deadlines,
+  onDeadlinesChange,
+  feedState,
+  onFeedStateChange,
+}: VeilleReglementaireCardProps) {
+  const [view, setView] = useState<VeilleViewMode>("liste");
+  const allItems = regulatory?.items ?? [];
+  const listeItems = allItems.slice(0, 5);
+  const feedItems = useMemo(() => allItems.map(mapRegItemToFeedChange), [allItems]);
+
   const impactColor = (impact: string) => impact === "high" ? NEGATIVE : impact === "medium" ? NEUTRAL_AMBER : POSITIVE;
   const impactLabel = (impact: string) => impact === "high" ? "Fort" : impact === "medium" ? "Moyen" : "Faible";
 
-  const ammcCount = items.filter((i) => i.source === "AMMC").length;
-  const bamCount = items.filter((i) => i.source === "BAM").length;
-  const highImpactCount = items.filter((i) => i.impact === "high").length;
+  const ammcCount = allItems.filter((i) => i.source === "AMMC").length;
+  const bamCount = allItems.filter((i) => i.source === "BAM").length;
+  const highImpactCount = allItems.filter((i) => i.impact === "high").length;
+
+  // Calendrier state (former Feature 32)
+  const [cursor, setCursor] = useState<Date>(new Date());
+  const [showCalForm, setShowCalForm] = useState(false);
+  const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
+  const [calDraft, setCalDraft] = useState<RegDraft>(REG_DRAFT_EMPTY);
+  const monthStart = startOfMonth(cursor);
+  const monthEnd = endOfMonth(cursor);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calDays = eachDayOfInterval({ start: calStart, end: calEnd });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const apiItemsOnDay = (day: Date) => allItems.filter((i) => isSameDay(parseISO(i.date), day));
+  const userDeadlinesOnDay = (day: Date) => deadlines.filter((d) => isSameDay(new Date(d.date), day));
+  const upcomingUserDeadlines = [...deadlines].filter((d) => new Date(d.date).getTime() >= today.getTime()).sort((a, b) => a.date - b.date);
+  const next3UserDeadlines = upcomingUserDeadlines.slice(0, 3);
+  const overdueUserDeadlines = deadlines.filter((d) => regStatus(d.date) === "dépassé");
+
+  const handleAddDeadline = () => {
+    if (!calDraft.title.trim()) {
+      toast.error("Intitulé de l'échéance requis.");
+      return;
+    }
+    const newItem: RegDeadline = {
+      id: `REG-${String(deadlines.length + 1).padStart(3, "0")}-${Math.random().toString(36).slice(2, 6)}`,
+      date: new Date(calDraft.date).getTime(),
+      regulator: calDraft.regulator,
+      title: calDraft.title.trim(),
+      requirement: calDraft.requirement.trim() || "—",
+      documents: calDraft.documents.trim() || "—",
+      team: calDraft.team.trim() || "—",
+      createdAt: Date.now(),
+    };
+    onDeadlinesChange([...deadlines, newItem]);
+    toast.success(`Échéance « ${newItem.title} » ajoutée au calendrier.`);
+    setShowCalForm(false);
+    setCalDraft(REG_DRAFT_EMPTY);
+  };
+
+  const handleDeleteDeadline = (id: string) => {
+    onDeadlinesChange(deadlines.filter((d) => d.id !== id));
+    if (selectedDeadlineId === id) setSelectedDeadlineId(null);
+    toast.info("Échéance retirée du calendrier.");
+  };
+
+  const selectedDeadline = deadlines.find((d) => d.id === selectedDeadlineId) ?? null;
+
+  // Flux state (former Feature 38)
+  const [filterRegulator, setFilterRegulator] = useState<"all" | RegFeedRegulator>("all");
+  const [filterImpact, setFilterImpact] = useState<"all" | RegFeedImpact>("all");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [analysisRegId, setAnalysisRegId] = useState<string | null>(null);
+  const [analysisDraft, setAnalysisDraft] = useState<{ affected: boolean | null; actionsRequired: string; deadline: string; responsible: string }>({
+    affected: null,
+    actionsRequired: "",
+    deadline: "",
+    responsible: "",
+  });
+
+  const fourteenDaysAgo = Date.now() - 86400_000 * 14;
+  const newCount = feedItems.filter((r) => r.publishedAt >= fourteenDaysAgo).length;
+
+  const filteredFeed = useMemo(() => {
+    return feedItems.filter((r) => {
+      if (filterRegulator !== "all" && r.regulator !== filterRegulator) return false;
+      if (filterImpact !== "all" && r.impact !== filterImpact) return false;
+      if (filterDateFrom) {
+        const from = new Date(filterDateFrom).getTime();
+        if (r.effectiveDate < from) return false;
+      }
+      if (filterDateTo) {
+        const to = new Date(filterDateTo).getTime() + 86400_000 - 1;
+        if (r.effectiveDate > to) return false;
+      }
+      return true;
+    }).sort((a, b) => b.publishedAt - a.publishedAt);
+  }, [feedItems, filterRegulator, filterImpact, filterDateFrom, filterDateTo]);
+
+  const watchedCount = feedItems.filter((r) => feedState.watchlist.includes(r.id)).length;
+  const analyzedCount = Object.keys(feedState.analyses).length;
+
+  const toggleWatch = (id: string) => {
+    onFeedStateChange({
+      ...feedState,
+      watchlist: feedState.watchlist.includes(id)
+        ? feedState.watchlist.filter((x) => x !== id)
+        : [...feedState.watchlist, id],
+    });
+  };
+
+  const openAnalysis = (id: string) => {
+    const existing = feedState.analyses[id];
+    setAnalysisDraft({
+      affected: existing?.affected ?? null,
+      actionsRequired: existing?.actionsRequired ?? "",
+      deadline: existing?.deadline ?? "",
+      responsible: existing?.responsible ?? "",
+    });
+    setAnalysisRegId(id);
+  };
+
+  const saveAnalysis = () => {
+    if (!analysisRegId) return;
+    if (analysisDraft.affected === null) {
+      toast.error("Indiquez si la régulation affecte l'organisation (Oui/Non).");
+      return;
+    }
+    onFeedStateChange({
+      ...feedState,
+      analyses: {
+        ...feedState.analyses,
+        [analysisRegId]: {
+          affected: analysisDraft.affected,
+          actionsRequired: analysisDraft.actionsRequired.trim(),
+          deadline: analysisDraft.deadline,
+          responsible: analysisDraft.responsible.trim(),
+          analyzedAt: Date.now(),
+        },
+      },
+    });
+    toast.success("Analyse d'impact enregistrée.");
+    setAnalysisRegId(null);
+  };
+
+  const clearFilters = () => {
+    setFilterRegulator("all");
+    setFilterImpact("all");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  };
+
+  const hasActiveFilters = filterRegulator !== "all" || filterImpact !== "all" || filterDateFrom !== "" || filterDateTo !== "";
+  const analysisReg = analysisRegId ? feedItems.find((r) => r.id === analysisRegId) : null;
 
   const insight = regulatory
-    ? items.length > 0
-      ? `${items.length} nouvelles réglementations ce mois · ${ammcCount} AMMC, ${bamCount} BAM. Impact: ${highImpactCount > 0 ? `${highImpactCount} fort(s)` : "Faible pour votre secteur"}. Surveillez les publications BAM sur la liquidité bancaire.`
+    ? allItems.length > 0
+      ? `${allItems.length} réglementations suivies · ${ammcCount} AMMC, ${bamCount} BAM. Impact: ${highImpactCount > 0 ? `${highImpactCount} fort(s)` : "Faible pour votre secteur"}. Vue active : ${view}.`
       : "Aucune nouvelle réglementaire ce mois — situation stable."
     : "En attente des données réglementaires…";
 
   return (
-    <motion.div {...cardMotion}>
+    <motion.div id="veille-reglementaire" {...cardMotion}>
       <CardShell className="lg:col-span-12">
         <SectionHeader
-          title="25 · Veille Réglementaire"
+          title="25 · Veille Réglementaire — Vue unifiée"
           right={
             <div className="flex items-center gap-2">
+              {/* P2-11-DEDUP — view toggle (Liste / Calendrier / Flux) */}
+              <div className="inline-flex items-center rounded-md" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", overflow: "hidden" }} role="group" aria-label="Vue Veille Réglementaire">
+                {([
+                  { id: "liste", label: "Liste" },
+                  { id: "calendrier", label: "Calendrier" },
+                  { id: "flux", label: "Flux" },
+                ] as { id: VeilleViewMode; label: string }[]).map((opt) => {
+                  const isActive = view === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setView(opt.id)}
+                      aria-pressed={isActive}
+                      className="px-2.5 py-1 transition-colors"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                        color: isActive ? "#FFFFFF" : TEXT_MUTED,
+                        backgroundColor: isActive ? SAGE : "transparent",
+                      }}
+                    >
+                      {opt.label.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
               <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
-                AMMC · BAM · CNDP
+                {allItems.length} RÉGULATIONS · {watchedCount} SURVEILLÉES
               </Badge>
               <a
                 href="#"
@@ -5800,79 +5655,601 @@ function VeilleReglementaireCard({ regulatory, loading }: { regulatory: Regulato
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
         {loading ? (
           <Skeleton className="h-64 w-full" />
-        ) : items.length === 0 ? (
-          <EmptyDash label="Aucune réglementation récente." />
         ) : (
           <>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-md p-3 flex items-start gap-3"
-                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
-                >
-                  <div
-                    className="flex items-center justify-center rounded-md shrink-0"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      backgroundColor: SAGE_BG,
-                      color: SAGE,
-                    }}
-                  >
-                    <Scale size={14} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="secondary"
-                          className="h-5"
+            {view === "liste" && (
+              <>
+                {listeItems.length === 0 ? (
+                  <EmptyDash label="Aucune réglementation récente." />
+                ) : (
+                  <div className="space-y-2">
+                    {listeItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-md p-3 flex items-start gap-3"
+                        style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                      >
+                        <div
+                          className="flex items-center justify-center rounded-md shrink-0"
                           style={{
-                            fontFamily: FONT_MONO,
-                            fontSize: 9,
-                            letterSpacing: "0.08em",
-                            backgroundColor: "#FAFAFA",
-                            color: CHARCOAL,
+                            width: 32,
+                            height: 32,
+                            backgroundColor: SAGE_BG,
+                            color: SAGE,
                           }}
                         >
-                          {item.source}
-                        </Badge>
-                        <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
-                          {item.title}
-                        </span>
+                          <Scale size={14} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="secondary"
+                                className="h-5"
+                                style={{
+                                  fontFamily: FONT_MONO,
+                                  fontSize: 9,
+                                  letterSpacing: "0.08em",
+                                  backgroundColor: "#FAFAFA",
+                                  color: CHARCOAL,
+                                }}
+                              >
+                                {item.source}
+                              </Badge>
+                              <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
+                                {item.title}
+                              </span>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className="h-5 shrink-0"
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 9,
+                                letterSpacing: "0.06em",
+                                backgroundColor: `${impactColor(item.impact)}20`,
+                                color: impactColor(item.impact),
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {impactLabel(item.impact)}
+                            </Badge>
+                          </div>
+                          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
+                            {item.summary}
+                          </p>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                            {item.date} · {item.type}
+                          </div>
+                        </div>
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className="h-5 shrink-0"
-                        style={{
-                          fontFamily: FONT_MONO,
-                          fontSize: 9,
-                          letterSpacing: "0.06em",
-                          backgroundColor: `${impactColor(item.impact)}20`,
-                          color: impactColor(item.impact),
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {impactLabel(item.impact)}
-                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {view === "calendrier" && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Calendar grid — API items as dots + user-added deadlines as dots */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }} aria-label="Mois précédent">
+                      <ChevronLeft size={14} />
+                    </button>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      {format(cursor, "MMMM yyyy", { locale: fr })}
                     </div>
-                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.45 }}>
-                      {item.summary}
-                    </p>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
-                      {item.date} · {item.type}
-                    </div>
+                    <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }} aria-label="Mois suivant">
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                    {CAL_DOW_FR.map((d) => (
+                      <div key={d} style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_HEADER, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: 2 }}>
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                    {calDays.map((day) => {
+                      const inMonth = isSameMonth(day, cursor);
+                      const isToday = isSameDay(day, today);
+                      const apiDayItems = apiItemsOnDay(day);
+                      const userDayDeadlines = userDeadlinesOnDay(day);
+                      const hasAny = apiDayItems.length > 0 || userDayDeadlines.length > 0;
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className="rounded-md"
+                          style={{
+                            height: 56,
+                            padding: 4,
+                            border: `1px solid ${hasAny ? BORDER_STRONG : BORDER}`,
+                            backgroundColor: hasAny ? "#FAFAFA" : "#FFFFFF",
+                            opacity: inMonth ? 1 : 0.35,
+                            position: "relative",
+                          }}
+                        >
+                          <div style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            width: 18, height: 18, borderRadius: "50%",
+                            fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
+                            color: isToday ? "#FFFFFF" : CHARCOAL,
+                            backgroundColor: isToday ? SAGE : "transparent",
+                          }}>
+                            {format(day, "d")}
+                          </div>
+                          {hasAny && (
+                            <div className="flex flex-wrap gap-0.5 mt-1">
+                              {apiDayItems.slice(0, 3).map((it) => {
+                                const reg = ((): RegCalendarRegulator => {
+                                  const s = it.source.toUpperCase();
+                                  if (s.startsWith("AMMC")) return "AMMC";
+                                  if (s.startsWith("BAM")) return "BAM";
+                                  if (s.startsWith("CNDP")) return "CNDP";
+                                  if (s.includes("ESG") || s.includes("CSRD")) return "ESG";
+                                  return "AMMC";
+                                })();
+                                return (
+                                  <span key={it.id} title={it.title} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", backgroundColor: REG_REGULATOR_COLOR[reg] }} />
+                                );
+                              })}
+                              {userDayDeadlines.slice(0, 3).map((dd) => (
+                                <span key={dd.id} title={dd.title} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", backgroundColor: REG_REGULATOR_COLOR[dd.regulator] }} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    {(Object.keys(REG_REGULATOR_COLOR) as RegCalendarRegulator[]).map((reg) => (
+                      <div key={reg} className="flex items-center gap-1">
+                        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: REG_REGULATOR_COLOR[reg] }} />
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{reg}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Sidebar — user-added deadlines management (former Feature 32) */}
+                <div className="lg:col-span-1 space-y-3">
+                  {showCalForm ? (
+                    <div className="rounded-lg p-3" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span style={FONT_HEADER}>NOUVELLE ÉCHÉANCE</span>
+                        <button type="button" onClick={() => setShowCalForm(false)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-white" style={{ width: 22, height: 22 }}>
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        <input type="date" value={calDraft.date} onChange={(e) => setCalDraft({ ...calDraft, date: e.target.value })} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                        <select value={calDraft.regulator} onChange={(e) => setCalDraft({ ...calDraft, regulator: e.target.value as RegCalendarRegulator })} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>
+                          {(Object.keys(REG_REGULATOR_COLOR) as RegCalendarRegulator[]).map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <input value={calDraft.title} onChange={(e) => setCalDraft({ ...calDraft, title: e.target.value })} placeholder="Intitulé de l'échéance" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                        <textarea value={calDraft.requirement} onChange={(e) => setCalDraft({ ...calDraft, requirement: e.target.value })} placeholder="Exigence réglementaire" rows={2} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                        <input value={calDraft.team} onChange={(e) => setCalDraft({ ...calDraft, team: e.target.value })} placeholder="Équipe assignée" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
+                        <Button type="button" size="sm" className="w-full h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={handleAddDeadline}>
+                          <Plus size={12} className="mr-1" /> ENREGISTRER
+                        </Button>
+                      </div>
+                    </div>
+                  ) : selectedDeadline ? (
+                    <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}>
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: REG_REGULATOR_COLOR[selectedDeadline.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                          {selectedDeadline.regulator}
+                        </span>
+                        <button type="button" onClick={() => setSelectedDeadlineId(null)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 22, height: 22 }}>
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginBottom: 4 }}>{selectedDeadline.title}</div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginBottom: 8, textTransform: "capitalize" }}>
+                        {format(selectedDeadline.date, "EEEE d MMMM yyyy", { locale: fr })}
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>EXIGENCE</div>
+                          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selectedDeadline.requirement}</p>
+                        </div>
+                        <div>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>DOCUMENTS REQUIS</div>
+                          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selectedDeadline.documents}</p>
+                        </div>
+                        <div>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>ÉQUIPE ASSIGNÉE</div>
+                          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, margin: 0 }}>{selectedDeadline.team}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: regStatus(selectedDeadline.date) === "dépassé" ? NEGATIVE : regStatus(selectedDeadline.date) === "échéance" ? NEUTRAL_AMBER : SAGE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                          {regStatus(selectedDeadline.date).toUpperCase()}
+                        </span>
+                        <button type="button" onClick={() => handleDeleteDeadline(selectedDeadline.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, letterSpacing: "0.06em" }}>
+                          <Trash2 size={10} /> RETIRER
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Clock size={13} style={{ color: SAGE }} />
+                          <span style={FONT_HEADER}>PROCHAINES ÉCHÉANCES (VOS AJOUTS)</span>
+                        </div>
+                        {next3UserDeadlines.length === 0 ? (
+                          <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, margin: 0 }}>Aucune échéance personnalisée à venir.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {next3UserDeadlines.map((d) => {
+                              const st = regStatus(d.date);
+                              const stColor = st === "dépassé" ? NEGATIVE : st === "échéance" ? NEUTRAL_AMBER : SAGE;
+                              return (
+                                <button key={d.id} type="button" onClick={() => setSelectedDeadlineId(d.id)} className="w-full text-left rounded-md p-2 transition-all hover:bg-white" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 2, backgroundColor: REG_REGULATOR_COLOR[d.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                                      {d.regulator}
+                                    </span>
+                                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: stColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{st}</span>
+                                  </div>
+                                  <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL, marginBottom: 2 }}>{d.title}</div>
+                                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{format(d.date, "d MMM yyyy", { locale: fr })}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {overdueUserDeadlines.length > 0 && (
+                        <div className="rounded-lg p-3" style={{ border: `1px solid ${NEGATIVE}`, backgroundColor: `${NEGATIVE}08` }}>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <AlertTriangle size={13} style={{ color: NEGATIVE }} />
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, fontWeight: 700, letterSpacing: "0.08em" }}>ÉCHÉANCES DÉPASSÉES · {overdueUserDeadlines.length}</span>
+                          </div>
+                          <div className="space-y-1">
+                            {overdueUserDeadlines.map((d) => (
+                              <button key={d.id} type="button" onClick={() => setSelectedDeadlineId(d.id)} className="w-full text-left">
+                                <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>{d.title}</span>
+                                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, marginLeft: 6 }}>· {format(d.date, "d MMM", { locale: fr })}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <Button type="button" variant="outline" size="sm" className="w-full h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={() => setShowCalForm(true)}>
+                        <Plus size={12} className="mr-1" /> AJOUTER UNE ÉCHÉANCE
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {view === "flux" && (
+              <>
+                {/* Filter bar — preserved from Feature 38 */}
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  <div className="flex items-center gap-1">
+                    <Filter size={12} style={{ color: TEXT_MUTED }} />
+                    <span style={FONT_HEADER}>FILTRES</span>
+                  </div>
+                  <select
+                    value={filterRegulator}
+                    onChange={(e) => setFilterRegulator(e.target.value as "all" | RegFeedRegulator)}
+                    className="rounded-md px-2 py-1"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+                    aria-label="Filtrer par régulateur"
+                  >
+                    <option value="all">Tous régulateurs</option>
+                    {(Object.keys(REG_FEED_REGULATOR_COLOR) as RegFeedRegulator[]).map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <select
+                    value={filterImpact}
+                    onChange={(e) => setFilterImpact(e.target.value as "all" | RegFeedImpact)}
+                    className="rounded-md px-2 py-1"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+                    aria-label="Filtrer par niveau d'impact"
+                  >
+                    <option value="all">Tous niveaux</option>
+                    {(Object.keys(REG_FEED_IMPACT_COLOR) as RegFeedImpact[]).map((i) => <option key={i} value={i}>{i}</option>)}
+                  </select>
+                  <div className="flex items-center gap-1">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>DU</span>
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => setFilterDateFrom(e.target.value)}
+                      className="rounded-md px-2 py-1"
+                      style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                      aria-label="Date de début"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AU</span>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      className="rounded-md px-2 py-1"
+                      style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                      aria-label="Date de fin"
+                    />
+                  </div>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                      style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}
+                    >
+                      <X size={10} /> RÉINITIALISER
+                    </button>
+                  )}
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
+                    {filteredFeed.length} / {feedItems.length} entrées
+                  </span>
+                </div>
+
+                {newCount > 0 && (
+                  <div className="mb-3 rounded-md px-3 py-2 flex items-center gap-2" style={{ backgroundColor: `${NEGATIVE}08`, border: `1px solid ${NEGATIVE}30` }}>
+                    <Bell size={12} style={{ color: NEGATIVE }} />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: NEGATIVE, fontWeight: 700, letterSpacing: "0.06em" }}>
+                      {newCount} NOUVELLE(S) RÉGULATION(S) DANS LES 14 DERNIERS JOURS
+                    </span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {filteredFeed.length === 0 ? (
+                    <div className="rounded-md p-4 text-center" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+                      <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, margin: 0 }}>Aucune régulation ne correspond aux filtres actifs.</p>
+                    </div>
+                  ) : (
+                    filteredFeed.map((r) => {
+                      const isWatched = feedState.watchlist.includes(r.id);
+                      const analysis = feedState.analyses[r.id];
+                      const isNew = r.publishedAt >= fourteenDaysAgo;
+                      return (
+                        <div
+                          key={r.id}
+                          className="rounded-md p-3"
+                          style={{ border: `1px solid ${isWatched ? SAGE : BORDER}`, backgroundColor: isWatched ? SAGE_BG : "#FFFFFF" }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="flex items-center justify-center rounded-md shrink-0"
+                              style={{ width: 36, height: 36, backgroundColor: `${REG_FEED_REGULATOR_COLOR[r.regulator]}15`, color: REG_FEED_REGULATOR_COLOR[r.regulator] }}
+                            >
+                              <Scale size={16} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      fontFamily: FONT_MONO,
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      padding: "2px 6px",
+                                      borderRadius: 3,
+                                      backgroundColor: REG_FEED_REGULATOR_COLOR[r.regulator],
+                                      color: "#FFFFFF",
+                                      letterSpacing: "0.08em",
+                                    }}
+                                  >
+                                    {r.regulator}
+                                  </span>
+                                  {isNew && (
+                                    <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: NEGATIVE, color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                                      NOUVEAU
+                                    </span>
+                                  )}
+                                  {analysis && (
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: analysis.affected ? `${NEGATIVE}15` : SAGE_BG, color: analysis.affected ? NEGATIVE : SAGE, letterSpacing: "0.08em" }}>
+                                      <CheckCircle2 size={9} /> {analysis.affected ? "AFFECTÉ" : "NON AFFECTÉ"}
+                                    </span>
+                                  )}
+                                  <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
+                                    {r.title}
+                                  </span>
+                                </div>
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    fontFamily: FONT_MONO,
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: 3,
+                                    backgroundColor: `${REG_FEED_IMPACT_COLOR[r.impact]}15`,
+                                    color: REG_FEED_IMPACT_COLOR[r.impact],
+                                    letterSpacing: "0.06em",
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  {r.impact}
+                                </span>
+                              </div>
+                              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>
+                                {r.summary}
+                              </p>
+                              <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
+                                <div className="flex items-center gap-3" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                                  <span>Publié {fmtRelative(r.publishedAt)}</span>
+                                  <span>·</span>
+                                  <span>Entrée en vigueur : <strong style={{ color: CHARCOAL }}>{format(r.effectiveDate, "d MMM yyyy", { locale: fr })}</strong></span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleWatch(r.id)}
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
+                                    style={{
+                                      border: `1px solid ${isWatched ? SAGE : BORDER_STRONG}`,
+                                      fontFamily: FONT_MONO,
+                                      fontSize: 9,
+                                      color: isWatched ? SAGE : TEXT_MUTED,
+                                      letterSpacing: "0.06em",
+                                      backgroundColor: isWatched ? SAGE_BG : "#FFFFFF",
+                                    }}
+                                    aria-label={isWatched ? "Ne plus surveiller" : "Surveiller"}
+                                  >
+                                    {isWatched ? <Bell size={10} /> : <Eye size={10} />}
+                                    {isWatched ? "SURVEILLÉ" : "SURVEILLER"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openAnalysis(r.id)}
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                                    style={{ border: `1px solid ${analysis ? SAGE : BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: analysis ? SAGE : CHARCOAL, letterSpacing: "0.06em", backgroundColor: analysis ? SAGE_BG : "#FFFFFF" }}
+                                  >
+                                    <Search size={10} />
+                                    {analysis ? "ANALYSE MODIFIER" : "ANALYSER L'IMPACT"}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+
             <AiCommentary text={insight} />
           </>
         )}
       </CardShell>
+
+      {/* Impact analysis modal (former Feature 38) */}
+      {analysisReg && (
+        <div
+          className="fixed inset-0 z-[180] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(10,10,10,0.55)" }}
+          onClick={() => setAnalysisRegId(null)}
+        >
+          <div
+            className="rounded-lg max-w-lg w-full"
+            style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, boxShadow: "0 20px 60px rgba(10,10,10,0.2)" }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Analyse d'impact réglementaire"
+          >
+            <div className="flex items-start justify-between gap-2 px-5 py-4" style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: REG_FEED_REGULATOR_COLOR[analysisReg.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                    {analysisReg.regulator}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ANALYSE D'IMPACT</span>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>{analysisReg.title}</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                  Entrée en vigueur : {format(analysisReg.effectiveDate, "d MMM yyyy", { locale: fr })} · Impact {analysisReg.impact}
+                </div>
+              </div>
+              <button type="button" onClick={() => setAnalysisRegId(null)} aria-label="Fermer l'analyse" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 28, height: 28 }}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AFFECTÉ</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAnalysisDraft({ ...analysisDraft, affected: true })}
+                    className="rounded-md px-3 py-1.5 transition-colors"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: `1px solid ${analysisDraft.affected === true ? NEGATIVE : BORDER_STRONG}`,
+                      backgroundColor: analysisDraft.affected === true ? `${NEGATIVE}15` : "#FFFFFF",
+                      color: analysisDraft.affected === true ? NEGATIVE : TEXT_MUTED,
+                    }}
+                  >
+                    Oui — affecté
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalysisDraft({ ...analysisDraft, affected: false })}
+                    className="rounded-md px-3 py-1.5 transition-colors"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: `1px solid ${analysisDraft.affected === false ? SAGE : BORDER_STRONG}`,
+                      backgroundColor: analysisDraft.affected === false ? SAGE_BG : "#FFFFFF",
+                      color: analysisDraft.affected === false ? SAGE : TEXT_MUTED,
+                    }}
+                  >
+                    Non — non affecté
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ACTIONS REQUISES</label>
+                <textarea
+                  value={analysisDraft.actionsRequired}
+                  onChange={(e) => setAnalysisDraft({ ...analysisDraft, actionsRequired: e.target.value })}
+                  placeholder="Décrivez les actions correctives ou de mise en conformité…"
+                  lang="fr"
+                  rows={3}
+                  className="w-full rounded-md px-2 py-1.5 mt-1"
+                  style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ÉCHÉANCE</label>
+                  <input
+                    type="date"
+                    value={analysisDraft.deadline}
+                    onChange={(e) => setAnalysisDraft({ ...analysisDraft, deadline: e.target.value })}
+                    className="w-full rounded-md px-2 py-1.5 mt-1"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>RESPONSABLE</label>
+                  <input
+                    value={analysisDraft.responsible}
+                    onChange={(e) => setAnalysisDraft({ ...analysisDraft, responsible: e.target.value })}
+                    placeholder="Nom / fonction"
+                    lang="fr"
+                    className="w-full rounded-md px-2 py-1.5 mt-1"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-3" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <Button type="button" variant="outline" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, borderColor: BORDER_STRONG }} onClick={() => setAnalysisRegId(null)}>
+                ANNULER
+              </Button>
+              <Button type="button" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={saveAnalysis}>
+                <CheckCircle2 size={12} className="mr-1" /> ENREGISTRER L'ANALYSE
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -6217,6 +6594,14 @@ function GovernanceCommandBar({
 // PDF-ready layout (exec summary / key risks / recommendations) ·
 // schedule next generation (monthly/quarterly)
 // Persists: enterprise:briefing-schedule
+//
+// P2-11-DEDUP: Specialized HarchIQ view (board-ready briefings). This is
+// NOT a duplicate of HarchIQWorkspace (Feature 1) — it's a context-
+// specific HarchIQ panel that pre-fills a structured briefing prompt
+// (4 templates: COMEX, ESG, Conformité, Géopolitique) and renders the
+// output in a PDF-ready board layout. Kept as a dedicated specialized
+// view because the briefing use-case requires its own template picker,
+// cadence scheduler, and document-style render surface.
 // ════════════════════════════════════════════════════════════════════
 
 type BriefingTemplateId = "comex" | "esg" | "conformite" | "geopolitique";
@@ -6849,14 +7234,21 @@ function ComplianceCockpitCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SECTION 29 — API & INTEGRATION HUB
-// API key management (generate/revoke) · webhook config (add endpoint, event types) ·
-// MCP integrations (ServiceNow, Splunk, Tableau, Slack, Teams) ·
-// rate limit display (600 req/min enterprise tier)
+// SECTION 29 — API & INTEGRATION HUB (P2-11-DEDUP — unified)
+// Merges former SECTION 19 (API & Intégrations) into a single tabbed
+// card. Preserves all functionality of both prior cards:
+//   • Clés API tab — multi-key management (generate/revoke) from F29
+//     + copy/regenerate single-key UX from F19
+//   • Webhooks tab — endpoint config + event types (F29)
+//   • MCP tab — connectors (ServiceNow, Splunk, Tableau, Slack, Teams,
+//     Power BI) — Power BI added from F19 connector list
+//   • Consommation & SIEM tab — rate limit (req/min, F29) + 30-day
+//     consumption bar (F19) + API documentation link (F19)
 // Persists: enterprise:integrations
 // ════════════════════════════════════════════════════════════════════
 
-type MCPConnectorId = "servicenow" | "splunk" | "tableau" | "slack" | "teams";
+type MCPConnectorId = "servicenow" | "splunk" | "tableau" | "slack" | "teams" | "powerbi";
+type ApiHubTab = "cles" | "webhooks" | "mcp" | "consommation";
 type WebhookEventType = "crisis" | "sentiment-shift" | "milestone";
 
 interface ApiKeyRow {
@@ -6897,6 +7289,7 @@ const MCP_CONNECTOR_DEFS: Omit<MCPConnector, "enabled" | "lastSync">[] = [
   { id: "servicenow", label: "ServiceNow", description: "Tickets d'incident + workflows ITSM", Icon: Network },
   { id: "splunk", label: "Splunk", description: "SIEM — ingestion des logs Harch", Icon: Database },
   { id: "tableau", label: "Tableau", description: "Dashboards BI — export métriques", Icon: BarChart3 },
+  { id: "powerbi", label: "Power BI", description: "Microsoft BI — rapports embarqués", Icon: BarChart3 },
   { id: "slack", label: "Slack", description: "Notifications temps réel canal #crise", Icon: MessageSquare },
   { id: "teams", label: "Microsoft Teams", description: "Alertes DEFCON + briefings COMEX", Icon: Users },
 ];
@@ -6943,10 +7336,13 @@ const WEBHOOK_EVENT_LABEL: Record<WebhookEventType, string> = {
 function ApiIntegrationHubCard({
   state,
   onStateChange,
+  teamActivity,
 }: {
   state: IntegrationState;
   onStateChange: (s: IntegrationState) => void;
+  teamActivity?: TeamActivityResp | null;
 }) {
+  const [activeTab, setActiveTab] = useState<ApiHubTab>("cles");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
   const [newWebhookEvents, setNewWebhookEvents] = useState<Set<WebhookEventType>>(new Set<WebhookEventType>(["crisis"]));
 
@@ -6954,6 +7350,14 @@ function ApiIntegrationHubCard({
   const rateLimitPerMin = 600;
   const currentPerMin = 142;
   const ratePct = (currentPerMin / rateLimitPerMin) * 100;
+  // 30-day consumption — merged from former Feature 19 (ApiIntegrationsCard).
+  // Combines persisted API key call counts with live team activity probes
+  // so the bar reflects both programmatic and exploratory API usage.
+  const apiQuota = 50000;
+  const apiCalls = totalCalls + ((teamActivity?.activities ?? []).filter((a) => a.action === "ai_probe").length * 3);
+  const apiPct = (apiCalls / apiQuota) * 100;
+  const activeKeyCount = state.apiKeys.filter((k) => k.status === "active").length;
+  const enabledConnectorCount = state.connectors.filter((c) => c.enabled).length;
 
   const handleGenerateKey = () => {
     const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
@@ -7028,7 +7432,7 @@ function ApiIntegrationHubCard({
     <motion.div id="api-hub" {...cardMotion}>
       <CardShell className="lg:col-span-12">
         <SectionHeader
-          title="28 · API & Integration Hub"
+          title="19 · API & Intégrations — Hub unifié"
           right={
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
@@ -7037,6 +7441,18 @@ function ApiIntegrationHubCard({
               <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
                 ENTERPRISE TIER
               </Badge>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast.info("Documentation API — redirection vers /docs.");
+                }}
+                className="inline-flex items-center gap-1"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+              >
+                <ExternalLink size={11} />
+                Documentation API
+              </a>
             </div>
           }
         />
@@ -7061,13 +7477,19 @@ function ApiIntegrationHubCard({
           <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
             <div className="flex items-center gap-2 mb-1.5">
               <Activity size={13} style={{ color: SAGE }} />
-              <span style={FONT_HEADER}>APPELS CE MOIS</span>
+              <span style={FONT_HEADER}>CONSOMMATION 30J</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>{fmtNumber(totalCalls)}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>{fmtNumber(apiCalls)}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ {fmtNumber(apiQuota)}</span>
             </div>
+            <Progress
+              value={apiPct}
+              className="h-1.5 mt-2"
+              style={{ ["--progress-background" as string]: BORDER_STRONG, ["--progress-foreground" as string]: apiPct > 80 ? NEGATIVE : SAGE } as CSSProperties}
+            />
             <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
-              {state.apiKeys.filter((k) => k.status === "active").length} clé(s) active(s)
+              {activeKeyCount} clé(s) active(s) · renouvellement le 1er du mois
             </div>
           </div>
           <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
@@ -7077,7 +7499,7 @@ function ApiIntegrationHubCard({
             </div>
             <div className="flex items-baseline gap-1">
               <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>
-                {state.connectors.filter((c) => c.enabled).length}
+                {enabledConnectorCount}
               </span>
               <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ {state.connectors.length}</span>
             </div>
@@ -7087,12 +7509,47 @@ function ApiIntegrationHubCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* P2-11-DEDUP — Tab bar unifying the former F19 + F29 cards */}
+        <div className="flex items-center gap-1 mb-3 flex-wrap" role="tablist" aria-label="Onglets API & Intégrations">
+          {([
+            { id: "cles", label: "Clés API", Icon: Key },
+            { id: "webhooks", label: "Webhooks", Icon: Webhook },
+            { id: "mcp", label: "MCP", Icon: Network },
+            { id: "consommation", label: "Consommation & SIEM", Icon: Activity },
+          ] as { id: ApiHubTab; label: string; Icon: typeof Key }[]).map((t) => {
+            const isActive = activeTab === t.id;
+            const { Icon } = t;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(t.id)}
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  color: isActive ? "#FFFFFF" : TEXT_MUTED,
+                  backgroundColor: isActive ? SAGE : "#FFFFFF",
+                  border: `1px solid ${isActive ? SAGE : BORDER_STRONG}`,
+                }}
+              >
+                <Icon size={11} />
+                {t.label.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeTab === "cles" && (
           <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}` }}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Key size={13} style={{ color: SAGE }} />
-                <span style={FONT_HEADER}>CLÉS API</span>
+                <span style={FONT_HEADER}>CLÉS API — GESTION MULTI-CLÉS</span>
               </div>
               <Button
                 type="button"
@@ -7155,11 +7612,13 @@ function ApiIntegrationHubCard({
               ))}
             </div>
           </div>
+        )}
 
+        {activeTab === "webhooks" && (
           <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}` }}>
             <div className="flex items-center gap-2 mb-2">
               <Webhook size={13} style={{ color: SAGE }} />
-              <span style={FONT_HEADER}>WEBHOOKS</span>
+              <span style={FONT_HEADER}>WEBHOOKS — ENDPOINTS & ÉVÉNEMENTS</span>
             </div>
             <div className="space-y-2 mb-3">
               {state.webhooks.length === 0 && (
@@ -7241,61 +7700,134 @@ function ApiIntegrationHubCard({
               </Button>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="mt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Network size={13} style={{ color: SAGE }} />
-            <span style={FONT_HEADER}>CONNEXIONS MCP — MODEL CONTEXT PROTOCOL</span>
+        {activeTab === "mcp" && (
+          <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Network size={13} style={{ color: SAGE }} />
+              <span style={FONT_HEADER}>CONNEXIONS MCP — MODEL CONTEXT PROTOCOL</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              {state.connectors.map((c) => {
+                const { Icon } = c;
+                return (
+                  <div
+                    key={c.id}
+                    className="rounded-lg p-3"
+                    style={{ border: `1px solid ${c.enabled ? SAGE : BORDER}`, backgroundColor: c.enabled ? SAGE_BG : "#FFFFFF" }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div
+                        className="flex items-center justify-center rounded-md"
+                        style={{ width: 24, height: 24, backgroundColor: c.enabled ? SAGE : "#FAFAFA", color: c.enabled ? "#FFFFFF" : TEXT_MUTED }}
+                      >
+                        <Icon size={12} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleConnector(c.id)}
+                        className="rounded-md px-1.5 py-0.5"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 8,
+                          fontWeight: 700,
+                          backgroundColor: c.enabled ? SAGE : BORDER_STRONG,
+                          color: c.enabled ? "#FFFFFF" : TEXT_MUTED,
+                        }}
+                        aria-label={`${c.enabled ? "Déconnecter" : "Connecter"} ${c.label}`}
+                      >
+                        {c.enabled ? "ON" : "OFF"}
+                      </button>
+                    </div>
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
+                      {c.label}
+                    </div>
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 9, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35 }}>
+                      {c.description}
+                    </div>
+                    {c.lastSync && (
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: SAGE, marginTop: 4 }}>
+                        sync · {fmtRelative(c.lastSync)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            {state.connectors.map((c) => {
-              const { Icon } = c;
-              return (
-                <div
-                  key={c.id}
-                  className="rounded-lg p-3"
-                  style={{ border: `1px solid ${c.enabled ? SAGE : BORDER}`, backgroundColor: c.enabled ? SAGE_BG : "#FFFFFF" }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div
-                      className="flex items-center justify-center rounded-md"
-                      style={{ width: 24, height: 24, backgroundColor: c.enabled ? SAGE : "#FAFAFA", color: c.enabled ? "#FFFFFF" : TEXT_MUTED }}
-                    >
-                      <Icon size={12} />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleConnector(c.id)}
-                      className="rounded-md px-1.5 py-0.5"
-                      style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 8,
-                        fontWeight: 700,
-                        backgroundColor: c.enabled ? SAGE : BORDER_STRONG,
-                        color: c.enabled ? "#FFFFFF" : TEXT_MUTED,
-                      }}
-                      aria-label={`${c.enabled ? "Déconnecter" : "Connecter"} ${c.label}`}
-                    >
-                      {c.enabled ? "ON" : "OFF"}
-                    </button>
-                  </div>
-                  <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
-                    {c.label}
-                  </div>
-                  <div style={{ fontFamily: FONT_SANS, fontSize: 9, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35 }}>
-                    {c.description}
-                  </div>
-                  {c.lastSync && (
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: SAGE, marginTop: 4 }}>
-                      sync · {fmtRelative(c.lastSync)}
-                    </div>
-                  )}
+        )}
+
+        {activeTab === "consommation" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* 30-day consumption — merged from former Feature 19 */}
+            <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Activity size={14} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>CONSOMMATION 30J — QUOTA ENTERPRISE</span>
                 </div>
-              );
-            })}
+                <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
+                  {fmtNumber(apiCalls)} / {fmtNumber(apiQuota)}
+                </span>
+              </div>
+              <Progress
+                value={apiPct}
+                className="h-2 mb-2"
+                style={
+                  {
+                    ["--progress-background" as string]: SAGE_BG_STRONG,
+                    ["--progress-foreground" as string]: SAGE,
+                  } as CSSProperties
+                }
+              />
+              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                <span>{Math.round(apiPct)}% du quota utilisé</span>
+                <span>Renouvellement : 1er du mois</span>
+              </div>
+              <div className="mt-3 pt-3 grid grid-cols-2 gap-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+                <div>
+                  <div style={FONT_HEADER}>CLÉS ACTIVES</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: CHARCOAL }}>{activeKeyCount}</div>
+                </div>
+                <div>
+                  <div style={FONT_HEADER}>APPELS TOTAUX</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: CHARCOAL }}>{fmtNumber(totalCalls)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rate limit + SIEM preview — from Feature 29 */}
+            <div className="rounded-lg p-4" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>RATE LIMIT — REQ/MIN</span>
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL, fontWeight: 700 }}>
+                  {currentPerMin} / {rateLimitPerMin}
+                </span>
+              </div>
+              <Progress
+                value={ratePct}
+                className="h-2 mb-2"
+                style={{ ["--progress-background" as string]: BORDER_STRONG, ["--progress-foreground" as string]: ratePct > 80 ? NEGATIVE : SAGE } as CSSProperties}
+              />
+              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                <span>{Math.round(ratePct)}% de la capacité instantanée</span>
+                <span>Enterprise tier · 600 req/min</span>
+              </div>
+              <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                <div className="flex items-start gap-1.5">
+                  <Database size={11} style={{ color: SAGE, marginTop: 1, flexShrink: 0 }} />
+                  <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5 }}>
+                    {enabledConnectorCount}/{state.connectors.length} intégrations MCP actives. Documentation API REST + WebSocket disponible — endpoint /api/v1/* authentifié par clé Bearer. Configurez Splunk ou ServiceNow via l'onglet MCP pour ingérer les événements Harch dans votre SIEM.
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </CardShell>
     </motion.div>
   );
@@ -7333,6 +7865,14 @@ interface SsoConfig {
   defaultRole: SsoDefaultRole;
   domainWhitelist: string;
   sessions: SsoSession[];
+  // P2-8-MCP-REAL — persisted on every real SAML config validation.
+  lastTest: {
+    success: boolean;
+    validatedAt: number;
+    provider: SsoProvider;
+    ssoUrl: string;
+    certFingerprint: string;
+  } | null;
 }
 
 const SSO_PROVIDER_LABEL: Record<SsoProvider, string> = {
@@ -7372,6 +7912,7 @@ const SSO_CONFIG_INITIAL: SsoConfig = {
   jitRoleMapping: false,
   defaultRole: "viewer",
   domainWhitelist: "",
+  lastTest: null,
   sessions: [
     { id: "SSO-001", email: "karim.b@harchcorp.com", provider: "azure-ad", loginTime: Date.now() - 3600_000 * 2, ip: "196.12.84.32", status: "active" },
     { id: "SSO-002", email: "leila.mansouri@harchcorp.com", provider: "azure-ad", loginTime: Date.now() - 3600_000 * 4, ip: "196.12.84.45", status: "active" },
@@ -7402,6 +7943,9 @@ function SsoSamlConfigCard({
     .map((d) => d.trim())
     .filter(Boolean);
 
+  // P2-8-MCP-REAL — real validation (replaces Math.random fake latency + "200 OK" lie).
+  // SAML IdP cannot be safely probed client-side (CORS, signed SAML request), so we
+  // validate URL HTTPS + cert format + provider consistency honestly.
   const handleTestConnection = () => {
     if (!isConfigured) {
       toast.error("Configuration incomplète.", {
@@ -7409,14 +7953,46 @@ function SsoSamlConfigCard({
       });
       return;
     }
+    // Validate SSO URL is well-formed HTTPS.
+    let ssoUrl: URL;
+    try {
+      ssoUrl = new URL(state.ssoUrl.trim());
+    } catch {
+      toast.error("SSO URL invalide.", { description: "Format attendu : https://idp.exemple.com/saml/sso" });
+      return;
+    }
+    if (ssoUrl.protocol !== "https:") {
+      toast.error("Protocole non sécurisé.", { description: "L'URL SSO doit utiliser HTTPS." });
+      return;
+    }
+    // Validate certificate format (PEM block or base64 DER).
+    const cert = state.x509Certificate.trim();
+    const isPem = /-----BEGIN CERTIFICATE-----/.test(cert) && /-----END CERTIFICATE-----/.test(cert);
+    const isDerBase64 = /^[A-Za-z0-9+/=\s]{64,}$/.test(cert.replace(/\s/g, ""));
+    if (!isPem && !isDerBase64) {
+      toast.error("Certificat X.509 invalide.", {
+        description: "Format attendu : bloc PEM (-----BEGIN CERTIFICATE-----) ou base64 DER (≥ 64 caractères).",
+      });
+      return;
+    }
     setTesting(true);
+    // Short delay preserves the spinner UX; no fake "200 OK" claim.
     window.setTimeout(() => {
       setTesting(false);
-      const latency = 280 + Math.floor(Math.random() * 240);
-      toast.success("Connexion SAML établie.", {
-        description: `${SSO_PROVIDER_LABEL[state.provider]} · métadonnées validées · réponse IdP 200 OK en ${latency} ms`,
+      onStateChange({
+        ...state,
+        lastTest: {
+          success: true,
+          validatedAt: Date.now(),
+          provider: state.provider,
+          ssoUrl: state.ssoUrl.trim(),
+          certFingerprint: cert.slice(0, 16) + "…",
+        },
       });
-    }, 1500);
+      toast.success("Configuration SAML validée.", {
+        description: `${SSO_PROVIDER_LABEL[state.provider]} · URL HTTPS valide · certificat ${isPem ? "PEM" : "DER base64"} · test live IdP requis lors du provisioning JIT`,
+      });
+    }, 600);
   };
 
   const handleRevokeSession = (id: string) => {
@@ -8963,279 +9539,17 @@ const REG_DRAFT_EMPTY: RegDraft = {
 
 const CAL_DOW_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-function RegulatoryCalendarCard({
-  deadlines,
-  onDeadlinesChange,
-}: {
-  deadlines: RegDeadline[];
-  onDeadlinesChange: (d: RegDeadline[]) => void;
-}) {
-  const [cursor, setCursor] = useState<Date>(new Date());
-  const [showForm, setShowForm] = useState(false);
-  const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<RegDraft>(REG_DRAFT_EMPTY);
-
-  const monthStart = startOfMonth(cursor);
-  const monthEnd = endOfMonth(cursor);
-  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: calStart, end: calEnd });
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const deadlinesOnDay = (day: Date) => deadlines.filter((d) => isSameDay(new Date(d.date), day));
-  const upcoming = [...deadlines].filter((d) => new Date(d.date).getTime() >= today.getTime()).sort((a, b) => a.date - b.date);
-  const next3 = upcoming.slice(0, 3);
-  const overdue = deadlines.filter((d) => regStatus(d.date) === "dépassé");
-  const selectedDeadline = deadlines.find((d) => d.id === selectedDeadlineId) ?? null;
-
-  const handleAdd = () => {
-    if (!draft.title.trim()) {
-      toast.error("Intitulé de l'échéance requis.");
-      return;
-    }
-    const newItem: RegDeadline = {
-      id: `REG-${String(deadlines.length + 1).padStart(3, "0")}-${Math.random().toString(36).slice(2, 6)}`,
-      date: new Date(draft.date).getTime(),
-      regulator: draft.regulator,
-      title: draft.title.trim(),
-      requirement: draft.requirement.trim() || "—",
-      documents: draft.documents.trim() || "—",
-      team: draft.team.trim() || "—",
-      createdAt: Date.now(),
-    };
-    onDeadlinesChange([...deadlines, newItem]);
-    toast.success(`Échéance « ${newItem.title} » ajoutée au calendrier.`);
-    setShowForm(false);
-    setDraft(REG_DRAFT_EMPTY);
-  };
-
-  const handleDelete = (id: string) => {
-    onDeadlinesChange(deadlines.filter((d) => d.id !== id));
-    if (selectedDeadlineId === id) setSelectedDeadlineId(null);
-    toast.info("Échéance retirée du calendrier.");
-  };
-
-  return (
-    <motion.div id="reg-calendar" {...cardMotion}>
-      <CardShell className="lg:col-span-12">
-        <SectionHeader
-          title="31 · Calendrier Réglementaire — Échéances & Conformité"
-          right={
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: overdue.length > 0 ? `${NEGATIVE}15` : SAGE_BG, color: overdue.length > 0 ? NEGATIVE : SAGE }}>
-                {deadlines.length} ÉCHÉANCES · {overdue.length} DÉPASSÉES
-              </Badge>
-              <Button type="button" variant="outline" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={() => setShowForm(!showForm)}>
-                <Plus size={12} className="mr-1" />
-                AJOUTER UNE ÉCHÉANCE
-              </Button>
-            </div>
-          }
-        />
-        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Calendar grid */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-2">
-              <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }} aria-label="Mois précédent">
-                <ChevronLeft size={14} />
-              </button>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                {format(cursor, "MMMM yyyy", { locale: fr })}
-              </div>
-              <button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }} aria-label="Mois suivant">
-                <ChevronRight size={14} />
-              </button>
-            </div>
-            {/* DOW header */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
-              {CAL_DOW_FR.map((d) => (
-                <div key={d} style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_HEADER, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: 2 }}>
-                  {d}
-                </div>
-              ))}
-            </div>
-            {/* Days grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-              {days.map((day) => {
-                const inMonth = isSameMonth(day, cursor);
-                const isToday = isSameDay(day, today);
-                const dayDeadlines = deadlinesOnDay(day);
-                const hasDeadline = dayDeadlines.length > 0;
-                return (
-                  <button
-                    key={day.toISOString()}
-                    type="button"
-                    onClick={() => {
-                      if (dayDeadlines.length > 0) {
-                        setSelectedDeadlineId(dayDeadlines[0].id === selectedDeadlineId ? null : dayDeadlines[0].id);
-                      }
-                    }}
-                    className="text-left rounded-md transition-all"
-                    style={{
-                      height: 56,
-                      padding: 4,
-                      border: `1px solid ${hasDeadline ? BORDER_STRONG : BORDER}`,
-                      backgroundColor: hasDeadline ? "#FAFAFA" : "#FFFFFF",
-                      opacity: inMonth ? 1 : 0.35,
-                      cursor: hasDeadline ? "pointer" : "default",
-                      position: "relative",
-                    }}
-                  >
-                    <div style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      width: 18, height: 18, borderRadius: "50%",
-                      fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
-                      color: isToday ? "#FFFFFF" : CHARCOAL,
-                      backgroundColor: isToday ? SAGE : "transparent",
-                      border: isToday ? "none" : `1px solid ${isToday ? SAGE : "transparent"}`,
-                    }}>
-                      {format(day, "d")}
-                    </div>
-                    {hasDeadline && (
-                      <div className="flex flex-wrap gap-0.5 mt-1">
-                        {dayDeadlines.slice(0, 4).map((dd) => (
-                          <span key={dd.id} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", backgroundColor: REG_REGULATOR_COLOR[dd.regulator] }} />
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            {/* Regulator color legend */}
-            <div className="flex flex-wrap gap-3 mt-3">
-              {(Object.keys(REG_REGULATOR_COLOR) as RegCalendarRegulator[]).map((reg) => (
-                <div key={reg} className="flex items-center gap-1">
-                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: REG_REGULATOR_COLOR[reg] }} />
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>{reg}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar: next 3 deadlines + selected/form panel */}
-          <div className="lg:col-span-1 space-y-3">
-            {showForm ? (
-              <div className="rounded-lg p-3" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span style={FONT_HEADER}>NOUVELLE ÉCHÉANCE</span>
-                  <button type="button" onClick={() => setShowForm(false)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-white" style={{ width: 22, height: 22 }}>
-                    <X size={13} />
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <input type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
-                  <select value={draft.regulator} onChange={(e) => setDraft({ ...draft, regulator: e.target.value as RegCalendarRegulator })} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}>
-                    {(Object.keys(REG_REGULATOR_COLOR) as RegCalendarRegulator[]).map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Intitulé de l'échéance" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
-                  <textarea value={draft.requirement} onChange={(e) => setDraft({ ...draft, requirement: e.target.value })} placeholder="Exigence réglementaire" rows={2} className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
-                  <input value={draft.documents} onChange={(e) => setDraft({ ...draft, documents: e.target.value })} placeholder="Documents requis" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
-                  <input value={draft.team} onChange={(e) => setDraft({ ...draft, team: e.target.value })} placeholder="Équipe assignée" className="w-full rounded-md px-2 py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }} />
-                  <Button type="button" size="sm" className="w-full h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={handleAdd}>
-                    <Plus size={12} className="mr-1" /> ENREGISTRER
-                  </Button>
-                </div>
-              </div>
-            ) : selectedDeadline ? (
-              <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}>
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: REG_REGULATOR_COLOR[selectedDeadline.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
-                    {selectedDeadline.regulator}
-                  </span>
-                  <button type="button" onClick={() => setSelectedDeadlineId(null)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 22, height: 22 }}>
-                    <X size={13} />
-                  </button>
-                </div>
-                <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginBottom: 4 }}>{selectedDeadline.title}</div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginBottom: 8, textTransform: "capitalize" }}>
-                  {format(selectedDeadline.date, "EEEE d MMMM yyyy", { locale: fr })}
-                </div>
-                <div className="space-y-2">
-                  <div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>EXIGENCE</div>
-                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selectedDeadline.requirement}</p>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>DOCUMENTS REQUIS</div>
-                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>{selectedDeadline.documents}</p>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 2 }}>ÉQUIPE ASSIGNÉE</div>
-                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, margin: 0 }}>{selectedDeadline.team}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: `1px solid ${BORDER}` }}>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: regStatus(selectedDeadline.date) === "dépassé" ? NEGATIVE : regStatus(selectedDeadline.date) === "échéance" ? NEUTRAL_AMBER : SAGE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    {regStatus(selectedDeadline.date).toUpperCase()}
-                  </span>
-                  <button type="button" onClick={() => handleDelete(selectedDeadline.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-1" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, letterSpacing: "0.08em" }}>
-                    <Trash2 size={10} /> RETIRER
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Next 3 deadlines */}
-                <div className="rounded-lg p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Clock size={13} style={{ color: SAGE }} />
-                    <span style={FONT_HEADER}>PROCHAINES 3 ÉCHÉANCES</span>
-                  </div>
-                  {next3.length === 0 ? (
-                    <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, margin: 0 }}>Aucune échéance à venir — calendrier à jour.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {next3.map((d) => {
-                        const st = regStatus(d.date);
-                        const stColor = st === "dépassé" ? NEGATIVE : st === "échéance" ? NEUTRAL_AMBER : SAGE;
-                        return (
-                          <button key={d.id} type="button" onClick={() => setSelectedDeadlineId(d.id)} className="w-full text-left rounded-md p-2 transition-all hover:bg-white" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 2, backgroundColor: REG_REGULATOR_COLOR[d.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
-                                {d.regulator}
-                              </span>
-                              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: stColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{st}</span>
-                            </div>
-                            <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL, marginBottom: 2 }}>{d.title}</div>
-                            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{format(d.date, "d MMM yyyy", { locale: fr })}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Overdue alert */}
-                {overdue.length > 0 && (
-                  <div className="rounded-lg p-3" style={{ border: `1px solid ${NEGATIVE}`, backgroundColor: `${NEGATIVE}08` }}>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <AlertTriangle size={13} style={{ color: NEGATIVE }} />
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, fontWeight: 700, letterSpacing: "0.08em" }}>ÉCHÉANCES DÉPASSÉES · {overdue.length}</span>
-                    </div>
-                    <div className="space-y-1">
-                      {overdue.map((d) => (
-                        <button key={d.id} type="button" onClick={() => setSelectedDeadlineId(d.id)} className="w-full text-left">
-                          <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>{d.title}</span>
-                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, marginLeft: 6 }}>· {format(d.date, "d MMM", { locale: fr })}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        <AiCommentary text={`${deadlines.length} échéance(s) suivie(s) · ${format(cursor, "MMMM yyyy", { locale: fr })}. ${overdue.length > 0 ? `${overdue.length} échéance(s) dépassée(s) — notifiez immédiatement le juridique et engagez la régularisation.` : next3.length > 0 ? `Prochaine échéance : ${next3[0].title} (${format(next3[0].date, "d MMM", { locale: fr })}, ${next3[0].regulator}).` : "Calendrier à jour — continuez la veille réglementaire hebdomadaire."}`} />
-      </CardShell>
-    </motion.div>
-  );
-}
+// ════════════════════════════════════════════════════════════════════
+// SECTION 32 — REGULATORY CALENDAR (R2-ENTERPRISE-A)  [P2-11-DEDUP — removed]
+// This standalone card was a duplicate of SECTION 25 (VeilleReglementaireCard).
+// Its calendar UI, "Ajouter une échéance" form, RegDeadline management
+// (next 3, overdue, delete) and per-regulator color legend have all been
+// merged into VeilleReglementaireCard's "Calendrier" view. The shared
+// types (RegDeadline, RegCalendarRegulator, RegDraft), constants
+// (REG_REGULATOR_COLOR, REG_CALENDAR_INITIAL, REG_DRAFT_EMPTY,
+// CAL_DOW_FR) and helper (regStatus) remain declared here and are
+// imported by VeilleReglementaireCard via module scope.
+// ════════════════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 0 — KPI EXECUTIVE SUMMARY ROW (R2-ENTERPRISE-A)
@@ -10445,6 +10759,16 @@ interface SiemEventMapping {
   siemField: string;
 }
 
+// P2-8-MCP-REAL — persisted on every real /api/console/mcp/test call.
+interface SiemTestResult {
+  success: boolean;
+  latencyMs: number;
+  eventsSynced: number;
+  validated: "hec-probe" | "url+token" | null;
+  error: string | null;
+  timestamp: number;
+}
+
 interface SiemConnectorState {
   id: SiemConnectorId;
   label: string;
@@ -10457,6 +10781,7 @@ interface SiemConnectorState {
   rateLimitPerMin: number;
   rateLimitCurrent: number;
   mappings: SiemEventMapping[];
+  lastTest: SiemTestResult | null;
 }
 
 interface SiemConfig {
@@ -10500,6 +10825,7 @@ function makeSiemInitial(): SiemConfig {
           { harchEvent: "compliance.update", siemField: "harch.compliance.status" },
           { harchEvent: "anomaly.detected", siemField: "harch.anomaly.score" },
         ],
+        lastTest: null,
       },
       {
         id: "qradar",
@@ -10513,6 +10839,7 @@ function makeSiemInitial(): SiemConfig {
         rateLimitPerMin: 300,
         rateLimitCurrent: 0,
         mappings: HARCH_EVENTS_BASE.map((h) => ({ harchEvent: h, siemField: "" })),
+        lastTest: null,
       },
       {
         id: "sentinel",
@@ -10526,6 +10853,7 @@ function makeSiemInitial(): SiemConfig {
         rateLimitPerMin: 400,
         rateLimitCurrent: 0,
         mappings: HARCH_EVENTS_BASE.map((h) => ({ harchEvent: h, siemField: "" })),
+        lastTest: null,
       },
     ],
   };
@@ -10564,7 +10892,8 @@ function SiemIntegrationConfiguratorCard({
     updateConnector(id, { eventTypes: Array.from(set) });
   }, [state, updateConnector]);
 
-  const handleTest = useCallback((id: SiemConnectorId) => {
+  // P2-8-MCP-REAL — real POST to /api/console/mcp/test (replaces Math.random lie).
+  const handleTest = useCallback(async (id: SiemConnectorId) => {
     const conn = state.connectors.find((c) => c.id === id);
     if (!conn) return;
     if (!conn.endpoint.trim() || !conn.token.trim()) {
@@ -10572,17 +10901,75 @@ function SiemIntegrationConfiguratorCard({
       return;
     }
     setTesting((t) => ({ ...t, [id]: true }));
-    window.setTimeout(() => {
-      setTesting((t) => ({ ...t, [id]: false }));
-      if (Math.random() > 0.1) {
+    const timestamp = Date.now();
+    try {
+      const res = await fetch("/api/console/mcp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          connector: id,
+          endpoint: conn.endpoint.trim(),
+          authToken: conn.token.trim(),
+        }),
+      });
+      const data = (await res.json()) as {
+        success: boolean;
+        latency: number;
+        eventsSynced: number;
+        validated?: "hec-probe" | "url+token";
+        error?: string;
+      };
+      if (data.success) {
+        updateConnector(id, {
+          status: "connected",
+          lastTest: {
+            success: true,
+            latencyMs: data.latency,
+            eventsSynced: data.eventsSynced,
+            validated: data.validated ?? null,
+            error: null,
+            timestamp,
+          },
+        });
         toast.success(`Connexion à ${conn.label} établie.`, {
-          description: `Latence simulée : ${Math.floor(40 + Math.random() * 80)} ms · endpoint joignable`,
+          description: data.validated === "hec-probe"
+            ? `Latence ${data.latency} ms · événement test ingéré · HEC 200 OK`
+            : `URL HTTPS valide · token validé (${conn.token.length} caractères) · test live requiert des identifiants QRadar/Sentinel`,
         });
       } else {
-        toast.error(`Échec de connexion à ${conn.label}.`, { description: "Timeout — vérifiez l'endpoint et le token." });
+        updateConnector(id, {
+          status: "error",
+          lastTest: {
+            success: false,
+            latencyMs: data.latency,
+            eventsSynced: 0,
+            validated: data.validated ?? null,
+            error: data.error ?? "Erreur inconnue",
+            timestamp,
+          },
+        });
+        toast.error(`Échec de connexion à ${conn.label}.`, {
+          description: data.error ?? "Erreur inconnue",
+        });
       }
-    }, 900);
-  }, [state]);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Erreur réseau";
+      updateConnector(id, {
+        status: "error",
+        lastTest: {
+          success: false,
+          latencyMs: 0,
+          eventsSynced: 0,
+          validated: null,
+          error: errorMsg,
+          timestamp,
+        },
+      });
+      toast.error(`Échec de connexion à ${conn.label}.`, { description: errorMsg });
+    } finally {
+      setTesting((t) => ({ ...t, [id]: false }));
+    }
+  }, [state, updateConnector]);
 
   const handleSync = useCallback((id: SiemConnectorId) => {
     const conn = state.connectors.find((c) => c.id === id);
@@ -12218,425 +12605,17 @@ const REG_FEED_STATE_INITIAL: RegFeedState = {
   analyses: {},
 };
 
-function RegulatoryChangeFeedCard({
-  state,
-  onStateChange,
-}: {
-  state: RegFeedState;
-  onStateChange: (s: RegFeedState) => void;
-}) {
-  const [filterRegulator, setFilterRegulator] = useState<"all" | RegFeedRegulator>("all");
-  const [filterImpact, setFilterImpact] = useState<"all" | RegFeedImpact>("all");
-  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
-  const [filterDateTo, setFilterDateTo] = useState<string>("");
-  const [analysisRegId, setAnalysisRegId] = useState<string | null>(null);
-  const [analysisDraft, setAnalysisDraft] = useState<{ affected: boolean | null; actionsRequired: string; deadline: string; responsible: string }>({
-    affected: null,
-    actionsRequired: "",
-    deadline: "",
-    responsible: "",
-  });
+// ════════════════════════════════════════════════════════════════════
+// SECTION 38 — REGULATORY CHANGE FEED (R3-ENTERPRISE-A)  [P2-11-DEDUP — removed]
+// This standalone card was a duplicate of SECTION 25 (VeilleReglementaireCard).
+// Its feed UI, watchlist toggle, impact-analysis modal, and filter bar
+// have all been merged into VeilleReglementaireCard's "Flux" view. The
+// shared types (RegChange, RegFeedState, RegFeedAnalysis, RegFeedRegulator,
+// RegFeedImpact), constants (REG_FEED_REGULATOR_COLOR, REG_FEED_IMPACT_COLOR,
+// REG_FEED_INITIAL, REG_FEED_STATE_INITIAL) remain declared above for
+// VeilleReglementaireCard to import via module scope.
+// ════════════════════════════════════════════════════════════════════
 
-  const fourteenDaysAgo = Date.now() - 86400_000 * 14;
-  const newCount = REG_FEED_INITIAL.filter((r) => r.publishedAt >= fourteenDaysAgo).length;
-
-  const filtered = useMemo(() => {
-    return REG_FEED_INITIAL.filter((r) => {
-      if (filterRegulator !== "all" && r.regulator !== filterRegulator) return false;
-      if (filterImpact !== "all" && r.impact !== filterImpact) return false;
-      if (filterDateFrom) {
-        const from = new Date(filterDateFrom).getTime();
-        if (r.effectiveDate < from) return false;
-      }
-      if (filterDateTo) {
-        const to = new Date(filterDateTo).getTime() + 86400_000 - 1; // include full day
-        if (r.effectiveDate > to) return false;
-      }
-      return true;
-    }).sort((a, b) => b.publishedAt - a.publishedAt);
-  }, [filterRegulator, filterImpact, filterDateFrom, filterDateTo]);
-
-  const watchedCount = REG_FEED_INITIAL.filter((r) => state.watchlist.includes(r.id)).length;
-  const analyzedCount = Object.keys(state.analyses).length;
-
-  const toggleWatch = (id: string) => {
-    onStateChange({
-      ...state,
-      watchlist: state.watchlist.includes(id)
-        ? state.watchlist.filter((x) => x !== id)
-        : [...state.watchlist, id],
-    });
-  };
-
-  const openAnalysis = (id: string) => {
-    const existing = state.analyses[id];
-    setAnalysisDraft({
-      affected: existing?.affected ?? null,
-      actionsRequired: existing?.actionsRequired ?? "",
-      deadline: existing?.deadline ?? "",
-      responsible: existing?.responsible ?? "",
-    });
-    setAnalysisRegId(id);
-  };
-
-  const saveAnalysis = () => {
-    if (!analysisRegId) return;
-    if (analysisDraft.affected === null) {
-      toast.error("Indiquez si la régulation affecte l'organisation (Oui/Non).");
-      return;
-    }
-    onStateChange({
-      ...state,
-      analyses: {
-        ...state.analyses,
-        [analysisRegId]: {
-          affected: analysisDraft.affected,
-          actionsRequired: analysisDraft.actionsRequired.trim(),
-          deadline: analysisDraft.deadline,
-          responsible: analysisDraft.responsible.trim(),
-          analyzedAt: Date.now(),
-        },
-      },
-    });
-    toast.success("Analyse d'impact enregistrée.");
-    setAnalysisRegId(null);
-  };
-
-  const clearFilters = () => {
-    setFilterRegulator("all");
-    setFilterImpact("all");
-    setFilterDateFrom("");
-    setFilterDateTo("");
-  };
-
-  const hasActiveFilters = filterRegulator !== "all" || filterImpact !== "all" || filterDateFrom !== "" || filterDateTo !== "";
-  const analysisReg = analysisRegId ? REG_FEED_INITIAL.find((r) => r.id === analysisRegId) : null;
-
-  return (
-    <motion.div id="reg-feed" {...cardMotion}>
-      <CardShell className="lg:col-span-12">
-        <SectionHeader
-          title="32 · Veille Réglementaire — Flux des Changements en Temps Réel"
-          right={
-            <div className="flex items-center gap-2">
-              {newCount > 0 && (
-                <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: `${NEGATIVE}15`, color: NEGATIVE, letterSpacing: "0.06em" }}>
-                  {newCount} NOUVELLES RÉGULATIONS
-                </Badge>
-              )}
-              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
-                {watchedCount} SURVEILLÉES · {analyzedCount} ANALYSÉES
-              </Badge>
-            </div>
-          }
-        />
-        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-
-        {/* Filter bar */}
-        <div className="flex items-center gap-2 flex-wrap mb-3">
-          <div className="flex items-center gap-1">
-            <Filter size={12} style={{ color: TEXT_MUTED }} />
-            <span style={FONT_HEADER}>FILTRES</span>
-          </div>
-          <select
-            value={filterRegulator}
-            onChange={(e) => setFilterRegulator(e.target.value as "all" | RegFeedRegulator)}
-            className="rounded-md px-2 py-1"
-            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
-            aria-label="Filtrer par régulateur"
-          >
-            <option value="all">Tous régulateurs</option>
-            {(Object.keys(REG_FEED_REGULATOR_COLOR) as RegFeedRegulator[]).map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <select
-            value={filterImpact}
-            onChange={(e) => setFilterImpact(e.target.value as "all" | RegFeedImpact)}
-            className="rounded-md px-2 py-1"
-            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
-            aria-label="Filtrer par niveau d'impact"
-          >
-            <option value="all">Tous niveaux</option>
-            {(Object.keys(REG_FEED_IMPACT_COLOR) as RegFeedImpact[]).map((i) => <option key={i} value={i}>{i}</option>)}
-          </select>
-          <div className="flex items-center gap-1">
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>DU</span>
-            <input
-              type="date"
-              value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="rounded-md px-2 py-1"
-              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
-              aria-label="Date de début"
-            />
-          </div>
-          <div className="flex items-center gap-1">
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AU</span>
-            <input
-              type="date"
-              value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
-              className="rounded-md px-2 py-1"
-              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
-              aria-label="Date de fin"
-            />
-          </div>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
-              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}
-            >
-              <X size={10} /> RÉINITIALISER
-            </button>
-          )}
-          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
-            {filtered.length} / {REG_FEED_INITIAL.length} entrées
-          </span>
-        </div>
-
-        {/* Feed */}
-        <div className="space-y-2">
-          {filtered.length === 0 ? (
-            <div className="rounded-md p-4 text-center" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
-              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, margin: 0 }}>Aucune régulation ne correspond aux filtres actifs.</p>
-            </div>
-          ) : (
-            filtered.map((r) => {
-              const isWatched = state.watchlist.includes(r.id);
-              const analysis = state.analyses[r.id];
-              const isNew = r.publishedAt >= fourteenDaysAgo;
-              return (
-                <div
-                  key={r.id}
-                  className="rounded-md p-3"
-                  style={{ border: `1px solid ${isWatched ? SAGE : BORDER}`, backgroundColor: isWatched ? SAGE_BG : "#FFFFFF" }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="flex items-center justify-center rounded-md shrink-0"
-                      style={{ width: 36, height: 36, backgroundColor: `${REG_FEED_REGULATOR_COLOR[r.regulator]}15`, color: REG_FEED_REGULATOR_COLOR[r.regulator] }}
-                    >
-                      <Scale size={16} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              fontFamily: FONT_MONO,
-                              fontSize: 9,
-                              fontWeight: 700,
-                              padding: "2px 6px",
-                              borderRadius: 3,
-                              backgroundColor: REG_FEED_REGULATOR_COLOR[r.regulator],
-                              color: "#FFFFFF",
-                              letterSpacing: "0.08em",
-                            }}
-                          >
-                            {r.regulator}
-                          </span>
-                          {isNew && (
-                            <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: NEGATIVE, color: "#FFFFFF", letterSpacing: "0.08em" }}>
-                              NOUVEAU
-                            </span>
-                          )}
-                          {analysis && (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: analysis.affected ? `${NEGATIVE}15` : SAGE_BG, color: analysis.affected ? NEGATIVE : SAGE, letterSpacing: "0.08em" }}>
-                              <CheckCircle2 size={9} /> {analysis.affected ? "AFFECTÉ" : "NON AFFECTÉ"}
-                            </span>
-                          )}
-                          <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
-                            {r.title}
-                          </span>
-                        </div>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            fontFamily: FONT_MONO,
-                            fontSize: 9,
-                            fontWeight: 700,
-                            padding: "2px 6px",
-                            borderRadius: 3,
-                            backgroundColor: `${REG_FEED_IMPACT_COLOR[r.impact]}15`,
-                            color: REG_FEED_IMPACT_COLOR[r.impact],
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {r.impact}
-                        </span>
-                      </div>
-                      <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>
-                        {r.summary}
-                      </p>
-                      <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
-                        <div className="flex items-center gap-3" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-                          <span>Publié {fmtRelative(r.publishedAt)}</span>
-                          <span>·</span>
-                          <span>Entrée en vigueur : <strong style={{ color: CHARCOAL }}>{format(r.effectiveDate, "d MMM yyyy", { locale: fr })}</strong></span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => toggleWatch(r.id)}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
-                            style={{
-                              border: `1px solid ${isWatched ? SAGE : BORDER_STRONG}`,
-                              fontFamily: FONT_MONO,
-                              fontSize: 9,
-                              color: isWatched ? SAGE : TEXT_MUTED,
-                              letterSpacing: "0.06em",
-                              backgroundColor: isWatched ? SAGE_BG : "#FFFFFF",
-                            }}
-                            aria-label={isWatched ? "Ne plus surveiller" : "Surveiller"}
-                          >
-                            {isWatched ? <Bell size={10} /> : <Eye size={10} />}
-                            {isWatched ? "SURVEILLÉ" : "SURVEILLER"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openAnalysis(r.id)}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
-                            style={{ border: `1px solid ${analysis ? SAGE : BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: analysis ? SAGE : CHARCOAL, letterSpacing: "0.06em", backgroundColor: analysis ? SAGE_BG : "#FFFFFF" }}
-                          >
-                            <Search size={10} />
-                            {analysis ? "ANALYSE MODIFIER" : "ANALYSER L'IMPACT"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <AiCommentary text={`${REG_FEED_INITIAL.length} régulations suivies · ${newCount} nouvelle(s) dans les 14 derniers jours · ${watchedCount} en watchlist · ${analyzedCount} analyse(s) d'impact finalisée(s). ${newCount > 3 ? "Volume réglementaire élevé — priorisez les impacts Élevé et planifiez une revue hebdomadaire avec la conformité." : analyzedCount === REG_FEED_INITIAL.length ? "Toutes les régulations ont été analysées — maintenez la cadence mensuelle d'analyse d'impact." : "Finalisez les analyses d'impact restantes pour sécuriser la conformité du trimestre."}`} />
-      </CardShell>
-
-      {/* Impact analysis modal */}
-      {analysisReg && (
-        <div
-          className="fixed inset-0 z-[180] flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(10,10,10,0.55)" }}
-          onClick={() => setAnalysisRegId(null)}
-        >
-          <div
-            className="rounded-lg max-w-lg w-full"
-            style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, boxShadow: "0 20px 60px rgba(10,10,10,0.2)" }}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Analyse d'impact réglementaire"
-          >
-            <div className="flex items-start justify-between gap-2 px-5 py-4" style={{ borderBottom: `1px solid ${BORDER}` }}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: REG_FEED_REGULATOR_COLOR[analysisReg.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
-                    {analysisReg.regulator}
-                  </span>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ANALYSE D'IMPACT</span>
-                </div>
-                <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>{analysisReg.title}</div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
-                  Entrée en vigueur : {format(analysisReg.effectiveDate, "d MMM yyyy", { locale: fr })} · Impact {analysisReg.impact}
-                </div>
-              </div>
-              <button type="button" onClick={() => setAnalysisRegId(null)} aria-label="Fermer l'analyse" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 28, height: 28 }}>
-                <X size={14} />
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-3">
-              <div>
-                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AFFECTÉ</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => setAnalysisDraft({ ...analysisDraft, affected: true })}
-                    className="rounded-md px-3 py-1.5 transition-colors"
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      border: `1px solid ${analysisDraft.affected === true ? NEGATIVE : BORDER_STRONG}`,
-                      backgroundColor: analysisDraft.affected === true ? `${NEGATIVE}15` : "#FFFFFF",
-                      color: analysisDraft.affected === true ? NEGATIVE : TEXT_MUTED,
-                    }}
-                  >
-                    Oui — affecté
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalysisDraft({ ...analysisDraft, affected: false })}
-                    className="rounded-md px-3 py-1.5 transition-colors"
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      border: `1px solid ${analysisDraft.affected === false ? SAGE : BORDER_STRONG}`,
-                      backgroundColor: analysisDraft.affected === false ? SAGE_BG : "#FFFFFF",
-                      color: analysisDraft.affected === false ? SAGE : TEXT_MUTED,
-                    }}
-                  >
-                    Non — non affecté
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ACTIONS REQUISES</label>
-                <textarea
-                  value={analysisDraft.actionsRequired}
-                  onChange={(e) => setAnalysisDraft({ ...analysisDraft, actionsRequired: e.target.value })}
-                  placeholder="Décrivez les actions correctives ou de mise en conformité…"
-                  lang="fr"
-                  rows={3}
-                  className="w-full rounded-md px-2 py-1.5 mt-1"
-                  style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ÉCHÉANCE</label>
-                  <input
-                    type="date"
-                    value={analysisDraft.deadline}
-                    onChange={(e) => setAnalysisDraft({ ...analysisDraft, deadline: e.target.value })}
-                    className="w-full rounded-md px-2 py-1.5 mt-1"
-                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>RESPONSABLE</label>
-                  <input
-                    value={analysisDraft.responsible}
-                    onChange={(e) => setAnalysisDraft({ ...analysisDraft, responsible: e.target.value })}
-                    placeholder="Nom / fonction"
-                    lang="fr"
-                    className="w-full rounded-md px-2 py-1.5 mt-1"
-                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 px-5 py-3" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
-              <Button type="button" variant="outline" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, borderColor: BORDER_STRONG }} onClick={() => setAnalysisRegId(null)}>
-                ANNULER
-              </Button>
-              <Button type="button" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={saveAnalysis}>
-                <CheckCircle2 size={12} className="mr-1" /> ENREGISTRER L'ANALYSE
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-}
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 39 — BOARD RESOLUTION TRACKER (R4-ENTERPRISE-A)
@@ -13511,15 +13490,23 @@ function GeopoliticalRiskFeedCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SECTION 41 — ESG SCORECARD (R4-ENTERPRISE-A)
+// SECTION 41 — ESG SCORECARD (R4-ENTERPRISE-A) — P2-11-DEDUP unified
 // 3 pillars (Environmental / Social / Governance) ·
 // 12 sub-metrics · radar chart · bar chart per pillar ·
 // benchmark sectoriel · "Rapport ESG" PDF-ready ·
 // persisted manual score overrides
 // Persists: enterprise:esg-scorecard
+//
+// P2-11-DEDUP: This card now hosts the "Vue synthèse" toggle that
+// previously rendered as the standalone SuiviEsgCard (SECTION 24).
+// The synthese view reuses the same pillarScores data (derived from
+// ESG_PILLARS_SEED + manual overrides) to render a 3-card compact
+// scorecard. The detaillee view is the original radar + sub-metrics +
+// benchmark view. One data source, two view modes.
 // ════════════════════════════════════════════════════════════════════
 
 type EsgPillarId = "environmental" | "social" | "governance";
+type EsgViewMode = "synthese" | "detaillee";
 
 interface EsgSubMetric {
   key: string;
@@ -13593,6 +13580,8 @@ function EsgScorecardCard({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<string>("");
   const [showReport, setShowReport] = useState(false);
+  // P2-11-DEDUP — Vue toggle: synthèse (3-card compact) vs détaillée (radar + sub-metrics)
+  const [esgView, setEsgView] = useState<EsgViewMode>("detaillee");
 
   const pillars = useMemo(() => {
     return ESG_PILLARS_SEED.map((p) => ({
@@ -13655,12 +13644,40 @@ function EsgScorecardCard({
   const colorForScore = (s: number) => s >= 80 ? POSITIVE : s >= 65 ? NEUTRAL_AMBER : NEGATIVE;
 
   return (
-    <motion.div id="esg-scorecard" {...cardMotion}>
+    <motion.div id="esg-conformite" {...cardMotion}>
       <CardShell className="lg:col-span-12">
         <SectionHeader
-          title="41 · ESG Scorecard — Tableau de Bord Extra-Financier"
+          title="24 · Suivi ESG — Scorecard unifiée"
           right={
             <div className="flex items-center gap-2">
+              {/* P2-11-DEDUP — Vue toggle (synthèse / détaillée) */}
+              <div className="inline-flex items-center rounded-md" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", overflow: "hidden" }} role="group" aria-label="Vue ESG">
+                {([
+                  { id: "synthese", label: "Synthèse" },
+                  { id: "detaillee", label: "Détaillée" },
+                ] as { id: EsgViewMode; label: string }[]).map((opt) => {
+                  const isActive = esgView === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setEsgView(opt.id)}
+                      aria-pressed={isActive}
+                      className="px-2.5 py-1 transition-colors"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                        color: isActive ? "#FFFFFF" : TEXT_MUTED,
+                        backgroundColor: isActive ? SAGE : "transparent",
+                      }}
+                    >
+                      {opt.label.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
               <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: deltaVsBenchmark >= 0 ? SAGE_BG : `${NEGATIVE}15`, color: deltaVsBenchmark >= 0 ? SAGE : NEGATIVE }}>
                 GLOBAL {overallScore}/100 · {deltaVsBenchmark >= 0 ? "+" : ""}{deltaVsBenchmark} VS SECTEUR
               </Badge>
@@ -13672,6 +13689,69 @@ function EsgScorecardCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
 
+        {esgView === "synthese" && (
+          <>
+            {/* Vue synthèse — 3 piliers en cartes compactes (ancien SuiviEsgCard) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {pillarScores.map((c) => {
+                const { Icon } = c;
+                const color = c.score >= 75 ? POSITIVE : c.score >= 60 ? NEUTRAL_AMBER : NEGATIVE;
+                const weaknessLabel = c.id === "environmental"
+                  ? "Faible couverture des publications ESG spécialisées."
+                  : c.id === "social"
+                    ? "Renforcez la communication RSE interne."
+                    : "Communiquez sur l'indépendance des administrateurs.";
+                return (
+                  <div
+                    key={c.id}
+                    className="rounded-lg p-4"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="flex items-center justify-center rounded-md"
+                          style={{ width: 28, height: 28, backgroundColor: SAGE_BG, color: SAGE }}
+                        >
+                          <Icon size={14} />
+                        </div>
+                        <span style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+                          {c.label}
+                        </span>
+                      </div>
+                      <Delta value={c.trend} suffix=" pts" />
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color }}>
+                        {c.score}
+                      </span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ 100</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: 8 }}>
+                        (bench. {c.benchmark})
+                      </span>
+                    </div>
+                    <div style={{ width: "100%", height: 4, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 8 }}>
+                      <div style={{ width: `${c.score}%`, height: "100%", backgroundColor: color, borderRadius: 2 }} />
+                    </div>
+                    <div
+                      className="mt-2 pt-2 flex items-start gap-1.5"
+                      style={{ borderTop: `1px solid ${BORDER}` }}
+                    >
+                      <AlertTriangle size={11} style={{ color: NEUTRAL_AMBER, marginTop: 1, flexShrink: 0 }} />
+                      <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4 }}>
+                        {weaknessLabel}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <AiCommentary text={`Vue synthèse — Score ESG global : ${overallScore}/100. Force : ${pillarScores.reduce((max, c) => (c.score > max.score ? c : max), pillarScores[0]).label}. Faiblesse : ${pillarScores.reduce((min, c) => (c.score < min.score ? c : min), pillarScores[0]).label}. Basculez en vue détaillée pour éditer les sous-métriques et consulter le radar E/S/G.`} />
+          </>
+        )}
+
+        {esgView === "detaillee" && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left: Radar chart */}
           <div className="lg:col-span-4">
@@ -13827,6 +13907,8 @@ function EsgScorecardCard({
         </div>
 
         <AiCommentary text={`Score ESG global ${overallScore}/100 · benchmark sectoriel ${overallBenchmark}/100 · ${deltaVsBenchmark >= 0 ? "surperformance" : "sous-performance"} de ${Math.abs(deltaVsBenchmark)} point(s). ${overallScore >= 75 ? "Niveau de maturité ESG solide — capitalisez sur les forces et publiez le rapport CSRD." : overallScore >= 65 ? "Niveau ESG acceptable — identifiez les piliers sous le benchmark et planifiez des actions correctives." : "Niveau ESG à risque — mobilisez le COMEX sur un plan de remédiation trimestriel."}`} />
+        </>
+        )}
       </CardShell>
 
       {/* PDF-ready ESG report modal */}
@@ -14190,8 +14272,19 @@ export function EnterpriseDashboard({
             {/* SECTION 15 — Grille Visibilité IA (9 LLMs) */}
             <GrilleVisibiliteIaCard ai={aiVis} loading={aiVisLoading} />
 
-            {/* SECTION 16 — HarchIQ AI Entreprise (chat, unlimited) */}
-            <HarchIQEntrepriseCard />
+            {/* SECTION 16 — HarchIQ AI Entreprise (Quick Ask delegating widget — P2-11-DEDUP) */}
+            <HarchIQEntrepriseCard
+              onQuickAsk={(q) => {
+                setPrefillQuestion(q);
+                scrollToSection("ai-workspace");
+              }}
+              onGenerateBriefing={() => {
+                toast.success("Génération du briefing exécutif lancée.", {
+                  description: "Le briefing sera disponible dans la section 'Briefings' sous 90 secondes.",
+                });
+                scrollToSection("briefing-board");
+              }}
+            />
 
             {/* SECTION 17 — Panneau de Gouvernance */}
             <PanneauGouvernanceCard users={teamUsers} activity={teamActivity} loading={teamUsersLoading} />
@@ -14199,8 +14292,7 @@ export function EnterpriseDashboard({
             {/* SECTION 18 — Tableau Multi-Équipes (expandable) */}
             <TableauMultiEquipesCard loading={false} />
 
-            {/* SECTION 19 — API & Intégrations */}
-            <ApiIntegrationsCard teamActivity={teamActivity} loading={teamActivityLoading} />
+            {/* SECTION 19 — API & Intégrations  [P2-11-DEDUP — merged into ApiIntegrationHubCard below] */}
 
             {/* SECTION 20 — Marketing d'Influence */}
             <MarketingInfluenceCard influencers={influencers} loading={influencersLoading} />
@@ -14214,11 +14306,17 @@ export function EnterpriseDashboard({
             {/* SECTION 23 — Competitor Deep Dive */}
             <CompetitorDeepDiveCard radar={radar} sov={sov} loading={radarLoading} />
 
-            {/* SECTION 24 — Suivi ESG */}
-            <SuiviEsgCard health={health} loading={healthLoading} />
+            {/* SECTION 24 — Suivi ESG  [P2-11-DEDUP — merged into EsgScorecardCard below] */}
 
-            {/* SECTION 25 — Veille Réglementaire */}
-            <VeilleReglementaireCard regulatory={regulatory} loading={regulatoryLoading} />
+            {/* SECTION 25 — Veille Réglementaire (unified — P2-11-DEDUP — Liste/Calendrier/Flux views) */}
+            <VeilleReglementaireCard
+              regulatory={regulatory}
+              loading={regulatoryLoading}
+              deadlines={regCalendarState}
+              onDeadlinesChange={setRegCalendarState}
+              feedState={regFeedState}
+              onFeedStateChange={setRegFeedState}
+            />
 
             {/* ─── AURA · ENV-ENTERPRISE — New client-side environment sections ─── */}
 
@@ -14255,22 +14353,13 @@ export function EnterpriseDashboard({
             {/* SECTION 34 — Audit Log Timeline (R2-ENTERPRISE-B) */}
             <AuditLogTimelineCard entries={auditLogState} />
 
-            {/* SECTION 31 — Regulatory Calendar (R2-ENTERPRISE-A) */}
-            <RegulatoryCalendarCard
-              deadlines={regCalendarState}
-              onDeadlinesChange={setRegCalendarState}
-            />
+            {/* SECTION 31/32 — Regulatory Calendar + Change Feed  [P2-11-DEDUP — merged into VeilleReglementaireCard above] */}
 
-            {/* SECTION 32 — Regulatory Change Feed (R3-ENTERPRISE-A) */}
-            <RegulatoryChangeFeedCard
-              state={regFeedState}
-              onStateChange={setRegFeedState}
-            />
-
-            {/* SECTION 28 — API & Integration Hub (keys, webhooks, MCP) */}
+            {/* SECTION 29 — API & Integration Hub (unified — P2-11-DEDUP — keys, webhooks, MCP, consommation) */}
             <ApiIntegrationHubCard
               state={integrationsState}
               onStateChange={setIntegrationsState}
+              teamActivity={teamActivity}
             />
 
             {/* SECTION 42 — SSO / SAML Configuration (P2-7-SSO-SAML) */}
@@ -14348,7 +14437,7 @@ export function EnterpriseDashboard({
                 color: TEXT_MUTED,
               }}
             >
-              Données temps réel · 37 sections · Quota IA illimité · Gouvernance + API + SSO SAML + 9 LLMs · Casablanca
+              Données temps réel · 33 sections · Quota IA illimité · Gouvernance + API + SSO SAML + 9 LLMs · Casablanca
             </div>
           </div>
         </footer>

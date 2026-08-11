@@ -97,6 +97,7 @@ import {
   LogOut,
   Mail,
   Map,
+  MapPin,
   Menu,
   MessageCircle,
   MessageSquare,
@@ -348,6 +349,66 @@ interface Harch100Resp {
   ok: boolean;
   published?: boolean;
   snapshot?: Harch100Snapshot;
+}
+
+// ─── P3-ESSENTIAL-REAL-ROUTES — 3 nouvelles réponses API ─────────────
+// Remplacent les mocks hardcoded des sections 14, 16, 17.
+
+interface GeoHeatmapCity {
+  name: string;
+  lat: number;
+  lng: number;
+  mentionCount: number;
+  avgSentiment: number | null;
+}
+
+interface GeoHeatmapResp {
+  company?: { name: string; slug: string } | null;
+  range: string;
+  cities: GeoHeatmapCity[];
+  source?: string;
+}
+
+interface SocialActivityDay {
+  date: string;
+  platform: string;
+  mentionCount: number;
+  avgSentiment: number | null;
+}
+
+interface SocialActivityRollup {
+  date: string;
+  Facebook: number;
+  Instagram: number;
+  Twitter: number;
+  LinkedIn: number;
+  TikTok: number;
+}
+
+interface SocialActivityResp {
+  company?: { name: string; slug: string } | null;
+  range: string;
+  days: SocialActivityDay[];
+  rollups: SocialActivityRollup[];
+  totals: { mentionCount: number };
+  source?: string;
+}
+
+interface LanguageSentimentRow {
+  code: "fr" | "ar" | "en" | "other";
+  label: string;
+  articleCount: number;
+  avgSentiment: number | null;
+  positivePct: number;
+  neutralPct: number;
+  negativePct: number;
+}
+
+interface LanguageSentimentResp {
+  company?: { name: string; slug: string } | null;
+  range: string;
+  languages: LanguageSentimentRow[];
+  source?: string;
 }
 
 // ─── ENV-ESSENTIAL client-side environment types ───────────────────────
@@ -4047,23 +4108,64 @@ function IndicateurCriseCard({ health, alerts, loading }: { health: BrandHealth 
 // SECTION 14 — CARTE DE CHALEUR GÉO (ScatterChart)
 // ════════════════════════════════════════════════════════════════════
 
-function CarteChaleurGeoCard({ health, loading }: { health: BrandHealth | null; loading: boolean }) {
-  // Pseudo geo data — Morocco's main cities with approximate lat/lon
-  // Bubble size = mention count, color = sentiment
-  const cities = [
-    { name: "Casablanca", lon: -7.6, lat: 33.6, count: 142, sentiment: 0.5 },
-    { name: "Rabat", lon: -6.8, lat: 34.0, count: 87, sentiment: 0.6 },
-    { name: "Marrakech", lon: -8.0, lat: 31.6, count: 64, sentiment: 0.7 },
-    { name: "Fès", lon: -5.0, lat: 34.0, count: 38, sentiment: 0.4 },
-    { name: "Tanger", lon: -5.8, lat: 35.8, count: 29, sentiment: 0.55 },
-    { name: "Agadir", lon: -9.6, lat: 30.4, count: 22, sentiment: 0.65 },
-  ];
+function CarteChaleurGeoCard({
+  data,
+  loading,
+  error,
+}: {
+  data: GeoHeatmapResp | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  // P3-ESSENTIAL-REAL-ROUTES — données réelles depuis /api/console/geo-heatmap
+  // L'API renvoie lat/lng/mentionCount/avgSentiment (avgSentiment ∈ [-1, +1]).
+  // On convertit avgSentiment vers une échelle 0-1 pour conserver les
+  // seuils de couleur historiques (>= 0.6 POSITIVE, >= 0.45 NEUTRAL, sinon NEGATIVE).
+  // Seuils équivalents sur l'échelle -1/+1 : >= +0.2 POSITIVE, >= -0.1 NEUTRAL, sinon NEGATIVE.
+  const cities = data?.cities ?? [];
 
-  const data = cities.map((c) => ({
-    ...c,
-    z: c.count,
-    fill: c.sentiment >= 0.6 ? POSITIVE : c.sentiment >= 0.45 ? NEUTRAL_AMBER : NEGATIVE,
-  }));
+  const chartData = cities.map((c) => {
+    const s = c.avgSentiment;
+    const fill =
+      s === null
+        ? NEUTRAL_GRAY
+        : s >= 0.2
+          ? POSITIVE
+          : s >= -0.1
+            ? NEUTRAL_AMBER
+            : NEGATIVE;
+    return {
+      name: c.name,
+      lon: c.lng,
+      lat: c.lat,
+      count: c.mentionCount,
+      sentiment: s === null ? null : (s + 1) / 2,
+      fill,
+    };
+  });
+
+  const totalMentions = chartData.reduce((sum, c) => sum + c.count, 0);
+  const isEmpty = chartData.length === 0 || totalMentions === 0;
+  const topCity = chartData.slice().sort((a, b) => b.count - a.count)[0];
+
+  // Génération dynamique du commentaire IA basé sur les données réelles.
+  const commentary = useMemo(() => {
+    if (isEmpty || !topCity) {
+      return "Aucune mention géolocalisée sur les 30 derniers jours — la cartographie s'alimentera dès la prochaine vague d'articles.";
+    }
+    const parts: string[] = [];
+    parts.push(
+      `${topCity.name} concentre le plus de mentions (${topCity.count})`,
+    );
+    const neg = chartData.find((c) => c.sentiment !== null && c.sentiment < 0.45);
+    if (neg && neg.name !== topCity.name) {
+      const pct = neg.sentiment !== null ? Math.round(neg.sentiment * 100) : 0;
+      parts.push(
+        `${neg.name} présente un sentiment plus mitigé (${pct}%) à surveiller`,
+      );
+    }
+    return parts.join(" — ") + ".";
+  }, [chartData, isEmpty, topCity]);
 
   return (
     <motion.div {...cardMotion}>
@@ -4072,6 +4174,35 @@ function CarteChaleurGeoCard({ health, loading }: { health: BrandHealth | null; 
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <LiveSkeleton className="h-[240px] w-full" />
+        ) : error ? (
+          <div
+            role="alert"
+            className="flex items-center gap-2"
+            style={{
+              height: 240,
+              padding: "0 12px",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: NEGATIVE,
+            }}
+          >
+            <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+            <span>Impossible de charger la carte de chaleur — {error}</span>
+          </div>
+        ) : isEmpty ? (
+          <div
+            className="flex items-center gap-2"
+            style={{
+              height: 240,
+              padding: "0 12px",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: TEXT_MUTED,
+            }}
+          >
+            <MapPin size={14} style={{ flexShrink: 0 }} />
+            <span>Aucune donnée disponible pour la période des 30 derniers jours.</span>
+          </div>
         ) : (
           <>
             <div style={{ width: "100%", height: 220 }}>
@@ -4108,7 +4239,11 @@ function CarteChaleurGeoCard({ health, loading }: { health: BrandHealth | null; 
                     }}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
-                      const d = payload[0].payload as (typeof data)[number];
+                      const d = payload[0].payload as (typeof chartData)[number];
+                      const sentimentPct =
+                        d.sentiment === null
+                          ? null
+                          : Math.round(d.sentiment * 100);
                       return (
                         <div
                           style={{
@@ -4123,14 +4258,14 @@ function CarteChaleurGeoCard({ health, loading }: { health: BrandHealth | null; 
                           <div style={{ fontWeight: 700, color: CHARCOAL }}>{d.name}</div>
                           <div style={{ color: TEXT_MUTED, marginTop: 2 }}>{d.count} mentions</div>
                           <div style={{ color: d.fill, marginTop: 2 }}>
-                            Sentiment: {Math.round(d.sentiment * 100)}%
+                            Sentiment: {sentimentPct === null ? "n/a" : `${sentimentPct}%`}
                           </div>
                         </div>
                       );
                     }}
                   />
-                  <Scatter data={data} isAnimationActive>
-                    {data.map((entry, idx) => (
+                  <Scatter data={chartData} isAnimationActive>
+                    {chartData.map((entry, idx) => (
                       <Cell key={`cell-${idx}`} fill={entry.fill} fillOpacity={0.7} />
                     ))}
                   </Scatter>
@@ -4160,7 +4295,7 @@ function CarteChaleurGeoCard({ health, loading }: { health: BrandHealth | null; 
                 Voir la carte interactive <ChevronRight size={11} />
               </Link>
             </div>
-            <AiCommentary text="Casablanca concentre le plus de mentions (142) — sentiment positif dominant. Fès présente un sentiment plus mitigé (40%) à surveiller." />
+            <AiCommentary text={commentary} />
           </>
         )}
       </CardShell>
@@ -4319,25 +4454,59 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
 // SECTION 16 — ACTIVITÉ RÉSEAU SOCIAL (stacked AreaChart)
 // ════════════════════════════════════════════════════════════════════
 
-function ActiviteReseauSocialCard({ loading }: { loading: boolean }) {
-  // Pseudo 30-day social data — 4 platforms
-  const data = useMemo(() => {
-    const days = 30;
-    return Array.from({ length: days }).map((_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - i - 1));
-      return {
-        date: date.toISOString().slice(0, 10),
-        Facebook: Math.round(15 + Math.sin(i / 3) * 8 + Math.random() * 6),
-        Instagram: Math.round(20 + Math.cos(i / 4) * 10 + Math.random() * 8),
-        Twitter: Math.round(8 + Math.sin(i / 2) * 4 + Math.random() * 4),
-        LinkedIn: Math.round(5 + Math.cos(i / 5) * 3 + Math.random() * 3),
-      };
-    });
-  }, []);
+function ActiviteReseauSocialCard({
+  data,
+  loading,
+  error,
+}: {
+  data: SocialActivityResp | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  // P3-ESSENTIAL-REAL-ROUTES — données réelles depuis /api/console/social-activity
+  // L'API renvoie un rollup par jour avec un champ par plateforme
+  // (Facebook, Instagram, Twitter, LinkedIn, TikTok), plus un total.
+  const rollups = data?.rollups ?? [];
+  const total = data?.totals?.mentionCount ?? 0;
+  const hasTikTok = rollups.some((r) => r.TikTok > 0);
+  const isEmpty = rollups.length === 0 || total === 0;
 
-  const total = data.reduce((s, d) => s + d.Facebook + d.Instagram + d.Twitter + d.LinkedIn, 0);
-  const engagement = { likes: 1842, shares: 312, comments: 198 };
+  // Mini-stats dérivées des données réelles — on ne dispose pas de
+  // likes / partages / commentaires au niveau Article, donc on
+  // affiche des agrégations pertinentes: total mentions, jour pic,
+  // et plateforme dominante.
+  const peakDay = useMemo(() => {
+    if (rollups.length === 0) return null;
+    return rollups.slice().sort((a, b) => {
+      const sumA = a.Facebook + a.Instagram + a.Twitter + a.LinkedIn + a.TikTok;
+      const sumB = b.Facebook + b.Instagram + b.Twitter + b.LinkedIn + b.TikTok;
+      return sumB - sumA;
+    })[0];
+  }, [rollups]);
+
+  const platformTotals = useMemo(() => {
+    return rollups.reduce(
+      (acc, r) => {
+        acc.Facebook += r.Facebook;
+        acc.Instagram += r.Instagram;
+        acc.Twitter += r.Twitter;
+        acc.LinkedIn += r.LinkedIn;
+        acc.TikTok += r.TikTok;
+        return acc;
+      },
+      { Facebook: 0, Instagram: 0, Twitter: 0, LinkedIn: 0, TikTok: 0 },
+    );
+  }, [rollups]);
+
+  const topPlatform = useMemo(() => {
+    const entries = Object.entries(platformTotals) as [string, number][];
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0]?.[0] ?? "—";
+  }, [platformTotals]);
+
+  const peakDayMentions = peakDay
+    ? peakDay.Facebook + peakDay.Instagram + peakDay.Twitter + peakDay.LinkedIn + peakDay.TikTok
+    : 0;
 
   return (
     <motion.div {...cardMotion}>
@@ -4362,11 +4531,40 @@ function ActiviteReseauSocialCard({ loading }: { loading: boolean }) {
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <LiveSkeleton className="h-[220px] w-full" />
+        ) : error ? (
+          <div
+            role="alert"
+            className="flex items-center gap-2"
+            style={{
+              height: 220,
+              padding: "0 12px",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: NEGATIVE,
+            }}
+          >
+            <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+            <span>Impossible de charger l&apos;activité réseau social — {error}</span>
+          </div>
+        ) : isEmpty ? (
+          <div
+            className="flex items-center gap-2"
+            style={{
+              height: 220,
+              padding: "0 12px",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: TEXT_MUTED,
+            }}
+          >
+            <MessageCircle size={14} style={{ flexShrink: 0 }} />
+            <span>Aucune donnée disponible pour la période des 30 derniers jours.</span>
+          </div>
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                <AreaChart data={rollups} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                   <defs>
                     <linearGradient id="fbGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#1877F2" stopOpacity={0.6} />
@@ -4384,6 +4582,12 @@ function ActiviteReseauSocialCard({ loading }: { loading: boolean }) {
                       <stop offset="0%" stopColor="#0A66C2" stopOpacity={0.6} />
                       <stop offset="100%" stopColor="#0A66C2" stopOpacity={0.05} />
                     </linearGradient>
+                    {hasTikTok && (
+                      <linearGradient id="tkGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#000000" stopOpacity={0.6} />
+                        <stop offset="100%" stopColor="#000000" stopOpacity={0.05} />
+                      </linearGradient>
+                    )}
                   </defs>
                   <CartesianGrid stroke="#F4F4F5" vertical={false} />
                   <XAxis
@@ -4418,14 +4622,30 @@ function ActiviteReseauSocialCard({ loading }: { loading: boolean }) {
                   <Area type="monotone" dataKey="Instagram" stackId="1" stroke="#C13584" strokeWidth={1.5} fill="url(#igGrad)" isAnimationActive />
                   <Area type="monotone" dataKey="Twitter" stackId="1" stroke="#1DA1F2" strokeWidth={1.5} fill="url(#twGrad)" isAnimationActive />
                   <Area type="monotone" dataKey="LinkedIn" stackId="1" stroke="#0A66C2" strokeWidth={1.5} fill="url(#liGrad)" isAnimationActive />
+                  {hasTikTok && (
+                    <Area type="monotone" dataKey="TikTok" stackId="1" stroke="#000000" strokeWidth={1.5} fill="url(#tkGrad)" isAnimationActive />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-3">
-              <MiniStat label="J'aime" value={fmtNumber(engagement.likes)} />
-              <MiniStat label="Partages" value={fmtNumber(engagement.shares)} />
-              <MiniStat label="Commentaires" value={fmtNumber(engagement.comments)} />
+              <MiniStat label="Total mentions" value={fmtNumber(total)} dotColor={SAGE} />
+              <MiniStat
+                label="Jour pic"
+                value={peakDay ? `${fmtDayShort(peakDay.date)}` : "—"}
+                dotColor={POSITIVE}
+              />
+              <MiniStat
+                label="Plateforme dominante"
+                value={topPlatform}
+                dotColor={NEUTRAL_AMBER}
+              />
             </div>
+            {peakDay && (
+              <AiCommentary
+                text={`Le jour pic est ${fmtDayShort(peakDay.date)} avec ${fmtNumber(peakDayMentions)} mentions. La plateforme dominante sur la période est ${topPlatform}.`}
+              />
+            )}
           </>
         )}
       </CardShell>
@@ -4437,13 +4657,50 @@ function ActiviteReseauSocialCard({ loading }: { loading: boolean }) {
 // SECTION 17 — MÉTÉO SENTIMENTS PAR LANGUE
 // ════════════════════════════════════════════════════════════════════
 
-function MeteoSentimentsLangueCard({ loading }: { loading: boolean }) {
-  // Pseudo language breakdown
-  const data = [
-    { name: "Français", Positif: 62, Neutre: 24, Négatif: 14 },
-    { name: "Arabe/Darija", Positif: 25, Neutre: 20, Négatif: 55 },
-    { name: "Anglais", Positif: 48, Neutre: 38, Négatif: 14 },
-  ];
+function MeteoSentimentsLangueCard({
+  data,
+  loading,
+  error,
+}: {
+  data: LanguageSentimentResp | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  // P3-ESSENTIAL-REAL-ROUTES — données réelles depuis /api/console/language-sentiment
+  // L'API renvoie languages[] avec code/label/articleCount/avgSentiment
+  // et les pourcentages positivePct / neutralPct / negativePct.
+  const languages = data?.languages ?? [];
+  const isEmpty = languages.length === 0;
+
+  const chartData = languages.map((l) => ({
+    name: l.label,
+    Positif: l.positivePct,
+    Neutre: l.neutralPct,
+    Négatif: l.negativePct,
+    articleCount: l.articleCount,
+  }));
+
+  // Commentaire IA dynamique basé sur les données réelles:
+  // on cherche la langue la plus négative et la plus positive.
+  const commentary = useMemo(() => {
+    if (isEmpty) {
+      return "Aucune donnée linguistique sur les 30 derniers jours — la météo des sentiments s'alimentera dès la prochaine vague d'articles.";
+    }
+    const sortedByNeg = languages.slice().sort((a, b) => b.negativePct - a.negativePct);
+    const mostNeg = sortedByNeg[0];
+    const sortedByPos = languages.slice().sort((a, b) => b.positivePct - a.positivePct);
+    const mostPos = sortedByPos[0];
+    const parts: string[] = [];
+    if (mostNeg && mostNeg.negativePct > 0) {
+      parts.push(
+        `${mostNeg.label} est plus négative (${mostNeg.negativePct}% négatif) — surveillez ces conversations`,
+      );
+    }
+    if (mostPos && mostPos.positivePct > 0 && mostPos.label !== mostNeg.label) {
+      parts.push(`${mostPos.label} reste positive (${mostPos.positivePct}%)`);
+    }
+    return parts.length > 0 ? parts.join(" — ") + "." : "Données linguistiques indisponibles pour cette période.";
+  }, [languages, isEmpty]);
 
   return (
     <motion.div {...cardMotion}>
@@ -4457,12 +4714,41 @@ function MeteoSentimentsLangueCard({ loading }: { loading: boolean }) {
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <LiveSkeleton className="h-[220px] w-full" />
+        ) : error ? (
+          <div
+            role="alert"
+            className="flex items-center gap-2"
+            style={{
+              height: 220,
+              padding: "0 12px",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: NEGATIVE,
+            }}
+          >
+            <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+            <span>Impossible de charger la météo des sentiments — {error}</span>
+          </div>
+        ) : isEmpty ? (
+          <div
+            className="flex items-center gap-2"
+            style={{
+              height: 220,
+              padding: "0 12px",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: TEXT_MUTED,
+            }}
+          >
+            <Languages size={14} style={{ flexShrink: 0 }} />
+            <span>Aucune donnée disponible pour la période des 30 derniers jours.</span>
+          </div>
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={data}
+                  data={chartData}
                   margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
                   barSize={48}
                 >
@@ -4500,7 +4786,7 @@ function MeteoSentimentsLangueCard({ loading }: { loading: boolean }) {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <AiCommentary text="La Darija est plus négative (55% négatif) — surveillez les conversations en arabe marocain. Le français reste positif (62%)." />
+            <AiCommentary text={commentary} />
             <div className="mt-2 text-right">
               <Link
                 href="#"
@@ -10216,6 +10502,13 @@ export default function EssentialDashboard() {
   const { data: sources, loading: sourcesLoading } = useApi<SourceDistResp>("/api/console/source-distribution");
   const { data: harch100, loading: harch100Loading } = useApi<Harch100Resp>("/api/harch100/latest");
 
+  // P3-ESSENTIAL-REAL-ROUTES — 3 routes qui remplacent les mocks
+  // hardcoded des sections 14 (Carte Chaleur Géo), 16 (Activité
+  // Réseau Social) et 17 (Météo Sentiments par Langue).
+  const { data: geoHeatmap, loading: geoHeatmapLoading, error: geoHeatmapError } = useApi<GeoHeatmapResp>("/api/console/geo-heatmap");
+  const { data: socialActivity, loading: socialActivityLoading, error: socialActivityError } = useApi<SocialActivityResp>("/api/console/social-activity");
+  const { data: languageSentiment, loading: languageSentimentLoading, error: languageSentimentError } = useApi<LanguageSentimentResp>("/api/console/language-sentiment");
+
   const alertCount = alerts?.count ?? alerts?.alerts?.length ?? 0;
   const sourcesCount = Math.min(20, sources?.sources?.length ?? 0);
 
@@ -10780,14 +11073,14 @@ export default function EssentialDashboard() {
 
             {/* SECTIONS 13-14 — Crisis row */}
             <IndicateurCriseCard health={health} alerts={alerts} loading={healthLoading} />
-            <CarteChaleurGeoCard health={health} loading={healthLoading} />
+            <CarteChaleurGeoCard data={geoHeatmap} loading={geoHeatmapLoading} error={geoHeatmapError} />
 
             {/* SECTIONS 15-16 — Rank row */}
             <PositionHarch100Card harch100={harch100} loading={harch100Loading} />
-            <ActiviteReseauSocialCard loading={false} />
+            <ActiviteReseauSocialCard data={socialActivity} loading={socialActivityLoading} error={socialActivityError} />
 
             {/* SECTIONS 17-18 — Lang row */}
-            <MeteoSentimentsLangueCard loading={false} />
+            <MeteoSentimentsLangueCard data={languageSentiment} loading={languageSentimentLoading} error={languageSentimentError} />
             <EvolutionScoreCard health={health} loading={healthLoading} />
 
             {/* SECTION 19 — Volume row */}
