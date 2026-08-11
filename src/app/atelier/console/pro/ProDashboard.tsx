@@ -13974,6 +13974,35 @@ export default function ProDashboard({
     "repartition-media": <RepartitionTypeMediaCard sources={sources} aiVis={aiVis} loading={sourcesLoading} />,
     "sujets-emergents": <SujetsEmergentsCard topics={topics} loading={topicsLoading} />,
     "tableaux-personnalisables": <TableauxPersonnalisablesCard />,
+    "sentiment-heatmap": (
+      <SentimentHeatmapCard
+        trend={sentimentTrend}
+        topics={topics}
+        sources={sources}
+        loading={trendLoading || sourcesLoading}
+      />
+    ),
+    "campaign-tracker": (
+      <CampaignTrackerCard
+        influencers={(influencers?.influencers ?? []).map((r) => ({
+          id: r.source,
+          name: r.source,
+          handle: "@" + r.source.toLowerCase().replace(/\s+/g, ""),
+          platform: "X" as const,
+          followers: r.reachScore * 1000,
+          engagementRate: r.consistency,
+          sentiment: r.avgSentiment,
+          starred: false,
+          addedAt: Date.now(),
+        }))}
+      />
+    ),
+    "dashboard-templates": (
+      <DashboardTemplatesCard
+        widgetOrder={widgetOrder}
+        onApply={(w) => setWidgetOrder(w)}
+      />
+    ),
     "upsell": <PasserGrandesEntreprisesCard />,
   };
 
