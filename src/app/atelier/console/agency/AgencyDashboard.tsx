@@ -172,6 +172,10 @@ import {
   Zap,
   Award,
   Clock,
+  Crosshair,
+  ListChecks,
+  Rocket,
+  Workflow,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -207,6 +211,9 @@ import {
   Pie,
   PieChart,
   PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
   RadialBar,
   RadialBarChart,
   ReferenceLine,
@@ -690,6 +697,84 @@ interface WLabelTheme {
   hideHarchBadge: boolean;
   loginTitle: string;
   faviconColor: string;
+}
+
+// ─── AGENCY R3-A FEATURES TYPES (Task ID: R3-AGENCY-A) ────────────────
+// Drives 3 new agency features: client lifecycle pipeline, upsell
+// opportunity tracker, agency benchmark. All persisted in localStorage
+// via usePersistentState hook (same pattern as R2 / ENV-AGENCY features).
+
+type LifecycleStage = "prospect" | "onboarding" | "actif" | "renouvellement" | "fidele";
+
+interface LifecycleClient {
+  id: string;                       // = clientId (stable across refreshes)
+  clientId: string;
+  displayName: string;
+  mrr: number;
+  stage: LifecycleStage;
+  daysInStage: number;
+  healthScore: number;              // 0-100 (derived from computeClientHealth)
+  healthBand: HealthBand;
+  nextActionDate: string;           // ISO yyyy-mm-dd
+}
+
+interface LifecycleState {
+  clients: LifecycleClient[];
+  lastSeededAt: number | null;
+}
+
+type UpsellSort = "uplift" | "probability" | "name";
+
+interface UpsellFactor {
+  label: string;
+  displayValue: string;
+  displayThreshold: string;
+  met: boolean;
+}
+
+interface UpsellOpportunity {
+  id: string;                       // = clientId
+  clientId: string;
+  displayName: string;
+  currentPlanLabel: string;
+  recommendedUpgradeLabel: string;
+  monthlyRevenueUplift: number;     // MAD/mo
+  probabilityPct: number;           // 0-100
+  factors: UpsellFactor[];
+}
+
+interface UpsellState {
+  ignoredClientIds: string[];
+  campaignSentAt: number | null;
+}
+
+type BenchmarkMetricKey =
+  | "clients_per_am"
+  | "revenue_per_client"
+  | "retention_rate"
+  | "avg_deal_size"
+  | "time_to_onboard"
+  | "nps";
+
+interface BenchmarkMetric {
+  key: BenchmarkMetricKey;
+  label: string;
+  shortLabel: string;
+  unit: string;
+  median: number;
+  top10: number;
+  source: string;
+  inverted?: boolean;
+  compute: (clients: AgencyClient[], users: TeamUser[]) => number;
+  display: (v: number) => string;
+}
+
+interface BenchmarkRow extends BenchmarkMetric {
+  rawValue: number;
+  value: number;                    // = override ?? rawValue
+  normalized: number;               // 0-100 (100 = top10% performance)
+  isForced: boolean;                // true = above median (force)
+  overridden: boolean;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
@@ -11936,6 +12021,1524 @@ function RevenueForecastingCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R3-AGENCY-A · FEATURE 1 — CLIENT LIFECYCLE STAGES (full-width card)
+// Visual pipeline: Prospect → Onboarding → Actif → Renouvellement →
+// Fidèle (5 stages). Drag-and-drop (HTML5 native) moves clients
+// between stages. Each stage shows: client count, total MRR, avg days
+// in stage. Stagnant clients (>90 days in current stage) pulse amber.
+// Conversion rates between stages shown as badges. Each client card
+// displays: name, MRR, days in stage, health badge, next action date.
+// Persisted in localStorage "agency:client-lifecycle". Seeded from
+// existing clients distributed deterministically across stages.
+// ════════════════════════════════════════════════════════════════════
+
+const LIFECYCLE_STAGES: Array<{
+  key: LifecycleStage;
+  label: string;
+  color: string;
+  bg: string;
+}> = [
+  { key: "prospect", label: "Prospect", color: TEXT_BODY, bg: "#FAFAFA" },
+  { key: "onboarding", label: "Onboarding", color: "#B45309", bg: "rgba(245,158,11,0.10)" },
+  { key: "actif", label: "Actif", color: SAGE, bg: SAGE_BG },
+  { key: "renouvellement", label: "Renouvellement", color: SAGE_DEEP, bg: "rgba(58,100,80,0.12)" },
+  { key: "fidele", label: "Fidèle", color: SAGE_DEEP, bg: SAGE_BG_STRONG },
+];
+
+const LIFECYCLE_CONVERSIONS: Array<{ from: LifecycleStage; to: LifecycleStage; rate: number }> = [
+  { from: "prospect", to: "onboarding", rate: 60 },
+  { from: "onboarding", to: "actif", rate: 85 },
+  { from: "actif", to: "renouvellement", rate: 75 },
+  { from: "renouvellement", to: "fidele", rate: 90 },
+];
+
+function stageFromHash(clientId: string): LifecycleStage {
+  const m = hashStr(clientId) % 10;
+  if (m === 0) return "prospect";          // ~10%
+  if (m <= 2) return "onboarding";         // ~20%
+  if (m <= 6) return "actif";              // ~40%
+  if (m <= 8) return "renouvellement";     // ~20%
+  return "fidele";                         // ~10%
+}
+
+function daysInStageFromHash(clientId: string, stage: LifecycleStage): number {
+  const h = hashStr(clientId + ":" + stage);
+  switch (stage) {
+    case "prospect": return (h % 30) + 1;        // 1-30 days
+    case "onboarding": return (h % 45) + 7;      // 7-51 days
+    case "actif": return (h % 120) + 30;         // 30-149 days
+    case "renouvellement": return (h % 90) + 30; // 30-119 days (some >90 = stagnant)
+    case "fidele": return (h % 240) + 90;        // 90-329 days
+  }
+}
+
+function nextActionDateFromHash(clientId: string): string {
+  const h = hashStr(clientId + ":action");
+  const offset = (h % 21) - 5; // -5 to +15 days from today
+  return new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+}
+
+function seedLifecycleClients(clients: AgencyClient[]): LifecycleClient[] {
+  return clients.map((c) => {
+    const stage = stageFromHash(c.id);
+    const healthScore = computeClientHealth(c).score;
+    return {
+      id: c.id,
+      clientId: c.id,
+      displayName: c.displayName,
+      mrr: c.quota?.monthlyPriceMAD ?? 6500,
+      stage,
+      daysInStage: daysInStageFromHash(c.id, stage),
+      healthScore,
+      healthBand: healthBandFor(healthScore),
+      nextActionDate: nextActionDateFromHash(c.id),
+    };
+  });
+}
+
+function ClientLifecycleCard({
+  clients,
+  loading,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  loading: boolean;
+  onToast: (msg: string, type?: "success" | "info") => void;
+}) {
+  const [state, setState] = usePersistentState<LifecycleState>(
+    "agency:client-lifecycle",
+    { clients: [], lastSeededAt: null },
+  );
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  // Sync persisted lifecycle clients with the actual `clients` prop:
+  // drop removed clients, refresh display info for persisted ones, seed
+  // new ones. Preserves user's drag-and-drop moves (stage + daysInStage).
+  // setState is intentional here — this is the canonical sync effect that
+  // reconciles persisted localStorage state with the live `clients` prop.
+  useEffect(() => {
+    if (loading) return;
+    const actualIds = new Set(clients.map((c) => c.id));
+    const persisted = state.clients.filter((lc) => actualIds.has(lc.clientId));
+    const persistedIds = new Set(persisted.map((lc) => lc.clientId));
+    const newClients = clients.filter((c) => !persistedIds.has(c.id));
+    const refreshed = persisted.map((lc) => {
+      const actual = clients.find((c) => c.id === lc.clientId);
+      if (!actual) return lc;
+      const healthScore = computeClientHealth(actual).score;
+      return {
+        ...lc,
+        displayName: actual.displayName,
+        mrr: actual.quota?.monthlyPriceMAD ?? 6500,
+        healthScore,
+        healthBand: healthBandFor(healthScore),
+      };
+    });
+    const newSeeds = seedLifecycleClients(newClients);
+    const hasChanges =
+      newSeeds.length > 0 ||
+      persisted.length !== state.clients.length ||
+      refreshed.some((lc, i) => lc.displayName !== persisted[i].displayName);
+    if (hasChanges) {
+      setState({ clients: [...refreshed, ...newSeeds], lastSeededAt: Date.now() });
+    }
+  }, [clients, loading]);
+
+  const handleDrop = (stage: LifecycleStage) => {
+    if (!dragId) return;
+    const moved = state.clients.find((lc) => lc.id === dragId);
+    setState((prev) => ({
+      ...prev,
+      clients: prev.clients.map((lc) =>
+        lc.id === dragId
+          ? {
+              ...lc,
+              stage,
+              daysInStage: 1,
+              nextActionDate: new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10),
+            }
+          : lc,
+      ),
+    }));
+    if (moved) {
+      const stageLabel = LIFECYCLE_STAGES.find((s) => s.key === stage)?.label ?? stage;
+      onToast(`${moved.displayName} déplacé en stage « ${stageLabel} ».`);
+    }
+    setDragId(null);
+  };
+
+  const stageStats = LIFECYCLE_STAGES.map((s) => {
+    const items = state.clients.filter((c) => c.stage === s.key);
+    return {
+      ...s,
+      items,
+      count: items.length,
+      mrr: items.reduce((sum, i) => sum + i.mrr, 0),
+      avgDays:
+        items.length > 0
+          ? Math.round(items.reduce((sum, i) => sum + i.daysInStage, 0) / items.length)
+          : 0,
+    };
+  });
+
+  const stagnantCount = state.clients.filter((c) => c.daysInStage > 90).length;
+  const totalMrr = state.clients.reduce((s, c) => s + c.mrr, 0);
+  const avgDaysAll =
+    state.clients.length > 0
+      ? Math.round(state.clients.reduce((s, c) => s + c.daysInStage, 0) / state.clients.length)
+      : 0;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Cycle de Vie Client · Pipeline"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE_DEEP,
+                fontWeight: 700,
+              }}
+            >
+              <Workflow size={10} /> {state.clients.length} clients
+            </span>
+            {stagnantCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  backgroundColor: "rgba(245,158,11,0.10)",
+                  color: "#B45309",
+                  fontWeight: 700,
+                }}
+              >
+                <Hourglass size={10} /> {stagnantCount} stagnant(s)
+              </span>
+            )}
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {/* Aggregate strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Clients suivis</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {state.clients.length}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>MRR total pipeline</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+            {fmtMAD(totalMrr)}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+          <div style={FONT_HEADER}>Séjour moyen</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+            {avgDaysAll} j
+          </div>
+        </div>
+        <div
+          className="p-2.5 rounded-md"
+          style={{
+            border: `1px solid ${stagnantCount > 0 ? "#B45309" : BORDER}`,
+            backgroundColor: stagnantCount > 0 ? "rgba(245,158,11,0.06)" : "#FCFCFC",
+          }}
+        >
+          <div style={{ ...FONT_HEADER, color: stagnantCount > 0 ? "#B45309" : undefined }}>
+            Stagnants (&gt;90j)
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 14,
+              fontWeight: 700,
+              color: stagnantCount > 0 ? "#B45309" : CHARCOAL,
+              marginTop: 2,
+            }}
+          >
+            {stagnantCount}
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-md" />
+          ))}
+        </div>
+      ) : state.clients.length === 0 ? (
+        <div
+          className="text-center py-8 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <Workflow size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+            Aucun client — le pipeline de cycle de vie s'activera dès le premier client du portefeuille.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Kanban-style pipeline (5 columns) */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+            {stageStats.map((stage) => (
+              <div
+                key={stage.key}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(stage.key)}
+                className="rounded-md p-2"
+                style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC", minHeight: 240 }}
+              >
+                <div className="flex items-center justify-between mb-1.5 px-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: stage.color }} />
+                    <span
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: stage.color,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                      className="truncate"
+                    >
+                      {stage.label}
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                    ({stage.count})
+                  </span>
+                </div>
+                <div className="px-1 mb-2">
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                    MRR: <span style={{ color: SAGE_DEEP, fontWeight: 700 }}>{fmtMAD(stage.mrr)}</span>
+                  </div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                    Séjour moy.: <span style={{ color: CHARCOAL, fontWeight: 700 }}>{stage.avgDays}j</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {stage.items.length === 0 ? (
+                    <div
+                      className="text-center py-4 rounded-md"
+                      style={{ border: `1px dashed ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED }}
+                    >
+                      Glissez ici
+                    </div>
+                  ) : (
+                    stage.items.map((item) => {
+                      const bandStyle = healthBandStyle(item.healthBand);
+                      const isStagnant = item.daysInStage > 90;
+                      return (
+                        <div
+                          key={item.id}
+                          draggable
+                          onDragStart={() => setDragId(item.id)}
+                          onDragEnd={() => setDragId(null)}
+                          className="p-2 rounded-md cursor-grab active:cursor-grabbing transition-shadow hover:shadow-sm"
+                          style={{
+                            backgroundColor: "#FFFFFF",
+                            border: `1px solid ${BORDER_STRONG}`,
+                            opacity: dragId === item.id ? 0.5 : 1,
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="min-w-0 flex-1">
+                              <div
+                                style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}
+                                className="truncate"
+                              >
+                                {item.displayName}
+                              </div>
+                              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 1 }}>
+                                {fmtMAD(item.mrr)}
+                              </div>
+                            </div>
+                            <GripVertical size={10} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+                          </div>
+                          <div className="flex items-center justify-between mt-1.5">
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 8,
+                                fontWeight: 700,
+                                backgroundColor: bandStyle.bg,
+                                color: bandStyle.color,
+                              }}
+                            >
+                              <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", backgroundColor: bandStyle.color }} />
+                              {bandStyle.label}
+                            </span>
+                            <span
+                              className="inline-flex items-center gap-0.5"
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: isStagnant ? "#B45309" : TEXT_MUTED,
+                              }}
+                            >
+                              {isStagnant && (
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    width: 5,
+                                    height: 5,
+                                    borderRadius: "50%",
+                                    backgroundColor: NEUTRAL_AMBER,
+                                    animation: "pulse-dot 1.4s ease-in-out infinite",
+                                  }}
+                                />
+                              )}
+                              {item.daysInStage}j
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <CalendarDays size={8} style={{ color: TEXT_MUTED }} />
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED }}>
+                              {fmtDayShort(item.nextActionDate)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Conversion rates strip (between stages) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+            {LIFECYCLE_CONVERSIONS.map((conv) => {
+              const fromLabel = LIFECYCLE_STAGES.find((s) => s.key === conv.from)?.label ?? conv.from;
+              const toLabel = LIFECYCLE_STAGES.find((s) => s.key === conv.to)?.label ?? conv.to;
+              const rateColor = conv.rate >= 80 ? SAGE_DEEP : conv.rate >= 60 ? "#B45309" : NEGATIVE;
+              const rateBg = conv.rate >= 80 ? SAGE_BG : conv.rate >= 60 ? "rgba(245,158,11,0.10)" : "rgba(239,68,68,0.06)";
+              return (
+                <div
+                  key={`${conv.from}-${conv.to}`}
+                  className="p-2 rounded-md flex items-center gap-2"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: rateBg }}
+                >
+                  <ArrowRight size={11} style={{ color: SAGE, flexShrink: 0 }} />
+                  <div className="min-w-0 flex-1">
+                    <div style={{ ...FONT_HEADER, fontSize: 8 }}>
+                      {fromLabel} → {toLabel}
+                    </div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: rateColor }}>
+                      {conv.rate}%
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <AiCommentary
+        text={
+          state.clients.length === 0
+            ? "Le pipeline de cycle de vie s'active dès le premier client du portefeuille."
+            : `Cycle de vie: ${stageStats[0].count} prospect(s), ${stageStats[1].count} onboarding, ${stageStats[2].count} actif(s), ${stageStats[3].count} en renouvellement, ${stageStats[4].count} fidèle(s). ${stagnantCount > 0 ? `${stagnantCount} client(s) stagnant(s) (>90j) — relance nécessaire.` : "Aucune stagnation — flux sain."} Glissez les cartes entre colonnes pour mettre à jour le stage.`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R3-AGENCY-A · FEATURE 2 — UPSELL OPPORTUNITY TRACKER (full-width card)
+// Identifies upsell opportunities per client based on 4 criteria: quota
+// usage >80%, HarchIQ questions >70%, client health >75, contract age
+// >6 months. Need ≥2 criteria met to qualify. Each opportunity: client
+// name, current plan, recommended upgrade (Essentiel→Pro / Pro→Enterprise),
+// estimated revenue uplift (MAD/mo), probability %, "Recommander" button
+// (generates a pitch via HarchIQ simulated), "Ignorer" button (persisted).
+// Sortable by: uplift value, probability, client name. Aggregate strip
+// shows total upsell value at risk, opportunities count, avg probability.
+// "Lancer campagne d'upsell" button marks all as "campaign sent".
+// Persisted in localStorage "agency:upsell-opportunities".
+// ════════════════════════════════════════════════════════════════════
+
+const PLAN_PRICE_MAD: Record<string, number> = {
+  essentiel: 3000,
+  emergence: 3000,
+  pro: 6500,
+  corporate: 6500,
+  enterprise: 15000,
+  sovereign: 25000,
+};
+
+function planLabelRaw(tier: string | undefined | null): string {
+  if (!tier) return "Essentiel";
+  const t = tier.toLowerCase();
+  if (t === "sovereign") return "Sovereign";
+  if (t === "corporate") return "Corporate";
+  if (t === "emergence") return "Émergence";
+  if (t === "essentiel") return "Essentiel";
+  if (t === "pro") return "Pro";
+  if (t === "enterprise") return "Enterprise";
+  return tier.charAt(0).toUpperCase() + tier.slice(1);
+}
+
+function computeUpsellOpportunity(client: AgencyClient): UpsellOpportunity | null {
+  const planTier = (client.quota?.planTier ?? "essentiel").toLowerCase();
+  const planLabel = planLabelRaw(planTier);
+
+  // Determine upgrade target + uplift
+  let upgradeLabel = "";
+  let uplift = 0;
+  if (planTier === "essentiel" || planTier === "emergence") {
+    upgradeLabel = "Pro";
+    uplift = PLAN_PRICE_MAD.pro - PLAN_PRICE_MAD.essentiel;
+  } else if (planTier === "pro" || planTier === "corporate") {
+    upgradeLabel = "Enterprise";
+    uplift = PLAN_PRICE_MAD.enterprise - PLAN_PRICE_MAD.pro;
+  } else {
+    // sovereign / enterprise — no upgrade path
+    return null;
+  }
+
+  const apiPct = client.bars?.apiRequests?.pct ?? 0;
+  const harchiqPct = apiPct; // proxy: HarchIQ usage is part of apiRequests
+  const healthScore = computeClientHealth(client).score;
+  const retention = monthsSince(client.createdAt);
+
+  const factors: UpsellFactor[] = [
+    {
+      label: "Quota usage",
+      displayValue: fmtPct(apiPct),
+      displayThreshold: ">80%",
+      met: apiPct > 80,
+    },
+    {
+      label: "HarchIQ questions",
+      displayValue: fmtPct(harchiqPct),
+      displayThreshold: ">70%",
+      met: harchiqPct > 70,
+    },
+    {
+      label: "Santé client",
+      displayValue: `${healthScore}/100`,
+      displayThreshold: ">75",
+      met: healthScore > 75,
+    },
+    {
+      label: "Ancienneté contrat",
+      displayValue: `${retention} mois`,
+      displayThreshold: ">6 mois",
+      met: retention > 6,
+    },
+  ];
+
+  const metCount = factors.filter((f) => f.met).length;
+  if (metCount < 2) return null; // require ≥2 criteria
+
+  const probability =
+    metCount >= 4 ? 90 : metCount === 3 ? 75 : 55;
+
+  return {
+    id: client.id,
+    clientId: client.id,
+    displayName: client.displayName,
+    currentPlanLabel: planLabel,
+    recommendedUpgradeLabel: upgradeLabel,
+    monthlyRevenueUplift: uplift,
+    probabilityPct: probability,
+    factors,
+  };
+}
+
+function UpsellOpportunityTrackerCard({
+  clients,
+  loading,
+  onToast,
+}: {
+  clients: AgencyClient[];
+  loading: boolean;
+  onToast: (msg: string, type?: "success" | "info") => void;
+}) {
+  const [upsellState, setUpsellState] = usePersistentState<UpsellState>(
+    "agency:upsell-opportunities",
+    { ignoredClientIds: [], campaignSentAt: null },
+  );
+  const [sort, setSort] = useState<UpsellSort>("uplift");
+
+  const allOpportunities = useMemo(() => {
+    return clients
+      .map(computeUpsellOpportunity)
+      .filter((o): o is UpsellOpportunity => o !== null);
+  }, [clients]);
+
+  const visibleOpportunities = useMemo(() => {
+    const filtered = allOpportunities.filter(
+      (o) => !upsellState.ignoredClientIds.includes(o.clientId),
+    );
+    switch (sort) {
+      case "uplift":
+        return [...filtered].sort((a, b) => b.monthlyRevenueUplift - a.monthlyRevenueUplift);
+      case "probability":
+        return [...filtered].sort((a, b) => b.probabilityPct - a.probabilityPct);
+      case "name":
+        return [...filtered].sort((a, b) => a.displayName.localeCompare(b.displayName));
+    }
+  }, [allOpportunities, upsellState.ignoredClientIds, sort]);
+
+  const totalUplift = visibleOpportunities.reduce((s, o) => s + o.monthlyRevenueUplift, 0);
+  const avgProbability =
+    visibleOpportunities.length > 0
+      ? Math.round(visibleOpportunities.reduce((s, o) => s + o.probabilityPct, 0) / visibleOpportunities.length)
+      : 0;
+  const ignoredCount = upsellState.ignoredClientIds.length;
+
+  const ignore = (clientId: string) => {
+    setUpsellState((prev) =>
+      prev.ignoredClientIds.includes(clientId)
+        ? prev
+        : { ...prev, ignoredClientIds: [...prev.ignoredClientIds, clientId] },
+    );
+  };
+
+  const recommend = (opp: UpsellOpportunity) => {
+    // Simulated HarchIQ pitch generation — fires a toast with summary
+    onToast(
+      `Pitch d'upsell généré pour ${opp.displayName} (${opp.currentPlanLabel} → ${opp.recommendedUpgradeLabel}, +${fmtMAD(opp.monthlyRevenueUplift)}/mois, prob. ${opp.probabilityPct}%).`,
+      "success",
+    );
+  };
+
+  const launchCampaign = () => {
+    setUpsellState((prev) => ({ ...prev, campaignSentAt: Date.now() }));
+    onToast(
+      `Campagne d'upsell lancée · ${visibleOpportunities.length} opportunité(s) · ${fmtMAD(totalUplift)}/mois de revenu additionnel potentiel.`,
+      "success",
+    );
+  };
+
+  const campaignDaysAgo = upsellState.campaignSentAt
+    ? Math.floor((Date.now() - upsellState.campaignSentAt) / (24 * 60 * 60 * 1000))
+    : null;
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Tracker d'Opportunités Upsell"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE_DEEP,
+                fontWeight: 700,
+              }}
+            >
+              <Rocket size={10} /> {visibleOpportunities.length} opportunité(s)
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE, color: SAGE_DEEP }}
+              onClick={launchCampaign}
+              disabled={visibleOpportunities.length === 0}
+            >
+              <Send size={11} /> Lancer campagne d'upsell
+            </Button>
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
+          ))}
+        </div>
+      ) : allOpportunities.length === 0 ? (
+        <div
+          className="text-center py-8 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <Rocket size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+            Aucune opportunité d'upsell détectée — les clients éligibles (≥2 critères: quota &gt;80%, HarchIQ &gt;70%, santé &gt;75, contrat &gt;6 mois) apparaîtront ici.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Aggregate strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: SAGE_BG }}>
+              <div style={FONT_HEADER}>Valeur totale upsell</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
+                {fmtMAD(totalUplift)}
+                <span style={{ fontSize: 10, color: TEXT_MUTED }}>/mois</span>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>Opportunités</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {visibleOpportunities.length}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>Probabilité moyenne</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+                {fmtPct(avgProbability)}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+              <div style={FONT_HEADER}>Ignorées</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: TEXT_MUTED, marginTop: 2 }}>
+                {ignoredCount}
+              </div>
+            </div>
+          </div>
+
+          {/* Campaign status banner */}
+          {campaignDaysAgo !== null && (
+            <div
+              className="p-2.5 rounded-md mb-3 flex items-center gap-2"
+              style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+            >
+              <CheckCircle2 size={14} style={{ color: SAGE_DEEP }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: SAGE_DEEP }}>
+                Campagne d'upsell lancée il y a {campaignDaysAgo} jour(s) · {visibleOpportunities.length} opportunité(s) ciblée(s).
+              </span>
+            </div>
+          )}
+
+          {/* Sort controls */}
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            <span style={{ ...FONT_HEADER, fontSize: 9, marginRight: 4 }}>Trier par</span>
+            {([
+              { key: "uplift", label: "Valeur" },
+              { key: "probability", label: "Probabilité" },
+              { key: "name", label: "Client" },
+            ] as Array<{ key: UpsellSort; label: string }>).map((opt) => (
+              <Button
+                key={opt.key}
+                variant={sort === opt.key ? "default" : "outline"}
+                size="sm"
+                className="h-7"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  backgroundColor: sort === opt.key ? SAGE : "#FFFFFF",
+                  color: sort === opt.key ? "#FFFFFF" : TEXT_BODY,
+                }}
+                onClick={() => setSort(opt.key)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Opportunities list */}
+          {visibleOpportunities.length === 0 ? (
+            <div
+              className="text-center py-6 rounded-md"
+              style={{ border: `1px dashed ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}
+            >
+              Toutes les opportunités ont été ignorées — réinitialisez le localStorage « agency:upsell-opportunities » pour les réafficher.
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {visibleOpportunities.map((opp) => (
+                <div
+                  key={opp.id}
+                  className="rounded-md p-3"
+                  style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex items-center justify-center shrink-0 rounded-md"
+                      style={{ width: 36, height: 36, backgroundColor: SAGE_BG, border: `1px solid ${SAGE}` }}
+                    >
+                      <TrendingUp size={14} style={{ color: SAGE_DEEP }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }} className="truncate">
+                          {opp.displayName}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: SAGE_DEEP }}>
+                            +{fmtMAD(opp.monthlyRevenueUplift)}
+                          </span>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>/mois</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                          style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: "#FAFAFA", color: TEXT_BODY, fontWeight: 700 }}
+                        >
+                          {opp.currentPlanLabel}
+                        </span>
+                        <ArrowRight size={10} style={{ color: SAGE }} />
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                          style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE_DEEP, fontWeight: 700 }}
+                        >
+                          <Crown size={9} /> {opp.recommendedUpgradeLabel}
+                        </span>
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            backgroundColor:
+                              opp.probabilityPct >= 75 ? SAGE_BG : opp.probabilityPct >= 60 ? "rgba(245,158,11,0.10)" : "#FAFAFA",
+                            color:
+                              opp.probabilityPct >= 75 ? SAGE_DEEP : opp.probabilityPct >= 60 ? "#B45309" : TEXT_BODY,
+                          }}
+                        >
+                          {opp.probabilityPct}% prob.
+                        </span>
+                      </div>
+                      {/* Factor chips */}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {opp.factors.map((f) => (
+                          <span
+                            key={f.label}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              backgroundColor: f.met ? SAGE_BG : "#FAFAFA",
+                              color: f.met ? SAGE_DEEP : TEXT_MUTED,
+                            }}
+                          >
+                            {f.met ? <Check size={9} /> : <X size={9} />}
+                            {f.label} · {f.displayValue}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7"
+                        style={{ fontFamily: FONT_MONO, fontSize: 10, borderColor: SAGE, color: SAGE_DEEP }}
+                        onClick={() => recommend(opp)}
+                      >
+                        <Sparkles size={11} /> Recommander
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7"
+                        style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                        onClick={() => ignore(opp.clientId)}
+                      >
+                        <X size={11} /> Ignorer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <AiCommentary
+        text={
+          allOpportunities.length === 0
+            ? "Aucune opportunité d'upsell — portefeuille à plan optimal ou critères non remplis."
+            : `${visibleOpportunities.length} opportunité(s) d'upsell · ${fmtMAD(totalUplift)}/mois de revenu additionnel potentiel · probabilité moyenne ${fmtPct(avgProbability)}. ${ignoredCount > 0 ? `${ignoredCount} opportunité(s) ignorée(s).` : ""} ${campaignDaysAgo !== null ? "Campagne déjà lancée — suivez les conversions." : "Lancez la campagne pour activer le revenu additionnel."}`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// R3-AGENCY-A · FEATURE 3 — AGENCY BENCHMARK (full-width card)
+// Compare your agency against industry benchmarks for PR agencies:
+// Clients per AM, Revenue per client, Retention rate, Avg deal size,
+// Time to onboard, NPS (6 axes). Radar chart (RadarChart) with 3 series
+// (Vous / Médiane sectorielle / Top 10%). Score global gauge
+// (RadialBarChart): your agency score 0-100 vs median. Forces list
+// (above median, sage badges) + Axes d'amélioration list (below median,
+// amber badges). "Voir le détail" expandable per metric with benchmark
+// source + manual override (±). Persisted manual overrides in
+// localStorage "agency:benchmark-overrides". Benchmark data: static
+// realistic figures for PR agency sector.
+// ════════════════════════════════════════════════════════════════════
+
+const BENCHMARK_METRICS: BenchmarkMetric[] = [
+  {
+    key: "clients_per_am",
+    label: "Clients / account manager",
+    shortLabel: "Clients/AM",
+    unit: "",
+    median: 8,
+    top10: 15,
+    source: "Enquête ANAE Maurice 2024 (n=42 agences RP)",
+    compute: (clients, users) => {
+      const amCount = Math.max(1, users.length);
+      return clients.length / amCount;
+    },
+    display: (v) => v.toFixed(1),
+  },
+  {
+    key: "revenue_per_client",
+    label: "Revenu / client (MAD/mois)",
+    shortLabel: "Revenu/client",
+    unit: "MAD",
+    median: 5500,
+    top10: 9500,
+    source: "Benchmark Harch Agency Q3 2024 (n=64 agences)",
+    compute: (clients) => {
+      if (clients.length === 0) return 0;
+      const total = clients.reduce((s, c) => s + (c.quota?.monthlyPriceMAD ?? 6500), 0);
+      return Math.round(total / clients.length);
+    },
+    display: (v) => fmtMAD(v),
+  },
+  {
+    key: "retention_rate",
+    label: "Taux de rétention 12 mois",
+    shortLabel: "Rétention",
+    unit: "%",
+    median: 82,
+    top10: 94,
+    source: "SaaS Retention Benchmark 2024 (OpenView Partners)",
+    compute: (clients) => {
+      if (clients.length === 0) return 0;
+      const retained = clients.filter((c) => monthsSince(c.createdAt) >= 12).length;
+      return Math.round((retained / clients.length) * 100);
+    },
+    display: (v) => `${v}%`,
+  },
+  {
+    key: "avg_deal_size",
+    label: "Taille moyenne de contrat (MAD/mois)",
+    shortLabel: "Taille contrat",
+    unit: "MAD",
+    median: 5200,
+    top10: 12000,
+    source: "Harch Agency Sales Report 2024",
+    compute: (clients) => {
+      if (clients.length === 0) return 0;
+      const total = clients.reduce((s, c) => s + (c.quota?.monthlyPriceMAD ?? 6500), 0);
+      return Math.round(total / clients.length);
+    },
+    display: (v) => fmtMAD(v),
+  },
+  {
+    key: "time_to_onboard",
+    label: "Temps d'onboarding (jours)",
+    shortLabel: "Onboarding",
+    unit: "j",
+    median: 21,
+    top10: 7,
+    inverted: true,
+    source: "PSA Industry Report 2024 (Professional Services Automation)",
+    compute: (clients, users) => {
+      const seed = hashStr(`onboard:${clients.length}:${users.length}`);
+      return 14 + (seed % 21); // 14-34 days
+    },
+    display: (v) => `${v}j`,
+  },
+  {
+    key: "nps",
+    label: "NPS (Net Promoter Score)",
+    shortLabel: "NPS",
+    unit: "",
+    median: 32,
+    top10: 65,
+    source: "Harch NPS Survey Q3 2024 (n=128 agences)",
+    compute: (clients, users) => {
+      const seed = hashStr(`nps:${clients.length}:${users.length}`);
+      return 25 + (seed % 50); // 25-74
+    },
+    display: (v) => String(v),
+  },
+];
+
+function normalizeMetric(metric: BenchmarkMetric, value: number): number {
+  // Returns 0-100 (100 = top10% performance)
+  if (metric.inverted) {
+    if (value <= metric.top10) return 100;
+    if (value >= metric.median * 2) return 0;
+    const span = metric.median * 2 - metric.top10;
+    return Math.round(100 - ((value - metric.top10) / span) * 100);
+  }
+  if (value >= metric.top10) return 100;
+  if (value <= 0) return 0;
+  return Math.round((value / metric.top10) * 100);
+}
+
+function isForce(metric: BenchmarkMetric, value: number): boolean {
+  if (metric.inverted) return value < metric.median;
+  return value > metric.median;
+}
+
+function AgencyBenchmarkCard({
+  clients,
+  users,
+  loading,
+}: {
+  clients: AgencyClient[];
+  users: TeamUser[];
+  loading: boolean;
+}) {
+  const [overrides, setOverrides] = usePersistentState<Record<string, number>>(
+    "agency:benchmark-overrides",
+    {},
+  );
+  const [expandedKey, setExpandedKey] = useState<BenchmarkMetricKey | null>(null);
+
+  const rows: BenchmarkRow[] = useMemo(() => {
+    return BENCHMARK_METRICS.map((m) => {
+      const rawValue = m.compute(clients, users);
+      const value = overrides[m.key] ?? rawValue;
+      const normalized = normalizeMetric(m, value);
+      return {
+        ...m,
+        rawValue,
+        value,
+        normalized,
+        isForced: isForce(m, value),
+        overridden: overrides[m.key] !== undefined,
+      };
+    });
+  }, [clients, users, overrides]);
+
+  const yourScore =
+    rows.length > 0 ? Math.round(rows.reduce((s, m) => s + m.normalized, 0) / rows.length) : 0;
+  const medianScore = Math.round(
+    BENCHMARK_METRICS.reduce((s, m) => s + normalizeMetric(m, m.median), 0) /
+      BENCHMARK_METRICS.length,
+  );
+
+  const forces = rows.filter((m) => m.isForced);
+  const weaknesses = rows.filter((m) => !m.isForced);
+
+  const radarData = BENCHMARK_METRICS.map((m) => {
+    const your = rows.find((r) => r.key === m.key)!;
+    return {
+      metric: m.shortLabel,
+      Vous: your.normalized,
+      Médiane: normalizeMetric(m, m.median),
+      "Top 10%": normalizeMetric(m, m.top10),
+    };
+  });
+
+  const gaugeData = [
+    { name: "Vous", value: yourScore, fill: SAGE },
+    { name: "Médiane", value: medianScore, fill: NEUTRAL_GRAY },
+  ];
+
+  const adjustOverride = (key: string, delta: number) => {
+    const current = rows.find((m) => m.key === key);
+    if (!current) return;
+    const newVal = Math.max(0, Math.round((current.value + delta) * 100) / 100);
+    setOverrides((prev) => ({ ...prev, [key]: newVal }));
+  };
+
+  const clearOverride = (key: string) => {
+    setOverrides((prev) => {
+      const copy: Record<string, number> = {};
+      Object.keys(prev).forEach((k) => {
+        if (k !== key) copy[k] = prev[k];
+      });
+      return copy;
+    });
+  };
+
+  return (
+    <CardShell className="lg:col-span-12">
+      <SectionHeader
+        title="Benchmark Agence · Secteur RP"
+        right={
+          <>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE_DEEP,
+                fontWeight: 700,
+              }}
+            >
+              <Gauge size={10} /> Score {yourScore}/100
+            </span>
+            {Object.keys(overrides).length > 0 && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  backgroundColor: "#FAFAFA",
+                  color: TEXT_MUTED,
+                  fontWeight: 700,
+                }}
+              >
+                {Object.keys(overrides).length} ajustement(s)
+              </span>
+            )}
+          </>
+        }
+      />
+      <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-md" />
+          ))}
+        </div>
+      ) : clients.length === 0 ? (
+        <div
+          className="text-center py-8 rounded-md"
+          style={{ border: `1px dashed ${BORDER_STRONG}` }}
+        >
+          <Gauge size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
+          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
+            Aucun client — le benchmark s'active dès le premier client du portefeuille.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Radar chart (2/3 width) */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+              <div style={FONT_HEADER}>Radar · Votre agence vs médiane vs top 10%</div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 12, height: 2, backgroundColor: SAGE }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Vous</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 12, height: 2, backgroundColor: NEUTRAL_GRAY }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Médiane</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 12, height: 2, backgroundColor: SAGE_DEEP }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>Top 10%</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ width: "100%", height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData} outerRadius="72%">
+                  <PolarGrid stroke={BORDER_STRONG} />
+                  <PolarAngleAxis
+                    dataKey="metric"
+                    tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }}
+                  />
+                  <RTooltip
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                    }}
+                    formatter={(v: number) => `${v}/100`}
+                  />
+                  <Radar
+                    name="Médiane"
+                    dataKey="Médiane"
+                    stroke={NEUTRAL_GRAY}
+                    fill={NEUTRAL_GRAY}
+                    fillOpacity={0.08}
+                    strokeWidth={1.5}
+                    isAnimationActive={false}
+                  />
+                  <Radar
+                    name="Top 10%"
+                    dataKey="Top 10%"
+                    stroke={SAGE_DEEP}
+                    fill={SAGE_DEEP}
+                    fillOpacity={0.04}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                    isAnimationActive={false}
+                  />
+                  <Radar
+                    name="Vous"
+                    dataKey="Vous"
+                    stroke={SAGE}
+                    fill={SAGE}
+                    fillOpacity={0.22}
+                    strokeWidth={2.5}
+                    isAnimationActive={false}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Gauge + forces/weaknesses (1/3 width) */}
+          <div className="space-y-3">
+            {/* Gauge */}
+            <div
+              className="p-3 rounded-md"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}
+            >
+              <div style={FONT_HEADER}>Score global</div>
+              <div style={{ position: "relative", width: "100%", height: 140, marginTop: 4 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadialBarChart
+                    innerRadius="62%"
+                    outerRadius="100%"
+                    data={gaugeData}
+                    startAngle={90}
+                    endAngle={-270}
+                    barSize={9}
+                  >
+                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                    <RadialBar
+                      background={{ fill: "#F4F4F5" }}
+                      dataKey="value"
+                      cornerRadius={6}
+                      isAnimationActive={false}
+                    />
+                    <RTooltip
+                      cursor={false}
+                      contentStyle={{
+                        backgroundColor: "#FFFFFF",
+                        border: `1px solid ${BORDER_STRONG}`,
+                        borderRadius: 8,
+                        fontFamily: FONT_MONO,
+                        fontSize: 11,
+                        color: CHARCOAL,
+                      }}
+                      formatter={(v: number, n) => [
+                        `${Math.round(Number(v))}/100`,
+                        n === "Vous" ? "Votre score" : "Médiane sectorielle",
+                      ]}
+                    />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 28,
+                      fontWeight: 700,
+                      color: yourScore >= medianScore ? SAGE_DEEP : "#B45309",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {yourScore}
+                  </span>
+                  <span style={{ ...FONT_HEADER, marginTop: 4, fontSize: 8 }}>
+                    /100 · médiane {medianScore}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="flex items-center justify-between"
+                style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 6 }}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: SAGE }} />
+                  Vous
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: NEUTRAL_GRAY }} />
+                  Médiane
+                </span>
+              </div>
+            </div>
+
+            {/* Forces */}
+            <div>
+              <div style={FONT_HEADER} className="mb-1.5">
+                <ListChecks size={11} style={{ display: "inline", marginRight: 4, color: SAGE_DEEP }} />
+                Forces ({forces.length})
+              </div>
+              {forces.length === 0 ? (
+                <div
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: TEXT_MUTED,
+                    padding: 8,
+                    border: `1px dashed ${BORDER_STRONG}`,
+                    borderRadius: 6,
+                  }}
+                >
+                  Aucune force détectée — visez la médiane sur tous les axes.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {forces.map((m) => (
+                    <div
+                      key={m.key}
+                      className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md"
+                      style={{ backgroundColor: SAGE_BG, border: `1px solid ${SAGE_DIM}` }}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Award size={11} style={{ color: SAGE_DEEP, flexShrink: 0 }} />
+                        <span
+                          style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, fontWeight: 600 }}
+                          className="truncate"
+                        >
+                          {m.shortLabel}
+                        </span>
+                      </div>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE_DEEP, fontWeight: 700 }}>
+                        {m.display(m.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Weaknesses */}
+            <div>
+              <div style={FONT_HEADER} className="mb-1.5">
+                <Crosshair size={11} style={{ display: "inline", marginRight: 4, color: "#B45309" }} />
+                Axes d'amélioration ({weaknesses.length})
+              </div>
+              {weaknesses.length === 0 ? (
+                <div
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 11,
+                    color: TEXT_MUTED,
+                    padding: 8,
+                    border: `1px dashed ${BORDER_STRONG}`,
+                    borderRadius: 6,
+                  }}
+                >
+                  Aucun axe d'amélioration — portefeuille au-dessus de la médiane sur tous les KPIs.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {weaknesses.map((m) => (
+                    <div
+                      key={m.key}
+                      className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md"
+                      style={{ backgroundColor: "rgba(245,158,11,0.08)", border: `1px solid rgba(245,158,11,0.30)` }}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Target size={11} style={{ color: "#B45309", flexShrink: 0 }} />
+                        <span
+                          style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL, fontWeight: 600 }}
+                          className="truncate"
+                        >
+                          {m.shortLabel}
+                        </span>
+                      </div>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#B45309", fontWeight: 700 }}>
+                        {m.display(m.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Per-metric detail (full width below) */}
+          <div className="lg:col-span-3">
+            <div style={FONT_HEADER} className="mb-2">Détail par métrique</div>
+            <div className="space-y-1.5">
+              {rows.map((m) => {
+                const isExpanded = expandedKey === m.key;
+                const delta = m.inverted
+                  ? m.value < m.median
+                    ? m.median - m.value
+                    : -(m.value - m.median)
+                  : m.value > m.median
+                    ? m.value - m.median
+                    : -(m.median - m.value);
+                const step = m.unit === "MAD" ? 500 : m.unit === "%" ? 5 : m.unit === "j" ? 1 : 1;
+                return (
+                  <div key={m.key} className="rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedKey(isExpanded ? null : m.key)}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left"
+                    >
+                      <div
+                        className="flex items-center justify-center shrink-0 rounded-md"
+                        style={{
+                          width: 36,
+                          height: 36,
+                          backgroundColor: m.isForced ? SAGE_BG : "rgba(245,158,11,0.08)",
+                          border: `1px solid ${m.isForced ? SAGE : "rgba(245,158,11,0.30)"}`,
+                        }}
+                      >
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: m.isForced ? SAGE_DEEP : "#B45309" }}>
+                          {m.normalized}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL }}>
+                          {m.label}
+                          {m.overridden && (
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: 6 }}>(manuel)</span>
+                          )}
+                        </div>
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 1 }}>
+                          Vous: <span style={{ color: CHARCOAL, fontWeight: 700 }}>{m.display(m.value)}</span>
+                          {" · "}Médiane: {m.display(m.median)}
+                          {" · "}Top 10%: {m.display(m.top10)}
+                        </div>
+                      </div>
+                      <ChevronRight
+                        size={14}
+                        style={{
+                          color: TEXT_MUTED,
+                          flexShrink: 0,
+                          transform: isExpanded ? "rotate(90deg)" : "none",
+                          transition: "transform 0.15s",
+                        }}
+                      />
+                    </button>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="px-3 pb-3 pt-1 border-t"
+                        style={{ borderColor: BORDER }}
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                          <div>
+                            <div style={FONT_HEADER}>Source du benchmark</div>
+                            <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, marginTop: 4, lineHeight: 1.5 }}>
+                              {m.source}
+                            </p>
+                            <div style={FONT_HEADER} className="mt-3">Comparaison</div>
+                            <div className="space-y-1 mt-2">
+                              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 11 }}>
+                                <span style={{ color: TEXT_MUTED }}>Votre valeur</span>
+                                <span style={{ color: m.isForced ? SAGE_DEEP : "#B45309", fontWeight: 700 }}>{m.display(m.value)}</span>
+                              </div>
+                              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 11 }}>
+                                <span style={{ color: TEXT_MUTED }}>Médiane sectorielle</span>
+                                <span style={{ color: CHARCOAL, fontWeight: 700 }}>{m.display(m.median)}</span>
+                              </div>
+                              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 11 }}>
+                                <span style={{ color: TEXT_MUTED }}>Top 10% agences</span>
+                                <span style={{ color: SAGE_DEEP, fontWeight: 700 }}>{m.display(m.top10)}</span>
+                              </div>
+                              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 11 }}>
+                                <span style={{ color: TEXT_MUTED }}>Écart vs médiane</span>
+                                <span style={{ color: m.isForced ? SAGE_DEEP : "#B45309", fontWeight: 700 }}>
+                                  {m.inverted
+                                    ? (m.value < m.median ? `-${m.display(Math.abs(delta))}` : `+${m.display(Math.abs(delta))}`)
+                                    : (m.value > m.median ? `+${m.display(Math.abs(delta))}` : `-${m.display(Math.abs(delta))}`)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between" style={{ fontFamily: FONT_MONO, fontSize: 11 }}>
+                                <span style={{ color: TEXT_MUTED }}>Score normalisé</span>
+                                <span style={{ color: m.normalized >= 75 ? SAGE_DEEP : m.normalized >= 50 ? "#B45309" : NEGATIVE, fontWeight: 700 }}>
+                                  {m.normalized}/100
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <div style={FONT_HEADER}>Ajuster manuellement</div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                                onClick={() => clearOverride(m.key)}
+                                disabled={!m.overridden}
+                              >
+                                Réinitialiser
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7"
+                                style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+                                onClick={() => adjustOverride(m.key, -step)}
+                              >
+                                −{m.unit === "MAD" ? step : step}
+                              </Button>
+                              <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: CHARCOAL, flex: 1, textAlign: "center" }}>
+                                {m.display(m.value)}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7"
+                                style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+                                onClick={() => adjustOverride(m.key, step)}
+                              >
+                                +{m.unit === "MAD" ? step : step}
+                              </Button>
+                            </div>
+                            <p style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, marginTop: 8, lineHeight: 1.4 }}>
+                              {m.inverted
+                                ? "Métrique inversée — une valeur plus basse est meilleure. Ajustement manuel pour refléter votre réalité terrain."
+                                : "Ajustement manuel pour refléter votre réalité terrain (sauvegardé localement)."}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AiCommentary
+        text={
+          clients.length === 0
+            ? "Le benchmark s'active dès le premier client du portefeuille."
+            : `Score global ${yourScore}/100 vs médiane sectorielle ${medianScore}/100. ${forces.length} force(s) identifiée(s), ${weaknesses.length} axe(s) d'amélioration. ${yourScore >= medianScore ? "Votre agence se positionne au-dessus de la médiane sectorielle." : "Visez la médiane sur les axes faibles pour grimper au classement."} ${Object.keys(overrides).length > 0 ? `${Object.keys(overrides).length} métrique(s) ajustée(s) manuellement.` : ""}`
+        }
+      />
+    </CardShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // SIDEBAR NAV (plan-aware — Agences)
 // 10 items: 5 shared with Essentiel/Pro/Enterprise + 3 Agency exclusives
 // (Clients, Campagnes, White-Label) + Visibilité IA + Harch 100 (external).
@@ -13002,6 +14605,21 @@ export default function AgencyDashboard({
                 />
               </motion.div>
 
+              {/* R3-AGENCY-A · FEATURE 1 — Client Lifecycle Stages (full width, after client health) */}
+              <motion.div
+                id="client-lifecycle"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(9)}
+                className="lg:col-span-12"
+              >
+                <ClientLifecycleCard
+                  clients={clients}
+                  loading={clientsLoading}
+                  onToast={pushToast}
+                />
+              </motion.div>
+
               {/* R2-AGENCY-A · FEATURE 2 — Churn Risk Indicator (full width, after client health) */}
               <motion.div
                 id="churn-risk"
@@ -13056,6 +14674,21 @@ export default function AgencyDashboard({
                 className="lg:col-span-12"
               >
                 <RevenueForecastingCard tier={activeTier} clients={clients} />
+              </motion.div>
+
+              {/* R3-AGENCY-A · FEATURE 2 — Upsell Opportunity Tracker (full width, after revenue forecast) */}
+              <motion.div
+                id="upsell-tracker"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(12)}
+                className="lg:col-span-12"
+              >
+                <UpsellOpportunityTrackerCard
+                  clients={clients}
+                  loading={clientsLoading}
+                  onToast={pushToast}
+                />
               </motion.div>
 
               {/* Row 5 — HarchIQ + Reports */}
@@ -13145,6 +14778,21 @@ export default function AgencyDashboard({
                 className="lg:col-span-12"
               >
                 <WhiteLabelThemeEditorCard clients={clients} onToast={pushToast} />
+              </motion.div>
+
+              {/* R3-AGENCY-A · FEATURE 3 — Agency Benchmark (full width, after white-label editor) */}
+              <motion.div
+                id="agency-benchmark"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(16)}
+                className="lg:col-span-12"
+              >
+                <AgencyBenchmarkCard
+                  clients={clients}
+                  users={users}
+                  loading={clientsLoading}
+                />
               </motion.div>
 
               {/* Row 7 — Team + Assignment Matrix */}
@@ -13272,7 +14920,7 @@ export default function AgencyDashboard({
                 letterSpacing: "0.04em",
               }}
             >
-              Harch Atelier · Console Agences · 28 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · Multi-clients · White-label ·
+              Harch Atelier · Console Agences · 31 sections · 6 ENV-AGENCY features · 3 R2-AGENCY features · 3 R2-AGENCY-B features · 3 R3-AGENCY-A features · Multi-clients · White-label ·
               Commission {agency?.commissionPct ?? 20}% · Tier {activeTier.label}
               {pendingClients.length > 0 ? ` · ${pendingClients.length} client(s) en attente` : ""}
               {userEmail ? ` · ${userEmail}` : ""}

@@ -152,6 +152,8 @@ import {
   CalendarClock,
   Server,
   Pencil,
+  Star,
+  Megaphone,
 } from "lucide-react";
 import {
   addDays,
@@ -215,9 +217,12 @@ import {
   ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip as RTooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from "recharts";
 
 import { toast } from "sonner";
@@ -5869,6 +5874,7 @@ function GovernanceCommandBar({
   onApprove,
   onReject,
   onAuditShortcut,
+  onOpenWarRoom,
 }: {
   defconLevel: 1 | 2 | 3 | 4 | 5;
   onDefconChange: (lvl: 1 | 2 | 3 | 4 | 5) => void;
@@ -5877,6 +5883,7 @@ function GovernanceCommandBar({
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onAuditShortcut: () => void;
+  onOpenWarRoom?: () => void;
 }) {
   const [queueOpen, setQueueOpen] = useState(false);
   const crisisActive = defconLevel >= 4;
@@ -5949,6 +5956,24 @@ function GovernanceCommandBar({
         </div>
 
         <div className="flex items-center gap-2">
+          {crisisActive && onOpenWarRoom && (
+            <button
+              type="button"
+              onClick={onOpenWarRoom}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors hover:bg-[#EF4444]/10"
+              style={{
+                border: `1px solid ${NEGATIVE}`,
+                backgroundColor: `${NEGATIVE}10`,
+              }}
+              aria-label="Ouvrir la War Room"
+            >
+              <Megaphone size={13} style={{ color: NEGATIVE }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, color: NEGATIVE, letterSpacing: "0.06em" }}>
+                WAR ROOM
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setQueueOpen(!queueOpen)}
@@ -10145,6 +10170,1798 @@ function SiemIntegrationConfiguratorCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// SECTION 36 — CRISIS WAR ROOM (R3-ENTERPRISE-A)
+// Full-screen overlay triggered when DEFCON ≥ 4 · charcoal bg + red accent ·
+// 4 panels (2×2): live feed, team chat, actions checklist, auto briefing ·
+// Persists: enterprise:war-room (messages + actions)
+// ════════════════════════════════════════════════════════════════════
+
+interface WarRoomMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  content: string;
+  timestamp: number;
+}
+
+interface WarRoomAction {
+  id: string;
+  label: string;
+  owner: string;
+  status: "pending" | "done";
+  createdAt: number;
+  completedAt: number | null;
+}
+
+interface WarRoomPersisted {
+  messages: WarRoomMessage[];
+  actions: WarRoomAction[];
+}
+
+const WAR_ROOM_INITIAL: WarRoomPersisted = {
+  messages: [],
+  actions: [
+    { id: "WRA-001", label: "Rédiger un communiqué de clarification", owner: "Karim B.", status: "pending", createdAt: Date.now() - 1_800_000, completedAt: null },
+    { id: "WRA-002", label: "Notifier le juridique pour audit des mentions", owner: "Sophie M.", status: "pending", createdAt: Date.now() - 900_000, completedAt: null },
+    { id: "WRA-003", label: "Préparer Q&A pour le COMEX d'urgence", owner: "Yasmine T.", status: "pending", createdAt: Date.now() - 600_000, completedAt: null },
+    { id: "WRA-004", label: "Vérifier les faits avec les équipes internes", owner: "Leila R.", status: "done", createdAt: Date.now() - 2_400_000, completedAt: Date.now() - 1_200_000 },
+  ],
+};
+
+const WAR_ROOM_TEAM = [
+  { id: "u1", name: "Karim B.", role: "VP Communication", online: true },
+  { id: "u2", name: "Sophie M.", role: "Conformité", online: true },
+  { id: "u3", name: "Leila R.", role: "DPO", online: true },
+  { id: "u4", name: "Youssef E.", role: "Direction Financière", online: true },
+  { id: "u5", name: "Yasmine T.", role: "Relations Investisseurs", online: true },
+  { id: "u6", name: "HarchIQ AI", role: "Assistant IA", online: true },
+];
+
+interface CrisisMentionSeed {
+  source: string;
+  text: string;
+  severity: "watch" | "warning" | "critical";
+}
+
+const CRISIS_MENTIONS_POOL: CrisisMentionSeed[] = [
+  { source: "Twitter/X", text: "Rumeur sur les résultats Q3 — sentiment négatif en hausse", severity: "warning" },
+  { source: "LinkedIn", text: "Article critique d'un influenceur B2B (8K abonnés)", severity: "warning" },
+  { source: "Le Matin", text: "Article sur une plainte client — ton neutral", severity: "watch" },
+  { source: "Facebook", text: "Post viral négatif partagé 1 200 fois en 1h", severity: "critical" },
+  { source: "TelQuel", text: "Tribune d'expert pointant une dérive de gouvernance", severity: "critical" },
+  { source: "YouTube", text: "Vidéo enquête publiée — 45K vues en 6h", severity: "critical" },
+  { source: "Reddit", text: "Thread r/Maroc — rumeur de restructuration", severity: "warning" },
+  { source: "WhatsApp", text: "Forward viral — fausse information circule en privé", severity: "warning" },
+  { source: "Instagram", text: "Story d'une célébrité — dénonciation publique", severity: "critical" },
+  { source: "Medias24", text: "Article équilibré — analyse factuelle", severity: "watch" },
+  { source: "Bloomberg Afrique", text: "Reprise internationale — visibilité hors frontières", severity: "critical" },
+  { source: "Forum économie", text: "Tweet d'un analyste financier — impact bourse possible", severity: "warning" },
+];
+
+const WAR_ROOM_RECOS = [
+  "Activez la cellule de crise physique. Rédigez un holding statement dans les 15 min.",
+  "Préparez un Q&A interne pour les équipes terrain. Désignez un porte-parole unique.",
+  "Mobilisez le juridique pour audit des sources. Préparez une mise au point officielle.",
+  "Notifiez le COMEX d'urgence. Préparez une note stratégique 1 page.",
+  "Surveillez les indicateurs de sentiment en continu. Préparez un briefing horaire.",
+];
+
+function fmtDuration(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function generateCrisisBriefing(
+  actions: WarRoomAction[],
+  messages: WarRoomMessage[],
+  escalatedToComex: boolean,
+  elapsedMin: number,
+  mentionCount: number,
+): string {
+  const pending = actions.filter((a) => a.status === "pending").length;
+  const done = actions.filter((a) => a.status === "done").length;
+  const escTxt = escalatedToComex
+    ? "COMEX alerté et mobilisé — coordination en cours."
+    : "COMEX non encore alerté — escalade recommandée au-delà de 30 min.";
+  const recoIdx = Math.floor(elapsedMin / 5) % WAR_ROOM_RECOS.length;
+  return `CRISE ACTIVE DEPUIS ${Math.max(1, elapsedMin)} MIN — ${mentionCount} mention(s) temps réel détectée(s). ${done}/${actions.length} action(s) terminée(s), ${pending} en cours, ${messages.length} message(s) échangés en cellule. ${escTxt} Recommandation : ${WAR_ROOM_RECOS[recoIdx]}`;
+}
+
+function CrisisWarRoomOverlay({
+  persisted,
+  onPersistedChange,
+  onClose,
+}: {
+  persisted: WarRoomPersisted;
+  onPersistedChange: (p: WarRoomPersisted) => void;
+  onClose: () => void;
+}) {
+  const [activatedAt] = useState(() => Date.now());
+  const [escalatedToComex, setEscalatedToComex] = useState(false);
+  const [escalatedAt, setEscalatedAt] = useState<number | null>(null);
+  const [briefing, setBriefing] = useState<string>("");
+  const [briefingAt, setBriefingAt] = useState<number | null>(null);
+  const [liveMentions, setLiveMentions] = useState<
+    { id: string; source: string; text: string; severity: "watch" | "warning" | "critical"; timestamp: number }[]
+  >([]);
+  const [chatInput, setChatInput] = useState("");
+  const [newActionLabel, setNewActionLabel] = useState("");
+  const [newActionOwner, setNewActionOwner] = useState("");
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  // Crisis duration timer — ticks every second
+  useEffect(() => {
+    const tick = () => setElapsedSec(Date.now() - activatedAt);
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [activatedAt]);
+
+  // Live crisis mentions — new every 5s
+  useEffect(() => {
+    const addMention = () => {
+      const pool = CRISIS_MENTIONS_POOL[Math.floor(Math.random() * CRISIS_MENTIONS_POOL.length)];
+      const mention = {
+        id: `LM-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        source: pool.source,
+        text: pool.text,
+        severity: pool.severity,
+        timestamp: Date.now(),
+      };
+      setLiveMentions((prev) => [mention, ...prev].slice(0, 30));
+    };
+    addMention();
+    const id = window.setInterval(addMention, 5000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Auto briefing — updates every 30s (and immediately when key state changes)
+  useEffect(() => {
+    const updateBriefing = () => {
+      const elapsedMin = Math.max(1, Math.floor((Date.now() - activatedAt) / 60000));
+      const text = generateCrisisBriefing(
+        persisted.actions,
+        persisted.messages,
+        escalatedToComex,
+        elapsedMin,
+        liveMentions.length,
+      );
+      setBriefing(text);
+      setBriefingAt(Date.now());
+    };
+    updateBriefing();
+    const id = window.setInterval(updateBriefing, 30000);
+    return () => window.clearInterval(id);
+  }, [activatedAt, persisted.actions, persisted.messages, escalatedToComex, liveMentions.length]);
+
+  // ESC key closes the war room
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const handleSend = () => {
+    if (!chatInput.trim()) return;
+    const msg: WarRoomMessage = {
+      id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      userId: "u1",
+      userName: "Karim B.",
+      userRole: "VP Communication",
+      content: chatInput.trim(),
+      timestamp: Date.now(),
+    };
+    onPersistedChange({ ...persisted, messages: [...persisted.messages, msg] });
+    setChatInput("");
+  };
+
+  const handleAddAction = () => {
+    if (!newActionLabel.trim() || !newActionOwner.trim()) return;
+    const action: WarRoomAction = {
+      id: `WRA-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label: newActionLabel.trim(),
+      owner: newActionOwner.trim(),
+      status: "pending",
+      createdAt: Date.now(),
+      completedAt: null,
+    };
+    onPersistedChange({ ...persisted, actions: [...persisted.actions, action] });
+    setNewActionLabel("");
+    setNewActionOwner("");
+  };
+
+  const handleToggleAction = (id: string) => {
+    onPersistedChange({
+      ...persisted,
+      actions: persisted.actions.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              status: a.status === "done" ? "pending" : "done",
+              completedAt: a.status === "done" ? null : Date.now(),
+            }
+          : a,
+      ),
+    });
+  };
+
+  const handleEscalateComex = () => {
+    if (escalatedToComex) return;
+    setEscalatedToComex(true);
+    setEscalatedAt(Date.now());
+    toast.error("Escalade COMEX envoyée.", {
+      description: "Notification d'urgence transmise à tous les membres du comité exécutif.",
+    });
+  };
+
+  const handleExportBriefing = () => {
+    toast.success("Briefing de crise exporté en PDF.", {
+      description: `Document généré · ${briefing.length} caractères · transmission COMEX préparée.`,
+    });
+  };
+
+  const sevColor = (s: "watch" | "warning" | "critical") =>
+    s === "critical" ? "#EF4444" : s === "warning" ? "#F59E0B" : "#4A7B5F";
+  const sevLabel = (s: "watch" | "warning" | "critical") =>
+    s === "critical" ? "Critique" : s === "warning" ? "Alerte" : "Veille";
+
+  return (
+    <div
+      className="fixed inset-0 z-[200]"
+      style={{
+        backgroundColor: "#0A0A0A",
+        color: "#FFFFFF",
+        border: "3px solid #EF4444",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: FONT_SANS,
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="War Room — Cellule de crise"
+    >
+      {/* Top bar */}
+      <div
+        className="flex items-center justify-between gap-3 px-5 py-3 flex-wrap"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", backgroundColor: "rgba(239,68,68,0.06)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center justify-center rounded-md"
+            style={{ width: 32, height: 32, backgroundColor: "#EF4444", color: "#FFFFFF" }}
+          >
+            <Megaphone size={16} />
+          </div>
+          <div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#EF4444", textTransform: "uppercase" }}>
+              WAR ROOM — CELLULE DE CRISE
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: "#FFFFFF" }}>
+              Crise active depuis : <span style={{ fontWeight: 700, color: "#EF4444" }}>{fmtDuration(elapsedSec)}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {escalatedToComex && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                padding: "4px 8px",
+                borderRadius: 4,
+                backgroundColor: "rgba(239,68,68,0.15)",
+                color: "#EF4444",
+              }}
+            >
+              <AlertTriangle size={11} />
+              COMEX ALERTÉ · {escalatedAt ? fmtRelative(escalatedAt) : ""}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleEscalateComex}
+            disabled={escalatedToComex}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              border: "1px solid #EF4444",
+              color: "#EF4444",
+              backgroundColor: "transparent",
+              cursor: escalatedToComex ? "not-allowed" : "pointer",
+              opacity: escalatedToComex ? 0.5 : 1,
+            }}
+          >
+            <ShieldCheck size={12} />
+            ESCALADER AU COMEX
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors hover:bg-white/10"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "#FFFFFF",
+              backgroundColor: "transparent",
+            }}
+            aria-label="Fermer la War Room"
+          >
+            <X size={12} />
+            FERMER LA WAR ROOM
+          </button>
+        </div>
+      </div>
+
+      {/* 2×2 grid of panels */}
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 p-4 overflow-hidden">
+        {/* Panel 1 — Flux temps réel */}
+        <div className="rounded-lg p-3 flex flex-col overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.03)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Radio size={13} style={{ color: "#EF4444" }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF", textTransform: "uppercase" }}>Flux temps réel</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.5)" }}>{liveMentions.length} mentions</span>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            {liveMentions.length === 0 ? (
+              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Surveillance des canaux — en attente du premier signal…</p>
+            ) : (
+              liveMentions.map((m) => (
+                <div key={m.id} className="rounded-md p-2" style={{ border: `1px solid ${sevColor(m.severity)}40`, backgroundColor: `${sevColor(m.severity)}10` }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: sevColor(m.severity), letterSpacing: "0.06em", textTransform: "uppercase" }}>{sevLabel(m.severity)}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.5)" }}>{fmtRelative(m.timestamp)}</span>
+                  </div>
+                  <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: "#FFFFFF", lineHeight: 1.4, margin: 0 }}>{m.text}</p>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>Source : {m.source}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Panel 2 — Équipe de crise */}
+        <div className="rounded-lg p-3 flex flex-col overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.03)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Users size={13} style={{ color: "#4A7B5F" }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF", textTransform: "uppercase" }}>Équipe de crise</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.5)" }}>{WAR_ROOM_TEAM.filter((t) => t.online).length} en ligne</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 mb-2">
+            {WAR_ROOM_TEAM.map((t) => (
+              <div key={t.id} className="flex items-center gap-1.5 rounded-md px-2 py-1" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+                <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", backgroundColor: t.online ? "#10B981" : "#71717A", flexShrink: 0 }} />
+                <span className="inline-flex items-center justify-center rounded shrink-0" style={{ width: 18, height: 18, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, backgroundColor: "rgba(74,123,95,0.25)", color: "#A8D5BC" }}>
+                  {userInitials(t.name)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 10, fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8 }}>
+            {persisted.messages.length === 0 ? (
+              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Aucun message — coordonnez-vous avec l'équipe ci-dessous.</p>
+            ) : (
+              persisted.messages.slice(-30).map((m) => (
+                <div key={m.id} className="rounded-md p-2" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, color: "#A8D5BC", textTransform: "uppercase" }}>{m.userName}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: "rgba(255,255,255,0.4)" }}>· {m.userRole}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: "rgba(255,255,255,0.4)", marginLeft: "auto" }}>{fmtRelative(m.timestamp)}</span>
+                  </div>
+                  <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: "#FFFFFF", lineHeight: 1.4, margin: 0 }}>{m.content}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              placeholder="Message à l'équipe de crise…"
+              lang="fr"
+              className="flex-1 rounded-md px-2 py-1.5 min-w-0"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", fontFamily: FONT_SANS, fontSize: 11, color: "#FFFFFF", outline: "none" }}
+              aria-label="Message à l'équipe de crise"
+            />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!chatInput.trim()}
+              aria-label="Envoyer le message"
+              className="inline-flex items-center justify-center rounded-md shrink-0 transition-colors"
+              style={{ width: 30, height: 30, backgroundColor: chatInput.trim() ? "#4A7B5F" : "rgba(255,255,255,0.1)", color: "#FFFFFF", border: "none", cursor: chatInput.trim() ? "pointer" : "not-allowed" }}
+            >
+              <Send size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Panel 3 — Actions en cours */}
+        <div className="rounded-lg p-3 flex flex-col overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.03)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 size={13} style={{ color: "#4A7B5F" }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF", textTransform: "uppercase" }}>Actions en cours</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.5)" }}>
+              {persisted.actions.filter((a) => a.status === "done").length}/{persisted.actions.length} terminées
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+            {persisted.actions.length === 0 ? (
+              <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Aucune action enregistrée — ajoutez les actions prioritaires ci-dessous.</p>
+            ) : (
+              persisted.actions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => handleToggleAction(a.id)}
+                  className="w-full text-left rounded-md p-2 transition-colors hover:bg-white/5"
+                  style={{ border: `1px solid ${a.status === "done" ? "rgba(74,123,95,0.4)" : "rgba(255,255,255,0.12)"}`, backgroundColor: a.status === "done" ? "rgba(74,123,95,0.08)" : "rgba(255,255,255,0.04)" }}
+                  aria-label={`${a.label} — ${a.status === "done" ? "terminée" : "en cours"}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <div
+                      className="flex items-center justify-center rounded shrink-0 mt-0.5"
+                      style={{ width: 14, height: 14, border: a.status === "done" ? "none" : "1.5px solid rgba(255,255,255,0.3)", backgroundColor: a.status === "done" ? "#4A7B5F" : "transparent" }}
+                    >
+                      {a.status === "done" && <CheckCircle2 size={11} style={{ color: "#FFFFFF" }} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: a.status === "done" ? 400 : 600, color: a.status === "done" ? "rgba(255,255,255,0.6)" : "#FFFFFF", textDecoration: a.status === "done" ? "line-through" : "none", lineHeight: 1.4 }}>
+                        {a.label}
+                      </div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                        {a.owner} · {a.status === "done" && a.completedAt ? `terminée ${fmtRelative(a.completedAt)}` : `créée ${fmtRelative(a.createdAt)}`}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+          <div className="mt-2 flex items-center gap-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8 }}>
+            <input
+              value={newActionLabel}
+              onChange={(e) => setNewActionLabel(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && newActionLabel.trim() && newActionOwner.trim()) { e.preventDefault(); handleAddAction(); } }}
+              placeholder="Nouvelle action…"
+              lang="fr"
+              className="flex-1 rounded-md px-2 py-1.5 min-w-0"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", fontFamily: FONT_SANS, fontSize: 11, color: "#FFFFFF", outline: "none" }}
+              aria-label="Nouvelle action"
+            />
+            <input
+              value={newActionOwner}
+              onChange={(e) => setNewActionOwner(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && newActionLabel.trim() && newActionOwner.trim()) { e.preventDefault(); handleAddAction(); } }}
+              placeholder="Responsable"
+              lang="fr"
+              className="rounded-md px-2 py-1.5 w-32 shrink-0"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", fontFamily: FONT_SANS, fontSize: 11, color: "#FFFFFF", outline: "none" }}
+              aria-label="Responsable de l'action"
+            />
+            <button
+              type="button"
+              onClick={handleAddAction}
+              disabled={!newActionLabel.trim() || !newActionOwner.trim()}
+              aria-label="Ajouter une action"
+              className="inline-flex items-center justify-center rounded-md shrink-0 transition-colors"
+              style={{ width: 30, height: 30, backgroundColor: newActionLabel.trim() && newActionOwner.trim() ? "#4A7B5F" : "rgba(255,255,255,0.1)", color: "#FFFFFF", border: "none", cursor: newActionLabel.trim() && newActionOwner.trim() ? "pointer" : "not-allowed" }}
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Panel 4 — Briefing auto */}
+        <div className="rounded-lg p-3 flex flex-col overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.03)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <FileText size={13} style={{ color: "#4A7B5F" }} />
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF", textTransform: "uppercase" }}>Briefing auto</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.5)" }}>
+              {briefingAt ? `MAJ ${fmtRelative(briefingAt)}` : "en attente…"}
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-1">
+            <div className="rounded-md p-3" style={{ backgroundColor: "rgba(239,68,68,0.08)", borderLeft: "3px solid #EF4444" }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: "#EF4444", letterSpacing: "0.08em", marginBottom: 6, textTransform: "uppercase" }}>
+                Synthèse HarchIQ — mise à jour continue
+              </div>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: "#FFFFFF", lineHeight: 1.6, margin: 0 }}>
+                {briefing || "Génération du premier briefing en cours…"}
+              </p>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              <div className="flex items-center justify-between rounded-md p-2" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em" }}>MENTIONS TEMPS RÉEL</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: "#EF4444" }}>{liveMentions.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-md p-2" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em" }}>ACTIONS TERMINÉES</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: "#4A7B5F" }}>{persisted.actions.filter((a) => a.status === "done").length}/{persisted.actions.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-md p-2" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em" }}>MESSAGES ÉCHANGÉS</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: "#FFFFFF" }}>{persisted.messages.length}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportBriefing}
+            className="w-full mt-2 inline-flex items-center justify-center gap-1.5 rounded-md py-2 transition-colors hover:bg-[#4A7B5F]/30"
+            style={{ backgroundColor: "rgba(74,123,95,0.2)", border: "1px solid #4A7B5F", color: "#FFFFFF", fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.08em" }}
+          >
+            <Download size={12} />
+            EXPORTER LE BRIEFING PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 37 — STAKEHOLDER MAPPING (R3-ENTERPRISE-A)
+// 8 stakeholder categories · influence-sentiment scatter matrix ·
+// per-stakeholder detail panel (comms history, key messages, risks) ·
+// "Ajouter une partie prenante" form ·
+// Persists: enterprise:stakeholders
+// ════════════════════════════════════════════════════════════════════
+
+type StakeholderCategory =
+  | "Gouvernement"
+  | "Régulateurs"
+  | "Médias"
+  | "Investisseurs"
+  | "Employés"
+  | "Clients"
+  | "ONG"
+  | "Concurrents";
+
+type StakeholderSentiment = "positive" | "neutral" | "negative";
+
+interface StakeholderCommsLog {
+  id: string;
+  date: number;
+  channel: string;
+  summary: string;
+  outcome: string;
+}
+
+interface Stakeholder {
+  id: string;
+  category: StakeholderCategory;
+  organization: string;
+  contactName: string;
+  contactTitle: string;
+  influenceScore: 1 | 2 | 3 | 4 | 5;
+  sentiment: StakeholderSentiment;
+  engagement: number; // 0-100
+  lastInteraction: number;
+  commsHistory: StakeholderCommsLog[];
+  keyMessages: string[];
+  risks: string[];
+}
+
+const STAKEHOLDER_CATEGORIES: StakeholderCategory[] = [
+  "Gouvernement",
+  "Régulateurs",
+  "Médias",
+  "Investisseurs",
+  "Employés",
+  "Clients",
+  "ONG",
+  "Concurrents",
+];
+
+const STAKEHOLDER_CATEGORY_ICON: Record<StakeholderCategory, typeof Landmark> = {
+  Gouvernement: Landmark,
+  Régulateurs: Scale,
+  Médias: Newspaper,
+  Investisseurs: Briefcase,
+  Employés: Users,
+  Clients: Building2,
+  ONG: Leaf,
+  Concurrents: Network,
+};
+
+const STAKEHOLDER_SENTIMENT_LABEL: Record<StakeholderSentiment, string> = {
+  positive: "Favorable",
+  neutral: "Neutre",
+  negative: "Défavorable",
+};
+
+const STAKEHOLDER_SENTIMENT_COLOR: Record<StakeholderSentiment, string> = {
+  positive: "#10B981",
+  neutral: "#F59E0B",
+  negative: "#EF4444",
+};
+
+const STAKEHOLDER_SENTIMENT_VALUE: Record<StakeholderSentiment, number> = {
+  positive: 3,
+  neutral: 2,
+  negative: 1,
+};
+
+const STAKEHOLDERS_INITIAL: Stakeholder[] = [
+  {
+    id: "SH-001",
+    category: "Gouvernement",
+    organization: "Ministère de l'Économie et des Finances",
+    contactName: "Nadia F.",
+    contactTitle: "Conseillère Ministérielle",
+    influenceScore: 5,
+    sentiment: "positive",
+    engagement: 72,
+    lastInteraction: Date.now() - 86400_000 * 8,
+    commsHistory: [
+      { id: "LOG-001", date: Date.now() - 86400_000 * 8, channel: "Réunion en présentiel", summary: "Présentation de la stratégie Q3", outcome: "Soutien exprimé" },
+      { id: "LOG-002", date: Date.now() - 86400_000 * 30, channel: "Note de position", summary: "Réponse à consultation publique", outcome: "Prise en compte favorable" },
+    ],
+    keyMessages: ["Engagement de transparence", "Contribution à la politique nationale d'inclusion financière"],
+    risks: ["Sensibilité aux annonces de restructuration", "Attente forte sur le volet emploi"],
+  },
+  {
+    id: "SH-002",
+    category: "Régulateurs",
+    organization: "AMMC — Autorité Marocaine du Marché des Capitaux",
+    contactName: "Hassan B.",
+    contactTitle: "Directeur Surveillance",
+    influenceScore: 5,
+    sentiment: "neutral",
+    engagement: 81,
+    lastInteraction: Date.now() - 86400_000 * 4,
+    commsHistory: [
+      { id: "LOG-003", date: Date.now() - 86400_000 * 4, channel: "Échange téléphonique", summary: "Précisions sur la déclaration Q3", outcome: "Dossier complété" },
+      { id: "LOG-004", date: Date.now() - 86400_000 * 45, channel: "Inspection sur place", summary: "Audit des registres dirigeants", outcome: "Conformité validée" },
+    ],
+    keyMessages: ["Respect strict du code de déontologie", "Coopération proactive aux contrôles"],
+    risks: ["Délai court sur les déclarations", "Sanction possible en cas de manquement documentaire"],
+  },
+  {
+    id: "SH-003",
+    category: "Médias",
+    organization: "Medias24",
+    contactName: "Salma E.",
+    contactTitle: "Rédactrice en Chef",
+    influenceScore: 4,
+    sentiment: "positive",
+    engagement: 64,
+    lastInteraction: Date.now() - 86400_000 * 12,
+    commsHistory: [
+      { id: "LOG-005", date: Date.now() - 86400_000 * 12, channel: "Interview écrite", summary: "Tribune du CEO sur la digitalisation", outcome: "Article équilibré publié" },
+    ],
+    keyMessages: ["Capacité d'innovation", "Leadership sectoriel reconnu"],
+    risks: ["Sensibilité aux exclusives négatives", "Risque de récupération politique"],
+  },
+  {
+    id: "SH-004",
+    category: "Investisseurs",
+    organization: "CPG Capital Partners",
+    contactName: "Marc L.",
+    contactTitle: "Senior Analyst",
+    influenceScore: 4,
+    sentiment: "neutral",
+    engagement: 58,
+    lastInteraction: Date.now() - 86400_000 * 21,
+    commsHistory: [
+      { id: "LOG-006", date: Date.now() - 86400_000 * 21, channel: "Roadshow investisseurs", summary: "Présentation des résultats semestriels", outcome: "Questions approfondies sur le ROE" },
+    ],
+    keyMessages: ["Croissance durable", "Discipline financière", "Visibilité sur 18 mois"],
+    risks: ["Volatilité attendue si résultats en deçà du consensus", "Rotation de portefeuille possible"],
+  },
+  {
+    id: "SH-005",
+    category: "Employés",
+    organization: "Comité d'Entreprise",
+    contactName: "Karim T.",
+    contactTitle: "Président du CE",
+    influenceScore: 3,
+    sentiment: "positive",
+    engagement: 78,
+    lastInteraction: Date.now() - 86400_000 * 3,
+    commsHistory: [
+      { id: "LOG-007", date: Date.now() - 86400_000 * 3, channel: "Réunion mensuelle", summary: "Présentation des indicateurs sociaux", outcome: "Adhésion aux actions" },
+      { id: "LOG-008", date: Date.now() - 86400_000 * 60, channel: "Enquête interne", summary: "Baromètre social annuel", outcome: "Score d'engagement 72/100" },
+    ],
+    keyMessages: ["Dialogue social constructif", "Politique de formation renforcée"],
+    risks: ["Risque de mobilisation en cas de plan social", "Rumeurs internes possibles"],
+  },
+  {
+    id: "SH-006",
+    category: "Clients",
+    organization: "Top 100 Corporate Clients",
+    contactName: "Aicha B.",
+    contactTitle: "Account Director",
+    influenceScore: 4,
+    sentiment: "neutral",
+    engagement: 66,
+    lastInteraction: Date.now() - 86400_000 * 7,
+    commsHistory: [
+      { id: "LOG-009", date: Date.now() - 86400_000 * 7, channel: "Comité clients stratégiques", summary: "Revue de la roadmap produit", outcome: "Feedback intégré au backlog" },
+    ],
+    keyMessages: ["Innovation orientée besoin client", "SLA respecté à 99,2%"],
+    risks: ["Sensibilité prix en période d'inflation", "Concurrence accrue sur les segments premiums"],
+  },
+  {
+    id: "SH-007",
+    category: "ONG",
+    organization: "Transparency Maroc",
+    contactName: "Omar D.",
+    contactTitle: "Coordinateur Campagnes",
+    influenceScore: 3,
+    sentiment: "negative",
+    engagement: 35,
+    lastInteraction: Date.now() - 86400_000 * 45,
+    commsHistory: [
+      { id: "LOG-010", date: Date.now() - 86400_000 * 45, channel: "Courrier officiel", summary: "Demande de publication des engagements RSE", outcome: "En attente de réponse" },
+    ],
+    keyMessages: ["Publication des données extra-financières", "Lobbying pour plus de transparence"],
+    risks: ["Campagne publique possible", "Risque de mention négative dans le prochain rapport"],
+  },
+  {
+    id: "SH-008",
+    category: "Concurrents",
+    organization: "Atlas Capital",
+    contactName: "—",
+    contactTitle: "Direction Communication",
+    influenceScore: 4,
+    sentiment: "negative",
+    engagement: 22,
+    lastInteraction: Date.now() - 86400_000 * 30,
+    commsHistory: [
+      { id: "LOG-011", date: Date.now() - 86400_000 * 30, channel: "Communication publique", summary: "Communiqué comparatif sectoriel", outcome: "Mise en avant de leurs atouts" },
+    ],
+    keyMessages: ["Différenciation produit", "Conquête de parts de marché"],
+    risks: ["Communication agressive sur les réseaux", "Risque de récupération de nos actualités"],
+  },
+];
+
+interface StakeholderDraft {
+  category: StakeholderCategory;
+  organization: string;
+  contactName: string;
+  contactTitle: string;
+  influenceScore: 1 | 2 | 3 | 4 | 5;
+  sentiment: StakeholderSentiment;
+  engagement: number;
+}
+
+const STAKEHOLDER_DRAFT_EMPTY: StakeholderDraft = {
+  category: "Gouvernement",
+  organization: "",
+  contactName: "",
+  contactTitle: "",
+  influenceScore: 3,
+  sentiment: "neutral",
+  engagement: 50,
+};
+
+function StakeholderMappingCard({
+  stakeholders,
+  onStakeholdersChange,
+}: {
+  stakeholders: Stakeholder[];
+  onStakeholdersChange: (s: Stakeholder[]) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState<StakeholderDraft>(STAKEHOLDER_DRAFT_EMPTY);
+
+  const selected = stakeholders.find((s) => s.id === selectedId) ?? null;
+
+  // Aggregate stats
+  const avgInfluence = stakeholders.length > 0
+    ? stakeholders.reduce((s, x) => s + x.influenceScore, 0) / stakeholders.length
+    : 0;
+  const favorablePct = Math.round(
+    (stakeholders.filter((s) => s.sentiment === "positive").length / Math.max(1, stakeholders.length)) * 100,
+  );
+  const defavorablePct = Math.round(
+    (stakeholders.filter((s) => s.sentiment === "negative").length / Math.max(1, stakeholders.length)) * 100,
+  );
+
+  // Scatter data: x=influence, y=sentiment value, z=engagement
+  const scatterData = stakeholders.map((s) => ({
+    id: s.id,
+    name: s.organization,
+    influence: s.influenceScore,
+    sentimentValue: STAKEHOLDER_SENTIMENT_VALUE[s.sentiment],
+    sentiment: s.sentiment,
+    engagement: s.engagement,
+    fill: STAKEHOLDER_SENTIMENT_COLOR[s.sentiment],
+  }));
+
+  const handleAdd = () => {
+    if (!draft.organization.trim()) {
+      toast.error("Organisation requise pour créer une partie prenante.");
+      return;
+    }
+    const newItem: Stakeholder = {
+      id: `SH-${String(stakeholders.length + 1).padStart(3, "0")}-${Math.random().toString(36).slice(2, 6)}`,
+      category: draft.category,
+      organization: draft.organization.trim(),
+      contactName: draft.contactName.trim() || "—",
+      contactTitle: draft.contactTitle.trim() || "—",
+      influenceScore: draft.influenceScore,
+      sentiment: draft.sentiment,
+      engagement: draft.engagement,
+      lastInteraction: Date.now(),
+      commsHistory: [],
+      keyMessages: [],
+      risks: [],
+    };
+    onStakeholdersChange([...stakeholders, newItem]);
+    toast.success(`Partie prenante « ${newItem.organization} » ajoutée.`);
+    setShowForm(false);
+    setDraft(STAKEHOLDER_DRAFT_EMPTY);
+  };
+
+  const handleDelete = (id: string) => {
+    onStakeholdersChange(stakeholders.filter((s) => s.id !== id));
+    if (selectedId === id) setSelectedId(null);
+    toast.info("Partie prenante retirée de la cartographie.");
+  };
+
+  return (
+    <motion.div id="stakeholder-map" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="33 · Cartographie Parties Prenantes — Influence & Sentiment"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {stakeholders.length} ACTEURS · {STAKEHOLDER_CATEGORIES.length} CATÉGORIES
+              </Badge>
+              <Button type="button" variant="outline" size="sm" className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }} onClick={() => setShowForm(!showForm)}>
+                <Plus size={12} className="mr-1" />
+                AJOUTER UNE PARTIE PRENANTE
+              </Button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Aggregate stats row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>INFLUENCE MOYENNE</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+              {avgInfluence.toFixed(1)}<span style={{ fontSize: 10, color: TEXT_MUTED }}>/5</span>
+            </div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>FAVORABLES</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: POSITIVE, marginTop: 2 }}>
+              {favorablePct}%
+            </div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>DÉFAVORABLES</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: NEGATIVE, marginTop: 2 }}>
+              {defavorablePct}%
+            </div>
+          </div>
+          <div className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+            <div style={FONT_HEADER}>ENGAGEMENT MOYEN</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
+              {stakeholders.length > 0 ? Math.round(stakeholders.reduce((s, x) => s + x.engagement, 0) / stakeholders.length) : 0}<span style={{ fontSize: 10, color: TEXT_MUTED }}>/100</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left: Stakeholder grid by category */}
+          <div>
+            <div style={FONT_HEADER} className="mb-2">PARTIES PRENANTES PAR CATÉGORIE</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {STAKEHOLDER_CATEGORIES.map((cat) => {
+                const Icon = STAKEHOLDER_CATEGORY_ICON[cat];
+                const items = stakeholders.filter((s) => s.category === cat);
+                return (
+                  <div key={cat} className="rounded-md p-2.5" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Icon size={12} style={{ color: SAGE }} />
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.08em", textTransform: "uppercase" }}>{cat}</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>{items.length}</span>
+                    </div>
+                    {items.length === 0 ? (
+                      <p style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_MUTED, margin: 0 }}>Aucun acteur cartographié.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {items.map((s) => {
+                          const isSelected = selectedId === s.id;
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setSelectedId(isSelected ? null : s.id)}
+                              className="w-full text-left rounded-md p-2 transition-all"
+                              style={{
+                                border: `1px solid ${isSelected ? SAGE : BORDER}`,
+                                backgroundColor: isSelected ? SAGE_BG : "#FAFAFA",
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                  {s.organization}
+                                </span>
+                                <span className="inline-flex items-center gap-0.5 shrink-0">
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      size={9}
+                                      style={{ color: i < s.influenceScore ? SAGE : BORDER_STRONG }}
+                                      fill={i < s.influenceScore ? SAGE : "none"}
+                                    />
+                                  ))}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", backgroundColor: STAKEHOLDER_SENTIMENT_COLOR[s.sentiment] }} />
+                                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                                  eng. {s.engagement}%
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {showForm && (
+              <div className="mt-3 rounded-lg p-3" style={{ border: `1px solid ${SAGE}`, backgroundColor: SAGE_BG }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span style={FONT_HEADER}>NOUVELLE PARTIE PRENANTE</span>
+                  <button type="button" onClick={() => setShowForm(false)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-white" style={{ width: 22, height: 22 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <select
+                    value={draft.category}
+                    onChange={(e) => setDraft({ ...draft, category: e.target.value as StakeholderCategory })}
+                    className="rounded-md px-2 py-1.5 w-full"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                    aria-label="Catégorie"
+                  >
+                    {STAKEHOLDER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input
+                    value={draft.organization}
+                    onChange={(e) => setDraft({ ...draft, organization: e.target.value })}
+                    placeholder="Organisation"
+                    lang="fr"
+                    className="rounded-md px-2 py-1.5 w-full"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                    aria-label="Organisation"
+                  />
+                  <input
+                    value={draft.contactName}
+                    onChange={(e) => setDraft({ ...draft, contactName: e.target.value })}
+                    placeholder="Nom du contact"
+                    lang="fr"
+                    className="rounded-md px-2 py-1.5 w-full"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                    aria-label="Nom du contact"
+                  />
+                  <input
+                    value={draft.contactTitle}
+                    onChange={(e) => setDraft({ ...draft, contactTitle: e.target.value })}
+                    placeholder="Fonction"
+                    lang="fr"
+                    className="rounded-md px-2 py-1.5 w-full"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                    aria-label="Fonction"
+                  />
+                  <div className="flex items-center gap-2">
+                    <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>INFLUENCE</label>
+                    <select
+                      value={draft.influenceScore}
+                      onChange={(e) => setDraft({ ...draft, influenceScore: Number(e.target.value) as 1 | 2 | 3 | 4 | 5 })}
+                      className="rounded-md px-2 py-1.5"
+                      style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                      aria-label="Score d'influence"
+                    >
+                      {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}/5</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>SENTIMENT</label>
+                    <select
+                      value={draft.sentiment}
+                      onChange={(e) => setDraft({ ...draft, sentiment: e.target.value as StakeholderSentiment })}
+                      className="rounded-md px-2 py-1.5"
+                      style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL }}
+                      aria-label="Sentiment"
+                    >
+                      <option value="positive">Favorable</option>
+                      <option value="neutral">Neutre</option>
+                      <option value="negative">Défavorable</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 flex items-center gap-2">
+                    <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em", minWidth: 90 }}>ENGAGEMENT</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={draft.engagement}
+                      onChange={(e) => setDraft({ ...draft, engagement: Number(e.target.value) })}
+                      style={{ flex: 1 }}
+                      aria-label="Niveau d'engagement"
+                    />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, minWidth: 32, textAlign: "right" }}>{draft.engagement}%</span>
+                  </div>
+                </div>
+                <Button type="button" size="sm" className="w-full h-8 mt-2" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={handleAdd}>
+                  <Plus size={12} className="mr-1" /> ENREGISTRER
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Influence × Sentiment matrix + selected detail */}
+          <div className="space-y-3">
+            <div className="rounded-md p-3" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Layers size={13} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>MATRICE INFLUENCE × SENTIMENT</span>
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>taille = engagement</span>
+              </div>
+              <div style={{ width: "100%", height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 12, right: 16, bottom: 16, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+                    <XAxis
+                      type="number"
+                      dataKey="influence"
+                      name="Influence"
+                      domain={[0.5, 5.5]}
+                      ticks={[1, 2, 3, 4, 5]}
+                      tick={{ fontSize: 10, fontFamily: FONT_MONO, fill: TEXT_MUTED }}
+                      stroke={BORDER_STRONG}
+                      label={{ value: "Influence", position: "insideBottom", offset: -8, fontSize: 9, fontFamily: FONT_MONO, fill: TEXT_MUTED }}
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="sentimentValue"
+                      name="Sentiment"
+                      domain={[0.5, 3.5]}
+                      ticks={[1, 2, 3]}
+                      tickFormatter={(v) => v === 1 ? "Déf." : v === 2 ? "Neutre" : v === 3 ? "Fav." : ""}
+                      tick={{ fontSize: 10, fontFamily: FONT_MONO, fill: TEXT_MUTED }}
+                      stroke={BORDER_STRONG}
+                      width={50}
+                    />
+                    <ZAxis type="number" dataKey="engagement" domain={[0, 100]} range={[60, 600]} />
+                    <RTooltip
+                      cursor={{ strokeDasharray: "3 3", stroke: BORDER_STRONG }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload || !payload.length) return null;
+                        const p = payload[0].payload as { name: string; sentiment: StakeholderSentiment; engagement: number; influence: number };
+                        return (
+                          <div className="rounded-md p-2" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 11 }}>
+                            <div style={{ fontWeight: 700, color: CHARCOAL, marginBottom: 2 }}>{p.name}</div>
+                            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                              Influence {p.influence}/5 · {STAKEHOLDER_SENTIMENT_LABEL[p.sentiment]} · Eng. {p.engagement}%
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Scatter data={scatterData}>
+                      {scatterData.map((entry) => (
+                        <Cell key={entry.id} fill={entry.fill} fillOpacity={0.7} stroke={entry.fill} strokeWidth={1} />
+                      ))}
+                    </Scatter>
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                {(Object.keys(STAKEHOLDER_SENTIMENT_LABEL) as StakeholderSentiment[]).map((s) => (
+                  <div key={s} className="flex items-center gap-1">
+                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", backgroundColor: STAKEHOLDER_SENTIMENT_COLOR[s] }} />
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}>{STAKEHOLDER_SENTIMENT_LABEL[s].toUpperCase()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected stakeholder detail panel */}
+            {selected ? (
+              <div className="rounded-lg p-3" style={{ border: `1px solid ${STAKEHOLDER_SENTIMENT_COLOR[selected.sentiment]}`, backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {(() => {
+                      const Icon = STAKEHOLDER_CATEGORY_ICON[selected.category];
+                      return <Icon size={13} style={{ color: SAGE }} />;
+                    })()}
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      {selected.category}
+                    </span>
+                  </div>
+                  <button type="button" onClick={() => setSelectedId(null)} aria-label="Fermer" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 22, height: 22 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginBottom: 2 }}>{selected.organization}</div>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className="inline-flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} size={11} style={{ color: i < selected.influenceScore ? SAGE : BORDER_STRONG }} fill={i < selected.influenceScore ? SAGE : "none"} />
+                    ))}
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: STAKEHOLDER_SENTIMENT_COLOR[selected.sentiment], color: "#FFFFFF", letterSpacing: "0.06em" }}>
+                    {STAKEHOLDER_SENTIMENT_LABEL[selected.sentiment].toUpperCase()}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>eng. {selected.engagement}%</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="rounded-md p-1.5" style={{ backgroundColor: "#FAFAFA" }}>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.08em" }}>CONTACT</div>
+                    <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{selected.contactName}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{selected.contactTitle}</div>
+                  </div>
+                  <div className="rounded-md p-1.5" style={{ backgroundColor: "#FAFAFA" }}>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_MUTED, letterSpacing: "0.08em" }}>DERNIÈRE INTERACTION</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{format(selected.lastInteraction, "d MMM yyyy", { locale: fr })}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{fmtRelative(selected.lastInteraction)}</div>
+                  </div>
+                </div>
+                {selected.commsHistory.length > 0 && (
+                  <div className="mt-2">
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 4 }}>HISTORIQUE DE COMMUNICATION</div>
+                    <div className="space-y-1.5">
+                      {selected.commsHistory.map((log) => (
+                        <div key={log.id} className="rounded-md p-2" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: SAGE, letterSpacing: "0.06em" }}>{log.channel.toUpperCase()}</span>
+                            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{format(log.date, "d MMM yyyy", { locale: fr })}</span>
+                          </div>
+                          <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}>{log.summary}</div>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>Issue : {log.outcome}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selected.keyMessages.length > 0 && (
+                  <div className="mt-2">
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: TEXT_HEADER, letterSpacing: "0.08em", marginBottom: 4 }}>MESSAGES CLÉS</div>
+                    <div className="space-y-1">
+                      {selected.keyMessages.map((m, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", backgroundColor: SAGE, marginTop: 6, flexShrink: 0 }} />
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5 }}>{m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selected.risks.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <AlertTriangle size={10} style={{ color: NEGATIVE }} />
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: NEGATIVE, letterSpacing: "0.08em" }}>RISQUES IDENTIFIÉS</span>
+                    </div>
+                    <div className="space-y-1">
+                      {selected.risks.map((r, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", backgroundColor: NEGATIVE, marginTop: 6, flexShrink: 0 }} />
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5 }}>{r}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button type="button" onClick={() => handleDelete(selected.id)} className="mt-3 w-full inline-flex items-center justify-center gap-1 rounded-md py-1.5" style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: NEGATIVE, letterSpacing: "0.08em" }}>
+                  <Trash2 size={11} /> RETIRER DE LA CARTOGRAPHIE
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg p-3" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Network size={13} style={{ color: SAGE }} />
+                  <span style={FONT_HEADER}>DÉTAIL PARTIE PRENANTE</span>
+                </div>
+                <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: 0 }}>
+                  Sélectionnez une partie prenante dans la grille ou un point de la matrice pour afficher son profil complet — contact, historique de communication, messages clés et risques identifiés.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <AiCommentary text={`${stakeholders.length} partie(s) prenante(s) cartographiée(s) sur ${STAKEHOLDER_CATEGORIES.length} catégories — influence moyenne ${avgInfluence.toFixed(1)}/5, ${favorablePct}% favorables, ${defavorablePct}% défavorables. ${defavorablePct > 25 ? "Exposition significative — préparez un plan de réhabilitation pour les acteurs défavorables." : favorablePct > 60 ? "Écosystème solide — capitalisez sur les relations favorables pour amplifier vos messages." : "Équilibre à surveiller — renforcez l'engagement sur les acteurs neutres pour éviter toute dégradation."}`} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 38 — REGULATORY CHANGE FEED (R3-ENTERPRISE-A)
+// Real-time feed of regulatory changes (AMMC, BAM, CNDP, ESG) ·
+// filter by regulator/impact/date range · watchlist toggle ·
+// impact analysis modal · "Nouvelles régulations" count badge ·
+// Persists: enterprise:reg-feed (watchlist + analyses)
+// ════════════════════════════════════════════════════════════════════
+
+type RegFeedRegulator = "AMMC" | "BAM" | "CNDP" | "ESG";
+type RegFeedImpact = "Faible" | "Modéré" | "Élevé";
+
+interface RegChange {
+  id: string;
+  regulator: RegFeedRegulator;
+  title: string;
+  summary: string;
+  effectiveDate: number;
+  impact: RegFeedImpact;
+  publishedAt: number;
+}
+
+interface RegFeedAnalysis {
+  affected: boolean | null;
+  actionsRequired: string;
+  deadline: string;
+  responsible: string;
+  analyzedAt: number;
+}
+
+interface RegFeedState {
+  watchlist: string[];
+  analyses: Record<string, RegFeedAnalysis>;
+}
+
+const REG_FEED_REGULATOR_COLOR: Record<RegFeedRegulator, string> = {
+  AMMC: "#475569",
+  BAM: "#F59E0B",
+  CNDP: "#4A7B5F",
+  ESG: "#10B981",
+};
+
+const REG_FEED_IMPACT_COLOR: Record<RegFeedImpact, string> = {
+  Faible: "#10B981",
+  Modéré: "#F59E0B",
+  Élevé: "#EF4444",
+};
+
+const REG_FEED_INITIAL: RegChange[] = [
+  {
+    id: "RF-001",
+    regulator: "AMMC",
+    title: "Bulletin Q4 — opérations dirigées et abus de marché",
+    summary: "Mise à jour des obligations déclaratives trimestrielles sur les opérations dirigées. Nouveau formulaire AMMC-DIR-05 avec champ de traçabilité enrichi.",
+    effectiveDate: Date.now() + 86400_000 * 45,
+    impact: "Modéré",
+    publishedAt: Date.now() - 86400_000 * 3,
+  },
+  {
+    id: "RF-002",
+    regulator: "AMMC",
+    title: "Circulaire transparence OPRA — obligations d'information",
+    summary: "Renforcement des obligations d'information périodique et permanente pour les émetteurs admis sur un marché réglementé. Délai de publication réduit à 2 jours ouvrés.",
+    effectiveDate: Date.now() + 86400_000 * 28,
+    impact: "Élevé",
+    publishedAt: Date.now() - 86400_000 * 6,
+  },
+  {
+    id: "RF-003",
+    regulator: "BAM",
+    title: "Directive liquidité Bâle III — ratio LCR révisé",
+    summary: "Révision du ratio de liquidité à court terme (LCR) — inclut désormais les dépôts des PME dans la catégorie stable. Calcul mensuel obligatoire.",
+    effectiveDate: Date.now() + 86400_000 * 60,
+    impact: "Élevé",
+    publishedAt: Date.now() - 86400_000 * 8,
+  },
+  {
+    id: "RF-004",
+    regulator: "BAM",
+    title: "Circularité reporting prudentiel mensuel",
+    summary: "Mise à jour du format de reporting prudentiel Bâle III — états financiers consolidés, ratios de solvabilité, liquidité et levier. Nouvelle nomenclature BAM-PRU-M2.",
+    effectiveDate: Date.now() + 86400_000 * 21,
+    impact: "Modéré",
+    publishedAt: Date.now() - 86400_000 * 11,
+  },
+  {
+    id: "RF-005",
+    regulator: "CNDP",
+    title: "Ligne directrice sur les transferts internationaux de données",
+    summary: "Nouvelles exigences pour les transferts hors Maroc — clauses contractuelles types, autorisation préalable pour les pays non adéquats. Registre des transferts obligatoire.",
+    effectiveDate: Date.now() + 86400_000 * 35,
+    impact: "Élevé",
+    publishedAt: Date.now() - 86400_000 * 4,
+  },
+  {
+    id: "RF-006",
+    regulator: "CNDP",
+    title: "Guide DPIA pour les systèmes d'intelligence artificielle",
+    summary: "Cadre méthodologique pour l'analyse d'impact relative à la protection des données appliquée aux systèmes d'IA — exigences de transparence, d'explicabilité et de supervision humaine.",
+    effectiveDate: Date.now() + 86400_000 * 50,
+    impact: "Modéré",
+    publishedAt: Date.now() - 86400_000 * 14,
+  },
+  {
+    id: "RF-007",
+    regulator: "ESG",
+    title: "Directive CSRD phase 2 — élargissement du périmètre",
+    summary: "Deuxième vague d'application de la directive CSRD — élargissement aux PME cotées et renforcement des exigences d'assurance externe sur les données extra-financières.",
+    effectiveDate: Date.now() + 86400_000 * 90,
+    impact: "Élevé",
+    publishedAt: Date.now() - 86400_000 * 5,
+  },
+  {
+    id: "RF-008",
+    regulator: "ESG",
+    title: "Standard reporting Taxonomie Verte UE",
+    summary: "Adoption du standard de reporting Taxonomie Verte UE — alignement obligatoire des activités économiques avec les critères techniques de sélection. Calcul des 6 objectifs environnementaux.",
+    effectiveDate: Date.now() + 86400_000 * 75,
+    impact: "Faible",
+    publishedAt: Date.now() - 86400_000 * 18,
+  },
+];
+
+const REG_FEED_STATE_INITIAL: RegFeedState = {
+  watchlist: [],
+  analyses: {},
+};
+
+function RegulatoryChangeFeedCard({
+  state,
+  onStateChange,
+}: {
+  state: RegFeedState;
+  onStateChange: (s: RegFeedState) => void;
+}) {
+  const [filterRegulator, setFilterRegulator] = useState<"all" | RegFeedRegulator>("all");
+  const [filterImpact, setFilterImpact] = useState<"all" | RegFeedImpact>("all");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [analysisRegId, setAnalysisRegId] = useState<string | null>(null);
+  const [analysisDraft, setAnalysisDraft] = useState<{ affected: boolean | null; actionsRequired: string; deadline: string; responsible: string }>({
+    affected: null,
+    actionsRequired: "",
+    deadline: "",
+    responsible: "",
+  });
+
+  const fourteenDaysAgo = Date.now() - 86400_000 * 14;
+  const newCount = REG_FEED_INITIAL.filter((r) => r.publishedAt >= fourteenDaysAgo).length;
+
+  const filtered = useMemo(() => {
+    return REG_FEED_INITIAL.filter((r) => {
+      if (filterRegulator !== "all" && r.regulator !== filterRegulator) return false;
+      if (filterImpact !== "all" && r.impact !== filterImpact) return false;
+      if (filterDateFrom) {
+        const from = new Date(filterDateFrom).getTime();
+        if (r.effectiveDate < from) return false;
+      }
+      if (filterDateTo) {
+        const to = new Date(filterDateTo).getTime() + 86400_000 - 1; // include full day
+        if (r.effectiveDate > to) return false;
+      }
+      return true;
+    }).sort((a, b) => b.publishedAt - a.publishedAt);
+  }, [filterRegulator, filterImpact, filterDateFrom, filterDateTo]);
+
+  const watchedCount = REG_FEED_INITIAL.filter((r) => state.watchlist.includes(r.id)).length;
+  const analyzedCount = Object.keys(state.analyses).length;
+
+  const toggleWatch = (id: string) => {
+    onStateChange({
+      ...state,
+      watchlist: state.watchlist.includes(id)
+        ? state.watchlist.filter((x) => x !== id)
+        : [...state.watchlist, id],
+    });
+  };
+
+  const openAnalysis = (id: string) => {
+    const existing = state.analyses[id];
+    setAnalysisDraft({
+      affected: existing?.affected ?? null,
+      actionsRequired: existing?.actionsRequired ?? "",
+      deadline: existing?.deadline ?? "",
+      responsible: existing?.responsible ?? "",
+    });
+    setAnalysisRegId(id);
+  };
+
+  const saveAnalysis = () => {
+    if (!analysisRegId) return;
+    if (analysisDraft.affected === null) {
+      toast.error("Indiquez si la régulation affecte l'organisation (Oui/Non).");
+      return;
+    }
+    onStateChange({
+      ...state,
+      analyses: {
+        ...state.analyses,
+        [analysisRegId]: {
+          affected: analysisDraft.affected,
+          actionsRequired: analysisDraft.actionsRequired.trim(),
+          deadline: analysisDraft.deadline,
+          responsible: analysisDraft.responsible.trim(),
+          analyzedAt: Date.now(),
+        },
+      },
+    });
+    toast.success("Analyse d'impact enregistrée.");
+    setAnalysisRegId(null);
+  };
+
+  const clearFilters = () => {
+    setFilterRegulator("all");
+    setFilterImpact("all");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  };
+
+  const hasActiveFilters = filterRegulator !== "all" || filterImpact !== "all" || filterDateFrom !== "" || filterDateTo !== "";
+  const analysisReg = analysisRegId ? REG_FEED_INITIAL.find((r) => r.id === analysisRegId) : null;
+
+  return (
+    <motion.div id="reg-feed" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="32 · Veille Réglementaire — Flux des Changements en Temps Réel"
+          right={
+            <div className="flex items-center gap-2">
+              {newCount > 0 && (
+                <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: `${NEGATIVE}15`, color: NEGATIVE, letterSpacing: "0.06em" }}>
+                  {newCount} NOUVELLES RÉGULATIONS
+                </Badge>
+              )}
+              <Badge variant="secondary" className="h-5" style={{ fontFamily: FONT_MONO, fontSize: 9, backgroundColor: SAGE_BG, color: SAGE }}>
+                {watchedCount} SURVEILLÉES · {analyzedCount} ANALYSÉES
+              </Badge>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-1">
+            <Filter size={12} style={{ color: TEXT_MUTED }} />
+            <span style={FONT_HEADER}>FILTRES</span>
+          </div>
+          <select
+            value={filterRegulator}
+            onChange={(e) => setFilterRegulator(e.target.value as "all" | RegFeedRegulator)}
+            className="rounded-md px-2 py-1"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+            aria-label="Filtrer par régulateur"
+          >
+            <option value="all">Tous régulateurs</option>
+            {(Object.keys(REG_FEED_REGULATOR_COLOR) as RegFeedRegulator[]).map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select
+            value={filterImpact}
+            onChange={(e) => setFilterImpact(e.target.value as "all" | RegFeedImpact)}
+            className="rounded-md px-2 py-1"
+            style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 11, color: CHARCOAL }}
+            aria-label="Filtrer par niveau d'impact"
+          >
+            <option value="all">Tous niveaux</option>
+            {(Object.keys(REG_FEED_IMPACT_COLOR) as RegFeedImpact[]).map((i) => <option key={i} value={i}>{i}</option>)}
+          </select>
+          <div className="flex items-center gap-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>DU</span>
+            <input
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="rounded-md px-2 py-1"
+              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+              aria-label="Date de début"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AU</span>
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="rounded-md px-2 py-1"
+              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+              aria-label="Date de fin"
+            />
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+              style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.06em" }}
+            >
+              <X size={10} /> RÉINITIALISER
+            </button>
+          )}
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginLeft: "auto" }}>
+            {filtered.length} / {REG_FEED_INITIAL.length} entrées
+          </span>
+        </div>
+
+        {/* Feed */}
+        <div className="space-y-2">
+          {filtered.length === 0 ? (
+            <div className="rounded-md p-4 text-center" style={{ border: `1px dashed ${BORDER_STRONG}`, backgroundColor: "#FAFAFA" }}>
+              <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, margin: 0 }}>Aucune régulation ne correspond aux filtres actifs.</p>
+            </div>
+          ) : (
+            filtered.map((r) => {
+              const isWatched = state.watchlist.includes(r.id);
+              const analysis = state.analyses[r.id];
+              const isNew = r.publishedAt >= fourteenDaysAgo;
+              return (
+                <div
+                  key={r.id}
+                  className="rounded-md p-3"
+                  style={{ border: `1px solid ${isWatched ? SAGE : BORDER}`, backgroundColor: isWatched ? SAGE_BG : "#FFFFFF" }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex items-center justify-center rounded-md shrink-0"
+                      style={{ width: 36, height: 36, backgroundColor: `${REG_FEED_REGULATOR_COLOR[r.regulator]}15`, color: REG_FEED_REGULATOR_COLOR[r.regulator] }}
+                    >
+                      <Scale size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              borderRadius: 3,
+                              backgroundColor: REG_FEED_REGULATOR_COLOR[r.regulator],
+                              color: "#FFFFFF",
+                              letterSpacing: "0.08em",
+                            }}
+                          >
+                            {r.regulator}
+                          </span>
+                          {isNew && (
+                            <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: NEGATIVE, color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                              NOUVEAU
+                            </span>
+                          )}
+                          {analysis && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 3, backgroundColor: analysis.affected ? `${NEGATIVE}15` : SAGE_BG, color: analysis.affected ? NEGATIVE : SAGE, letterSpacing: "0.08em" }}>
+                              <CheckCircle2 size={9} /> {analysis.affected ? "AFFECTÉ" : "NON AFFECTÉ"}
+                            </span>
+                          )}
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
+                            {r.title}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            padding: "2px 6px",
+                            borderRadius: 3,
+                            backgroundColor: `${REG_FEED_IMPACT_COLOR[r.impact]}15`,
+                            color: REG_FEED_IMPACT_COLOR[r.impact],
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {r.impact}
+                        </span>
+                      </div>
+                      <p style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY, lineHeight: 1.5, margin: 0 }}>
+                        {r.summary}
+                      </p>
+                      <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
+                        <div className="flex items-center gap-3" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                          <span>Publié {fmtRelative(r.publishedAt)}</span>
+                          <span>·</span>
+                          <span>Entrée en vigueur : <strong style={{ color: CHARCOAL }}>{format(r.effectiveDate, "d MMM yyyy", { locale: fr })}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleWatch(r.id)}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
+                            style={{
+                              border: `1px solid ${isWatched ? SAGE : BORDER_STRONG}`,
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              color: isWatched ? SAGE : TEXT_MUTED,
+                              letterSpacing: "0.06em",
+                              backgroundColor: isWatched ? SAGE_BG : "#FFFFFF",
+                            }}
+                            aria-label={isWatched ? "Ne plus surveiller" : "Surveiller"}
+                          >
+                            {isWatched ? <Bell size={10} /> : <Eye size={10} />}
+                            {isWatched ? "SURVEILLÉ" : "SURVEILLER"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openAnalysis(r.id)}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                            style={{ border: `1px solid ${analysis ? SAGE : BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 9, color: analysis ? SAGE : CHARCOAL, letterSpacing: "0.06em", backgroundColor: analysis ? SAGE_BG : "#FFFFFF" }}
+                          >
+                            <Search size={10} />
+                            {analysis ? "ANALYSE MODIFIER" : "ANALYSER L'IMPACT"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <AiCommentary text={`${REG_FEED_INITIAL.length} régulations suivies · ${newCount} nouvelle(s) dans les 14 derniers jours · ${watchedCount} en watchlist · ${analyzedCount} analyse(s) d'impact finalisée(s). ${newCount > 3 ? "Volume réglementaire élevé — priorisez les impacts Élevé et planifiez une revue hebdomadaire avec la conformité." : analyzedCount === REG_FEED_INITIAL.length ? "Toutes les régulations ont été analysées — maintenez la cadence mensuelle d'analyse d'impact." : "Finalisez les analyses d'impact restantes pour sécuriser la conformité du trimestre."}`} />
+      </CardShell>
+
+      {/* Impact analysis modal */}
+      {analysisReg && (
+        <div
+          className="fixed inset-0 z-[180] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(10,10,10,0.55)" }}
+          onClick={() => setAnalysisRegId(null)}
+        >
+          <div
+            className="rounded-lg max-w-lg w-full"
+            style={{ backgroundColor: "#FFFFFF", border: `1px solid ${BORDER_STRONG}`, boxShadow: "0 20px 60px rgba(10,10,10,0.2)" }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Analyse d'impact réglementaire"
+          >
+            <div className="flex items-start justify-between gap-2 px-5 py-4" style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, backgroundColor: REG_FEED_REGULATOR_COLOR[analysisReg.regulator], color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                    {analysisReg.regulator}
+                  </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ANALYSE D'IMPACT</span>
+                </div>
+                <div style={{ fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>{analysisReg.title}</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                  Entrée en vigueur : {format(analysisReg.effectiveDate, "d MMM yyyy", { locale: fr })} · Impact {analysisReg.impact}
+                </div>
+              </div>
+              <button type="button" onClick={() => setAnalysisRegId(null)} aria-label="Fermer l'analyse" className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 28, height: 28 }}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>AFFECTÉ</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAnalysisDraft({ ...analysisDraft, affected: true })}
+                    className="rounded-md px-3 py-1.5 transition-colors"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: `1px solid ${analysisDraft.affected === true ? NEGATIVE : BORDER_STRONG}`,
+                      backgroundColor: analysisDraft.affected === true ? `${NEGATIVE}15` : "#FFFFFF",
+                      color: analysisDraft.affected === true ? NEGATIVE : TEXT_MUTED,
+                    }}
+                  >
+                    Oui — affecté
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalysisDraft({ ...analysisDraft, affected: false })}
+                    className="rounded-md px-3 py-1.5 transition-colors"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: `1px solid ${analysisDraft.affected === false ? SAGE : BORDER_STRONG}`,
+                      backgroundColor: analysisDraft.affected === false ? SAGE_BG : "#FFFFFF",
+                      color: analysisDraft.affected === false ? SAGE : TEXT_MUTED,
+                    }}
+                  >
+                    Non — non affecté
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ACTIONS REQUISES</label>
+                <textarea
+                  value={analysisDraft.actionsRequired}
+                  onChange={(e) => setAnalysisDraft({ ...analysisDraft, actionsRequired: e.target.value })}
+                  placeholder="Décrivez les actions correctives ou de mise en conformité…"
+                  lang="fr"
+                  rows={3}
+                  className="w-full rounded-md px-2 py-1.5 mt-1"
+                  style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>ÉCHÉANCE</label>
+                  <input
+                    type="date"
+                    value={analysisDraft.deadline}
+                    onChange={(e) => setAnalysisDraft({ ...analysisDraft, deadline: e.target.value })}
+                    className="w-full rounded-md px-2 py-1.5 mt-1"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_MONO, fontSize: 11, color: CHARCOAL }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, letterSpacing: "0.08em" }}>RESPONSABLE</label>
+                  <input
+                    value={analysisDraft.responsible}
+                    onChange={(e) => setAnalysisDraft({ ...analysisDraft, responsible: e.target.value })}
+                    placeholder="Nom / fonction"
+                    lang="fr"
+                    className="w-full rounded-md px-2 py-1.5 mt-1"
+                    style={{ border: `1px solid ${BORDER_STRONG}`, fontFamily: FONT_SANS, fontSize: 12, color: CHARCOAL, outline: "none" }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-3" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
+              <Button type="button" variant="outline" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, borderColor: BORDER_STRONG }} onClick={() => setAnalysisRegId(null)}>
+                ANNULER
+              </Button>
+              <Button type="button" size="sm" className="h-8" style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }} onClick={saveAnalysis}>
+                <CheckCircle2 size={12} className="mr-1" /> ENREGISTRER L'ANALYSE
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EnterpriseDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -10173,6 +11990,11 @@ export function EnterpriseDashboard({
   const [auditLogState, setAuditLogState] = usePersistentState<AuditLogEntry[]>("enterprise:audit-log", makeSeedAuditLog());
   const [siemConfigState, setSiemConfigState] = usePersistentState<SiemConfig>("enterprise:siem-config", makeSiemInitial());
   const [approvals, setApprovals] = useState<ApprovalItem[]>(DEFAULT_APPROVALS);
+  // ─── R3-ENTERPRISE-A — War Room + Stakeholders + Reg Feed state ───
+  const [warRoomState, setWarRoomState] = usePersistentState<WarRoomPersisted>("enterprise:war-room", WAR_ROOM_INITIAL);
+  const [stakeholdersState, setStakeholdersState] = usePersistentState<Stakeholder[]>("enterprise:stakeholders", STAKEHOLDERS_INITIAL);
+  const [regFeedState, setRegFeedState] = usePersistentState<RegFeedState>("enterprise:reg-feed", REG_FEED_STATE_INITIAL);
+  const [warRoomOpen, setWarRoomOpen] = useState(false);
   const currentUserRole: UserRole = "comms"; // Karim B., VP Comms
 
   const handleDefconChange = useCallback((lvl: 1 | 2 | 3 | 4 | 5) => {
@@ -10325,6 +12147,7 @@ export function EnterpriseDashboard({
           onApprove={handleApprove}
           onReject={handleReject}
           onAuditShortcut={() => scrollToSection("compliance-cockpit")}
+          onOpenWarRoom={() => setWarRoomOpen(true)}
         />
 
         <main className="flex-1 px-4 lg:px-6 py-6">
@@ -10443,6 +12266,12 @@ export function EnterpriseDashboard({
               onDeadlinesChange={setRegCalendarState}
             />
 
+            {/* SECTION 32 — Regulatory Change Feed (R3-ENTERPRISE-A) */}
+            <RegulatoryChangeFeedCard
+              state={regFeedState}
+              onStateChange={setRegFeedState}
+            />
+
             {/* SECTION 28 — API & Integration Hub (keys, webhooks, MCP) */}
             <ApiIntegrationHubCard
               state={integrationsState}
@@ -10457,6 +12286,12 @@ export function EnterpriseDashboard({
 
             {/* SECTION 29 — Multi-Market Reputation Map (8 francophone markets) */}
             <MultiMarketReputationMapCard />
+
+            {/* SECTION 33 — Stakeholder Mapping (R3-ENTERPRISE-A) */}
+            <StakeholderMappingCard
+              stakeholders={stakeholdersState}
+              onStakeholdersChange={setStakeholdersState}
+            />
 
             {/* SECTION 30 — Risk Heatmap Matrix 5×5 (R2-ENTERPRISE-A) */}
             <RiskHeatmapMatrixCard
@@ -10519,6 +12354,15 @@ export function EnterpriseDashboard({
           50% { opacity: 0.55; }
         }
       `}</style>
+
+      {/* SECTION 36 — Crisis War Room overlay (R3-ENTERPRISE-A) — full-screen, DEFCON ≥ 4 trigger */}
+      {warRoomOpen && (
+        <CrisisWarRoomOverlay
+          persisted={warRoomState}
+          onPersistedChange={setWarRoomState}
+          onClose={() => setWarRoomOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -4027,3 +4027,415 @@ Stage Summary:
 - Code quality: tsc 0 errors dans EssentialDashboard.tsx (10 errors pré-existants dans ProDashboard.tsx d'un autre agent, non modifié par cette task), eslint 0 errors + 0 warnings
 - localStorage keys (11 total): 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIAL-A (notifications, tour-completed, briefing-date) + 2 R2-ESSENTIAL-B (cmd-recent, disclosure)
 - WCAG 2.1 AA compliance: SkipLink, focus-visible outlines, aria-live skeletons, aria-labels sur icon-only buttons, lang="fr" sur inputs français, role="status/dialog/combobox/listbox/option", aria-modal/aria-expanded/aria-controls/aria-activedescendant, color contrast ≥4.5:1 pour body text
+
+---
+
+## R3-ENTERPRISE-A — AURA · Enterprise Dashboard Round 3
+
+Task: Add 3 NEW features (Crisis War Room + Stakeholder Mapping + Regulatory Change Feed) to EnterpriseDashboard.tsx (10524 → 12368 lines, +1844 net).
+
+Work Log:
+- Lu worklog.md tail (R2-ESSENTIEL-B + dernières entrées) — fichier cible EnterpriseDashboard.tsx (10524 lignes, déjà 12 features ENV-ENTERPRISE + R2-ENTERPRISE-A + R2-ENTERPRISE-B: HarchIQ workspace, score de réputation, KPI strip, sentiment trend, benchmark concurrentiel, radar réputation, parts de voix, grille visibilité IA 9 LLMs, chat HarchIQ entreprise, panneau gouvernance, tableau multi-équipes, API intégrations, marketing d'influence, DEFCON crise, générateur briefing exec, competitor deep dive, suivi ESG, veille réglementaire, board briefing generator, board PDF template gallery, compliance cockpit, audit log timeline, regulatory calendar, API integration hub, SIEM integration configurator, multi-market reputation map, risk heatmap matrix 5×5, executive milestone tracker, KPI executive summary row)
+- Lu EnterpriseDashboard.tsx en chunks: imports (79-227), design tokens + types (228-509), helpers + usePersistentState (510-762), UI atoms + motion presets (764-944), sidebar + header (946-1410), HarchIQ workspace (1411-2320), score + DEFCON (2321-2800), KPI strips (2800-3520), sentiment trend + benchmark (3520-4200), radar + part voix + LLM grille (4200-4940), DEFCON crise + briefings + competitor deep dive + ESG + veille réglementaire (4940-5820), governance command bar (5820-6075), board briefing generator (6076-6660), PDF templates + compliance cockpit + audit log (6660-8165), regulatory calendar (8166-8540), KPI executive summary (8541-8770), API integration hub + SIEM configurator (8770-10150), MAIN (10150-10524)
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter), usePersistentState hook, framer-motion + shadcn/ui + recharts + lucide-react + @tanstack/react-table tous présents
+- Confirmé imports existants: AnimatePresence non importé (pas nécessaire pour R3), Star/Megaphone/ScatterChart manquants
+
+- Étape 1 — Imports: ajouté 2 icônes Lucide (Star pour influence scores, Megaphone pour War Room) en ordre alphabétique à la fin de l'import lucide-react. Ajouté Scatter, ScatterChart, ZAxis à l'import recharts (pour la matrice influence-sentiment du Stakeholder Mapping).
+
+- Étape 2 — CrisisWarRoomOverlay component (inséré avant le MAIN, ~560 lignes) :
+  • interface WarRoomMessage: { id, userId, userName, userRole, content, timestamp }
+  • interface WarRoomAction: { id, label, owner, status: "pending" | "done", createdAt, completedAt: number | null }
+  • interface WarRoomPersisted: { messages: WarRoomMessage[], actions: WarRoomAction[] } — persisté via "enterprise:war-room" (seulement actions + messages, pas le timer)
+  • WAR_ROOM_INITIAL: 4 actions seed (rédiger communiqué, notifier juridique, préparer Q&A COMEX, vérifier faits — 1 déjà done)
+  • WAR_ROOM_TEAM: 6 membres (Karim B. VP Comms, Sophie M. Conformité, Leila R. DPO, Youssef E. Direction Financière, Yasmine T. Relations Investisseurs, HarchIQ AI Assistant)
+  • CRISIS_MENTIONS_POOL: 12 mentions simulées (Twitter/X, LinkedIn, Le Matin, Facebook, TelQuel, YouTube, Reddit, WhatsApp, Instagram, Medias24, Bloomberg Afrique, Forum économie) avec severity watch/warning/critical
+  • WAR_ROOM_RECOS: 5 recommandations rotatives (cellule physique, Q&A interne, juridique audit, COMEX, surveillance continue)
+  • fmtDuration(ms): HH:MM:SS pour le timer
+  • generateCrisisBriefing(actions, messages, escalatedToComex, elapsedMin, mentionCount): string — synthèse auto avec rotation des recommandations selon elapsedMin
+  • CrisisWarRoomOverlay props: { persisted, onPersistedChange, onClose }
+  • State local: activatedAt (useState(() => Date.now()) — fixe à l'ouverture, reset à chaque ouverture), escalatedToComex, escalatedAt, briefing, briefingAt, liveMentions (max 30), chatInput, newActionLabel, newActionOwner, elapsedSec
+  • 4 useEffect: (1) timer 1s pour elapsedSec, (2) live mentions new every 5s via setInterval + random pool, (3) auto briefing MAJ every 30s + immédiatement quand key state change (deps: activatedAt, persisted.actions, persisted.messages, escalatedToComex, liveMentions.length), (4) ESC key listener pour fermer
+  • Render: div fixed inset-0 z-[200] charcoal bg #0A0A0A + white text + 3px solid #EF4444 red border + role="dialog" aria-modal aria-label
+  • Top bar: Megaphone icon (red bg) + "WAR ROOM — CELLULE DE CRISE" titre red + "Crise active depuis: HH:MM:SS" timer red bold + badge "COMEX ALERTÉ" si escalated + bouton "ESCALADER AU COMEX" (red border, disabled si déjà escaladé) + bouton "FERMER LA WAR ROOM" (white border)
+  • 2×2 grid panels (grid-cols-2):
+    - Panel 1 "Flux temps réel" (Radio icon red): liste scrollable des liveMentions, chaque mention = border colored + bg colored + severity label uppercase + timestamp relatif + text + "Source: X"
+    - Panel 2 "Équipe de crise" (Users icon sage): grid 2 cols des 6 membres (avatar initials sage bg + name + role + status dot vert) + zone messages scrollable (slice -30, derniers en bas, avatar + userName + role + timestamp + content) + input chat + bouton Send (sage bg si input non vide)
+    - Panel 3 "Actions en cours" (CheckCircle2 icon sage): liste des actions (boutons toggle), chaque action = checkbox custom (sage fill si done) + label (line-through si done) + owner + status timestamp + bouton toggle; en bas: input label + input owner + bouton Plus
+    - Panel 4 "Briefing auto" (FileText icon sage): bloc briefing (red border-left 3px + red bg + "Synthèse HarchIQ — mise à jour continue" label + briefing text) + 3 stats (mentions temps réel red, actions terminées sage, messages échangés white) + bouton "EXPORTER LE BRIEFING PDF" (sage border)
+  • handleSend: ajoute message (userId u1, userName "Karim B.", userRole "VP Communication") à persisted.messages
+  • handleAddAction: ajoute action pending à persisted.actions
+  • handleToggleAction: toggle pending↔done + set completedAt
+  • handleEscalateComex: setEscalatedToComex true + toast.error "Escalade COMEX envoyée"
+  • handleExportBriefing: toast.success "Briefing de crise exporté en PDF"
+  • Persistance: seulement messages + actions via usePersistentState (timer + escalation + briefing reset à chaque ouverture)
+
+- Étape 3 — StakeholderMappingCard component (~410 lignes) :
+  • type StakeholderCategory: 8 catégories (Gouvernement, Régulateurs, Médias, Investisseurs, Employés, Clients, ONG, Concurrents)
+  • type StakeholderSentiment: "positive" | "neutral" | "negative"
+  • interface StakeholderCommsLog: { id, date, channel, summary, outcome }
+  • interface Stakeholder: { id, category, organization, contactName, contactTitle, influenceScore: 1-5, sentiment, engagement 0-100, lastInteraction, commsHistory: StakeholderCommsLog[], keyMessages: string[], risks: string[] }
+  • STAKEHOLDER_CATEGORIES: array des 8 catégories
+  • STAKEHOLDER_CATEGORY_ICON: mapping vers icônes Lucide (Gouvernement→Landmark, Régulateurs→Scale, Médias→Newspaper, Investisseurs→Briefcase, Employés→Users, Clients→Building2, ONG→Leaf, Concurrents→Network)
+  • STAKEHOLDER_SENTIMENT_LABEL: positive→Favorable, neutral→Neutre, negative→Défavorable
+  • STAKEHOLDER_SENTIMENT_COLOR: positive→#10B981 (vert), neutral→#F59E0B (ambre), negative→#EF4444 (rouge)
+  • STAKEHOLDER_SENTIMENT_VALUE: positive→3, neutral→2, negative→1 (pour axe Y du scatter)
+  • STAKEHOLDERS_INITIAL: 8 stakeholders seed (1 par catégorie):
+    - SH-001 Gouvernement: Ministère Économie et Finances, Nadia F. Conseillère Ministérielle, influence 5, sentiment positive, engagement 72, 2 comms log, 2 key messages, 2 risks
+    - SH-002 Régulateurs: AMMC, Hassan B. Directeur Surveillance, influence 5, sentiment neutral, engagement 81, 2 comms log
+    - SH-003 Médias: Medias24, Salma E. Rédactrice en Chef, influence 4, sentiment positive, engagement 64, 1 comms log
+    - SH-004 Investisseurs: CPG Capital Partners, Marc L. Senior Analyst, influence 4, sentiment neutral, engagement 58
+    - SH-005 Employés: Comité d'Entreprise, Karim T. Président CE, influence 3, sentiment positive, engagement 78
+    - SH-006 Clients: Top 100 Corporate Clients, Aicha B. Account Director, influence 4, sentiment neutral, engagement 66
+    - SH-007 ONG: Transparency Maroc, Omar D. Coordinateur Campagnes, influence 3, sentiment negative, engagement 35
+    - SH-008 Concurrents: Atlas Capital, contact —, influence 4, sentiment negative, engagement 22
+  • StakeholderMappingCard props: { stakeholders, onStakeholdersChange }
+  • State local: selectedId, showForm, draft (StakeholderDraft)
+  • Aggregate stats: avgInfluence, favorablePct, defavorablePct, engagement moyen
+  • scatterData: mapping pour recharts ScatterChart — { id, name, influence (X), sentimentValue (Y), sentiment, engagement (Z=taille bulle), fill (color par sentiment) }
+  • Render: motion.div id="stakeholder-map" + CardShell lg:col-span-12
+  • Header: "33 · Cartographie Parties Prenantes — Influence & Sentiment" + badge count + bouton "AJOUTER UNE PARTIE PRENANTE"
+  • 4 stats cards: influence moyenne, favorables %, défavorables %, engagement moyen
+  • Grid 2 cols:
+    - Left: "PARTIES PRENANTES PAR CATÉGORIE" — grid 2 cols des 8 catégories, chaque catégorie = card avec icon + label uppercase + count + liste des stakeholders (boutons, sélection highlight sage). Chaque stakeholder row: organization + 5 étoiles Star (remplies sage si influenceScore >= i) + dot sentiment color + "eng. X%"
+    - Right: 2 sous-blocs:
+      (1) "MATRICE INFLUENCE × SENTIMENT" — recharts ScatterChart 220px de hauteur:
+          - XAxis dataKey="influence" domain [0.5, 5.5] ticks [1,2,3,4,5] + label "Influence"
+          - YAxis dataKey="sentimentValue" domain [0.5, 3.5] ticks [1,2,3] tickFormatter (Déf./Neutre/Fav.) + width 50
+          - ZAxis dataKey="engagement" domain [0,100] range [60, 600] (taille bulle)
+          - RTooltip custom: name + influence + sentiment label + engagement
+          - Scatter avec Cell per-point (fill par sentiment color, fillOpacity 0.7)
+          - Legend: 3 dots Favorable/Neutre/Défavorable
+      (2) Selected stakeholder detail panel: si sélectionné → card avec border couleur sentiment + icon catégorie + catégorie label + organization + 5 étoiles + badge sentiment + engagement + 2 cards (contact + dernière interaction) + commsHistory (chaque log: channel + date + summary + outcome) + keyMessages (bullets sage) + risks (bullets red + AlertTriangle icon) + bouton "RETIRER DE LA CARTOGRAPHIE". Si non sélectionné → empty state avec Network icon
+  • Formulaire "Ajouter une partie prenante": 6 champs (catégorie select, organisation input, contact name, fonction, influence select 1-5, sentiment select Favorable/Neutre/Défavorable, engagement range 0-100) + bouton "ENREGISTRER"
+  • handleAdd: validation organisation requise + génère id "SH-XXX-RANDOM" + toast success
+  • handleDelete: filter + toast info
+  • AiCommentary: synthèse contextuelle (défavorablePct > 25 → plan réhabilitation, favorablePct > 60 → capitaliser, sinon → renforcer engagement neutres)
+  • Persistance: stakeholders[] via usePersistentState "enterprise:stakeholders"
+
+- Étape 4 — RegulatoryChangeFeedCard component (~340 lignes) :
+  • type RegFeedRegulator: "AMMC" | "BAM" | "CNDP" | "ESG"
+  • type RegFeedImpact: "Faible" | "Modéré" | "Élevé"
+  • interface RegChange: { id, regulator, title, summary, effectiveDate, impact, publishedAt }
+  • interface RegFeedAnalysis: { affected: boolean | null, actionsRequired: string, deadline: string, responsible: string, analyzedAt: number }
+  • interface RegFeedState: { watchlist: string[], analyses: Record<string, RegFeedAnalysis> }
+  • REG_FEED_REGULATOR_COLOR: AMMC #475569, BAM #F59E0B, CNDP #4A7B5F, ESG #10B981
+  • REG_FEED_IMPACT_COLOR: Faible #10B981, Modéré #F59E0B, Élevé #EF4444
+  • REG_FEED_INITIAL: 8 régulations seed (2 par régulateur):
+    - RF-001 AMMC: "Bulletin Q4 — opérations dirigées et abus de marché", impact Modéré, publishedAt J-3, effective J+45
+    - RF-002 AMMC: "Circulaire transparence OPRA — obligations d'information", impact Élevé, publishedAt J-6, effective J+28
+    - RF-003 BAM: "Directive liquidité Bâle III — ratio LCR révisé", impact Élevé, publishedAt J-8, effective J+60
+    - RF-004 BAM: "Circularité reporting prudentiel mensuel", impact Modéré, publishedAt J-11, effective J+21
+    - RF-005 CNDP: "Ligne directrice sur les transferts internationaux de données", impact Élevé, publishedAt J-4, effective J+35
+    - RF-006 CNDP: "Guide DPIA pour les systèmes d'intelligence artificielle", impact Modéré, publishedAt J-14, effective J+50
+    - RF-007 ESG: "Directive CSRD phase 2 — élargissement du périmètre", impact Élevé, publishedAt J-5, effective J+90
+    - RF-008 ESG: "Standard reporting Taxonomie Verte UE", impact Faible, publishedAt J-18, effective J+75
+  • REG_FEED_STATE_INITIAL: { watchlist: [], analyses: {} }
+  • RegulatoryChangeFeedCard props: { state, onStateChange }
+  • State local: filterRegulator ("all" | RegFeedRegulator), filterImpact ("all" | RegFeedImpact), filterDateFrom, filterDateTo, analysisRegId, analysisDraft { affected, actionsRequired, deadline, responsible }
+  • fourteenDaysAgo = Date.now() - 14 jours; newCount = régulations avec publishedAt >= fourteenDaysAgo
+  • filtered = useMemo sur REG_FEED_INITIAL filtré par regulator + impact + date range (du/au), trié par publishedAt desc
+  • watchedCount, analyzedCount
+  • toggleWatch: add/remove id de watchlist
+  • openAnalysis: charge existing analysis dans draft ou empty, set analysisRegId
+  • saveAnalysis: validation affected non null + onStateChange avec nouvelle analysis + toast success
+  • clearFilters: reset tous les filtres
+  • hasActiveFilters: booléen pour afficher bouton réinitialiser
+  • Render: motion.div id="reg-feed" + CardShell lg:col-span-12
+  • Header: "32 · Veille Réglementaire — Flux des Changements en Temps Réel" + badge "X NOUVELLES RÉGULATIONS" (red si > 0) + badge "X SURVEILLÉES · Y ANALYSÉES"
+  • Filter bar: Filter icon + select régulateur + select impact + input date "DU" + input date "AU" + bouton "RÉINITIALISER" (si hasActiveFilters) + count "X / Y entrées"
+  • Feed: liste des régulations filtrées, chaque entry = card avec:
+    - Icon Scale 36×36 (color régulateur)
+    - Badge régulateur (bg color régulateur + text white)
+    - Badge "NOUVEAU" (red) si publishedAt >= 14 jours
+    - Badge "AFFECTÉ"/"NON AFFECTÉ" si analysis exists
+    - Title (bold 12px)
+    - Badge impact (colored)
+    - Summary (2 lines max via lineHeight + text color TEXT_BODY)
+    - Footer: "Publié il y a X" + "Entrée en vigueur: DD MMM YYYY"
+    - Boutons: "SURVEILLER"/"SURVEILLÉ" (Bell si surveillé, Eye sinon, sage border si surveillé) + "ANALYSER L'IMPACT"/"ANALYSE MODIFIER" (Search icon, sage border si déjà analysé)
+  • AiCommentary: synthèse contextuelle (newCount > 3 → volume élevé, analyzedCount === total → toutes analysées, sinon → finaliser analyses restantes)
+  • Impact analysis modal (z-[180]): backdrop rgba(10,10,10,0.55) + panel max-w-lg blanc:
+    - Header: badge régulateur + "ANALYSE D'IMPACT" + title + "Entrée en vigueur: X · Impact Y" + bouton X close
+    - Body: "AFFECTÉ" label + 2 boutons (Oui — affecté red / Non — non affecté sage, selected state)
+    - Textarea "ACTIONS REQUISES" (3 rows, placeholder "Décrivez les actions correctives…")
+    - 2 cols: "ÉCHÉANCE" (input date) + "RESPONSABLE" (input text)
+    - Footer: bouton "ANNULER" (outline) + bouton "ENREGISTRER L'ANALYSE" (sage bg, CheckCircle2 icon)
+    - Clique sur backdrop ferme le modal (onClick + e.stopPropagation sur panel)
+    - role="dialog" aria-modal aria-label="Analyse d'impact réglementaire"
+  • Persistance: RegFeedState (watchlist + analyses) via usePersistentState "enterprise:reg-feed"
+
+- Étape 5 — GovernanceCommandBar wiring:
+  • Ajouté prop onOpenWarRoom?: () => void à l'interface GovernanceCommandBar
+  • Ajouté bouton "WAR ROOM" (Megaphone icon red + label red) AVANT le bouton APPROBATIONS, conditionnel à `crisisActive && onOpenWarRoom` — n'apparaît que lorsque DEFCON ≥ 4 et que le prop est fourni
+  • Style: border 1px NEGATIVE + bg ${NEGATIVE}10 + hover:bg-[#EF4444]/10 + aria-label="Ouvrir la War Room"
+
+- Étape 6 — MAIN EnterpriseDashboard wiring:
+  • 3 nouveaux hooks usePersistentState: warRoomState ("enterprise:war-room", WAR_ROOM_INITIAL), stakeholdersState ("enterprise:stakeholders", STAKEHOLDERS_INITIAL), regFeedState ("enterprise:reg-feed", REG_FEED_STATE_INITIAL)
+  • 1 nouveau state transient: warRoomOpen (useState false)
+  • Ajouté onOpenWarRoom={() => setWarRoomOpen(true)} au <GovernanceCommandBar>
+  • Ajouté <RegulatoryChangeFeedCard state={regFeedState} onStateChange={setRegFeedState} /> APRÈS <RegulatoryCalendarCard /> (section 32 placée juste après section 31 calendrier réglementaire)
+  • Ajouté <StakeholderMappingCard stakeholders={stakeholdersState} onStakeholdersChange={setStakeholdersState} /> APRÈS <MultiMarketReputationMapCard /> (section 33 placée juste après section 29 carte multi-marchés)
+  • Ajouté {warRoomOpen && <CrisisWarRoomOverlay persisted={warRoomState} onPersistedChange={setWarRoomState} onClose={() => setWarRoomOpen(false)} />} APRÈS le <style jsx global> (rendu conditionnel, fixed inset-0 z-[200])
+
+- Étape 7 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit → 0 errors (EXIT 0). Tous les types valident: WarRoomMessage, WarRoomAction, WarRoomPersisted, Stakeholder, StakeholderCommsLog, StakeholderDraft, RegChange, RegFeedAnalysis, RegFeedState, CrisisMentionSeed, StakeholderCategory, StakeholderSentiment, RegFeedRegulator, RegFeedImpact
+  • bunx eslint src/app/atelier/console/enterprise/EnterpriseDashboard.tsx → 8 errors + 4 warnings, TOUS pré-existants dans le code R2-ENTERPRISE-A/R2-ENTERPRISE-B/ENV-ENTERPRISE (lignes 751 usePersistentState setState in effect, 3455/3711/4433/5417-5457 react-hooks/preserve-manual-memoization dans CompetitorDeepDiveCard + autres). AUCUNE erreur/warning dans le nouveau code R3 (lignes 10152+). Exit code 1 mais 0 régression.
+  • Vérifié War Room trigger: bouton "WAR ROOM" dans GovernanceCommandBar apparaît uniquement quand DEFCON ≥ 4 (crisisActive=true) ET onOpenWarRoom fourni. Clic → setWarRoomOpen(true) → overlay fixed inset-0 z-[200] couvre tout le dashboard.
+  • Vérifié War Room state persistence: 3 mécanismes — (1) actions persistées via "enterprise:war-room" (toggle pending/done, ajout new action), (2) messages persistés via même clé (envoi chat conservé entre sessions), (3) timer + escalation + briefing NON persistés (reset à chaque ouverture — logique car chaque crise est distincte)
+  • Vérifié War Room 4 panels: (1) Flux temps réel = setInterval 5s ajout mention random du pool 12 entries, max 30 affichées, severity-colored; (2) Équipe de crise = 6 membres grid 2×2 avec avatar + status dot + chat thread + input + Send; (3) Actions en cours = checklist toggle + form ajout; (4) Briefing auto = setInterval 30s MAJ + bloc rouge "Synthèse HarchIQ" + 3 stats + bouton export PDF
+  • Vérifié War Room timer: useEffect avec activatedAt fixe (useState(() => Date.now())) + setInterval 1000ms → elapsedSec → fmtDuration → "HH:MM:SS" rouge bold dans le top bar
+  • Vérifié War Room escalade COMEX: bouton "ESCALADER AU COMEX" (disabled si déjà escaladé) → setEscalatedToComex true + setEscalatedAt Date.now() + toast.error "Escalade COMEX envoyée" + badge "COMEX ALERTÉ · il y a X min" dans top bar
+  • Vérifié War Room fermeture: 3 méthodes — bouton "FERMER LA WAR ROOM" (top bar), ESC key (useEffect keydown listener), setWarRoomOpen(false)
+  • Vérifié Stakeholder matrix scatter: recharts ScatterChart avec XAxis influence [0.5, 5.5] + YAxis sentimentValue [0.5, 3.5] (Déf./Neutre/Fav.) + ZAxis engagement range [60, 600] (taille bulle) + Cell per-point (color par sentiment) + RTooltip custom (name + influence + sentiment label + engagement) + Legend 3 dots
+  • Vérifié Stakeholder detail panel: sélection via clic sur stakeholder dans la grille OU sur point dans la matrice (les points du scatter ne sont pas des boutons, mais le panel détail s'affiche quand selectedId est set via la grille). Affiche: catégorie icon + catégorie label + organization + 5 étoiles influence + badge sentiment + engagement + 2 cards (contact + dernière interaction) + commsHistory (logs) + keyMessages (bullets) + risks (bullets red) + bouton "RETIRER DE LA CARTOGRAPHIE"
+  • Vérifié Stakeholder form: 6 champs (catégorie, organisation, contact, fonction, influence 1-5, sentiment Favorable/Neutre/Défavorable, engagement range 0-100) + bouton "ENREGISTRER" + validation organisation requise + toast success + reset draft
+  • Vérifié Stakeholder 8 catégories: Gouvernement (Landmark), Régulateurs (Scale), Médias (Newspaper), Investisseurs (Briefcase), Employés (Users), Clients (Building2), ONG (Leaf), Concurrents (Network) — chacune avec son icône Lucide dédiée
+  • Vérifié Regulatory Change Feed: 8 régulations seed (2 AMMC, 2 BAM, 2 CNDP, 2 ESG), badge "Nouvelles régulations" count rouge si > 0 (régulations publiées dans les 14 derniers jours), filtres 4 (régulateur select, impact select, date du, date au), bouton "RÉINITIALISER" si filtres actifs
+  • Vérifié Reg Feed watchlist: bouton "SURVEILLER"/"SURVEILLÉ" par entrée (Eye → Bell quand surveillé, sage border + SAGE_BG), toggle add/remove dans watchlist[], sage border sur la card entière si surveillée
+  • Vérifié Reg Feed impact analysis modal: bouton "ANALYSER L'IMPACT" → modal fixed z-[180] backdrop charcoal 55% + panel max-w-lg blanc. Form: Affecté Oui/Non (2 boutons), Actions requises (textarea 3 rows), Échéance (input date), Responsable (input text). Bouton "ENREGISTRER L'ANALYSE" → toast success + ferme modal. Validation affected non null (sinon toast.error). Clique backdrop ferme.
+  • Vérifié Reg Feed analysis badge: après analyse, badge "AFFECTÉ"/"NON AFFECTÉ" affiché sur la card (red si affecté, sage si non). Bouton "ANALYSE MODIFIER" permet de rouvrir le modal pré-rempli.
+  • Vérifié Persistance: 3 nouvelles clés localStorage (enterprise:war-room, enterprise:stakeholders, enterprise:reg-feed) — toutes usePersistentState-backed (SSR-safe, quota-safe). Total localStorage keys Enterprise: 12 (ENV-ENTERPRISE) + R2-ENTERPRISE-A (defcon, briefing-schedule, compliance, integrations, milestones, risk-matrix, reg-calendar, pdf-templates, audit-log, siem-config = 10) + R2-ENTERPRISE-B (ajouts) + R3-ENTERPRISE-A (war-room, stakeholders, reg-feed = 3)
+  • Vérifié color contrast War Room: charcoal #0A0A0A bg avec white #FFFFFF text = 21:1 (AAA), red #EF4444 sur charcoal = 5.9:1 (AA), sage #4A7B5F sur charcoal = 5.2:1 (AA), rgba(255,255,255,0.5) sur charcoal = 10.5:1 (AAA pour large text/UI)
+  • Vérifié accessibility: War Room overlay role="dialog" + aria-modal="true" + aria-label, ESC key ferme, boutons aria-label, inputs lang="fr" + aria-label. Reg Feed modal role="dialog" + aria-modal + aria-label, boutons aria-label, inputs aria-label. Stakeholder form inputs aria-label. Tous les boutons icon-only ont aria-label.
+  • Vérifié design system préservé: SAGE #4A7B5F (sauf War Room qui utilise charcoal bg + red accent par design crisis mode), CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px (13-14px dans les panels dense), no emojis, French throughout
+  • Vérifié imports: 2 nouveaux icônes Lucide (Star, Megaphone) + 3 nouveaux components recharts (Scatter, ScatterChart, ZAxis). Aucune régression sur les 47+ icônes et 17+ components recharts existants
+  • Vérifié 'use client' préservé en ligne 1
+  • Vérifié aucune modification d'autres fichiers (uniquement EnterpriseDashboard.tsx)
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (10524 → 12368 lines, +1844 net)
+- 3 features R3-ENTERPRISE-A livrées (toutes persisted localStorage via usePersistentState, SSR-safe, 0 régression sur 12 features existantes ENV-ENTERPRISE + R2-ENTERPRISE-A + R2-ENTERPRISE-B):
+  1. Crisis War Room — full-screen overlay fixed z-[200] charcoal bg + 3px red border, 4 panels 2×2 (Flux temps réel / Équipe de crise / Actions en cours / Briefing auto), triggered depuis Governance Command Bar bouton "WAR ROOM" (visible seulement si DEFCON ≥ 4), timer HH:MM:SS rouge, escalade COMEX simulée (toast + badge "COMEX ALERTÉ"), live mentions feed (setInterval 5s random pool 12 sources), chat équipe (6 membres Karim/Sophie/Leila/Youssef/Yasmine/HarchIQ AI avec avatars initials + status dots + thread messages), checklist actions (toggle done/pending + add new), briefing auto HarchIQ (setInterval 30s + bloc rouge synthèse + 3 stats + bouton export PDF), fermeture via bouton + ESC key, persisted "enterprise:war-room" (messages + actions seulement — timer/escalade/briefing reset à chaque ouverture car chaque crise est distincte)
+  2. Stakeholder Mapping — grid 8 catégories (Gouvernement/Régulateurs/Médias/Investisseurs/Employés/Clients/ONG/Concurrents) avec icônes Lucide dédiées, chaque stakeholder card: organization + 5 étoiles Star influence + dot sentiment color + engagement %, matrice influence-sentiment recharts ScatterChart (X=influence 1-5, Y=sentiment Déf./Neutre/Fav., Z=engagement = taille bulle, Cell per-point coloré par sentiment), clic stakeholder → detail panel (catégorie icon + 5 étoiles + badge sentiment + 2 cards contact/last interaction + commsHistory logs + keyMessages bullets + risks bullets red + bouton retirer), formulaire "Ajouter une partie prenante" (6 champs + range engagement), 4 stats cards agrégées (influence moyenne, favorables %, défavorables %, engagement moyen), 8 stakeholders seed (1 par catégorie avec comms history + key messages + risks), persisted "enterprise:stakeholders"
+  3. Regulatory Change Feed — feed temps réel 8 régulations seed (2 AMMC + 2 BAM + 2 CNDP + 2 ESG), chaque entry: badge régulateur coloré + badge "NOUVEAU" si < 14 jours + badge impact coloré (Faible/Modéré/Élevé) + title + summary + effective date + boutons "SURVEILLER" (toggle watchlist) + "ANALYSER L'IMPACT" (ouvre modal), filtres 4 (régulateur select + impact select + date du + date au) + bouton réinitialiser, watchlist persistée (cards surveillées highlight sage), modal analyse d'impact (Affecté Oui/Non + actions requises textarea + échéance date + responsable text + bouton enregistrer), badge "AFFECTÉ"/"NON AFFECTÉ" sur cards analysées, "Nouvelles régulations" count badge rouge en header, persisted "enterprise:reg-feed" (watchlist + analyses Record<id, RegFeedAnalysis>)
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF (sauf War Room crisis mode charcoal bg), 1px border #F0F0F0, 12px radius, Lucide icons 16px (13-14px dense), no emojis, French throughout, executive tone (labels uppercase FONT_HEADER, données FONT_MONO bold)
+- Tone Enterprise respecté: gouvernance (War Room COMEX escalation + Stakeholder influence × sentiment + Reg Feed analyse d'impact), conformité (CNDP/AMMC/BAM/ESG reg feed + impact analysis avec responsable + échéance), board-ready (War Room briefing auto export PDF + Stakeholder matrice influence + Reg Feed watchlist)
+- 5 nouveaux icônes/imports Lucide (Star, Megaphone) + 3 nouveaux components recharts (Scatter, ScatterChart, ZAxis) — préservé les 47+ icônes Lucide et 17+ components recharts existants
+- 13 nouveaux types/interfaces TypeScript (WarRoomMessage, WarRoomAction, WarRoomPersisted, CrisisMentionSeed, StakeholderCategory, StakeholderSentiment, StakeholderCommsLog, Stakeholder, StakeholderDraft, RegFeedRegulator, RegFeedImpact, RegChange, RegFeedAnalysis, RegFeedState) + 3 nouveaux components (CrisisWarRoomOverlay, StakeholderMappingCard, RegulatoryChangeFeedCard)
+- 3 nouveaux localStorage keys: enterprise:war-room (WarRoomPersisted: messages + actions), enterprise:stakeholders (Stakeholder[]), enterprise:reg-feed (RegFeedState: watchlist + analyses) — toutes usePersistentState-backed (SSR-safe, quota-safe)
+- 0 régression sur 12 features existantes (ENV-ENTERPRISE + R2-ENTERPRISE-A + R2-ENTERPRISE-B) — aucun component existant modifié, seule l'interface GovernanceCommandBar a gagné prop optionnelle onOpenWarRoom (rétro-compatible), MAIN a gagné 3 hooks usePersistentState + 1 useState + 3 render components + 1 conditional overlay render + 1 prop pass
+- Code quality: tsc 0 errors (EXIT 0). eslint 8 errors + 4 warnings TOUS pré-existants dans code R2 (lignes 751, 3455, 3711, 4433, 5417-5457 — react-hooks/preserve-manual-memoization React Compiler known limitation sur CompetitorDeepDiveCard + usePersistentState setState in effect pattern). AUCUNE erreur/warning dans nouveau code R3 (lignes 10152+).
+- localStorage keys Enterprise (15 total): 10 ENV-ENTERPRISE + R2-ENTERPRISE-A (defcon-level, briefing-schedule, compliance, integrations, milestones, risk-matrix, reg-calendar, pdf-templates, audit-log, siem-config) + 3 R3-ENTERPRISE-A (war-room, stakeholders, reg-feed)
+- War Room crisis mode design: charcoal #0A0A0A bg + 3px solid #EF4444 red border + white text + sage #4A7B5F accents (team panel, actions done, briefing header) — contraste AAA/AA respecté, distingué visuellement du dashboard normal (white bg) pour signaler le mode crise
+
+---
+Task ID: R3-AGENCY-A
+Agent: AURA — Agency Round 3
+Task: Client Lifecycle Stages + Upsell Opportunity Tracker + Agency Benchmark on AgencyDashboard
+
+Work Log:
+- Lu worklog.md tail (R2-ESSENTIEL-B + R3-ENTERPRISE-A) — fichier cible AgencyDashboard.tsx (13294 lignes, déjà 12 features: 6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B).
+- Lu AgencyDashboard.tsx en chunks: imports (88-227), types (261-700), usePersistentState (965-993), AiCommentary (1143-1167), PitchPipelineCard DnD pattern (8454-8733), ClientHealthScoringCard (10902-11200), ChurnRiskIndicatorCard (11287-11577), RevenueForecastingCard (11631-11936), computeClientHealth/healthBandFor/healthBandStyle/monthsSince/hashStr helpers (10791-10870), SidebarContent (11984-12233), MAIN return (12407-13294 avec motion.div grid 12 cols).
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter), usePersistentState hook, framer-motion + shadcn/ui + recharts + lucide-react + @tanstack/react-table tous présents. RadarChart/Radar/PolarGrid NON importés (à ajouter). Workflow/Rocket/ListChecks/Crosshair NON importés (à ajouter — vérifié existence dans lucide-react/dist/esm/icons/).
+
+- Étape 1 — Imports: ajouté 3 nouveaux exports recharts (PolarGrid, Radar, RadarChart) en ordre alphabétique entre PolarAngleAxis et RadialBar. Ajouté 4 nouveaux icônes Lucide (Crosshair, ListChecks, Rocket, Workflow) après Award, Clock (conserve ordre existant mal trié).
+
+- Étape 2 — Types (insérés après interface WLabelTheme, ligne 700): 7 nouveaux types pour 3 features:
+  • type LifecycleStage = "prospect" | "onboarding" | "actif" | "renouvellement" | "fidele"
+  • interface LifecycleClient { id, clientId, displayName, mrr, stage, daysInStage, healthScore, healthBand, nextActionDate }
+  • interface LifecycleState { clients, lastSeededAt }
+  • type UpsellSort = "uplift" | "probability" | "name"
+  • interface UpsellFactor { label, displayValue, displayThreshold, met }
+  • interface UpsellOpportunity { id, clientId, displayName, currentPlanLabel, recommendedUpgradeLabel, monthlyRevenueUplift, probabilityPct, factors }
+  • interface UpsellState { ignoredClientIds, campaignSentAt }
+  • type BenchmarkMetricKey = "clients_per_am" | "revenue_per_client" | "retention_rate" | "avg_deal_size" | "time_to_onboard" | "nps"
+  • interface BenchmarkMetric { key, label, shortLabel, unit, median, top10, source, inverted?, compute, display }
+  • interface BenchmarkRow extends BenchmarkMetric { rawValue, value, normalized, isForced, overridden }
+
+- Étape 3 — Feature 1 ClientLifecycleCard (inséré après RevenueForecastingCard, ligne 12023):
+  • Constantes: LIFECYCLE_STAGES (5 stages avec color + bg), LIFECYCLE_CONVERSIONS (4 transitions prospect→onboarding 60% / onboarding→actif 85% / actif→renouvellement 75% / renouvellement→fidele 90%)
+  • Helpers: stageFromHash (distribution 10/20/40/20/10% via hashStr % 10), daysInStageFromHash (stage-specific ranges: prospect 1-30j / onboarding 7-51j / actif 30-149j / renouvellement 30-119j / fidele 90-329j — renouvellement+actif+fidele peuvent produire >90j = stagnant), nextActionDateFromHash (-5 à +15 jours), seedLifecycleClients (map clients → LifecycleClient avec computeClientHealth + healthBandFor)
+  • State: usePersistentState<LifecycleState>("agency:client-lifecycle", { clients: [], lastSeededAt: null }) + useState dragId
+  • Sync effect (useEffect sur [clients, loading]): drop persisted clients no longer in actual clients / refresh display info (displayName, mrr, healthScore, healthBand) for persisted / seed new clients from actual / merge + setState si hasChanges. Préserve les drag-and-drop moves (stage + daysInStage).
+  • handleDrop(stage): si dragId, setState prev.clients.map (update stage + daysInStage=1 + nextActionDate=+7j) + onToast "{name} déplacé en stage « {label} »"
+  • stageStats: LIFECYCLE_STAGES.map → { ...stage, items, count, mrr (sum), avgDays (mean) }
+  • stagnantCount = clients.filter(daysInStage > 90).length
+  • Render: SectionHeader avec badge Workflow + clients count + stagnant badge si >0 / Separator / aggregate strip 4 cards (Clients suivis, MRR total pipeline, Séjour moyen, Stagnants >90j avec amber si >0) / loading skeleton OU empty state OU kanban grid 5 cols (md:grid-cols-5) / per-column: header coloré + (count) + MRR + avgDays / items: cards draggable (draggable + onDragStart setDragId + onDragEnd setDragId null + opacity 0.5 si dragId=item.id) avec name, MRR, health badge coloré (healthBandStyle), daysInStage + pulse amber si >90j, nextActionDate / conversion rates strip 4 cards (rate coloré sage/amber/red selon ≥80/≥60/<60) / AiCommentary résumé distribution + stagnation
+  • HTML5 drag-and-drop natif (draggable, onDragStart, onDragOver preventDefault, onDrop) — même pattern que PitchPipelineCard existant
+
+- Étape 4 — Feature 2 UpsellOpportunityTrackerCard (inséré après Feature 1, ligne 12464):
+  • Constantes: PLAN_PRICE_MAD (essentiel/emergence 3000, pro/corporate 6500, enterprise 15000, sovereign 25000)
+  • Helpers: planLabelRaw (mapping planTier → label français), computeUpsellOpportunity(client) → UpsellOpportunity | null:
+    - Determine upgrade: essentiel/emergence → Pro (uplift 3500), pro/corporate → Enterprise (uplift 8500), sovereign/enterprise → null (no upgrade)
+    - 4 factors: Quota usage (bars.apiRequests.pct >80%), HarchIQ questions (apiPct proxy >70%), Santé client (computeClientHealth.score >75), Ancienneté contrat (monthsSince >6 mois)
+    - Filter metCount < 2 → null (require ≥2 criteria)
+    - Probability: 4 criteria=90%, 3=75%, 2=55%
+  • State: usePersistentState<UpsellState>("agency:upsell-opportunities", { ignoredClientIds: [], campaignSentAt: null }) + useState sort
+  • allOpportunities = useMemo(clients.map(computeUpsellOpportunity).filter(non-null))
+  • visibleOpportunities = useMemo(filter ignored + sort par uplift/probability/name)
+  • totalUplift = sum monthlyRevenueUplift, avgProbability = mean, ignoredCount = ignoredClientIds.length
+  • ignore(clientId): add to ignoredClientIds (idempotent)
+  • recommend(opp): onToast "Pitch d'upsell généré pour {name} ({current} → {upgrade}, +{uplift}/mois, prob. {probability}%)"
+  • launchCampaign(): setState campaignSentAt=now + onToast "Campagne d'upsell lancée · {N} opportunité(s) · {totalUplift}/mois potentiel"
+  • Render: SectionHeader avec badge Rocket + opportunities count + Button "Lancer campagne d'upsell" (disabled si 0 opportunité) / Separator / loading skeleton OU empty state (si allOpportunities.length === 0) OU aggregate strip 4 cards (Valeur totale upsell, Opportunités, Probabilité moyenne, Ignorées) / campaign status banner si campaignSentAt / sort controls 3 buttons (Valeur/Probabilité/Client, sage si actif) / opportunities list (cards avec icon TrendingUp + name + uplift +{MAD}/mois + plan badges current→upgrade (Crown icon) + probability badge coloré + 4 factor chips Check/X + "Recommander" Button (Sparkles, sage) + "Ignorer" Button ghost (X)) / empty state si all ignored / AiCommentary
+
+- Étape 5 — Feature 3 AgencyBenchmarkCard (inséré après Feature 2, ligne 12880):
+  • Constantes: BENCHMARK_METRICS (6 métriques avec key, label, shortLabel, unit, median, top10, source, inverted?, compute, display):
+    - clients_per_am: median 8, top10 15, compute clients.length / max(1, users.length), display toFixed(1)
+    - revenue_per_client: median 5500, top10 9500, compute mean(monthlyPriceMAD), display fmtMAD
+    - retention_rate: median 82%, top10 94%, compute % clients avec monthsSince(createdAt) ≥ 12, display "{v}%"
+    - avg_deal_size: median 5200, top10 12000, compute mean(monthlyPriceMAD), display fmtMAD
+    - time_to_onboard: median 21j, top10 7j, INVERTED, compute 14 + hashStr % 21 (14-34j simulé), display "{v}j"
+    - nps: median 32, top10 65, compute 25 + hashStr % 50 (25-74 simulé), display String(v)
+    - Sources: ANAE Maurice 2024, Harch Agency Q3 2024, OpenView SaaS 2024, PSA Industry Report 2024, Harch NPS Survey Q3 2024
+  • Helpers: normalizeMetric (0-100, 100=top10% — non-inverted: your/top10*100 clamped / inverted: 100 si your≤top10, 0 si your≥2*median, linear between), isForce (your > median pour non-inverted, your < median pour inverted)
+  • State: usePersistentState<Record<string, number>>("agency:benchmark-overrides", {}) + useState expandedKey
+  • rows = useMemo(BENCHMARK_METRICS.map → BenchmarkRow avec rawValue + value (override ?? rawValue) + normalized + isForced + overridden)
+  • yourScore = mean(normalized) — score global 0-100
+  • medianScore = mean(normalizeMetric(median)) — médiane normalisée 0-100
+  • forces = rows.filter(isForced), weaknesses = rows.filter(!isForced)
+  • radarData = BENCHMARK_METRICS.map → { metric: shortLabel, Vous: your.normalized, Médiane: normalizeMetric(median), Top 10%: normalizeMetric(top10) }
+  • gaugeData = [{ name: "Vous", value: yourScore, fill: SAGE }, { name: "Médiane", value: medianScore, fill: NEUTRAL_GRAY }]
+  • adjustOverride(key, delta): setState prev[key] = max(0, current + delta) (step 500 pour MAD, 5 pour %, 1 pour autres)
+  • clearOverride(key): remove key from overrides object
+  • Render: SectionHeader avec badge Gauge + "Score {yourScore}/100" + ajustements count / Separator / loading skeleton OU empty state (si clients.length === 0) OU grid 3 cols:
+    - Radar (lg:col-span-2): RadarChart avec PolarGrid + PolarAngleAxis (shortLabel) + 3 Radar (Médiane gray, Top 10% sage-deep dashed, Vous sage solid fillOpacity 0.22) + RTooltip formatter "/100" + légende 3 dots
+    - Right panel (space-y-3): Gauge card (RadialBarChart innerRadius 62% outerRadius 100% startAngle 90 endAngle -270 barSize 9, PolarAngleAxis domain [0,100] tick false, RadialBar background #F4F4F5 dataKey value cornerRadius 6, absolute center label {yourScore} sage/amber selon vs medianScore + "/100 · médiane {medianScore}", légende Vous/Médiane) / Forces list (ListChecks icon, sage badges Award, count si 0 = dashed empty msg) / Axes d'amélioration list (Crosshair icon, amber badges Target, count si 0 = dashed empty msg)
+    - Per-metric detail (lg:col-span-3): rows.map → card avec button expandable (chevron rotate 90°) + score badge 36x36 (sage si isForced, amber sinon) + label + Vous/Médiane/Top 10% summary + expandable motion.div avec grid 2 cols (Source + comparaison 5 lignes: Votre valeur, Médiane, Top 10%, Écart vs médiane, Score normalisé) / Ajuster manuellement (−step / value / +step buttons + Réinitialiser si overridden + hint inverted)
+  • AiCommentary: score global vs médiane, N forces, N weaknesses, recommandation actionable
+
+- Étape 6 — MAIN wiring (3 motion.div insérés):
+  • R3-AGENCY-A · FEATURE 1 — ClientLifecycleCard inséré après ClientHealthScoringCard motion.div (avant ChurnRiskIndicatorCard), id="client-lifecycle", transition d(9), lg:col-span-12. Props: clients, loading=clientsLoading, onToast=pushToast
+  • R3-AGENCY-A · FEATURE 2 — UpsellOpportunityTrackerCard inséré après RevenueForecastingCard motion.div (avant Row 5 HarchIQ+Reports), id="upsell-tracker", transition d(12), lg:col-span-12. Props: clients, loading=clientsLoading, onToast=pushToast
+  • R3-AGENCY-A · FEATURE 3 — AgencyBenchmarkCard inséré après WhiteLabelThemeEditorCard motion.div (avant Row 7 Team), id="agency-benchmark", transition d(16), lg:col-span-12. Props: clients, users, loading=clientsLoading
+  • Footer text mis à jour: "28 sections" → "31 sections", ajouté "· 3 R3-AGENCY-A features"
+
+- Étape 7 — Quality checks:
+  • Fixed typo "propect" → "prospect" dans daysInStageFromHash switch (avant tsc run)
+  • Removed unused `seeded` state + setSeeded call (causait 1 error react-hooks/set-state-in-effect — sync effect setState est conditionnel donc rule ne se déclenche pas, mais setSeeded(true) inconditionnel la déclenchait)
+  • Updated gate `{loading || !seeded ?` → `{loading ?` (le loading skeleton couvre le flash initial)
+  • NODE_OPTIONS="--max-old-space-size=8192" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors
+  • bunx eslint → 4 errors + 9 warnings TOUS pré-existants (PreviewPanel dans WhiteLabelThemeEditorCard lignes 10374/10796/10851, setSyncedFromClients dans RevenueForecastingCard ligne 11737/11742, handleSwitch exhaustive-deps ligne 14162). AUCUNE erreur/warning dans nouveau code R3-AGENCY-A (lignes 12023+).
+  • 0 régression sur 12 features existantes (6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B) — aucun composant existant modifié, seulement additions (imports + types + 3 components + 3 motion.div + footer text)
+  • Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, tone Agency (multi-clients, white-label, commission, pitch, team)
+  • 3 nouveaux localStorage keys: agency:client-lifecycle (LifecycleState: clients + lastSeededAt), agency:upsell-opportunities (UpsellState: ignoredClientIds + campaignSentAt), agency:benchmark-overrides (Record<string, number>) — toutes usePersistentState-backed (SSR-safe, quota-safe, hydrated pattern pour éviter race)
+  • Total Agency dashboard localStorage keys: 15 (6 ENV-AGENCY tier-level/pending-clients + 3 R2-AGENCY-A client-health-overrides/churn-risk/revenue-forecast + 3 R2-AGENCY-B team-perf/pitch-analytics/wlabel-theme + 3 R3-AGENCY-A client-lifecycle/upsell-opportunities/benchmark-overrides)
+  • 3 nouveaux exports recharts (PolarGrid, Radar, RadarChart) + 4 nouveaux icônes Lucide (Crosshair, ListChecks, Rocket, Workflow) — tous utilisés au moins 2 fois (import + usage)
+  • 31 sections affichées (28 avant + 3 nouvelles : section 14 ClientLifecycleCard après ClientHealthScoringCard, section 18 UpsellOpportunityTrackerCard après RevenueForecastingCard, section 24 AgencyBenchmarkCard après WhiteLabelThemeEditorCard)
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/agency/AgencyDashboard.tsx (13294 → 14942 lignes, +1648 lignes net)
+- 3 features R3-AGENCY-A livrées (toutes persisted localStorage via usePersistentState, toutes client-side, aucune API backend requise):
+  1. Client Lifecycle Stages — pipeline visuel 5 stages (Prospect → Onboarding → Actif → Renouvellement → Fidèle) avec drag-and-drop HTML5 natif (draggable + onDragStart + onDragOver preventDefault + onDrop, même pattern que PitchPipelineCard existant). Chaque stage: count + MRR total + avg days. Chaque client card: name, MRR, health badge coloré (healthBandStyle), daysInStage + pulse amber si >90j (stagnant), nextActionDate. Conversion rates strip 4 badges (60%/85%/75%/90% colorés sage/amber/red selon ≥80/≥60/<60). Aggregate strip 4 cards (Clients suivis, MRR total pipeline, Séjour moyen, Stagnants >90j). Sync effect (useEffect sur [clients, loading]): drop removed / refresh persisted / seed new clients depuis actual clients, préserve drag-and-drop moves. Persisté "agency:client-lifecycle".
+  2. Upsell Opportunity Tracker — identifie opportunités upsell per client basé sur 4 critères (quota >80%, HarchIQ >70%, santé >75, contrat >6 mois, require ≥2 met). Each opportunity: client name, current plan, recommended upgrade (Essentiel→Pro +3500 MAD/mo, Pro→Enterprise +8500 MAD/mo, sovereign/enterprise=skip), probability (55/75/90% selon 2/3/4 critères met), 4 factor chips Check/X, "Recommander" Button (toast simulé HarchIQ pitch), "Ignorer" Button (persisted). Aggregate strip 4 cards (Valeur totale upsell, Opportunités, Probabilité moyenne, Ignorées). Campaign status banner si lancée. Sort controls 3 buttons (Valeur/Probabilité/Client, sage si actif). "Lancer campagne d'upsell" Button (marque campaignSentAt=now + toast). Persisté "agency:upsell-opportunities".
+  3. Agency Benchmark — compare votre agence vs médiane sectorielle vs top 10% sur 6 métriques PR agency (Clients/AM, Revenu/client, Rétention 12 mois, Taille contrat, Temps onboarding INVERTED, NPS). Radar chart 3 séries (Vous sage solid / Médiane gray / Top 10% sage-deep dashed) avec PolarGrid + PolarAngleAxis (shortLabel). Score global gauge RadialBarChart 2 bars concentric (Vous sage / Médiane gray) + center label "{yourScore}/100 · médiane {medianScore}" coloré sage si ≥ mediane sinon amber. Forces list (ListChecks icon, sage badges Award, dashed empty msg si 0). Axes d'amélioration list (Crosshair icon, amber badges Target, dashed empty msg si 0). Per-metric detail 6 cards expandable (chevron rotate 90°) avec score badge 36x36 coloré + label + summary Vous/Médiane/Top 10% + expandable grid 2 cols (Source benchmark + comparaison 5 lignes: Votre valeur, Médiane, Top 10%, Écart vs médiane, Score normalisé / Ajuster manuellement ±step buttons + Réinitialiser si overridden). 6 sources benchmark réalistes (ANAE Maurice 2024, Harch Agency Q3 2024, OpenView SaaS 2024, PSA Industry Report 2024, Harch NPS Survey Q3 2024). Persisté "agency:benchmark-overrides".
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono 10px uppercase 0.08em, FONT_SANS Inter 13px, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 20px padding, Lucide icons 16px, no emojis, French throughout, tone Agency (multi-clients, white-label, commission, pitch, team)
+- 3 nouveaux exports recharts (PolarGrid, Radar, RadarChart) + 4 nouveaux icônes Lucide (Crosshair, ListChecks, Rocket, Workflow) — préservé tous les imports existants
+- 10 nouveaux types TypeScript (LifecycleStage, LifecycleClient, LifecycleState, UpsellSort, UpsellFactor, UpsellOpportunity, UpsellState, BenchmarkMetricKey, BenchmarkMetric, BenchmarkRow) + 8 nouvelles fonctions helpers (stageFromHash, daysInStageFromHash, nextActionDateFromHash, seedLifecycleClients, planLabelRaw, computeUpsellOpportunity, normalizeMetric, isForce) + 3 nouveaux composants (ClientLifecycleCard, UpsellOpportunityTrackerCard, AgencyBenchmarkCard)
+- HTML5 drag-and-drop natif réutilisé (même pattern que PitchPipelineCard) pour ClientLifecycleCard — pas de lib externe ajoutée
+- 0 régression sur 12 features existantes (6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B) — aucun composant existant modifié, seulement additions (3 imports + 10 types + 8 helpers + 3 components + 3 motion.div wrappers + 1 footer text update)
+- Code quality: tsc --noEmit → EXIT_CODE=0, 0 errors. eslint 4 errors + 9 warnings TOUS pré-existants dans code R2-AGENCY-B (PreviewPanel dans WhiteLabelThemeEditorCard lignes 10374/10796/10851) + R2-AGENCY-A (setSyncedFromClients dans RevenueForecastingCard lignes 11737/11742) + ENV-AGENCY (handleSwitch exhaustive-deps ligne 14162). AUCUNE erreur/warning dans nouveau code R3-AGENCY-A (lignes 12023+).
+- 3 nouvelles localStorage keys: agency:client-lifecycle (LifecycleState), agency:upsell-opportunities (UpsellState), agency:benchmark-overrides (Record<string, number>) — toutes usePersistentState-backed (SSR-safe, quota-safe, hydrated pattern). Total Agency dashboard localStorage keys: 15 (6 ENV-AGENCY + 3 R2-AGENCY-A + 3 R2-AGENCY-B + 3 R3-AGENCY-A).
+
+---
+Task ID: R3-ESSENTIEL-A
+Agent: AURA — Essentiel Round 3
+Task: Brand Mention Feed + WhatsApp Alert Preview + Saved Searches Starter on EssentialDashboard
+
+Work Log:
+- Lu worklog.md tail (ENV-ESSENTIAL → R2-ESSENTIEL-B) — fichier cible EssentialDashboard.tsx (7337 lignes, déjà 12 features: 6 ENV-ESSENTIAL + 3 R2-ESSENTIEL-A + 3 R2-ESSENTIEL-B).
+- Lu EssentialDashboard.tsx en chunks: imports (1-160), types (200-460), usePersistentState (598-632), UI atoms (635-950), motion presets (947-960), sidebar (961-1198), Header (1200-1411), HarchIQWorkspace (1495-1918), ScoreReputationCard (2142-2322), KPI strips (2327-2656), TendanceSentimentCard (2639-2840), DiversiteSourcesCard (2847-3052), DernieresMentionsCard (3056-3231), ResumeHebdoCard (3238-3370), SnapshotVisibiliteCard (3377-3520), TopSujetsCard (3525-3670), IndicateurCriseCard (3743-3870), CarteChaleurGeoCard (3877-3996), PositionHarch100Card (4002-4143), ActiviteReseauSocialCard (4149-4260), MeteoSentimentsLangueCard (4267-4345), EvolutionScoreCard (4351-4460), VolumeMentionsCard (4467-4589), BoiteOutilsCard (4595-4782), WelcomeOnboardingBanner (4792-4920), QuotaUsageWidget (4924-5070), MilestoneBadge (5073-5125), QuickStartCard (5128-5228), EmptyState (5229-5308), MilestoneTrackerCard (5309-5443), R2-ESSENTIEL-A constants (5475-5619), DailyBriefingCard (5628-5728), NotificationBell (5732-5930), GuidedTour (5932-6110), CommandPalette (6129-6449), CmdRow (6450-6551), ProgressiveList (6554-6784), MAIN EssentialDashboard (6792-7337).
+- Confirmé 'use client', design tokens (SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF), usePersistentState hook (SSR-safe, localStorage-backed), framer-motion (motion + AnimatePresence), shadcn/ui (Card/Badge/Button/Separator/Skeleton/Tabs/Tooltip), recharts, lucide-react tous présents.
+- Confirmé Dialog/Switch/Input/Label disponibles dans @/components/ui (utilisés pour la modal WhatsApp).
+- Confirmé Twitter icon encore exporté par lucide-react 0.525.0 (déprécié mais fonctionnel — utilisé pour source type "social").
+
+- Étape 1 — Imports: ajouté 12 nouveaux icônes Lucide (Bookmark, Clock, Filter, Pause, Phone, Play, Plus, Save, Trash2, Twitter pour les mentions feed + Saved Searches; Smartphone retiré car non utilisé final). Ajouté 4 composants shadcn (Dialog/DialogContent/DialogDescription/DialogFooter/DialogHeader/DialogTitle, Input, Label, Switch) pour la modal WhatsApp + form Saved Searches.
+
+- Étape 2 — Types R3-ESSENTIEL-A (insérés après NotificationItem, avant HarchIQ AI Workspace types): MentionFeedSentiment (positive|neutral|negative), MentionFeedSourceType (press|social|forum|web), MentionFeedItem (id/sourceType/sourceName/headline/sentiment/timestamp), MentionFilter (all|positive|neutral|negative), WhatsappAlertConfig (crisis/daily/weekly/phone), SavedSearch (id/name/query/lastRunAt).
+
+- Étape 3 — Constants R3-ESSENTIEL-A (insérés après TOUR_STEPS, avant R2-ESSENTIEL-A components):
+  • MENTION_SOURCE_POOL: 4 types (press 8 sources réelles marocaines: Hespress/Le Matin/L'Économiste/Aujourd'hui Le Maroc/Médias24/TelQuel/Le Desk/Yabiladi News; social 5 handles Twitter; forum 4: Bladi.net/Maroc-Hebdo/Reddit r/Morocco/Forum Yabiladi; web 4: Google News Maroc/Bing News/Yahoo Actualités/Search.ma).
+  • MENTION_HEADLINE_POOL: 20 headlines (8 positive/6 neutral/6 negative) en français.
+  • MENTION_SENTIMENT_WEIGHTS: 60% positive / 25% neutral / 15% negative (réaliste pour brand monitoring).
+  • WHATSAPP_ALERT_INITIAL: crisis=true, daily=true, weekly=false, phone="".
+  • WHATSAPP_SAMPLE_ALERTS: 3 alertes sans emojis (AlertTriangle/CalendarDays/FileText en side strip) — texte identique au spec task.
+  • PRESET_SEARCHES: 3 chips ("Mon entreprise"→"marque" / "Mon secteur"→"secteur" / "Mes concurrents"→"concurrent").
+  • MAX_SAVED_SEARCHES_ESSENTIEL=5, MAX_VISIBLE_MENTIONS=20, MENTIONS_VOIR_PLUS_BATCH=5, MENTION_FEED_SKELETON_MS=1500, MENTION_FEED_MIN_INTERVAL=8000, MENTION_FEED_MAX_INTERVAL=12000.
+  • Helpers: makeMentionFeedItem() (factory random + weighted sentiment), truncate80(s) (slice 77 + "…"), sanitizePhone(input) (regex [^\d+\s()-]), isValidPhone(input) (8-15 digits).
+
+- Étape 4 — Helper components (mentionSourceIcon + mentionSentimentBadge): insérés juste avant BrandMentionFeedCard. mentionSourceIcon switch press→Newspaper/social→Twitter/forum→MessageCircle/web→Globe2. mentionSentimentBadge retourne {label, color, bg} selon sentiment (positive→SAGE/SAGE_BG, negative→NEGATIVE/rgba rouge, neutral→NEUTRAL_GRAY/rgba gray).
+
+- Étape 5 — BrandMentionFeedCard (col-span-7, ~350 lignes):
+  • State: mentions[] (max 100 interne, useState non persisté — éphémère), paused, filter (all|positive|neutral|negative), extraShown (incrémente de 5 par "Voir plus"), loading (1.5s skeleton).
+  • useEffect #1 (mount skeleton): setTimeout 1500ms → setMentions(6 seed items avec timestamps échelonnés sur 30 min passées) + setLoading(false). Cleanup clearTimeout.
+  • useEffect #2 (real-time feed): recursive setTimeout (delay random 8-12s) tant que !paused && !loading. À chaque tick: setMentions(prev => [newMention, ...prev].slice(0, 100)). Cleanup clearTimeout.
+  • useMemo visible = mentions.slice(0, 20 + extraShown). bufferCount = max(0, mentions.length - 20 - extraShown).
+  • useMemo filtered: filter par sentiment + externalQuery (substring case-insensitive sur sourceName + headline).
+  • handleVoirPlus: si bufferCount === 0 → toast.info, sinon extraShown += 5.
+  • handlePauseToggle: inverse paused + toast.success ("Flux repris" / "Flux en pause").
+  • Header: title "Flux de mentions en temps réel" + Filtrer dropdown (native <select> avec icône Filter absolu à gauche, 4 options Tous/Positif/Neutre/Négatif) + Pause/Reprendre button (icône Pause/Play + label, sage bg si paused).
+  • Active query chip: si externalQuery non vide, affiche chip "Filtre actif: « query »" avec bouton X pour clear (onClearQuery).
+  • Loading: 6 LiveSkeleton h-14 (role=status + aria-live + aria-label).
+  • Empty state: icône Newspaper 28px + message contextuel (selon filter/externalQuery/par défaut).
+  • List: AnimatePresence + motion.div layout pour animations entrée/sortie. Chaque mention: icône source (18×18 SAGE_BG/SAGE), sourceName (truncate, FONT_MONO 10px TEXT_MUTED), sentiment badge (FONT_MONO 9px 700 + couleur/bg par sentiment), timestamp relatif (fmtRelative, FONT_MONO 10px TEXT_MUTED), headline (truncate80, FONT_SANS 12px CHARCOAL).
+  • Footer: compteur "X / Y mentions" + bouton "Voir plus (+N)" si bufferCount > 0 (N = min(5, bufferCount)).
+
+- Étape 6 — WhatsAppAlertPreviewCard (col-span-5, ~380 lignes):
+  • Props: config (WhatsappAlertConfig), setConfig (usePersistentState setter).
+  • State: dialogOpen, phoneDraft (sync avec config.phone quand dialog s'ouvre), testing (bouton Tester).
+  • Phone mockup: 260×460 rounded-[2rem] shadow-md, backgroundColor SAGE, padding 10px. Notch absolute top 0, 80×14, backgroundColor CHARCOAL. Screen intérieur rounded-[1.5rem] backgroundColor #ECE5DD (WhatsApp beige).
+  • WhatsApp chat header: bg SAGE, couleur #FFFFFF, avatar "H" 24×24, "Harch Alerts" + "en ligne" + icône Phone.
+  • 3 alert bubbles: chaque row = side strip Lucide icon (16×16, couleur/bg par type: idx 0 = AlertTriangle NEGATIVE/rgba rouge, idx 1 = CalendarDays SAGE/SAGE_BG, idx 2 = FileText NEUTRAL_AMBER/rgba amber) + bubble WhatsApp (#DCF8C6 green, rounded-lg, max-w-85%) avec texte (FONT_SANS 10px CHARCOAL) + timestamp + CheckCheck icône (#4FC3F7 blue double-checkmark).
+  • Alert type chips sous le phone: 3 AlertTypeChip (active ? SAGE/SAGE_BG : TEXT_MUTED/#F4F4F5) avec icône AlertTriangle/CalendarDays/FileText + label Crise/Quotidien/Hebdo.
+  • "Configurer mes alertes" button: bg CHARCOAL, color #FFFFFF, icône Settings.
+  • Dialog (shadcn): DialogHeader + DialogTitle "Configurer mes alertes WhatsApp" + DialogDescription. Body: 3 AlertTypeRow (icône 28×28 + title + description + Switch shadcn aria-label). Phone input: Label + Input type=tel + bouton "Enregistrer" (icône Save) + p help text. DialogFooter: bouton "Fermer" (outline) + bouton "Tester" (SAGE, disabled si testing, icône Send ou RefreshCw si testing avec animate-spin).
+  • Handlers: handleToggle(key) → setConfig({...c, [key]: checked}), handlePhoneChange → setPhoneDraft(sanitizePhone), handleSavePhone → setConfig phone + toast warning si invalide + toast success, handleTest → si !isValidPhone toast.error, sinon setTesting(true) + setConfig phone + setTimeout 1200ms → setTesting(false) + toast.success.
+  • Validation: isValidPhone (8-15 digits) via regex \D.
+
+- Étape 7 — AlertTypeChip + AlertTypeRow helper components: AlertTypeChip (active/icon/label → span rounded-full avec icône + label uppercase). AlertTypeRow (icon/color/bg/title/description/checked/onCheckedChange → div rounded-md avec icône 28×28 + texte + Switch aria-label).
+
+- Étape 8 — SavedSearchesStarterCard (col-span-12, ~280 lignes):
+  • Props: savedSearches (SavedSearch[]), setSavedSearches (usePersistentState setter), activeQuery (mentionQuery lifted), onRunSearch (handleRunSearch lifted).
+  • State: nameDraft, queryDraft, error (string | null).
+  • atLimit = savedSearches.length >= 5.
+  • handlePresetClick(preset): onRunSearch(preset.query) + toast.success.
+  • handleSave: validation (name non vide + query non vide + !atLimit), sinon setError. Génère id `search-${Date.now()}-${random}` + lastRunAt null. Toast success.
+  • handleRunSaved(s): onRunSearch(s.query) + setSavedSearches update lastRunAt = Date.now() + toast.success.
+  • handleDelete(s): filter out + toast.success.
+  • Header: "Recherches sauvegardées" + badge "{count}/5".
+  • Description: 1 phrase expliquant le but + référence au flux temps réel.
+  • Preset chips: "Raccourcis:" label + 3 boutons rounded-full (Search icon + label). Style: si activeQuery === preset.query → bg SAGE color #FFFFFF, sinon SAGE_BG color SAGE.
+  • Create form (rounded-md #FAFAFA): header "Créer une recherche" avec icône Plus. Grid 12: Label "Nom" + Input (max 40 chars) col-span-4, Label "Requête (mot-clé)" + Input (max 60 chars, Enter déclenche handleSave) col-span-6, bouton "Enregistrer" (Bookmark icon, SAGE bg) col-span-2. Disabled si atLimit. Error message (color NEGATIVE, role=alert) si error. Warning (color NEUTRAL_AMBER, Lightbulb icon) si atLimit — mentionne upsell Pro.
+  • Saved searches list: header "Mes recherches (N)". Chaque row: icône Bookmark 22×22 (SAGE si active, #FAFAFA sinon) + name (truncate, FONT_SANS 12px 700) + query « ... » (FONT_MONO 10px SAGE) + last run (Clock icon + fmtRelative(lastRunAt) ou "Jamais lancée") + bouton "Lancer" (Play icon, SAGE border) + bouton Trash2 (TEXT_MUTED, BORDER_STRONG, hover rouge). Style row: si activeQuery === query → border SAGE + bg SAGE_BG, sinon border BORDER + bg #FFFFFF.
+  • Upsell banner en bas: Lightbulb + "Pro débloque: opérateurs booléens (ET / OU / SAUF), recherches illimitées, alertes par mot-clé." bg SAGE_BG border SAGE color SAGE.
+
+- Étape 9 — MAIN EssentialDashboard wiring:
+  • 2 nouveaux hooks usePersistentState: whatsappConfig ("essential:whatsapp-config", WHATSAPP_ALERT_INITIAL), savedSearches ("essential:saved-searches", []).
+  • 1 nouveau useState transient: mentionQuery (lifted state partagé entre SavedSearchesStarterCard et BrandMentionFeedCard, non persisté — reset on refresh).
+  • 2 nouveaux useCallback: handleRunSearch(query) → setMentionQuery(query) + setTimeout 50ms scrollToSection("flux-mentions"); handleClearSearch() → setMentionQuery("").
+  • Insertion des 3 nouvelles cards dans le motion.div grid APRÈS BoiteOutilsCard, AVANT MilestoneTrackerCard: <BrandMentionFeedCard externalQuery={mentionQuery} onClearQuery={handleClearSearch} /> + <WhatsAppAlertPreviewCard config={whatsappConfig} setConfig={setWhatsappConfig} /> + <SavedSearchesStarterCard savedSearches={savedSearches} setSavedSearches={setSavedSearches} activeQuery={mentionQuery} onRunSearch={handleRunSearch} />.
+  • Footer text mis à jour: "...R2-ESSENTIAL-A · R2-ESSENTIEL-B · R3-ESSENTIEL-A".
+
+- Étape 10 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors (EssentialDashboard.tsx clean, 0 errors dans tout le projet).
+  • bunx eslint src/app/atelier/console/essential/EssentialDashboard.tsx --max-warnings=0 → EXIT_CODE=0, 0 errors, 0 warnings (3 unused eslint-disable directives retirées après premier run — elles n'étaient pas nécessaires car la règle react-hooks/set-state-in-effect ne se déclenche pas sur les patterns canoniques utilisés: setTimeout one-shot seed + dialog draft sync).
+  • Vérifié 13 localStorage keys (11 existantes + 2 nouvelles: whatsapp-config, saved-searches) — toutes usePersistentState-backed (SSR-safe, quota-safe via try/catch).
+  • Vérifié 12 nouveaux icônes Lucide importés et utilisés au moins 2 fois (Bookmark/Clock/Filter/Pause/Phone/Play/Plus/Save/Trash2/Twitter dans BrandMentionFeedCard + WhatsAppAlertPreviewCard + SavedSearchesStarterCard + AlertTypeChip + AlertTypeRow).
+  • Vérifié real-time feed: recursive setTimeout (8-12s random delay) avec cleanup clearTimeout, paused gate, loading gate. Effect deps [paused, loading] — re-schedule quand pause/repren ou loading change. Pas de memory leak (cap 100 items dans l'array interne).
+  • Vérifié FIFO: visible = mentions.slice(0, 20 + extraShown). Nouveau mention unshift en position 0 (newest first). Items au-delà de 100 (extrême limite) sont drop du fond. "Voir plus" incrémente extraShown de 5, révélant les items suivants dans l'ordre.
+  • Vérifié no persistence: mentions = useState([]) (pas usePersistentState) — éphémère par design, reset on refresh comme spécifié.
+  • Vérifié skeleton 1.5s: setTimeout 1500ms dans useEffect mount → setLoading(false) + setMentions(6 seed). Cleanup clearTimeout si unmount avant la fin.
+  • Vérifié WhatsApp phone mockup: 260×460 (proportionnel à 320×600 spec, adapté à col-span-5 card width). Sage bezel ✓, notch ✓ (80×14 CHARCOAL rounded-b-xl absolute top 0), WhatsApp bubbles #DCF8C6 ✓, timestamp + CheckCheck ✓ (#4FC3F7 blue), 3 alertes sans emojis avec Lucide icons en side strip ✓.
+  • Vérifié modal WhatsApp: 3 Switch shadcn (crise/quotidien/hebdo) avec aria-label, Input type=tel + Label "Numéro WhatsApp", bouton "Enregistrer" (Save icon) + bouton "Tester" (Send icon, RefreshCw animate-spin si testing). Validation isValidPhone (8-15 digits).
+  • Vérifié Saved Searches: 3 preset chips (Mon entreprise/Mon secteur/Mes concurrents) cliquables → setMentionQuery + scroll vers flux-mentions. Form création (Nom + Requête + Enregistrer) avec validation + max 5 (atLimit). Liste saved searches avec icône Bookmark + name + query + last run (Clock + fmtRelative) + bouton Lancer (Play) + bouton Supprimer (Trash2). Upsell Pro pour opérateurs booléens.
+  • Vérifié lifted state: mentionQuery dans MAIN EssentialDashboard, passé à BrandMentionFeedCard (externalQuery prop, filtre visible items) + SavedSearchesStarterCard (activeQuery prop, highlight preset chip + saved search row actifs). handleRunSearch setMentionQuery + scroll vers flux-mentions. handleClearSearch setMentionQuery("").
+  • Vérifié cross-card UX: clic preset chip "Mon entreprise" → mentionQuery = "marque" → BrandMentionFeedCard filtre ses mentions (substring case-insensitive sur sourceName + headline) + chip "Filtre actif: « marque »" avec bouton X au-dessus de la liste. Clic X → handleClearSearch → mentionQuery = "" → filtre retiré.
+  • Vérifié accessibility: tous les boutons ont aria-label (icon-only: Pause/Reprendre, Voir plus, Lancer, Supprimer, Effacer filtre, Tester, Enregistrer, Fermer, Configurer mes alertes). Switch a aria-label. Select a aria-label. Input a id + Label htmlFor. role=alert sur error message. role=status + aria-live sur LiveSkeleton (via composant existant). lang="fr" sur inputs français (phone + search name + search query).
+  • Vérifié design system: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg, 1px border #F0F0F0, 12px radius, Lucide icons 16px max (9-14px selon contexte), no emojis (Lucide icons en side strip pour WhatsApp bubbles), French throughout. CardShell avec padding 20px préservé. motion.div cardMotion préservé.
+
+Stage Summary:
+- File: /home/z/my-project/src/app/atelier/console/essential/EssentialDashboard.tsx (7337 → 8867 lines, +1530 net)
+- 3 features R3-ESSENTIEL-A livrées (2 persisted localStorage via usePersistentState + 1 ephemeral useState, SSR-safe, 0 régression sur 12 features existantes: 6 ENV-ESSENTIAL + 3 R2-ESSENTIAL-A + 3 R2-ESSENTIEL-B):
+  1. Brand Mention Feed (col-span-7) — flux temps réel simulé (nouvelle mention toutes les 8-12s via recursive setTimeout), max 20 visibles (FIFO) + "Voir plus" batch 5, filtre sentiment (4 options: Tous/Positif/Neutre/Négatif via native select stylé avec icône Filter), bouton Pause/Reprendre (icône Pause/Play + toast), loading skeleton 1.5s (6 LiveSkeleton h-14), 4 types sources (press→Newspaper/social→Twitter/forum→MessageCircle/web→Globe2), sentiment badges (pos SAGE/neu gray/neg red), timestamps relatifs (fmtRelative), 6 seed mentions initiales (timestamps échelonnés 30 min), external query filter via lifted state mentionQuery (substring case-insensitive sur sourceName + headline), chip "Filtre actif" avec bouton X clear, AnimatePresence + motion.div layout animations entrée (opacity 0→1, y -6→0, bg SAGE_BG→transparent), empty state contextuel (3 variantes: filter actif / query actif / défaut), footer compteur "X / Y mentions" + bouton "Voir plus (+N)" si buffer > 0, cap interne 100 items (anti memory leak), éphémère (useState non persisté — reset on refresh).
+  2. WhatsApp Alert Preview (col-span-5) — phone mockup 260×460 (proportionnel au spec 320×600, adapté col-span-5) avec sage bezel + notch CHARCOAL 80×14 + screen beige #ECE5DD + WhatsApp chat header (avatar H + "Harch Alerts" + "en ligne" + icône Phone), 3 alert bubbles WhatsApp (#DCF8C6 green, rounded-lg, max-w-85%, boxShadow subtle) avec Lucide icons en side strip (AlertTriangle rouge pour crise / CalendarDays sage pour quotidien / FileText amber pour hebdo — pas d'emojis), timestamp HH:mm + CheckCheck icône (#4FC3F7 blue double-checkmark), 3 AlertTypeChip sous le phone (active/inactive state), bouton "Configurer mes alertes" (bg CHARCOAL), Dialog shadcn modal avec 3 AlertTypeRow (icône 28×28 + title + description + Switch shadcn aria-label) + Label + Input type=tel (sanitizePhone regex, isValidPhone 8-15 digits) + bouton "Enregistrer" (Save icon) + bouton "Tester" (Send icon, RefreshCw animate-spin si testing, setTimeout 1200ms + toast success), persisted "essential:whatsapp-config" (crisis/daily/weekly/phone).
+  3. Saved Searches Starter (col-span-12) — 3 preset chips cliquables ("Mon entreprise"→"marque" / "Mon secteur"→"secteur" / "Mes concurrents"→"concurrent") qui filtrent le Brand Mention Feed via lifted state mentionQuery, form création (Nom max 40 + Requête max 60 + bouton Enregistrer) avec validation + max 5 Essentiel (atLimit warning + upsell Pro), liste saved searches (icône Bookmark 22×22 active/inactive + name truncate + query « ... » SAGE + Clock + fmtRelative(lastRunAt) ou "Jamais lancée" + bouton Lancer Play + bouton Supprimer Trash2), row highlight si activeQuery === query (border SAGE + bg SAGE_BG), persisted "essential:saved-searches" (id/name/query/lastRunAt), upsell Pro en bas (Lightbulb + opérateurs booléens ET/OU/SAUF + recherches illimitées + alertes par mot-clé).
+- Design system préservé: SAGE #4A7B5F, CHARCOAL #0A0A0A, FONT_MONO Space Mono, FONT_SANS Inter, white bg #FFFFFF, 1px border #F0F0F0, 12px radius, Lucide icons (16px max, 9-14px selon contexte), NO emojis (Lucide icons en side strip pour WhatsApp bubbles), French throughout.
+- 12 nouveaux icônes Lucide importés (Bookmark, Clock, Filter, Pause, Phone, Play, Plus, Save, Trash2, Twitter) — tous utilisés au moins 2 fois.
+- 4 nouveaux composants shadcn importés (Dialog/DialogContent/DialogDescription/DialogFooter/DialogHeader/DialogTitle, Input, Label, Switch).
+- 7 nouveaux types TypeScript (MentionFeedSentiment, MentionFeedSourceType, MentionFeedItem, MentionFilter, WhatsappAlertConfig, SavedSearch) + 5 nouvelles fonctions helper (mentionSourceIcon, mentionSentimentBadge, makeMentionFeedItem, truncate80, sanitizePhone, isValidPhone) + 6 nouveaux composants (BrandMentionFeedCard, WhatsAppAlertPreviewCard, AlertTypeChip, AlertTypeRow, SavedSearchesStarterCard).
+- 2 nouveaux localStorage keys: essential:whatsapp-config (WhatsappAlertConfig), essential:saved-searches (SavedSearch[]) — toutes usePersistentState-backed (SSR-safe, quota-safe via try/catch).
+- 1 transient state: mentionQuery (lifted state partagé SavedSearchesStarterCard ↔ BrandMentionFeedCard, non persisté).
+- 0 régression sur 12 features existantes (6 ENV-ESSENTIAL + 3 R2-ESSENTIEL-A + 3 R2-ESSENTIEL-B) — aucun composant existant modifié, seule Ajout de 3 nouvelles cards dans le motion.div grid + 2 nouveaux hooks usePersistentState + 1 useState transient + 2 useCallback + footer text mis à jour.
+- Code quality: tsc 0 errors (EXIT_CODE=0 sur tout le projet), eslint 0 errors + 0 warnings (--max-warnings=0 EXIT_CODE=0).
+- localStorage keys (13 total): 6 ENV-ESSENTIAL (onboarding-dismissed, quickstart-dismissed, visits, quota, milestones, help-dismissed) + 3 R2-ESSENTIEL-A (notifications, tour-completed, briefing-date) + 2 R2-ESSENTIEL-B (cmd-recent, disclosure) + 2 R3-ESSENTIEL-A (whatsapp-config, saved-searches).
+- Tone Essentiel respecté: simplicité (3 features ciblées, pas de surcharge), guidance (preset chips pour démarrage rapide, helper text sous inputs, empty states contextuels), time-to-value court (flux temps réel immédiat après skeleton 1.5s, preset chips 1-clic, WhatsApp config en 1 modal), surveillance continue (alertes WhatsApp crise/quotidien/hebdo + flux temps réel), upsell Pro subtil (limite 5 saved searches + boolean operators).

@@ -102,6 +102,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Cloud,
@@ -119,6 +120,7 @@ import {
   History,
   LayoutDashboard,
   LayoutGrid,
+  LayoutTemplate,
   Lightbulb,
   ListChecks,
   LogOut,
@@ -926,6 +928,197 @@ const EXPORT_THEME_OPTIONS: Array<{ key: ExportTheme; label: string; color: stri
 
 const MAX_EXPORT_HISTORY = 5;
 
+// ─── R3-PRO-A · Feature 1: Sentiment Heatmap types ─────────────────────
+// (Reuses SentimentDay — same shape: date/avgScore/count/positive/neutral/negative)
+
+// ─── R3-PRO-A · Feature 2: Influencer Campaign Tracker types ───────────
+
+type CampaignStatus = "active" | "scheduled" | "completed";
+
+interface Campaign {
+  id: string;
+  name: string;
+  brand: string;
+  influencer: string;
+  status: CampaignStatus;
+  startDate: string; // ISO yyyy-MM-dd
+  endDate: string; // ISO yyyy-MM-dd
+  budget: number; // MAD
+  reach: number;
+  engagementRate: number; // %
+  roi: number; // %
+}
+
+const CAMP_DAY_MS = 86400000;
+
+const SEED_CAMPAIGNS: Campaign[] = [
+  {
+    id: "camp-seed-1",
+    name: "Lancement Ramadan 2025",
+    brand: "Maroc Telecom",
+    influencer: "Yassine Benchakroun",
+    status: "active",
+    startDate: new Date(Date.now() - 10 * CAMP_DAY_MS).toISOString().slice(0, 10),
+    endDate: new Date(Date.now() + 20 * CAMP_DAY_MS).toISOString().slice(0, 10),
+    budget: 250000,
+    reach: 480000,
+    engagementRate: 5.4,
+    roi: 142,
+  },
+  {
+    id: "camp-seed-2",
+    name: "Inauguration nouvelle gamme",
+    brand: "Attijariwafa Bank",
+    influencer: "Salma El Idrissi",
+    status: "scheduled",
+    startDate: new Date(Date.now() + 7 * CAMP_DAY_MS).toISOString().slice(0, 10),
+    endDate: new Date(Date.now() + 37 * CAMP_DAY_MS).toISOString().slice(0, 10),
+    budget: 180000,
+    reach: 0,
+    engagementRate: 0,
+    roi: 0,
+  },
+  {
+    id: "camp-seed-3",
+    name: "Campagne Rentrée Scolaire",
+    brand: "Marjane Holding",
+    influencer: "Karim Tahiri",
+    status: "completed",
+    startDate: new Date(Date.now() - 60 * CAMP_DAY_MS).toISOString().slice(0, 10),
+    endDate: new Date(Date.now() - 30 * CAMP_DAY_MS).toISOString().slice(0, 10),
+    budget: 320000,
+    reach: 1250000,
+    engagementRate: 6.8,
+    roi: 215,
+  },
+];
+
+// ─── R3-PRO-A · Feature 3: Custom Dashboard Templates types ─────────────
+
+type TemplateIconKey = "direction" | "communication" | "conformite" | "competition" | "custom";
+
+interface DashboardTemplate {
+  id: string;
+  name: string;
+  description: string;
+  iconKey: TemplateIconKey;
+  widgets: string[]; // ordered list of widget IDs
+  custom?: boolean;
+  createdAt?: number;
+}
+
+const MAX_CUSTOM_TEMPLATES = 3;
+
+const TEMPLATE_ICONS: Record<TemplateIconKey, typeof LayoutGrid> = {
+  direction: LayoutGrid,
+  communication: MessageCircle,
+  conformite: AlertTriangle,
+  competition: Trophy,
+  custom: LayoutTemplate,
+};
+
+const TEMPLATE_WIDGET_LABELS: Record<string, string> = {
+  "ai-workspace": "Espace HarchIQ",
+  "score-reputation": "Score de réputation",
+  "sentiment-kpi": "KPI Sentiment",
+  "mentions-kpi": "KPI Mentions",
+  "citations-ia-kpi": "KPI Citations IA",
+  "parts-voix-kpi": "KPI Parts de voix",
+  "sources-kpi": "KPI Sources",
+  "engagement-kpi": "KPI Engagement",
+  "tendance-sentiment": "Tendance sentiment",
+  "benchmark-concurrents": "Benchmark concurrentiel",
+  "competitor-watchlist": "Watchlist concurrents",
+  "radar-reputation": "Radar réputation",
+  "part-voix-donut": "Part de voix (donut)",
+  "top-sujets": "Top sujets",
+  "dernieres-mentions": "Dernières mentions",
+  "comparaison-semaine": "Comparaison semaine",
+  "historique-rapports": "Historique rapports",
+  "report-scheduler": "Programmation rapports",
+  "export-center": "Centre d'export",
+  "recherches-alertes": "Recherches & alertes",
+  "alert-rules-builder": "Constructeur de règles",
+  "top-influenceurs": "Top influenceurs",
+  "influencer-tracker": "Suivi influenceurs",
+  "estimation-reach": "Estimation reach",
+  "carte-crise": "Carte de crise",
+  "heatmap": "Heatmap heure × jour",
+  "repartition-media": "Répartition média",
+  "sujets-emergents": "Sujets émergents",
+  "tableaux-personnalisables": "Tableaux personnalisables",
+  "upsell": "Passer aux grandes entreprises",
+  "sentiment-heatmap": "Heatmap sentiment (calendrier)",
+  "campaign-tracker": "Suivi campagnes influenceurs",
+  "dashboard-templates": "Bibliothèque de templates",
+};
+
+const PREDEFINED_TEMPLATES: DashboardTemplate[] = [
+  {
+    id: "tpl-direction",
+    name: "Direction",
+    description: "KPIs exécutifs et score de réputation — synthèse pour le COMEX.",
+    iconKey: "direction",
+    widgets: [
+      "ai-workspace",
+      "score-reputation",
+      "sentiment-kpi",
+      "mentions-kpi",
+      "citations-ia-kpi",
+      "parts-voix-kpi",
+      "comparaison-semaine",
+      "historique-rapports",
+    ],
+  },
+  {
+    id: "tpl-communication",
+    name: "Communication",
+    description: "Sentiment, sources et mentions — pilotage de la communication.",
+    iconKey: "communication",
+    widgets: [
+      "ai-workspace",
+      "tendance-sentiment",
+      "sentiment-kpi",
+      "sources-kpi",
+      "dernieres-mentions",
+      "top-sujets",
+      "repartition-media",
+      "top-influenceurs",
+    ],
+  },
+  {
+    id: "tpl-conformite",
+    name: "Conformité",
+    description: "Alertes, crise et règles — surveillance réglementaire continue.",
+    iconKey: "conformite",
+    widgets: [
+      "ai-workspace",
+      "carte-crise",
+      "heatmap",
+      "alert-rules-builder",
+      "recherches-alertes",
+      "sujets-emergents",
+      "sentiment-heatmap",
+    ],
+  },
+  {
+    id: "tpl-competition",
+    name: "Compétition",
+    description: "Benchmark, radar et part de voix — intelligence concurrentielle.",
+    iconKey: "competition",
+    widgets: [
+      "ai-workspace",
+      "benchmark-concurrents",
+      "competitor-watchlist",
+      "radar-reputation",
+      "part-voix-donut",
+      "parts-voix-kpi",
+      "estimation-reach",
+      "campaign-tracker",
+    ],
+  },
+];
+
 const ANNOTATABLE_SECTIONS: Array<{ id: string; label: string }> = [
   { id: "score-reputation", label: "Score de réputation" },
   { id: "tendance-sentiment", label: "Tendance sentiment" },
@@ -1204,6 +1397,238 @@ function renderCommentBody(body: string): React.ReactNode[] {
     parts.push(<span key={`t-${key++}`}>{body.slice(lastIdx)}</span>);
   }
   return parts;
+}
+
+// ─── R3-PRO-A · Feature 1: Sentiment Heatmap helpers ───────────────────
+
+/**
+ * Build daily sentiment series covering `weeks * 7` days back from today.
+ * Uses API data when available; extrapolates missing days by cycling the
+ * available series with small sinusoidal variation (deterministic by date).
+ */
+function buildHeatmapData(
+  trend: SentimentTrendResp | null,
+  weeks: 13 | 26,
+): SentimentDay[] {
+  const targetDays = weeks * 7;
+  const source = trend?.data ?? [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const result: SentimentDay[] = [];
+
+  for (let i = targetDays - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const iso = format(d, "yyyy-MM-dd");
+
+    // Try exact match first
+    let day = source.find((s) => s.date === iso);
+
+    if (!day) {
+      // Cycle through source data with deterministic variation
+      const srcIdx = source.length > 0 ? i % source.length : 0;
+      const src = source[srcIdx] ?? {
+        date: iso,
+        avgScore: 0,
+        count: 0,
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+      };
+      const seed = d.getDate() + d.getMonth() * 31 + d.getFullYear();
+      const variation = Math.sin(seed * 0.5) * 0.18;
+      const avgScore = source.length > 0
+        ? Math.max(-1, Math.min(1, src.avgScore + variation))
+        : Math.max(-1, Math.min(1, variation * 1.6));
+      const count = source.length > 0
+        ? Math.max(1, Math.round(src.count * (0.65 + Math.abs(Math.sin(seed * 1.3)) * 0.5)))
+        : Math.max(1, Math.round(15 + Math.abs(Math.sin(seed * 1.1)) * 60));
+      const positive = Math.round(((avgScore + 1) / 2) * count);
+      const negative = Math.round(((1 - avgScore) / 2) * count);
+      const neutral = Math.max(0, count - positive - negative);
+      day = { date: iso, avgScore, count, positive, neutral, negative };
+    }
+
+    result.push({
+      date: day.date,
+      avgScore: day.avgScore,
+      count: day.count,
+      positive: day.positive,
+      neutral: day.neutral,
+      negative: day.negative,
+    });
+  }
+  return result;
+}
+
+/**
+ * Build a 7-row × weeks-col calendar grid (row 0 = Monday, row 6 = Sunday).
+ * Each cell is a SentimentDay | null (null = future day, not yet occurred).
+ */
+function buildCalendarGrid(
+  days: SentimentDay[],
+  weeks: 13 | 26,
+): Array<Array<SentimentDay | null>> {
+  const dayMap = new Map(days.map((d) => [d.date, d]));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayDow = (today.getDay() + 6) % 7; // Mon=0, Sun=6
+  const grid: Array<Array<SentimentDay | null>> = Array.from({ length: 7 }, () => []);
+
+  for (let c = 0; c < weeks; c++) {
+    for (let r = 0; r < 7; r++) {
+      const dayOffset = (weeks - 1 - c) * 7 + (todayDow - r);
+      if (dayOffset < 0) {
+        grid[r].push(null); // future day
+        continue;
+      }
+      const d = new Date(today);
+      d.setDate(d.getDate() - dayOffset);
+      const iso = format(d, "yyyy-MM-dd");
+      grid[r].push(dayMap.get(iso) ?? null);
+    }
+  }
+  return grid;
+}
+
+/**
+ * Color for a heatmap cell based on sentiment polarity and volume intensity.
+ * - Positive (>60%) → sage gradient
+ * - Negative (<40%) → red gradient
+ * - Neutral → gray gradient
+ * Intensity (alpha) scales with volume / maxCount.
+ */
+function sentimentCellColor(day: SentimentDay, maxCount: number): string {
+  const sentimentPct = (day.avgScore + 1) / 2; // 0..1
+  const volumeRatio = Math.min(1, day.count / Math.max(1, maxCount));
+  const intensity = 0.2 + volumeRatio * 0.7; // 0.2..0.9
+  let baseColor: [number, number, number];
+  if (sentimentPct > 0.6) {
+    baseColor = [74, 123, 95]; // sage
+  } else if (sentimentPct < 0.4) {
+    baseColor = [239, 68, 68]; // red
+  } else {
+    baseColor = [161, 161, 170]; // gray
+  }
+  return `rgba(${baseColor[0]}, ${baseColor[1]}, ${baseColor[2]}, ${intensity.toFixed(2)})`;
+}
+
+interface SynthesizedMention {
+  id: string;
+  title: string;
+  source: string;
+  sentiment: "positif" | "neutre" | "négatif";
+  time: string;
+}
+
+/**
+ * Synthesize 3 plausible mentions for a given day using topics + sources
+ * from the API and the day's sentiment distribution. Deterministic by date
+ * so the same day always shows the same mentions across reloads.
+ */
+function synthesizeDayMentions(
+  day: SentimentDay,
+  topics: TopicRow[],
+  sources: SourceRow[],
+): SynthesizedMention[] {
+  if (!topics.length || !sources.length) return [];
+  const seedBase = parseInt(day.date.replace(/-/g, ""), 10) || 1;
+  const rng = (salt: number) => {
+    const x = Math.sin(seedBase * (salt + 1) * 13.37) * 10000;
+    return Math.abs(x - Math.floor(x));
+  };
+  const sentimentPct = (day.avgScore + 1) / 2;
+  const positiveTemplates = [
+    (t: string, s: string) => `${t} : couverture favorable dans ${s}`,
+    (t: string) => `Reconnaissance sectorielle sur ${t}`,
+    (t: string, s: string) => `${s} salue les avancées en ${t}`,
+  ];
+  const neutralTemplates = [
+    (t: string, s: string) => `${t} : analyse équilibrée par ${s}`,
+    (t: string) => `Point de situation sur ${t}`,
+    (t: string, s: string) => `${s} publie un dossier ${t}`,
+  ];
+  const negativeTemplates = [
+    (t: string, s: string) => `${t} : vives critiques sur ${s}`,
+    (t: string) => `Tensions autour de ${t}`,
+    (t: string, s: string) => `${s} pointe des lacunes en ${t}`,
+  ];
+  const result: SynthesizedMention[] = [];
+  for (let i = 0; i < 3; i++) {
+    const topic = topics[Math.floor(rng(i) * topics.length)] ?? topics[0];
+    const source = sources[Math.floor(rng(i + 10) * sources.length)] ?? sources[0];
+    const slot = i / 3;
+    let sentiment: SynthesizedMention["sentiment"];
+    let template: (t: string, s: string) => string;
+    if (slot < sentimentPct - 0.15) {
+      sentiment = "positif";
+      template = positiveTemplates[i % 3];
+    } else if (slot > sentimentPct + 0.15) {
+      sentiment = "négatif";
+      template = negativeTemplates[i % 3];
+    } else {
+      sentiment = "neutre";
+      template = neutralTemplates[i % 3];
+    }
+    const hour = Math.floor(rng(i + 20) * 24);
+    const minute = Math.floor(rng(i + 30) * 60);
+    result.push({
+      id: `m-${day.date}-${i}`,
+      title: template(topic.label, source.name),
+      source: source.name,
+      sentiment,
+      time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    });
+  }
+  return result;
+}
+
+// ─── R3-PRO-A · Feature 2: Campaign helpers ────────────────────────────
+
+/**
+ * Compute elapsed / total days + percentage for a campaign.
+ * Clamps elapsed to [0, total] so future campaigns show 0% and past show 100%.
+ */
+function campaignProgress(
+  startDate: string,
+  endDate: string,
+): { elapsed: number; total: number; pct: number } {
+  const s = new Date(startDate).getTime();
+  const e = new Date(endDate).getTime();
+  const now = Date.now();
+  const total = Math.max(1, e - s);
+  const elapsed = Math.max(0, Math.min(total, now - s));
+  const pct = (elapsed / total) * 100;
+  return {
+    elapsed: Math.round(elapsed / CAMP_DAY_MS),
+    total: Math.round(total / CAMP_DAY_MS),
+    pct,
+  };
+}
+
+/**
+ * Build daily engagement series across the campaign period.
+ * Uses a sine wave peaking mid-campaign + deterministic noise per day.
+ */
+function buildCampaignDailyEngagement(
+  campaign: Campaign,
+): Array<{ day: string; engagement: number }> {
+  const s = new Date(campaign.startDate);
+  const e = new Date(campaign.endDate);
+  const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / CAMP_DAY_MS));
+  const totalEngagement = campaign.reach * (campaign.engagementRate / 100);
+  const result: Array<{ day: string; engagement: number }> = [];
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(s);
+    d.setDate(d.getDate() + i);
+    const iso = format(d, "yyyy-MM-dd");
+    const wave = Math.sin((i / days) * Math.PI);
+    const noise = Math.abs(Math.sin(i * 7.3)) * 0.25;
+    const dailyShare = (0.25 + wave * 0.55 + noise * 0.2) / Math.max(1, days);
+    const engagement = Math.max(0, Math.round(totalEngagement * dailyShare));
+    result.push({ day: iso, engagement });
+  }
+  return result;
 }
 
 // ─── useApi HOOK ──────────────────────────────────────────────────────
@@ -7378,6 +7803,1164 @@ function PasserGrandesEntreprisesCard() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R3-PRO-A · 3 client-side features
+//  Feature 1: Sentiment Heatmap (calendar-style, GitHub-style contribution)
+//  Feature 2: Influencer Campaign Tracker (CRUD + progress + KPIs + chart)
+//  Feature 3: Custom Dashboard Templates (predefined + custom, apply layout)
+// ════════════════════════════════════════════════════════════════════
+
+// ─── R3-PRO-A · Feature 1: Sentiment Heatmap (calendar grid + modal) ────
+
+function SentimentHeatmapCard({
+  trend,
+  topics,
+  sources,
+  loading,
+}: {
+  trend: SentimentTrendResp | null;
+  topics: TopicsResp | null;
+  sources: SourceDistResp | null;
+  loading: boolean;
+}) {
+  const [weeks, setWeeks] = usePersistentState<13 | 26>("pro:heatmap-weeks", 13);
+  const [selectedDay, setSelectedDay] = useState<SentimentDay | null>(null);
+
+  const days = useMemo(() => buildHeatmapData(trend, weeks), [trend, weeks]);
+  const grid = useMemo(() => buildCalendarGrid(days, weeks), [days, weeks]);
+
+  const maxCount = useMemo(() => {
+    let max = 0;
+    for (const d of days) if (d.count > max) max = d.count;
+    return Math.max(1, max);
+  }, [days]);
+
+  const monthLabels = useMemo(() => {
+    const labels: Array<{ col: number; label: string }> = [];
+    let lastMonth = -1;
+    for (let c = 0; c < weeks; c++) {
+      // Use first non-null cell in column c (top row = Monday)
+      const cell = grid[0][c] ?? grid[1][c] ?? grid[2][c] ?? grid[3][c] ?? grid[4][c] ?? grid[5][c] ?? grid[6][c];
+      if (!cell) continue;
+      try {
+        const m = parseISO(cell.date).getMonth();
+        if (m !== lastMonth) {
+          labels.push({ col: c, label: format(parseISO(cell.date), "MMM", { locale: fr }) });
+          lastMonth = m;
+        }
+      } catch {
+        // skip invalid date
+      }
+    }
+    return labels;
+  }, [grid]);
+
+  const daysLabels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+  // Aggregate insights
+  const stats = useMemo(() => {
+    if (days.length === 0) return { avg: 0, total: 0, posDays: 0, negDays: 0 };
+    const total = days.reduce((s, d) => s + d.count, 0);
+    const avg = days.reduce((s, d) => s + d.avgScore, 0) / days.length;
+    const posDays = days.filter((d) => d.avgScore > 0.2).length;
+    const negDays = days.filter((d) => d.avgScore < -0.2).length;
+    return { avg, total, posDays, negDays };
+  }, [days]);
+
+  const insight = loading
+    ? "Chargement de la heatmap de sentiment…"
+    : days.length === 0
+      ? "Données de sentiment indisponibles — rechargement en cours."
+      : `${days.length} jours analysés — sentiment moyen ${(stats.avg * 100).toFixed(0)}%, ${stats.posDays} jour(s) positif(s), ${stats.negDays} jour(s) négatif(s). Cliquez une cellule pour voir les mentions du jour.`;
+
+  return (
+    <motion.div id="sentiment-heatmap" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="29 · Heatmap Sentiment (Calendrier)"
+          right={
+            <Tabs value={String(weeks)} onValueChange={(v) => setWeeks(v === "26" ? 26 : 13)}>
+              <TabsList className="h-7" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+                <TabsTrigger value="13" className="h-5 px-2 text-[10px]">13 sem.</TabsTrigger>
+                <TabsTrigger value="26" className="h-5 px-2 text-[10px]">26 sem.</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {loading ? (
+          <Skeleton className="h-[200px] w-full" />
+        ) : (
+          <>
+            <div className="overflow-x-auto -mx-1 pb-1">
+              <div className="inline-block min-w-full" style={{ padding: "0 4px" }}>
+                {/* Month labels */}
+                <div className="flex" style={{ marginLeft: 36, marginBottom: 4, height: 14 }}>
+                  {Array.from({ length: weeks }, (_, c) => {
+                    const label = monthLabels.find((m) => m.col === c);
+                    return (
+                      <div
+                        key={c}
+                        style={{
+                          width: 14,
+                          marginRight: 2,
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: TEXT_MUTED,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {label ? label.label : ""}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Grid rows */}
+                {grid.map((row, r) => (
+                  <div key={r} className="flex items-center" style={{ marginBottom: 2 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        color: TEXT_MUTED,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {r % 2 === 0 ? daysLabels[r] : ""}
+                    </div>
+                    {row.map((day, c) => (
+                      <TooltipProvider key={`${r}-${c}`}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              disabled={!day}
+                              onClick={() => day && setSelectedDay(day)}
+                              aria-label={day ? `Voir détails du ${day.date}` : "Aucune donnée"}
+                              style={{
+                                width: 14,
+                                height: 14,
+                                margin: 1,
+                                backgroundColor: day
+                                  ? sentimentCellColor(day, maxCount)
+                                  : "#FAFAFA",
+                                borderRadius: 2,
+                                border: "1px solid rgba(0,0,0,0.04)",
+                                cursor: day ? "pointer" : "default",
+                                padding: 0,
+                                transition: "transform 0.1s",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (day) e.currentTarget.style.transform = "scale(1.25)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "scale(1)";
+                              }}
+                            />
+                          </TooltipTrigger>
+                          {day && (
+                            <TooltipContent side="top">
+                              <span style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+                                {fmtDayShort(day.date)} · sentiment{" "}
+                                {Math.round(((day.avgScore + 1) / 2) * 100)}% · {day.count} mentions
+                              </span>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div
+              className="mt-3 flex items-center justify-between flex-wrap gap-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+            >
+              <div className="flex items-center gap-2">
+                <span>Négatif</span>
+                <span style={{ width: 12, height: 12, backgroundColor: "rgba(239,68,68,0.9)", borderRadius: 2 }} />
+                <span style={{ width: 12, height: 12, backgroundColor: "rgba(239,68,68,0.5)", borderRadius: 2 }} />
+                <span style={{ width: 12, height: 12, backgroundColor: "rgba(161,161,170,0.5)", borderRadius: 2 }} />
+                <span>Neutre</span>
+                <span style={{ width: 12, height: 12, backgroundColor: "rgba(74,123,95,0.3)", borderRadius: 2 }} />
+                <span style={{ width: 12, height: 12, backgroundColor: "rgba(74,123,95,0.6)", borderRadius: 2 }} />
+                <span style={{ width: 12, height: 12, backgroundColor: "rgba(74,123,95,0.9)", borderRadius: 2 }} />
+                <span>Positif</span>
+              </div>
+              <span>Intensité = volume de mentions</span>
+            </div>
+
+            <AiCommentary text={insight} />
+          </>
+        )}
+
+        {selectedDay && (
+          <SentimentDayModal
+            day={selectedDay}
+            topics={topics?.topics ?? []}
+            sources={sources?.sources ?? []}
+            onClose={() => setSelectedDay(null)}
+          />
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+function SentimentDayModal({
+  day,
+  topics,
+  sources,
+  onClose,
+}: {
+  day: SentimentDay;
+  topics: TopicRow[];
+  sources: SourceRow[];
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const mentions = useMemo(() => synthesizeDayMentions(day, topics, sources), [day, topics, sources]);
+  const sentimentPct = Math.round(((day.avgScore + 1) / 2) * 100);
+  const sentColor = sentimentPct > 60 ? SAGE : sentimentPct < 40 ? NEGATIVE : NEUTRAL_GRAY;
+  const sentLabel = sentimentPct > 60 ? "Positif" : sentimentPct < 40 ? "Négatif" : "Neutre";
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(10,10,10,0.55)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-xl bg-white shadow-2xl"
+        style={{ width: 480, maxWidth: "95vw", maxHeight: "85vh", overflow: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="flex items-start justify-between p-4"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div>
+            <div style={FONT_HEADER}>Détail du jour</div>
+            <div
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 16,
+                fontWeight: 700,
+                color: CHARCOAL,
+                marginTop: 4,
+              }}
+            >
+              {fmtDayShort(day.date)}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+            style={{ width: 28, height: 28 }}
+            aria-label="Fermer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-3 gap-2 p-4">
+          <div
+            className="rounded-md p-3"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div style={FONT_HEADER}>Sentiment</div>
+            <div
+              className="inline-flex items-center gap-1.5 mt-1"
+              style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: sentColor }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: sentColor,
+                }}
+              />
+              {sentimentPct}%
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>
+              {sentLabel}
+            </div>
+          </div>
+          <div
+            className="rounded-md p-3"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div style={FONT_HEADER}>Mentions</div>
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 16,
+                fontWeight: 700,
+                color: CHARCOAL,
+                marginTop: 4,
+              }}
+            >
+              {fmtNumber(day.count)}
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>
+              total
+            </div>
+          </div>
+          <div
+            className="rounded-md p-3"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div style={FONT_HEADER}>Décomposition</div>
+            <div
+              className="flex items-center gap-2 mt-1"
+              style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}
+            >
+              <span style={{ color: POSITIVE }}>+{day.positive}</span>
+              <span style={{ color: TEXT_MUTED }}>·{day.neutral}</span>
+              <span style={{ color: NEGATIVE }}>-{day.negative}</span>
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 2 }}>
+              pos · neu · neg
+            </div>
+          </div>
+        </div>
+
+        {/* Top 3 mentions */}
+        <div className="px-4 pb-4">
+          <div style={FONT_HEADER} className="mb-2">
+            Top 3 mentions du jour
+          </div>
+          {mentions.length === 0 ? (
+            <div className="rounded-md p-3 text-center" style={{ border: `1px solid ${BORDER}` }}>
+              <EmptyDash label="Données de mentions indisponibles" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {mentions.map((m) => {
+                const c =
+                  m.sentiment === "positif" ? SAGE : m.sentiment === "négatif" ? NEGATIVE : NEUTRAL_GRAY;
+                return (
+                  <div
+                    key={m.id}
+                    className="rounded-md p-3"
+                    style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <span
+                        className="inline-flex items-center gap-1 rounded"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "#FFFFFF",
+                          backgroundColor: c,
+                          padding: "2px 6px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: "#FFFFFF" }} />
+                        {m.sentiment}
+                      </span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                        {m.time}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: CHARCOAL,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {m.title}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Newspaper size={10} style={{ color: TEXT_MUTED }} />
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+                        {m.source}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── R3-PRO-A · Feature 2: Influencer Campaign Tracker ──────────────────
+
+function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
+  const meta: Record<CampaignStatus, { label: string; color: string; bg: string; pulse?: boolean }> = {
+    active: { label: "Actif", color: "#FFFFFF", bg: SAGE, pulse: true },
+    scheduled: { label: "Programmé", color: TEXT_BODY, bg: "#F4F4F5" },
+    completed: { label: "Terminé", color: SAGE_DIM, bg: SAGE_BG },
+  };
+  const m = meta[status];
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded ${m.pulse ? "sage-pulse" : ""}`}
+      style={{
+        fontFamily: FONT_MONO,
+        fontSize: 9,
+        fontWeight: 700,
+        color: m.color,
+        backgroundColor: m.bg,
+        padding: "2px 8px",
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+      }}
+    >
+      <span
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          backgroundColor: m.color,
+        }}
+      />
+      {m.label}
+    </span>
+  );
+}
+
+function CampaignCard({
+  campaign,
+  onRemove,
+}: {
+  campaign: Campaign;
+  onRemove: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const progress = campaignProgress(campaign.startDate, campaign.endDate);
+  const engagementData = useMemo(() => buildCampaignDailyEngagement(campaign), [campaign]);
+  const totalEngagement = engagementData.reduce((s, d) => s + d.engagement, 0);
+
+  return (
+    <div
+      className="rounded-lg p-4 transition-all"
+      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <CampaignStatusBadge status={campaign.status} />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+              }}
+            >
+              {campaign.brand}
+            </span>
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 14,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {campaign.name}
+          </div>
+          <div
+            className="flex items-center gap-1 mt-0.5"
+            style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}
+          >
+            <UserPlus size={11} style={{ color: TEXT_MUTED }} />
+            {campaign.influencer}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onRemove(campaign.id)}
+          className="inline-flex items-center justify-center rounded-md hover:bg-[#FEE2E2] shrink-0"
+          style={{ width: 24, height: 24 }}
+          aria-label="Supprimer la campagne"
+        >
+          <Trash2 size={13} style={{ color: NEGATIVE }} />
+        </button>
+      </div>
+
+      {/* Period + progress */}
+      <div className="flex items-center justify-between mb-1.5" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+        <span>{campaign.startDate} → {campaign.endDate}</span>
+        <span>
+          {progress.elapsed}/{progress.total} j
+        </span>
+      </div>
+      <div
+        className="rounded-full overflow-hidden"
+        style={{ height: 6, backgroundColor: "#F4F4F5" }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${Math.max(2, progress.pct)}%`,
+            backgroundColor: campaign.status === "completed" ? SAGE_DIM : SAGE,
+            transition: "width 0.4s ease",
+          }}
+        />
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        <div style={{ textAlign: "center" }}>
+          <div style={FONT_HEADER}>Reach</div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 13,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {fmtNumber(campaign.reach)}
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={FONT_HEADER}>Engagement</div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 13,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {campaign.engagementRate.toFixed(1)}%
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={FONT_HEADER}>ROI</div>
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 13,
+              fontWeight: 700,
+              color: campaign.roi >= 100 ? POSITIVE : campaign.roi > 0 ? SAGE : TEXT_MUTED,
+            }}
+          >
+            {campaign.roi > 0 ? "+" : ""}
+            {campaign.roi}%
+          </div>
+        </div>
+      </div>
+
+      {/* Budget + expand */}
+      <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+        <div className="flex items-center gap-1.5">
+          <span style={FONT_HEADER}>Budget</span>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 12,
+              fontWeight: 700,
+              color: CHARCOAL,
+            }}
+          >
+            {fmtNumber(campaign.budget)} MAD
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            color: SAGE,
+            border: `1px solid ${SAGE_DIM}`,
+          }}
+          aria-expanded={expanded}
+          aria-controls={`campaign-chart-${campaign.id}`}
+        >
+          Voir détails
+          <ChevronDown
+            size={11}
+            style={{
+              transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+            }}
+          />
+        </button>
+      </div>
+
+      {/* Expanded chart */}
+      {expanded && (
+        <div
+          id={`campaign-chart-${campaign.id}`}
+          className="mt-3 pt-3"
+          style={{ borderTop: `1px solid ${BORDER}` }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span style={FONT_HEADER}>Engagement quotidien</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
+              Total : {fmtNumber(totalEngagement)}
+            </span>
+          </div>
+          <div style={{ width: "100%", height: 160 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={engagementData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid stroke="#F4F4F5" vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  tickFormatter={(v: string) => fmtDayShort(v)}
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={{ stroke: BORDER_STRONG }}
+                  minTickGap={20}
+                />
+                <YAxis
+                  tick={{ fontFamily: FONT_MONO, fontSize: 9, fill: TEXT_MUTED }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                  tickFormatter={(v: number) => fmtNumber(v)}
+                />
+                <RTooltip
+                  contentStyle={{
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER_STRONG}`,
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                  }}
+                  labelFormatter={(l: string) => fmtDayShort(l)}
+                  formatter={(v: number) => [fmtNumber(v), "Engagement"]}
+                />
+                <Bar dataKey="engagement" fill={SAGE} radius={[2, 2, 0, 0]} maxBarSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CampaignTrackerCard({
+  influencers,
+}: {
+  influencers: InfluencerEntry[];
+}) {
+  const [campaigns, setCampaigns] = usePersistentState<Campaign[]>(
+    "pro:campaigns",
+    SEED_CAMPAIGNS,
+  );
+  const [showForm, setShowForm] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formBrand, setFormBrand] = useState("");
+  const [formInfluencer, setFormInfluencer] = useState("");
+  const [formStart, setFormStart] = useState("");
+  const [formEnd, setFormEnd] = useState("");
+  const [formBudget, setFormBudget] = useState("");
+
+  const handleAdd = () => {
+    if (!formName.trim() || !formBrand.trim() || !formInfluencer.trim()) {
+      toast.error("Nom, marque et influenceur sont requis.");
+      return;
+    }
+    if (!formStart || !formEnd) {
+      toast.error("Dates de début et de fin requises.");
+      return;
+    }
+    if (new Date(formEnd).getTime() <= new Date(formStart).getTime()) {
+      toast.error("La date de fin doit être après la date de début.");
+      return;
+    }
+    const budget = Math.max(0, parseInt(formBudget, 10) || 0);
+    const now = Date.now();
+    const startMs = new Date(formStart).getTime();
+    const endMs = new Date(formEnd).getTime();
+    const status: CampaignStatus =
+      now < startMs ? "scheduled" : now > endMs ? "completed" : "active";
+
+    const c: Campaign = {
+      id: `camp-${Date.now()}`,
+      name: formName.trim(),
+      brand: formBrand.trim(),
+      influencer: formInfluencer.trim(),
+      status,
+      startDate: formStart,
+      endDate: formEnd,
+      budget,
+      reach: status === "scheduled" ? 0 : Math.round(budget * (1.8 + Math.random() * 1.5)),
+      engagementRate: status === "scheduled" ? 0 : Math.round((2 + Math.random() * 5) * 10) / 10,
+      roi: status === "scheduled" ? 0 : Math.round(80 + Math.random() * 180),
+    };
+    setCampaigns((prev) => [c, ...prev]);
+    setFormName("");
+    setFormBrand("");
+    setFormInfluencer("");
+    setFormStart("");
+    setFormEnd("");
+    setFormBudget("");
+    setShowForm(false);
+    toast.success(`Campagne « ${c.name} » créée.`);
+  };
+
+  const handleRemove = (id: string) => {
+    setCampaigns((prev) => prev.filter((c) => c.id !== id));
+    toast.info("Campagne supprimée.");
+  };
+
+  // Aggregate stats
+  const total = campaigns.length;
+  const totalBudget = campaigns.reduce((s, c) => s + c.budget, 0);
+  const completedRoi = campaigns.filter((c) => c.roi > 0);
+  const avgRoi = completedRoi.length > 0
+    ? Math.round(completedRoi.reduce((s, c) => s + c.roi, 0) / completedRoi.length)
+    : 0;
+  const totalReach = campaigns.reduce((s, c) => s + c.reach, 0);
+
+  const insight = `${total} campagne(s) · ${fmtNumber(totalBudget)} MAD budget cumulé · ROI moyen ${avgRoi}% · ${fmtNumber(totalReach)} reach cumulé. ${
+    campaigns.filter((c) => c.status === "active").length
+  } active(s), ${
+    campaigns.filter((c) => c.status === "scheduled").length
+  } programmée(s), ${
+    campaigns.filter((c) => c.status === "completed").length
+  } terminée(s).`;
+
+  return (
+    <motion.div id="campaign-tracker" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="30 · Suivi Campagnes Influenceurs"
+          right={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
+              onClick={() => setShowForm((v) => !v)}
+            >
+              <Plus size={12} className="mr-1" />
+              Nouvelle campagne
+            </Button>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Aggregate strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          <MiniStat label="Campagnes" value={String(total)} dotColor={SAGE} />
+          <MiniStat label="Budget total" value={`${fmtNumber(totalBudget)} MAD`} dotColor={NEUTRAL_AMBER} />
+          <MiniStat label="ROI moyen" value={avgRoi > 0 ? `+${avgRoi}%` : "—"} dotColor={POSITIVE} />
+          <MiniStat label="Reach cumulé" value={fmtNumber(totalReach)} dotColor={SAGE_DIM} />
+        </div>
+
+        {/* Form */}
+        {showForm && (
+          <div
+            className="rounded-md p-3 mb-3"
+            style={{ border: `1px dashed ${SAGE}`, backgroundColor: SAGE_BG }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+              <Input
+                placeholder="Nom de la campagne"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+              />
+              <Input
+                placeholder="Marque"
+                value={formBrand}
+                onChange={(e) => setFormBrand(e.target.value)}
+                style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+              />
+              <select
+                value={formInfluencer}
+                onChange={(e) => setFormInfluencer(e.target.value)}
+                className="rounded-md px-3 py-2"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 12,
+                  border: `1px solid ${BORDER}`,
+                  backgroundColor: "#FFFFFF",
+                  color: CHARCOAL,
+                }}
+              >
+                <option value="">Sélectionner un influenceur…</option>
+                {influencers.map((inf) => (
+                  <option key={inf.id} value={inf.name}>
+                    {inf.name} · {inf.platform}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+              <div>
+                <Label className="mb-1 block" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Début
+                </Label>
+                <Input
+                  type="date"
+                  value={formStart}
+                  onChange={(e) => setFormStart(e.target.value)}
+                  style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+                />
+              </div>
+              <div>
+                <Label className="mb-1 block" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Fin
+                </Label>
+                <Input
+                  type="date"
+                  value={formEnd}
+                  onChange={(e) => setFormEnd(e.target.value)}
+                  style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+                />
+              </div>
+              <div>
+                <Label className="mb-1 block" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Budget (MAD)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="150000"
+                  value={formBudget}
+                  onChange={(e) => setFormBudget(e.target.value)}
+                  style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
+                onClick={() => setShowForm(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                className="h-7"
+                style={{ fontFamily: FONT_MONO, fontSize: 10, backgroundColor: SAGE, color: "#FFFFFF" }}
+                onClick={handleAdd}
+              >
+                <Plus size={11} className="mr-1" />
+                Créer la campagne
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Campaign list */}
+        {campaigns.length === 0 ? (
+          <div className="h-[160px] flex items-center justify-center">
+            <EmptyDash label="Aucune campagne suivie" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {campaigns.map((c) => (
+              <CampaignCard key={c.id} campaign={c} onRemove={handleRemove} />
+            ))}
+          </div>
+        )}
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ─── R3-PRO-A · Feature 3: Custom Dashboard Templates ───────────────────
+
+function TemplatePreview({ widgets }: { widgets: string[] }) {
+  // Mini grid — show up to 6 cells, with "X sections" label
+  const visibleCount = Math.min(6, widgets.length);
+  const restCount = widgets.length - visibleCount;
+  return (
+    <div
+      className="rounded-md p-2"
+      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+    >
+      <div
+        className="grid gap-1"
+        style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+      >
+        {Array.from({ length: 6 }, (_, i) => {
+          const filled = i < visibleCount;
+          return (
+            <div
+              key={i}
+              style={{
+                height: 16,
+                backgroundColor: filled ? SAGE_BG : "#FFFFFF",
+                border: `1px solid ${filled ? SAGE_DIM : BORDER}`,
+                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+              }}
+            >
+              {i === 5 && restCount > 0 && (
+                <span
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 8,
+                    color: SAGE,
+                    fontWeight: 700,
+                  }}
+                >
+                  +{restCount}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div
+        className="mt-1.5"
+        style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textAlign: "center" }}
+      >
+        {widgets.length} section{widgets.length > 1 ? "s" : ""}
+      </div>
+    </div>
+  );
+}
+
+function DashboardTemplatesCard({
+  widgetOrder,
+  onApply,
+}: {
+  widgetOrder: string[];
+  onApply: (widgets: string[]) => void;
+}) {
+  const [customTemplates, setCustomTemplates] = usePersistentState<DashboardTemplate[]>(
+    "pro:dashboard-templates",
+    [],
+  );
+
+  const handleApply = (tpl: DashboardTemplate) => {
+    onApply(tpl.widgets);
+    toast.success(`Template « ${tpl.name} » appliqué — disposition mise à jour.`);
+  };
+
+  const handleSaveCustom = () => {
+    if (customTemplates.length >= MAX_CUSTOM_TEMPLATES) {
+      toast.error(`Maximum ${MAX_CUSTOM_TEMPLATES} templates personnalisés autorisé.`);
+      return;
+    }
+    const tpl: DashboardTemplate = {
+      id: `tpl-custom-${Date.now()}`,
+      name: `Template ${customTemplates.length + 1}`,
+      description: `Disposition actuelle — ${widgetOrder.length} sections sauvegardées le ${format(new Date(), "dd MMM yyyy", { locale: fr })}.`,
+      iconKey: "custom",
+      widgets: [...widgetOrder],
+      custom: true,
+      createdAt: Date.now(),
+    };
+    setCustomTemplates((prev) => [...prev, tpl]);
+    toast.success(`Disposition sauvegardée comme « ${tpl.name} ».`);
+  };
+
+  const handleDeleteCustom = (id: string) => {
+    setCustomTemplates((prev) => prev.filter((t) => t.id !== id));
+    toast.info("Template personnalisé supprimé.");
+  };
+
+  const allTemplates = [...PREDEFINED_TEMPLATES, ...customTemplates];
+
+  const insight = `${PREDEFINED_TEMPLATES.length} templates prédéfinis + ${customTemplates.length}/${MAX_CUSTOM_TEMPLATES} personnalisés. Appliquez un template pour réorganiser votre tableau de bord en un clic.`;
+
+  return (
+    <motion.div id="dashboard-templates" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="31 · Bibliothèque de Templates"
+          right={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: SAGE,
+                borderColor: SAGE,
+              }}
+              onClick={handleSaveCustom}
+              disabled={customTemplates.length >= MAX_CUSTOM_TEMPLATES}
+            >
+              <Save size={12} className="mr-1" />
+              Sauvegarder comme template
+            </Button>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {allTemplates.map((tpl) => {
+            const Icon = TEMPLATE_ICONS[tpl.iconKey];
+            return (
+              <div
+                key={tpl.id}
+                className="rounded-lg p-4 transition-all hover:shadow-md flex flex-col"
+                style={{
+                  border: `1px solid ${tpl.custom ? SAGE_DIM : BORDER}`,
+                  backgroundColor: tpl.custom ? SAGE_BG : "#FFFFFF",
+                }}
+              >
+                <div className="flex items-start gap-2 mb-2">
+                  <div
+                    className="flex items-center justify-center rounded-md shrink-0"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      backgroundColor: tpl.custom ? "#FFFFFF" : SAGE_BG,
+                      color: SAGE,
+                      border: tpl.custom ? `1px solid ${SAGE_DIM}` : "none",
+                    }}
+                  >
+                    <Icon size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="flex items-center gap-1.5"
+                      style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}
+                    >
+                      {tpl.name}
+                      {tpl.custom && (
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 8,
+                            color: SAGE,
+                            backgroundColor: "#FFFFFF",
+                            border: `1px solid ${SAGE_DIM}`,
+                            borderRadius: 3,
+                            padding: "1px 4px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          Perso
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className="mt-1"
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 11,
+                        color: TEXT_BODY,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {tpl.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="my-2">
+                  <TemplatePreview widgets={tpl.widgets} />
+                </div>
+
+                {/* Sections list (checkboxes preview — read-only) */}
+                <div className="mb-3 flex-1">
+                  <div style={FONT_HEADER} className="mb-1.5">
+                    Sections incluses
+                  </div>
+                  <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                    {tpl.widgets.slice(0, 8).map((w) => (
+                      <div
+                        key={w}
+                        className="flex items-center gap-1.5"
+                        style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY }}
+                      >
+                        <Check
+                          size={10}
+                          style={{ color: SAGE, flexShrink: 0 }}
+                        />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {TEMPLATE_WIDGET_LABELS[w] ?? w}
+                        </span>
+                      </div>
+                    ))}
+                    {tpl.widgets.length > 8 && (
+                      <div
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 9,
+                          color: TEXT_MUTED,
+                          paddingLeft: 14,
+                        }}
+                      >
+                        + {tpl.widgets.length - 8} autre(s)
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-2" style={{ borderTop: `1px solid ${tpl.custom ? SAGE_DIM : BORDER}` }}>
+                  <Button
+                    size="sm"
+                    className="h-7 flex-1"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      backgroundColor: SAGE,
+                      color: "#FFFFFF",
+                    }}
+                    onClick={() => handleApply(tpl)}
+                  >
+                    <CheckCircle2 size={11} className="mr-1" />
+                    Appliquer
+                  </Button>
+                  {tpl.custom && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCustom(tpl.id)}
+                      className="inline-flex items-center justify-center rounded-md hover:bg-[#FEE2E2] shrink-0"
+                      style={{ width: 28, height: 28, border: `1px solid ${BORDER}` }}
+                      aria-label="Supprimer le template"
+                    >
+                      <Trash2 size={12} style={{ color: NEGATIVE }} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <AiCommentary text={insight} />
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // PRO ENV — 6 client-side features (Task ID: ENV-PRO)
 //  1. Competitor Setup Wizard (modal 3 steps + autocomplete)
 //  2. Period Comparison Toggle (vs période précédente — dual lines)
@@ -10275,12 +11858,15 @@ const DEFAULT_WIDGET_ORDER: string[] = [
   "alert-rules-builder",
   "top-influenceurs",
   "influencer-tracker",
+  "campaign-tracker",
   "estimation-reach",
   "carte-crise",
   "heatmap",
+  "sentiment-heatmap",
   "repartition-media",
   "sujets-emergents",
   "tableaux-personnalisables",
+  "dashboard-templates",
   "upsell",
 ];
 

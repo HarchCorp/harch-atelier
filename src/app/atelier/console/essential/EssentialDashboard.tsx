@@ -67,6 +67,7 @@ import {
   ArrowUp,
   ArrowUpCircle,
   Bell,
+  Bookmark,
   Brain,
   CalendarDays,
   CheckCheck,
@@ -74,6 +75,7 @@ import {
   ChevronRight,
   Circle,
   ClipboardList,
+  Clock,
   Cloud,
   CloudRain,
   Command,
@@ -81,6 +83,7 @@ import {
   Download,
   ExternalLink,
   FileText,
+  Filter,
   Flag,
   Globe2,
   Hash,
@@ -96,17 +99,24 @@ import {
   MessageSquare,
   Minus,
   Newspaper,
+  Pause,
+  Phone,
+  Play,
+  Plus,
   RefreshCw,
   Rocket,
+  Save,
   Search,
   Send,
   Settings,
   Share2,
   Sparkles,
   Sun,
+  Trash2,
   TrendingDown,
   TrendingUp,
   Trophy,
+  Twitter,
   Users,
   Volume2,
   X,
@@ -131,6 +141,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 import {
   Area,
@@ -377,6 +398,58 @@ interface NotificationItem {
   read: boolean;
   /** Section ID to scroll to on click (e.g. "alertes", "rapports"). */
   target: string;
+}
+
+// ─── R3-ESSENTIEL-A — Round 3 client-side environment types ────────────
+// Persisted in localStorage via usePersistentState. SSR-safe.
+
+/** Sentiment label for a simulated brand mention. */
+type MentionFeedSentiment = "positive" | "neutral" | "negative";
+
+/** Source type for a simulated brand mention — drives the Lucide icon. */
+type MentionFeedSourceType = "press" | "social" | "forum" | "web";
+
+/** Single mention in the ephemeral real-time Brand Mention Feed. */
+interface MentionFeedItem {
+  /** Stable unique ID (React key). */
+  id: string;
+  /** Source type — drives the Lucide icon (Newspaper/Twitter/MessageCircle/Globe2). */
+  sourceType: MentionFeedSourceType;
+  /** Source name (e.g. "Hespress", "Twitter @medias24"). */
+  sourceName: string;
+  /** Headline — truncated to 80 chars at display time. */
+  headline: string;
+  /** Sentiment label — drives the badge color. */
+  sentiment: MentionFeedSentiment;
+  /** Creation timestamp (epoch ms) — relative time formatting via fmtRelative. */
+  timestamp: number;
+}
+
+/** Filter for the Brand Mention Feed. */
+type MentionFilter = "all" | MentionFeedSentiment;
+
+/** WhatsApp alert configuration — persisted in localStorage. */
+interface WhatsappAlertConfig {
+  /** Crisis alerts (score drops, critical mentions). */
+  crisis: boolean;
+  /** Daily summary (article count + sentiment %). */
+  daily: boolean;
+  /** Weekly report ready notification. */
+  weekly: boolean;
+  /** Phone number in international format (e.g. "+212600000000"). */
+  phone: string;
+}
+
+/** Saved search — persisted in localStorage (max 5 for Essentiel tier). */
+interface SavedSearch {
+  /** Stable unique ID (React key). */
+  id: string;
+  /** User-facing name (e.g. "Mon entreprise"). */
+  name: string;
+  /** Keyword query (no boolean operators — Essentiel tier). */
+  query: string;
+  /** Last run timestamp (epoch ms) — null if never run. */
+  lastRunAt: number | null;
 }
 
 // ─── HarchIQ AI Workspace types ────────────────────────────────────────
@@ -5544,6 +5617,166 @@ const TOUR_STEPS: { target: string; title: string; description: string }[] = [
   },
 ];
 
+// ─── R3-ESSENTIEL-A — Round 3 client-side environment constants ────────
+// Real-time Brand Mention Feed simulation + WhatsApp Alert Preview +
+// Saved Searches Starter. All persisted via usePersistentState.
+
+/** Source pool for the simulated Brand Mention Feed — seeded from real
+ *  Moroccan / francophone media + social handles, grouped by source type. */
+const MENTION_SOURCE_POOL: Record<MentionFeedSourceType, string[]> = {
+  press: [
+    "Hespress",
+    "Le Matin",
+    "L'Économiste",
+    "Aujourd'hui Le Maroc",
+    "Médias24",
+    "TelQuel",
+    "Le Desk",
+    "Yabiladi News",
+  ],
+  social: [
+    "Twitter @maroc_confidential",
+    "Twitter @medias24",
+    "Twitter @hespress",
+    "Twitter @leconomiste",
+    "Twitter @telquel_officiel",
+  ],
+  forum: [
+    "Bladi.net Forum",
+    "Maroc-Hebdo Discussion",
+    "Reddit r/Morocco",
+    "Forum Yabiladi",
+  ],
+  web: [
+    "Google News Maroc",
+    "Bing News",
+    "Yahoo Actualités",
+    "Search.ma",
+  ],
+};
+
+/** Headline pool for the simulated Brand Mention Feed — mixed sentiment. */
+const MENTION_HEADLINE_POOL: { text: string; sentiment: MentionFeedSentiment }[] = [
+  { text: "L'entreprise annonce un nouveau plan stratégique pour 2026", sentiment: "positive" },
+  { text: "Croissance remarquable du chiffre d'affaires au dernier trimestre", sentiment: "positive" },
+  { text: "Innovation primée lors du salon international des technologies", sentiment: "positive" },
+  { text: "Dirigeant invité à parler de transformation digitale", sentiment: "positive" },
+  { text: "Lancement d'un programme de responsabilité sociale salué", sentiment: "positive" },
+  { text: "Nouveau partenariat stratégique officialisé à Casablanca", sentiment: "positive" },
+  { text: "Investissement important dans la formation des collaborateurs", sentiment: "positive" },
+  { text: "Reconnaissance internationale pour ses pratiques RSE", sentiment: "positive" },
+  { text: "Réorganisation interne annoncée pour le second semestre", sentiment: "neutral" },
+  { text: "Conférence de presse prévue la semaine prochaine", sentiment: "neutral" },
+  { text: "Changement de direction générale évoqué dans la presse", sentiment: "neutral" },
+  { text: "Résultats annuels en ligne avec les attentes des analystes", sentiment: "neutral" },
+  { text: "Participation confirmée au forum économique de Davos", sentiment: "neutral" },
+  { text: "Extension géographique à l'étude pour 2027", sentiment: "neutral" },
+  { text: "Polémique autour d'une décision de communication récente", sentiment: "negative" },
+  { text: "Controverse sur les conditions de travail dans une usine", sentiment: "negative" },
+  { text: "Baisse du score de réputation sur les réseaux sociaux", sentiment: "negative" },
+  { text: "Mouvement de protestation signalé devant le siège social", sentiment: "negative" },
+  { text: "Critiques sur la gestion environnementale de l'entreprise", sentiment: "negative" },
+  { text: "Départ précipité d'un cadre dirigeant suscite interrogations", sentiment: "negative" },
+];
+
+/** Sentiment weights for the simulated feed (bias toward positive — real-
+ *  world brand monitoring typically sees ~60% positive, 25% neutral, 15% neg). */
+const MENTION_SENTIMENT_WEIGHTS: Record<MentionFeedSentiment, number> = {
+  positive: 0.6,
+  neutral: 0.25,
+  negative: 0.15,
+};
+
+/** Initial WhatsApp alert config — crisis + daily on by default (weekly off). */
+const WHATSAPP_ALERT_INITIAL: WhatsappAlertConfig = {
+  crisis: true,
+  daily: true,
+  weekly: false,
+  phone: "",
+};
+
+/** Sample WhatsApp alert messages (no emojis — Lucide icons in a side strip). */
+const WHATSAPP_SAMPLE_ALERTS: { Icon: typeof AlertTriangle; text: string }[] = [
+  {
+    Icon: AlertTriangle,
+    text: "Alerte crise: Score de réputation a chuté de 72 à 58 en 2h. Source: Hespress. [Voir détails]",
+  },
+  {
+    Icon: CalendarDays,
+    text: "Résumé quotidien: 23 articles analysés, sentiment 68% positif. Top source: Le Matin.",
+  },
+  {
+    Icon: FileText,
+    text: "Rapport mensuel prêt: 'Rapport Octobre 2026'. Téléchargez-le depuis votre console.",
+  },
+];
+
+/** 3 preset search chips — clicking applies the corresponding query. */
+const PRESET_SEARCHES: { label: string; query: string }[] = [
+  { label: "Mon entreprise", query: "marque" },
+  { label: "Mon secteur", query: "secteur" },
+  { label: "Mes concurrents", query: "concurrent" },
+];
+
+/** Maximum saved searches for the Essentiel tier (Pro tier supports more). */
+const MAX_SAVED_SEARCHES_ESSENTIEL = 5;
+
+/** Maximum visible mentions before "Voir plus" is required. */
+const MAX_VISIBLE_MENTIONS = 20;
+
+/** How many additional mentions each "Voir plus" click reveals. */
+const MENTIONS_VOIR_PLUS_BATCH = 5;
+
+/** Initial skeleton delay for the Brand Mention Feed (ms). */
+const MENTION_FEED_SKELETON_MS = 1500;
+
+/** Min/max interval between simulated new mentions (ms). */
+const MENTION_FEED_MIN_INTERVAL = 8000;
+const MENTION_FEED_MAX_INTERVAL = 12000;
+
+/** Factory: generate a single random mention for the simulated feed. */
+function makeMentionFeedItem(): MentionFeedItem {
+  const types: MentionFeedSourceType[] = ["press", "social", "forum", "web"];
+  const sourceType = types[Math.floor(Math.random() * types.length)];
+  const sourceName =
+    MENTION_SOURCE_POOL[sourceType][
+      Math.floor(Math.random() * MENTION_SOURCE_POOL[sourceType].length)
+    ];
+  const pick = MENTION_HEADLINE_POOL[Math.floor(Math.random() * MENTION_HEADLINE_POOL.length)];
+  // Weighted sentiment — pick a random number in [0,1) and bucket it.
+  const r = Math.random();
+  let sentiment: MentionFeedSentiment;
+  if (r < MENTION_SENTIMENT_WEIGHTS.positive) sentiment = "positive";
+  else if (r < MENTION_SENTIMENT_WEIGHTS.positive + MENTION_SENTIMENT_WEIGHTS.neutral)
+    sentiment = "neutral";
+  else sentiment = "negative";
+  return {
+    id: `mention-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    sourceType,
+    sourceName,
+    headline: pick.text,
+    sentiment,
+    timestamp: Date.now(),
+  };
+}
+
+/** Truncate a string to N chars, appending "…" if truncated. */
+function truncate80(s: string): string {
+  if (s.length <= 80) return s;
+  return s.slice(0, 77) + "…";
+}
+
+/** Sanitize a phone number — keep digits, +, spaces, dashes, parentheses. */
+function sanitizePhone(input: string): string {
+  return input.replace(/[^\d+\s()-]/g, "").slice(0, 20);
+}
+
+/** Validate a phone number — at least 8 digits, optional leading +. */
+function isValidPhone(input: string): boolean {
+  const digits = input.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 15;
+}
+
 // ════════════════════════════════════════════════════════════════════
 // R2-ESSENTIEL-A — Round 2 client-side environment components
 // Daily Briefing · Notification Center · Guided Tour
@@ -6552,6 +6785,1256 @@ function ProgressiveList<T>({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// R3-ESSENTIEL-A — Round 3 client-side environment components
+// Brand Mention Feed · WhatsApp Alert Preview · Saved Searches Starter
+// All persisted via usePersistentState (localStorage-backed, SSR-safe).
+// ════════════════════════════════════════════════════════════════════
+
+/** Source icon by type — press/social/forum/web → Lucide icon. */
+function mentionSourceIcon(type: MentionFeedSourceType): typeof Newspaper {
+  switch (type) {
+    case "press":
+      return Newspaper;
+    case "social":
+      return Twitter;
+    case "forum":
+      return MessageCircle;
+    case "web":
+      return Globe2;
+  }
+}
+
+/** Sentiment badge label + color — pos sage / neu gray / neg red. */
+function mentionSentimentBadge(s: MentionFeedSentiment): { label: string; color: string; bg: string } {
+  if (s === "positive") return { label: "Positif", color: SAGE, bg: SAGE_BG };
+  if (s === "negative") return { label: "Négatif", color: NEGATIVE, bg: "rgba(239,68,68,0.08)" };
+  return { label: "Neutre", color: NEUTRAL_GRAY, bg: "rgba(161,161,170,0.10)" };
+}
+
+/** 11. Brand Mention Feed — real-time live list (simulated, ephemeral).
+ *  New mention every 8-12s, max 20 visible (FIFO), filter by sentiment,
+ *  "Voir plus" reveals 5 more from buffer. Optional external query filter
+ *  applied when a Saved Search is launched. */
+function BrandMentionFeedCard({
+  externalQuery,
+  onClearQuery,
+}: {
+  externalQuery: string;
+  onClearQuery: () => void;
+}) {
+  const [mentions, setMentions] = useState<MentionFeedItem[]>([]);
+  const [paused, setPaused] = useState(false);
+  const [filter, setFilter] = useState<MentionFilter>("all");
+  const [extraShown, setExtraShown] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  // Initial mount skeleton (1.5s) + seed 6 initial mentions.
+  useEffect(() => {
+    const seed: MentionFeedItem[] = [];
+    for (let i = 0; i < 6; i++) {
+      const item = makeMentionFeedItem();
+      // Stagger timestamps over the past ~30 min for realistic relative time.
+      item.timestamp = Date.now() - i * (1000 * 60 * (1 + Math.floor(Math.random() * 5)));
+      seed.push(item);
+    }
+    const t = setTimeout(() => {
+      // One-shot seed after skeleton delay. Effect deps = [].
+      setMentions(seed);
+      setLoading(false);
+    }, MENTION_FEED_SKELETON_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Real-time feed — recursive setTimeout with random 8-12s delay.
+  // Disabled while paused or while skeleton is showing.
+  useEffect(() => {
+    if (paused || loading) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const scheduleNext = () => {
+      const delay =
+        MENTION_FEED_MIN_INTERVAL +
+        Math.random() * (MENTION_FEED_MAX_INTERVAL - MENTION_FEED_MIN_INTERVAL);
+      timeoutId = setTimeout(() => {
+        setMentions((prev) => {
+          const next = [makeMentionFeedItem(), ...prev];
+          // Cap internal array at 100 items (memory bound — keeps buffer
+          // sizable for "Voir plus" but prevents unbounded growth).
+          return next.slice(0, 100);
+        });
+        scheduleNext();
+      }, delay);
+    };
+    scheduleNext();
+    return () => clearTimeout(timeoutId);
+  }, [paused, loading]);
+
+  // Filtered + paginated display: visible (max 20) + extra (revealed by "Voir plus").
+  const visible = useMemo(
+    () => mentions.slice(0, MAX_VISIBLE_MENTIONS + extraShown),
+    [mentions, extraShown],
+  );
+  const bufferCount = Math.max(0, mentions.length - MAX_VISIBLE_MENTIONS - extraShown);
+
+  const filtered = useMemo(() => {
+    const q = externalQuery.trim().toLowerCase();
+    return visible.filter((m) => {
+      if (filter !== "all" && m.sentiment !== filter) return false;
+      if (q) {
+        const haystack = `${m.sourceName} ${m.headline}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [visible, filter, externalQuery]);
+
+  const handleVoirPlus = useCallback(() => {
+    if (bufferCount === 0) {
+      toast.info("Aucune mention supplémentaire pour le moment");
+      return;
+    }
+    setExtraShown((n) => n + MENTIONS_VOIR_PLUS_BATCH);
+  }, [bufferCount]);
+
+  const handlePauseToggle = useCallback(() => {
+    setPaused((p) => {
+      toast.success(p ? "Flux repris" : "Flux en pause", {
+        description: p
+          ? "Vous recevez à nouveau les mentions en temps réel."
+          : "Cliquez sur Reprendre pour relancer le flux.",
+      });
+      return !p;
+    });
+  }, []);
+
+  const totalFiltered = filtered.length;
+  const totalAll = mentions.length;
+
+  return (
+    <motion.div id="flux-mentions" {...cardMotion}>
+      <CardShell className="lg:col-span-7">
+        <SectionHeader
+          title="Flux de mentions en temps réel"
+          right={
+            <div className="flex items-center gap-1.5">
+              {/* Filtrer dropdown — native select styled. */}
+              <div className="relative">
+                <Filter
+                  size={11}
+                  style={{
+                    color: TEXT_MUTED,
+                    position: "absolute",
+                    left: 6,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <select
+                  aria-label="Filtrer les mentions par sentiment"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value as MentionFilter)}
+                  className="appearance-none rounded-md pl-5 pr-2 py-0.5 cursor-pointer"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: CHARCOAL,
+                    backgroundColor: "#FFFFFF",
+                    border: `1px solid ${BORDER_STRONG}`,
+                  }}
+                >
+                  <option value="all">Tous</option>
+                  <option value="positive">Positif</option>
+                  <option value="neutral">Neutre</option>
+                  <option value="negative">Négatif</option>
+                </select>
+              </div>
+              {/* Pause / Reprendre toggle. */}
+              <button
+                type="button"
+                onClick={handlePauseToggle}
+                aria-label={paused ? "Reprendre le flux" : "Mettre le flux en pause"}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 transition-colors hover:bg-[#FAFAFA]"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: paused ? SAGE : TEXT_MUTED,
+                  border: `1px solid ${paused ? SAGE : BORDER_STRONG}`,
+                  backgroundColor: paused ? SAGE_BG : "transparent",
+                }}
+              >
+                {paused ? <Play size={11} /> : <Pause size={11} />}
+                {paused ? "Reprendre" : "Pause"}
+              </button>
+            </div>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Active external query chip (from Saved Searches). */}
+        {externalQuery.trim() && (
+          <div className="mb-3 flex items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: SAGE,
+                backgroundColor: SAGE_BG,
+                border: `1px solid ${SAGE}`,
+              }}
+            >
+              <Search size={10} />
+              Filtre actif: « {externalQuery} »
+              <button
+                type="button"
+                onClick={onClearQuery}
+                aria-label="Effacer le filtre de recherche"
+                className="inline-flex items-center justify-center rounded-full ml-0.5 hover:bg-[rgba(74,123,95,0.14)]"
+                style={{ width: 14, height: 14 }}
+              >
+                <X size={10} />
+              </button>
+            </span>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <LiveSkeleton key={i} className="h-14 w-full" label="Chargement des mentions en cours" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center text-center"
+            style={{ height: 320, gap: 8 }}
+          >
+            <Newspaper size={28} style={{ color: TEXT_HEADER }} />
+            <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+              Aucune mention à afficher
+            </div>
+            <p
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 12,
+                color: TEXT_BODY,
+                maxWidth: 320,
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              {filter !== "all"
+                ? `Aucune mention ${mentionSentimentBadge(filter as MentionFeedSentiment).label.toLowerCase()} pour le moment. Le flux reprend en continu.`
+                : externalQuery.trim()
+                  ? `Aucune mention ne correspond à « ${externalQuery} ». Le flux continue en arrière-plan.`
+                  : "Le flux démarre. Les nouvelles mentions apparaîtront ici en temps réel."}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div
+              className="space-y-1.5 overflow-y-auto pr-1"
+              style={{ maxHeight: 380 }}
+            >
+              <style>{`
+                .mention-feed-scroll::-webkit-scrollbar { width: 6px; }
+                .mention-feed-scroll::-webkit-scrollbar-track { background: transparent; }
+                .mention-feed-scroll::-webkit-scrollbar-thumb { background: ${BORDER_STRONG}; border-radius: 3px; }
+              `}</style>
+              <AnimatePresence initial={false}>
+                {filtered.map((m) => {
+                  const Icon = mentionSourceIcon(m.sourceType);
+                  const badge = mentionSentimentBadge(m.sentiment);
+                  return (
+                    <motion.div
+                      key={m.id}
+                      layout
+                      initial={{ opacity: 0, y: -6, backgroundColor: SAGE_BG }}
+                      animate={{ opacity: 1, y: 0, backgroundColor: "rgba(0,0,0,0)" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
+                      className="rounded-md p-2.5"
+                      style={{ border: `1px solid ${BORDER}` }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span
+                            className="inline-flex items-center justify-center rounded shrink-0"
+                            style={{
+                              width: 18,
+                              height: 18,
+                              backgroundColor: SAGE_BG,
+                              color: SAGE,
+                            }}
+                          >
+                            <Icon size={10} />
+                          </span>
+                          <span
+                            className="truncate"
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 10,
+                              color: TEXT_MUTED,
+                            }}
+                          >
+                            {m.sourceName}
+                          </span>
+                          <span
+                            className="inline-flex items-center rounded px-1.5 py-0.5 shrink-0"
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              color: badge.color,
+                              backgroundColor: badge.bg,
+                            }}
+                          >
+                            {badge.label}
+                          </span>
+                        </div>
+                        <span
+                          className="shrink-0"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 10,
+                            color: TEXT_MUTED,
+                          }}
+                        >
+                          {fmtRelative(m.timestamp)}
+                        </span>
+                      </div>
+                      <p
+                        className="mt-1.5"
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 12,
+                          color: CHARCOAL,
+                          lineHeight: 1.4,
+                          margin: 0,
+                        }}
+                      >
+                        {truncate80(m.headline)}
+                      </p>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {/* Footer: count + Voir plus button. */}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: TEXT_MUTED,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {totalFiltered} / {totalAll} mentions
+                {paused && " · en pause"}
+              </span>
+              {bufferCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleVoirPlus}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: SAGE,
+                    border: `1px solid ${SAGE}`,
+                  }}
+                >
+                  <Plus size={11} />
+                  Voir plus (+{Math.min(MENTIONS_VOIR_PLUS_BATCH, bufferCount)})
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </CardShell>
+    </motion.div>
+  );
+}
+
+/** 12. WhatsApp Alert Preview — phone mockup + 3 sample alert bubbles +
+ *  "Configurer mes alertes" modal with toggles + phone + Tester button.
+ *  Persisted in localStorage "essential:whatsapp-config". */
+function WhatsAppAlertPreviewCard({
+  config,
+  setConfig,
+}: {
+  config: WhatsappAlertConfig;
+  setConfig: (v: WhatsappAlertConfig | ((prev: WhatsappAlertConfig) => WhatsappAlertConfig)) => void;
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState(config.phone);
+  const [testing, setTesting] = useState(false);
+
+  // Sync draft with persisted config when dialog opens.
+  useEffect(() => {
+    if (dialogOpen) {
+      // Reset draft when modal opens. Effect deps = [dialogOpen].
+      setPhoneDraft(config.phone);
+    }
+  }, [dialogOpen, config.phone]);
+
+  const activeCount = [config.crisis, config.daily, config.weekly].filter(Boolean).length;
+
+  const handleToggle = (key: keyof Omit<WhatsappAlertConfig, "phone">) => (checked: boolean) => {
+    setConfig((c) => ({ ...c, [key]: checked }));
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneDraft(sanitizePhone(e.target.value));
+  };
+
+  const handleSavePhone = () => {
+    setConfig((c) => ({ ...c, phone: phoneDraft }));
+    if (phoneDraft && !isValidPhone(phoneDraft)) {
+      toast.warning("Numéro incomplet", {
+        description: "Format attendu: +212 6XX XXX XXX (8 à 15 chiffres).",
+      });
+      return;
+    }
+    toast.success("Numéro enregistré");
+  };
+
+  const handleTest = () => {
+    if (!phoneDraft || !isValidPhone(phoneDraft)) {
+      toast.error("Numéro invalide", {
+        description: "Saisissez un numéro valide avant de tester (8 à 15 chiffres).",
+      });
+      return;
+    }
+    setTesting(true);
+    setConfig((c) => ({ ...c, phone: phoneDraft }));
+    setTimeout(() => {
+      setTesting(false);
+      toast.success("Message test envoyé sur WhatsApp", {
+        description: `Un message de test a été envoyé au ${phoneDraft}.`,
+      });
+    }, 1200);
+  };
+
+  return (
+    <motion.div id="alertes-whatsapp" {...cardMotion}>
+      <CardShell className="lg:col-span-5">
+        <SectionHeader
+          title="Aperçu alertes WhatsApp"
+          right={
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: activeCount > 0 ? SAGE_BG : "#F4F4F5",
+                color: activeCount > 0 ? SAGE : TEXT_MUTED,
+              }}
+            >
+              {activeCount}/3 ACTIVES
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        {/* Phone mockup — 320×600 sage bezel + notch. */}
+        <div className="flex justify-center my-2">
+          <div
+            className="relative rounded-[2rem] shadow-md"
+            style={{
+              width: 260,
+              height: 460,
+              backgroundColor: SAGE,
+              padding: 10,
+            }}
+            aria-label="Aperçu du téléphone — alerts WhatsApp"
+          >
+            {/* Notch. */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 rounded-b-xl z-10"
+              style={{
+                top: 0,
+                width: 80,
+                height: 14,
+                backgroundColor: CHARCOAL,
+              }}
+              aria-hidden="true"
+            />
+
+            {/* Screen. */}
+            <div
+              className="w-full h-full rounded-[1.5rem] overflow-hidden flex flex-col"
+              style={{ backgroundColor: "#ECE5DD" }}
+            >
+              {/* WhatsApp chat header. */}
+              <div
+                className="flex items-center gap-2 px-3 py-2"
+                style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
+              >
+                <div
+                  className="rounded-full flex items-center justify-center"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    backgroundColor: "#FFFFFF",
+                    color: SAGE,
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  H
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#FFFFFF",
+                    }}
+                  >
+                    Harch Alerts
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 8,
+                      color: "rgba(255,255,255,0.7)",
+                    }}
+                  >
+                    en ligne
+                  </div>
+                </div>
+                <Phone size={11} style={{ color: "#FFFFFF" }} />
+              </div>
+
+              {/* Chat body — 3 alert bubbles. */}
+              <div
+                className="flex-1 overflow-y-auto px-2 py-2 space-y-2"
+                style={{ maxHeight: 380 }}
+              >
+                {WHATSAPP_SAMPLE_ALERTS.map((alert, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-1.5"
+                    style={{ animationDelay: `${idx * 100}ms` }}
+                  >
+                    {/* Side strip — Lucide icon (no emojis in bubble). */}
+                    <span
+                      className="inline-flex items-center justify-center rounded shrink-0"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        backgroundColor:
+                          idx === 0
+                            ? "rgba(239,68,68,0.15)"
+                            : idx === 1
+                              ? SAGE_BG
+                              : "rgba(245,158,11,0.15)",
+                        color: idx === 0 ? NEGATIVE : idx === 1 ? SAGE : NEUTRAL_AMBER,
+                        marginTop: 2,
+                      }}
+                    >
+                      <alert.Icon size={9} />
+                    </span>
+                    {/* WhatsApp bubble — DCF8C6 green + timestamp + checkmark. */}
+                    <div
+                      className="rounded-lg px-2 py-1.5 max-w-[85%]"
+                      style={{
+                        backgroundColor: "#DCF8C6",
+                        boxShadow: "0 1px 0.5px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 10,
+                          color: CHARCOAL,
+                          lineHeight: 1.4,
+                          margin: 0,
+                        }}
+                      >
+                        {alert.text}
+                      </p>
+                      <div
+                        className="flex items-center justify-end gap-0.5 mt-0.5"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 8,
+                          color: "#71717A",
+                        }}
+                      >
+                        {format(new Date(Date.now() - (2 - idx) * 3600 * 1000), "HH:mm")}
+                        <CheckCheck size={9} style={{ color: "#4FC3F7" }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Alert type summary chips. */}
+        <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
+          <AlertTypeChip active={config.crisis} Icon={AlertTriangle} label="Crise" />
+          <AlertTypeChip active={config.daily} Icon={CalendarDays} label="Quotidien" />
+          <AlertTypeChip active={config.weekly} Icon={FileText} label="Hebdo" />
+        </div>
+
+        {/* Configure button. */}
+        <div className="mt-3">
+          <Button
+            size="sm"
+            className="w-full h-8"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              backgroundColor: CHARCOAL,
+              color: "#FFFFFF",
+            }}
+            onClick={() => setDialogOpen(true)}
+          >
+            <Settings size={12} className="mr-1.5" />
+            Configurer mes alertes
+          </Button>
+        </div>
+
+        {/* Configuration modal. */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle
+                style={{ fontFamily: FONT_SANS, fontSize: 16, fontWeight: 700, color: CHARCOAL }}
+              >
+                Configurer mes alertes WhatsApp
+              </DialogTitle>
+              <DialogDescription
+                style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY }}
+              >
+                Choisissez les types d'alertes à recevoir et vérifiez votre numéro.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              {/* Alert type toggles. */}
+              <AlertTypeRow
+                Icon={AlertTriangle}
+                color={NEGATIVE}
+                bg="rgba(239,68,68,0.10)"
+                title="Alerte de crise"
+                description="Notification immédiate en cas de chute du score ou pic négatif."
+                checked={config.crisis}
+                onCheckedChange={handleToggle("crisis")}
+              />
+              <AlertTypeRow
+                Icon={CalendarDays}
+                color={SAGE}
+                bg={SAGE_BG}
+                title="Résumé quotidien"
+                description="Bilan du jour: nombre d'articles, sentiment, top source."
+                checked={config.daily}
+                onCheckedChange={handleToggle("daily")}
+              />
+              <AlertTypeRow
+                Icon={FileText}
+                color={NEUTRAL_AMBER}
+                bg="rgba(245,158,11,0.10)"
+                title="Rapport hebdomadaire"
+                description="Lien de téléchargement du rapport PDF chaque lundi matin."
+                checked={config.weekly}
+                onCheckedChange={handleToggle("weekly")}
+              />
+
+              {/* Phone number input. */}
+              <div className="pt-2 space-y-1.5">
+                <Label
+                  htmlFor="whatsapp-phone"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase" }}
+                >
+                  Numéro WhatsApp
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="whatsapp-phone"
+                    type="tel"
+                    lang="fr"
+                    placeholder="+212 6XX XXX XXX"
+                    value={phoneDraft}
+                    onChange={handlePhoneChange}
+                    className="h-8 flex-1"
+                    style={{ fontFamily: FONT_MONO, fontSize: 12 }}
+                    aria-describedby="whatsapp-phone-help"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 shrink-0"
+                    style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+                    onClick={handleSavePhone}
+                  >
+                    <Save size={11} className="mr-1" />
+                    Enregistrer
+                  </Button>
+                </div>
+                <p
+                  id="whatsapp-phone-help"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontSize: 10,
+                    color: TEXT_MUTED,
+                    margin: 0,
+                  }}
+                >
+                  Format international recommandé. Vos alertes seront envoyées à ce numéro.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8"
+                style={{ fontFamily: FONT_MONO, fontSize: 11 }}
+                onClick={() => setDialogOpen(false)}
+              >
+                Fermer
+              </Button>
+              <Button
+                type="button"
+                className="h-8"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  backgroundColor: SAGE,
+                  color: "#FFFFFF",
+                }}
+                disabled={testing}
+                onClick={handleTest}
+              >
+                {testing ? (
+                  <>
+                    <RefreshCw size={11} className="mr-1.5 animate-spin" />
+                    Envoi…
+                  </>
+                ) : (
+                  <>
+                    <Send size={11} className="mr-1.5" />
+                    Tester
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+/** WhatsApp alert type chip — shows active/inactive state under the phone. */
+function AlertTypeChip({
+  active,
+  Icon,
+  label,
+}: {
+  active: boolean;
+  Icon: typeof AlertTriangle;
+  label: string;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+      style={{
+        fontFamily: FONT_MONO,
+        fontSize: 9,
+        color: active ? SAGE : TEXT_MUTED,
+        backgroundColor: active ? SAGE_BG : "#F4F4F5",
+        border: `1px solid ${active ? SAGE : BORDER_STRONG}`,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+      }}
+    >
+      <Icon size={9} />
+      {label}
+    </span>
+  );
+}
+
+/** WhatsApp alert type row inside the configuration modal. */
+function AlertTypeRow({
+  Icon,
+  color,
+  bg,
+  title,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  Icon: typeof AlertTriangle;
+  color: string;
+  bg: string;
+  title: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div
+      className="flex items-start gap-3 rounded-md p-3"
+      style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FFFFFF" }}
+    >
+      <span
+        className="inline-flex items-center justify-center rounded shrink-0"
+        style={{ width: 28, height: 28, backgroundColor: bg, color }}
+      >
+        <Icon size={14} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 12,
+            fontWeight: 700,
+            color: CHARCOAL,
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 11,
+            color: TEXT_BODY,
+            marginTop: 2,
+            lineHeight: 1.4,
+          }}
+        >
+          {description}
+        </div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={`Activer ${title}`} />
+    </div>
+  );
+}
+
+/** 13. Saved Searches Starter — 3 preset chips + create form + saved list.
+ *  Click chip → applies query to the Brand Mention Feed (lifted state).
+ *  Max 5 saved searches (Essentiel tier). Persisted in localStorage. */
+function SavedSearchesStarterCard({
+  savedSearches,
+  setSavedSearches,
+  activeQuery,
+  onRunSearch,
+}: {
+  savedSearches: SavedSearch[];
+  setSavedSearches: (
+    v: SavedSearch[] | ((prev: SavedSearch[]) => SavedSearch[]),
+  ) => void;
+  activeQuery: string;
+  onRunSearch: (query: string) => void;
+}) {
+  const [nameDraft, setNameDraft] = useState("");
+  const [queryDraft, setQueryDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const atLimit = savedSearches.length >= MAX_SAVED_SEARCHES_ESSENTIEL;
+
+  const handlePresetClick = (preset: { label: string; query: string }) => {
+    onRunSearch(preset.query);
+    toast.success(`Recherche « ${preset.label} » lancée`, {
+      description: "Le flux de mentions a été filtré.",
+    });
+  };
+
+  const handleSave = () => {
+    const name = nameDraft.trim();
+    const query = queryDraft.trim();
+    if (!name) {
+      setError("Veuillez saisir un nom pour la recherche.");
+      return;
+    }
+    if (!query) {
+      setError("Veuillez saisir une requête (mot-clé).");
+      return;
+    }
+    if (atLimit) {
+      setError(`Limite atteinte: ${MAX_SAVED_SEARCHES_ESSENTIEL} recherches maximum sur le plan Essentiel.`);
+      return;
+    }
+    const newSearch: SavedSearch = {
+      id: `search-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      query,
+      lastRunAt: null,
+    };
+    setSavedSearches((prev) => [...prev, newSearch]);
+    setNameDraft("");
+    setQueryDraft("");
+    setError(null);
+    toast.success("Recherche enregistrée", {
+      description: `« ${name} » est prête à être lancée à tout moment.`,
+    });
+  };
+
+  const handleRunSaved = (s: SavedSearch) => {
+    onRunSearch(s.query);
+    setSavedSearches((prev) =>
+      prev.map((item) =>
+        item.id === s.id ? { ...item, lastRunAt: Date.now() } : item,
+      ),
+    );
+    toast.success(`Recherche « ${s.name} » lancée`, {
+      description: "Le flux de mentions a été filtré.",
+    });
+  };
+
+  const handleDelete = (s: SavedSearch) => {
+    setSavedSearches((prev) => prev.filter((item) => item.id !== s.id));
+    toast.success(`Recherche « ${s.name} » supprimée`);
+  };
+
+  return (
+    <motion.div id="recherches-sauvegardees" {...cardMotion}>
+      <CardShell className="lg:col-span-12">
+        <SectionHeader
+          title="Recherches sauvegardées"
+          right={
+            <Badge
+              variant="secondary"
+              className="h-5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                backgroundColor: SAGE_BG,
+                color: SAGE,
+              }}
+            >
+              {savedSearches.length}/{MAX_SAVED_SEARCHES_ESSENTIEL}
+            </Badge>
+          }
+        />
+        <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+        <p
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 12,
+            color: TEXT_BODY,
+            lineHeight: 1.5,
+            margin: 0,
+            marginBottom: 12,
+          }}
+        >
+          Lancez une recherche rapide ou enregistrez vos mots-clés pour les réutiliser.
+          Les recherches filtrent le flux de mentions en temps réel ci-dessus.
+        </p>
+
+        {/* Preset search chips. */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: TEXT_MUTED,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Raccourcis:
+          </span>
+          {PRESET_SEARCHES.map((preset) => {
+            const isActive = activeQuery.trim().toLowerCase() === preset.query.toLowerCase();
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => handlePresetClick(preset)}
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1 transition-colors"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: isActive ? "#FFFFFF" : SAGE,
+                  backgroundColor: isActive ? SAGE : SAGE_BG,
+                  border: `1px solid ${SAGE}`,
+                }}
+              >
+                <Search size={10} />
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Create form. */}
+        <div
+          className="rounded-md p-3"
+          style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Plus size={12} style={{ color: SAGE }} />
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: CHARCOAL,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                fontWeight: 700,
+              }}
+            >
+              Créer une recherche
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+            <div className="sm:col-span-4">
+              <Label
+                htmlFor="search-name"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: TEXT_MUTED,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Nom
+              </Label>
+              <Input
+                id="search-name"
+                type="text"
+                lang="fr"
+                placeholder="Ex: Ma marque"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value.slice(0, 40))}
+                className="h-8 mt-1"
+                style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+                disabled={atLimit}
+              />
+            </div>
+            <div className="sm:col-span-6">
+              <Label
+                htmlFor="search-query"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: TEXT_MUTED,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Requête (mot-clé)
+              </Label>
+              <Input
+                id="search-query"
+                type="text"
+                lang="fr"
+                placeholder="Ex: nom de marque"
+                value={queryDraft}
+                onChange={(e) => setQueryDraft(e.target.value.slice(0, 60))}
+                className="h-8 mt-1"
+                style={{ fontFamily: FONT_SANS, fontSize: 12 }}
+                disabled={atLimit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSave();
+                  }
+                }}
+              />
+            </div>
+            <div className="sm:col-span-2 flex items-end">
+              <Button
+                type="button"
+                size="sm"
+                className="w-full h-8"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  backgroundColor: SAGE,
+                  color: "#FFFFFF",
+                }}
+                onClick={handleSave}
+                disabled={atLimit}
+              >
+                <Bookmark size={11} className="mr-1" />
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+          {error && (
+            <p
+              className="mt-2"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 11,
+                color: NEGATIVE,
+                margin: 0,
+              }}
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+          {atLimit && (
+            <p
+              className="mt-2 inline-flex items-center gap-1"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 11,
+                color: NEUTRAL_AMBER,
+                margin: 0,
+              }}
+            >
+              <Lightbulb size={11} />
+              Limite Essentiel atteinte ({MAX_SAVED_SEARCHES_ESSENTIEL} recherches). Passez à Pro pour les opérateurs booléens et les recherches illimitées.
+            </p>
+          )}
+        </div>
+
+        {/* Saved searches list. */}
+        {savedSearches.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                fontWeight: 700,
+              }}
+            >
+              Mes recherches ({savedSearches.length})
+            </div>
+            {savedSearches.map((s) => {
+              const isActive = activeQuery.trim().toLowerCase() === s.query.toLowerCase();
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-2 rounded-md p-2.5 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    border: `1px solid ${isActive ? SAGE : BORDER}`,
+                    backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                  }}
+                >
+                  <span
+                    className="inline-flex items-center justify-center rounded shrink-0"
+                    style={{
+                      width: 22,
+                      height: 22,
+                      backgroundColor: isActive ? SAGE : "#FAFAFA",
+                      color: isActive ? "#FFFFFF" : SAGE,
+                    }}
+                  >
+                    <Bookmark size={11} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="truncate"
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: CHARCOAL,
+                        }}
+                      >
+                        {s.name}
+                      </span>
+                      <span
+                        className="shrink-0"
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 10,
+                          color: SAGE,
+                        }}
+                      >
+                        « {s.query} »
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center gap-1 mt-0.5"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: TEXT_MUTED,
+                      }}
+                    >
+                      <Clock size={10} />
+                      {s.lastRunAt ? `Lancée ${fmtRelative(s.lastRunAt)}` : "Jamais lancée"}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRunSaved(s)}
+                    aria-label={`Lancer la recherche « ${s.name} »`}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-[rgba(74,123,95,0.14)] shrink-0"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      color: SAGE,
+                      border: `1px solid ${SAGE}`,
+                    }}
+                  >
+                    <Play size={10} />
+                    Lancer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(s)}
+                    aria-label={`Supprimer la recherche « ${s.name} »`}
+                    className="inline-flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[rgba(239,68,68,0.08)] shrink-0"
+                    style={{
+                      color: TEXT_MUTED,
+                      border: `1px solid ${BORDER_STRONG}`,
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Upsell to Pro for boolean operators. */}
+        <div
+          className="mt-3 rounded-md p-3 flex items-center gap-2"
+          style={{
+            border: `1px solid ${BORDER}`,
+            backgroundColor: SAGE_BG,
+          }}
+        >
+          <Lightbulb size={14} style={{ color: SAGE, flexShrink: 0 }} />
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 11,
+              color: SAGE,
+              margin: 0,
+              lineHeight: 1.4,
+            }}
+          >
+            <strong>Pro débloque:</strong> opérateurs booléens (ET / OU / SAUF), recherches illimitées, alertes par mot-clé.
+          </p>
+        </div>
+      </CardShell>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — EssentialDashboard
 // ════════════════════════════════════════════════════════════════════
 
@@ -6611,6 +8094,20 @@ export default function EssentialDashboard() {
   const [tourStep, setTourStep] = useState(0);
   // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
   const [cmdOpen, setCmdOpen] = useState(false);
+  // R3-ESSENTIEL-A — Round 3 persisted client-side state.
+  // WhatsApp alert config + saved searches. Both stored in localStorage.
+  const [whatsappConfig, setWhatsappConfig] = usePersistentState<WhatsappAlertConfig>(
+    "essential:whatsapp-config",
+    WHATSAPP_ALERT_INITIAL,
+  );
+  const [savedSearches, setSavedSearches] = usePersistentState<SavedSearch[]>(
+    "essential:saved-searches",
+    [],
+  );
+  // R3-ESSENTIEL-A — Transient active search query (lifted state shared
+  // between SavedSearchesStarterCard and BrandMentionFeedCard).
+  // Not persisted — resets on refresh.
+  const [mentionQuery, setMentionQuery] = useState("");
 
   const helpDismissedSet = useMemo(() => new Set(helpDismissedArr), [helpDismissedArr]);
   const dismissHelp = useCallback(
@@ -6937,6 +8434,18 @@ export default function EssentialDashboard() {
     refetchInsights();
     toast.success("Données rafraîchies");
   }, [refetchHealth, refetchAlerts, refetchInsights]);
+
+  // R3-ESSENTIEL-A — Saved Search handlers (lifted state).
+  // Apply a search query to the Brand Mention Feed (filters visible items),
+  // then scroll to the feed so the user sees the filtered results.
+  const handleRunSearch = useCallback((query: string) => {
+    setMentionQuery(query);
+    setTimeout(() => scrollToSection("flux-mentions"), 50);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setMentionQuery("");
+  }, []);
 
   // ─── R2-ESSENTIAL-B — Command palette actions (7 actions, French) ───
   const cmdActions = useMemo<CmdAction[]>(
@@ -7268,7 +8777,27 @@ export default function EssentialDashboard() {
             {/* SECTION 20 — Boîte à outils + Upsell */}
             <BoiteOutilsCard />
 
-            {/* SECTION 21 — ENV-ESSENTIAL — Milestone tracker (gamification) */}
+            {/* R3-ESSENTIEL-A — Brand Mention Feed (real-time, col-span-7) */}
+            <BrandMentionFeedCard
+              externalQuery={mentionQuery}
+              onClearQuery={handleClearSearch}
+            />
+
+            {/* R3-ESSENTIEL-A — WhatsApp Alert Preview (phone mockup, col-span-5) */}
+            <WhatsAppAlertPreviewCard
+              config={whatsappConfig}
+              setConfig={setWhatsappConfig}
+            />
+
+            {/* R3-ESSENTIEL-A — Saved Searches Starter (col-span-12) */}
+            <SavedSearchesStarterCard
+              savedSearches={savedSearches}
+              setSavedSearches={setSavedSearches}
+              activeQuery={mentionQuery}
+              onRunSearch={handleRunSearch}
+            />
+
+            {/* SECTION 21 — ENV-ESSENTIEL — Milestone tracker (gamification) */}
             <MilestoneTrackerCard
               milestones={milestones}
               recentlyUnlockedKey={recentlyUnlockedKey}
@@ -7301,7 +8830,7 @@ export default function EssentialDashboard() {
                 letterSpacing: "0.04em",
               }}
             >
-              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A · R2-ESSENTIAL-B
+              HARCH ATELIER · CONSOLE ESSENTIEL · v10X · ENV-ESSENTIAL · R2-ESSENTIEL-A · R2-ESSENTIEL-B · R3-ESSENTIEL-A
             </div>
             <div
               style={{
