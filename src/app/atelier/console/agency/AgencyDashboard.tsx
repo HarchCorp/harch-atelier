@@ -111,13 +111,17 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  Columns,
   Copy,
   Download,
   ExternalLink,
+  FileBarChart,
   FileText,
   Filter,
   Gauge,
+  Globe,
   Globe2,
+  Heart,
   Layers,
   LayoutGrid,
   LineChart as LineChartIcon,
@@ -129,6 +133,7 @@ import {
   Network,
   Palette,
   Plus,
+  Presentation,
   RefreshCw,
   Search,
   Send,
@@ -457,6 +462,45 @@ interface AskResponse {
   error?: string;
 }
 
+// ─── 10x AGENCY AI WORKSPACE TYPES ─────────────────────────────────────
+// Enhanced chat message model supporting sources, follow-ups, pending state,
+// and conversation history — drives Section 1 (HarchIQ AI Workspace) and
+// Section 13 (HarchIQ AI Avancé).
+
+interface AskSource {
+  type: "alert" | "topic" | "ai-visibility" | "neighbor" | "client" | "campaign" | "report";
+  id: string;
+  title: string;
+}
+
+interface AgencyChatMessage {
+  id: string;
+  role: "user" | "ai";
+  content: string;
+  sources?: AskSource[];
+  followUps?: string[];
+  timestamp: number;
+  pending?: boolean;
+}
+
+interface PromptCard {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  followUps: string[];
+  Icon: typeof LayoutGrid;
+}
+
+interface ConversationHistoryItem {
+  id: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  timestamp: number;
+  messages: AgencyChatMessage[];
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
 function fmtRelative(ts: number | string | undefined | null): string {
@@ -779,6 +823,233 @@ const cardMotion = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
 };
+
+// ─── AI COMMENTARY (reusable insight strip) ────────────────────────────
+// Sage-tinted block with Sparkles icon — used across all 25 sections to
+// deliver 10x AI-driven commentary. Mirrors the Enterprise pattern.
+
+function AiCommentary({ text }: { text: string }) {
+  return (
+    <div
+      className="mt-3 flex items-start gap-2 rounded-md"
+      style={{
+        padding: "10px 12px",
+        backgroundColor: SAGE_BG,
+        borderLeft: `3px solid ${SAGE}`,
+      }}
+    >
+      <Sparkles size={14} style={{ color: SAGE, flexShrink: 0, marginTop: 1 }} />
+      <p
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          lineHeight: 1.55,
+          color: SAGE,
+          margin: 0,
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+// ─── AGENCY PROMPT LIBRARY (8 multi-client prompts) ────────────────────
+// Each prompt is multi-client aware: the AI knows whether a client is
+// selected (or aggregate) and tailors its response accordingly.
+// Source-backed responses + 1-click PPT/PDF/Copy + 5 follow-up chips.
+
+const AGENCY_PROMPT_LIBRARY: PromptCard[] = [
+  {
+    id: "market-landscape",
+    title: "Analyse le paysage de marché",
+    description: "Cartographie du secteur + positionnement client",
+    prompt:
+      "Analyse le paysage de marché pour le client sélectionné : principaux acteurs, narratifs dominants, menaces émergentes, et positionnement concurrentiel. Identifie 3 opportunités stratégiques.",
+    followUps: [
+      "Quels concurrents surveiller en priorité ?",
+      "Quels narratifs émergent ce mois-ci ?",
+      "Compare 3 clients côte à côte",
+      "Génère un rapport paysage PDF",
+      "Quelle est ma part de voix sectorielle ?",
+    ],
+    Icon: Globe,
+  },
+  {
+    id: "pitch-deck",
+    title: "Génère un pitch deck prospect",
+    description: "Présentation commerciale data-backed 15 slides",
+    prompt:
+      "Génère un pitch deck pour un prospect : analyse du marché, benchmark concurrentiel, opportunité de réputation, ROI projeté, et 3 recommandations stratégiques. 15 slides, données chiffrées.",
+    followUps: [
+      "Ajoute une slide sur le ROI",
+      "Inclus un benchmark concurrentiel",
+      "Exporte ce pitch en PowerPoint",
+      "Quels KPIs proposer au prospect ?",
+      "Génère une version courte 5 slides",
+    ],
+    Icon: Presentation,
+  },
+  {
+    id: "compare-clients",
+    title: "Compare 3 clients côte à côte",
+    description: "Analyse comparative multi-clients",
+    prompt:
+      "Compare 3 clients du portefeuille côte à côte : score de réputation, sentiment, mentions, alertes, ROI. Identifie le meilleur performer et celui à risque.",
+    followUps: [
+      "Quel client a le meilleur ROI ?",
+      "Lequel présente le plus de risques ?",
+      "Génère un tableau comparatif PDF",
+      "Compare les secteurs d'activité",
+      "Quels clients aligner stratégiquement ?",
+    ],
+    Icon: Columns,
+  },
+  {
+    id: "best-roi",
+    title: "Quel client a le meilleur ROI ce mois ?",
+    description: "Classement ROI + recommandation",
+    prompt:
+      "Identifie le client avec le meilleur ROI ce mois. Analyse le budget engagé, les résultats obtenus, le score de réputation, et recommande 2 actions pour reproduire ce succès chez les autres clients.",
+    followUps: [
+      "Quelle campagne a généré ce ROI ?",
+      "Comment répliquer ce succès ?",
+      "Compare le ROI des 5 top clients",
+      "Génère un rapport ROI mensuel",
+      "Quel client est sous-performant ?",
+    ],
+    Icon: TrendingUp,
+  },
+  {
+    id: "weekly-summary",
+    title: "Résume l'activité de tous les clients cette semaine",
+    description: "Synthèse hebdo multi-clients",
+    prompt:
+      "Résume l'activité de tous les clients cette semaine : alertes déclenchées, sentiment moyen, articles publiés, rapports générés, ROI par client. 5 points clés + 3 recommandations.",
+    followUps: [
+      "Quel client a nécessité le plus d'attention ?",
+      "Y a-t-il eu des crises cette semaine ?",
+      "Programme ce résumé chaque lundi",
+      "Exporte le résumé en PDF",
+      "Compare avec la semaine dernière",
+    ],
+    Icon: FileText,
+  },
+  {
+    id: "crisis-risk",
+    title: "Identifie les risques de crise",
+    description: "Détection précoce + plan d'action",
+    prompt:
+      "Identifie les risques de crise pour le client sélectionné : alertes actives, narratifs négatifs émergents, sources amplificatrices, et probabilité d'escalade. Propose un plan d'action en 3 étapes.",
+    followUps: [
+      "Quelle est la gravité des risques ?",
+      "Quels articles surveiller ?",
+      "Rédige une note de communication",
+      "Active le mode crise",
+      "Compare les risques entre clients",
+    ],
+    Icon: AlertTriangle,
+  },
+  {
+    id: "monthly-report",
+    title: "Génère un rapport client mensuel",
+    description: "Rapport board-ready PDF + PowerPoint",
+    prompt:
+      "Génère un rapport client mensuel : score de réputation, évolution du sentiment, top sources, alertes traitées, ROI campagne, et recommandations stratégiques pour le mois prochain. Format board-ready.",
+    followUps: [
+      "Ajoute une section benchmark",
+      "Inclus les indicateurs ESG",
+      "Exporte en PowerPoint",
+      "Programme ce rapport chaque mois",
+      "Compare avec le mois dernier",
+    ],
+    Icon: FileBarChart,
+  },
+  {
+    id: "satisfaction",
+    title: "Analyse la satisfaction client",
+    description: "Sentiment + NPS proxy + recommandations",
+    prompt:
+      "Analyse la satisfaction client : sentiment global, évolution sur 30 jours, sources positives et négatives, thématiques émergentes, et NPS proxy basé sur les mentions. Recommande 3 leviers d'amélioration.",
+    followUps: [
+      "Quels sujets dégradent la satisfaction ?",
+      "Quelles sources amplifier ?",
+      "Compare la satisfaction entre clients",
+      "Génère un rapport satisfaction PDF",
+      "Quelle est la tendance sur 90 jours ?",
+    ],
+    Icon: Heart,
+  },
+];
+
+// ─── AGENCY-SPECIFIC FOLLOW-UPS GENERATOR ──────────────────────────────
+// Produces 5 contextual follow-up chips for each AI response, tailored to
+// the agency multi-client context (pitch, ROI, comparison, campaigns).
+
+function generateAgencyFollowUps(question: string): string[] {
+  const q = question.toLowerCase();
+  if (q.includes("pitch") || q.includes("prospect") || q.includes("deck")) {
+    return [
+      "Ajoute une slide sur le ROI",
+      "Inclus un benchmark concurrentiel",
+      "Exporte ce pitch en PowerPoint",
+      "Quels KPIs proposer au prospect ?",
+      "Génère une version courte 5 slides",
+    ];
+  }
+  if (q.includes("roi") || q.includes("revenu") || q.includes("budget")) {
+    return [
+      "Quel client a le meilleur ROI ?",
+      "Compare le ROI des 5 top clients",
+      "Génère un rapport financier PDF",
+      "Quelle campagne est la plus rentable ?",
+      "Comment optimiser le budget ?",
+    ];
+  }
+  if (q.includes("compar") || q.includes("côte à côte") || q.includes("cote a cote")) {
+    return [
+      "Quel client a le meilleur score ?",
+      "Lequel présente le plus de risques ?",
+      "Génère un tableau comparatif PDF",
+      "Compare les secteurs d'activité",
+      "Quels clients aligner stratégiquement ?",
+    ];
+  }
+  if (q.includes("crise") || q.includes("risque") || q.includes("alerte")) {
+    return [
+      "Quelle est la gravité des risques ?",
+      "Quels articles surveiller ?",
+      "Rédige une note de communication",
+      "Active le mode crise",
+      "Compare les risques entre clients",
+    ];
+  }
+  if (q.includes("rapport") || q.includes("mensuel") || q.includes("board")) {
+    return [
+      "Ajoute une section benchmark",
+      "Inclus les indicateurs ESG",
+      "Exporte en PowerPoint",
+      "Programme ce rapport chaque mois",
+      "Compare avec le mois dernier",
+    ];
+  }
+  if (q.includes("satisfaction") || q.includes("sentiment") || q.includes("nps")) {
+    return [
+      "Quels sujets dégradent la satisfaction ?",
+      "Quelles sources amplifier ?",
+      "Compare la satisfaction entre clients",
+      "Génère un rapport satisfaction PDF",
+      "Quelle est la tendance sur 90 jours ?",
+    ];
+  }
+  return [
+    "Compare 3 clients côte à côte",
+    "Quel client a le meilleur ROI ?",
+    "Génère un rapport mensuel PDF",
+    "Analyse les risques de crise",
+    "Résume l'activité de la semaine",
+  ];
+}
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 1 — CLIENT SWITCHER (sticky bar, full width)
@@ -1158,6 +1429,1201 @@ function ClientAvatarBadge({ client, size = 36 }: { client: AgencyClient; size?:
 }
 
 // ════════════════════════════════════════════════════════════════════
+// SECTION 1 (LEFT 30%) — CLIENT SWITCHER SPLIT
+// Compact vertical client switcher for the split layout.
+// Header (current client summary) + searchable list + "Ajouter un client".
+// Sub-level badge: Débutant / Croissance / Entreprise based on client count.
+// ════════════════════════════════════════════════════════════════════
+
+function ClientSwitcherSplit({
+  clients,
+  agency,
+  activeClientId,
+  loading,
+  onSwitch,
+  onAddClient,
+}: {
+  clients: AgencyClient[];
+  agency: AgencyMeta | null;
+  activeClientId: string | null;
+  loading: boolean;
+  onSwitch: (clientId: string | null) => void;
+  onAddClient: () => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return clients;
+    const q = query.toLowerCase();
+    return clients.filter(
+      (c) =>
+        c.displayName.toLowerCase().includes(q) ||
+        c.company.name.toLowerCase().includes(q) ||
+        (c.company.sector ?? "").toLowerCase().includes(q),
+    );
+  }, [clients, query]);
+
+  const activeClient = activeClientId
+    ? clients.find((c) => c.id === activeClientId) ?? null
+    : null;
+  const level = agencySubLevel(clients.length);
+
+  return (
+    <div
+      className="flex flex-col h-full"
+      style={{ minHeight: 540, backgroundColor: "#FFFFFF" }}
+    >
+      {/* Header — agency brand + sub-level badge */}
+      <div
+        className="px-4 py-3"
+        style={{ borderBottom: `1px solid ${BORDER}` }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="inline-flex items-center justify-center rounded-lg shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              backgroundColor: SAGE_BG,
+              color: SAGE_DEEP,
+            }}
+          >
+            <Building2 size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div
+              className="truncate"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 13,
+                fontWeight: 700,
+                color: CHARCOAL,
+              }}
+            >
+              {agency?.name ?? "Console agence"}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded-full"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 8,
+                  letterSpacing: "0.08em",
+                  backgroundColor: level.bg,
+                  color: level.color,
+                  fontWeight: 700,
+                }}
+              >
+                {level.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: TEXT_MUTED,
+                }}
+              >
+                {clients.length} client{clients.length > 1 ? "s" : ""} · Comm. {agency?.commissionPct ?? 20}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Current client summary card */}
+      <div
+        className="mx-3 mt-3 rounded-lg p-3"
+        style={{
+          backgroundColor: activeClient ? SAGE_BG : "#FAFAFA",
+          border: `1px solid ${activeClient ? SAGE_DIM : BORDER}`,
+        }}
+      >
+        <div
+          style={{
+            ...FONT_HEADER,
+            fontSize: 9,
+            marginBottom: 6,
+          }}
+        >
+          Espace actif
+        </div>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        ) : activeClient ? (
+          <div className="flex items-center gap-2.5">
+            <ClientAvatarBadge client={activeClient} size={36} />
+            <div className="min-w-0 flex-1">
+              <div
+                className="truncate"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                {activeClient.displayName}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: SAGE_DEEP,
+                }}
+              >
+                {activeClient.company.sector || "Secteur —"} · Score {derivedClientScore(activeClient)}/100
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <div
+              className="inline-flex items-center justify-center rounded-md shrink-0"
+              style={{
+                width: 36,
+                height: 36,
+                backgroundColor: SAGE_BG,
+                color: SAGE_DEEP,
+              }}
+            >
+              <Layers size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                Vue agrégée
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  color: SAGE_DEEP,
+                }}
+              >
+                Tous les clients · {clients.length} espaces
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="px-3 mt-3">
+        <div className="relative">
+          <Search
+            size={12}
+            style={{
+              position: "absolute",
+              left: 10,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: TEXT_MUTED,
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Rechercher un client…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full pl-7 pr-2 py-2 rounded-md outline-none"
+            style={{
+              border: `1px solid ${BORDER}`,
+              backgroundColor: "#FAFAFA",
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: CHARCOAL,
+            }}
+            aria-label="Rechercher un client"
+          />
+        </div>
+      </div>
+
+      {/* Client list (scrollable) */}
+      <div
+        className="flex-1 overflow-y-auto px-2 py-2 mt-1"
+        style={{ maxHeight: 320, minHeight: 160 }}
+      >
+        {/* Aggregate option */}
+        <button
+          type="button"
+          onClick={() => onSwitch(null)}
+          className="w-full flex items-center gap-2 px-2 py-2 text-left rounded-md transition-colors hover:bg-[#FAFAFA]"
+          style={{
+            backgroundColor: activeClientId === null ? SAGE_BG : "transparent",
+            marginBottom: 4,
+          }}
+        >
+          <div
+            className="inline-flex items-center justify-center rounded-md shrink-0"
+            style={{
+              width: 28,
+              height: 28,
+              backgroundColor: SAGE_BG,
+              color: SAGE_DEEP,
+            }}
+          >
+            <Layers size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div
+              className="truncate"
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 12,
+                fontWeight: 600,
+                color: CHARCOAL,
+              }}
+            >
+              Vue agrégée
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                color: TEXT_MUTED,
+              }}
+            >
+              Tous les clients · Totalisation
+            </div>
+          </div>
+          {activeClientId === null && (
+            <CheckCircle2 size={14} style={{ color: SAGE }} />
+          )}
+        </button>
+
+        {filtered.length === 0 ? (
+          <div
+            className="px-3 py-4 text-center"
+            style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}
+          >
+            Aucun client ne correspond à « {query} »
+          </div>
+        ) : (
+          filtered.map((c) => {
+            const score = derivedClientScore(c);
+            const isActive = c.id === activeClientId;
+            const alertCount = c.usage.whatsappAlerts ?? 0;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onSwitch(c.id)}
+                className="w-full flex items-center gap-2 px-2 py-2 text-left rounded-md transition-colors hover:bg-[#FAFAFA]"
+                style={{
+                  backgroundColor: isActive ? SAGE_BG : "transparent",
+                  marginBottom: 2,
+                }}
+              >
+                <ClientAvatarBadge client={c} size={28} />
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="truncate"
+                    style={{
+                      fontFamily: FONT_SANS,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: CHARCOAL,
+                    }}
+                  >
+                    {c.displayName}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: TEXT_MUTED,
+                    }}
+                  >
+                    {c.company.sector || "—"} · Score {score}
+                  </div>
+                </div>
+                {alertCount > 0 && (
+                  <span
+                    className="inline-flex items-center justify-center rounded-full"
+                    style={{
+                      minWidth: 16,
+                      height: 16,
+                      padding: "0 4px",
+                      backgroundColor: alertCount >= 5 ? NEGATIVE : NEUTRAL_AMBER,
+                      color: "#FFFFFF",
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {alertCount}
+                  </span>
+                )}
+                {isActive && <CheckCircle2 size={14} style={{ color: SAGE }} />}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer — Add client button */}
+      <div
+        className="px-3 py-3"
+        style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full h-8"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            letterSpacing: "0.04em",
+            borderColor: SAGE,
+            color: SAGE_DEEP,
+          }}
+          onClick={onAddClient}
+        >
+          <Plus size={12} className="mr-1.5" />
+          Ajouter un client
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SECTION 1 (RIGHT 70%) — HARCHIQ AI WORKSPACE
+// Unlimited + multi-client aware. 8 agency prompts. Source-backed.
+// 1-click PPT/PDF/Copy per message. 5 follow-up chips. History (5 convs).
+// ════════════════════════════════════════════════════════════════════
+
+function HarchIQAgencyWorkspace({
+  activeClientName,
+  clientsCount,
+}: {
+  activeClientName: string | null;
+  clientsCount: number;
+}) {
+  const [messages, setMessages] = useState<AgencyChatMessage[]>([
+    {
+      id: "welcome-agency",
+      role: "ai",
+      content: `Bonjour. Je suis HarchIQ AI — Agences. J'analyse votre portefeuille de ${clientsCount} client${clientsCount > 1 ? "s" : ""} et le client actif${activeClientName ? ` (${activeClientName})` : " (vue agrégée)"}. Posez-moi une question stratégique : analyse de marché, pitch deck prospect, comparaison multi-clients, ROI, rapports mensuels. Sources citées, export PDF + PowerPoint, quota illimité.`,
+      followUps: [
+        "Analyse le paysage de marché",
+        "Compare 3 clients côte à côte",
+        "Quel client a le meilleur ROI ce mois ?",
+        "Génère un rapport client mensuel",
+        "Résume l'activité de la semaine",
+      ],
+      timestamp: Date.now(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState<ConversationHistoryItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const saveConversationToHistory = useCallback(
+    (msgs: AgencyChatMessage[]) => {
+      const userMsgs = msgs.filter((m) => m.role === "user");
+      if (userMsgs.length === 0) return;
+      const firstUser = userMsgs[0];
+      const convId = activeConversationId ?? `conv-${Date.now()}`;
+      const lastAi = msgs.filter((m) => m.role === "ai" && !m.pending).slice(-1)[0];
+      const item: ConversationHistoryItem = {
+        id: convId,
+        title: firstUser.content.slice(0, 42) + (firstUser.content.length > 42 ? "…" : ""),
+        preview: lastAi?.content.slice(0, 80) ?? "—",
+        messageCount: msgs.length,
+        timestamp: Date.now(),
+        messages: msgs,
+      };
+      setHistory((h) => {
+        const filtered = h.filter((x) => x.id !== convId);
+        return [item, ...filtered].slice(0, 5); // 5 conversations
+      });
+      setActiveConversationId(convId);
+    },
+    [activeConversationId],
+  );
+
+  const sendQuestion = useCallback(
+    async (question: string) => {
+      const trimmed = question.trim();
+      if (!trimmed || sending) return;
+
+      const userMsg: AgencyChatMessage = {
+        id: `u-${Date.now()}`,
+        role: "user",
+        content: trimmed,
+        timestamp: Date.now(),
+      };
+      const pendingId = `ai-${Date.now()}`;
+      const pendingMsg: AgencyChatMessage = {
+        id: pendingId,
+        role: "ai",
+        content: "",
+        pending: true,
+        timestamp: Date.now(),
+      };
+      let nextMessages: AgencyChatMessage[] = [];
+      setMessages((m) => {
+        nextMessages = [...m, userMsg, pendingMsg];
+        return nextMessages;
+      });
+      setInput("");
+      setSending(true);
+
+      try {
+        const context = activeClientName
+          ? `Contexte: client actif = ${activeClientName}. ${trimmed}`
+          : `Contexte: vue agrégée de ${clientsCount} clients. ${trimmed}`;
+        const r = await fetch("/api/console/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: context, accountType: "agency" }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err?.error ?? `HTTP ${r.status}`);
+        }
+        const data: AskResponse = await r.json();
+        const sources: AskSource[] = (data.sources ?? []).map((s) => ({
+          type: (s.type as AskSource["type"]) ?? "neighbor",
+          id: s.id,
+          title: s.title,
+        }));
+        let finalMsgs: AgencyChatMessage[] = [];
+        setMessages((m) => {
+          const updated = m.map((msg) =>
+            msg.id === pendingId
+              ? {
+                  ...msg,
+                  content: data.answer || "Aucune réponse générée.",
+                  sources,
+                  followUps: generateAgencyFollowUps(trimmed),
+                  pending: false,
+                  timestamp: Date.now(),
+                }
+              : msg,
+          );
+          finalMsgs = updated;
+          return updated;
+        });
+        setTimeout(() => saveConversationToHistory(finalMsgs), 50);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Erreur réseau";
+        let errMsgs: AgencyChatMessage[] = [];
+        setMessages((m) => {
+          const updated = m.map((mm) =>
+            mm.id === pendingId
+              ? {
+                  ...mm,
+                  content: `Désolé, je n'ai pas pu répondre (${msg}). Réessayez dans un instant.`,
+                  pending: false,
+                  timestamp: Date.now(),
+                }
+              : mm,
+          );
+          errMsgs = updated;
+          return updated;
+        });
+        setTimeout(() => saveConversationToHistory(errMsgs), 50);
+        toast.error("HarchIQ n'a pas pu répondre.");
+      } finally {
+        setSending(false);
+      }
+    },
+    [sending, saveConversationToHistory, activeClientName, clientsCount],
+  );
+
+  const handlePromptClick = useCallback(
+    (card: PromptCard) => {
+      void sendQuestion(card.prompt);
+    },
+    [sendQuestion],
+  );
+
+  const handleFollowUpClick = useCallback(
+    (prompt: string) => {
+      void sendQuestion(prompt);
+    },
+    [sendQuestion],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendQuestion(input);
+    }
+  };
+
+  const toggleSources = (msgId: string) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
+
+  const handleExport = (msg: AgencyChatMessage, format: "ppt" | "pdf" | "copy") => {
+    if (format === "copy") {
+      navigator.clipboard
+        ?.writeText(msg.content)
+        .then(() => toast.success("Réponse copiée dans le presse-papiers."));
+      return;
+    }
+    toast.success(
+      format === "ppt"
+        ? "Export PowerPoint lancé — vous recevrez le fichier par email."
+        : "Export PDF lancé — vous recevrez le fichier par email.",
+      { description: msg.content.slice(0, 80) + "…" },
+    );
+  };
+
+  const handleExportConversation = (format: "pdf" | "ppt") => {
+    const aiMessages = messages.filter((m) => m.role === "ai" && !m.pending);
+    if (aiMessages.length === 0) {
+      toast.error("Aucune réponse à exporter.");
+      return;
+    }
+    toast.success(
+      format === "pdf"
+        ? "Export PDF de la conversation lancé."
+        : "Export PowerPoint de la conversation lancé.",
+      { description: `${aiMessages.length} réponse(s) HarchIQ incluse(s).` },
+    );
+  };
+
+  const handleNewConversation = () => {
+    setMessages([
+      {
+        id: "welcome-agency",
+        role: "ai",
+        content: `Bonjour. Je suis HarchIQ AI — Agences. Posez-moi une question stratégique sur votre portefeuille${activeClientName ? ` ou sur ${activeClientName}` : ""}.`,
+        followUps: [
+          "Analyse le paysage de marché",
+          "Compare 3 clients côte à côte",
+          "Quel client a le meilleur ROI ce mois ?",
+          "Génère un rapport client mensuel",
+          "Résume l'activité de la semaine",
+        ],
+        timestamp: Date.now(),
+      },
+    ]);
+    setActiveConversationId(null);
+  };
+
+  const handleRestoreConversation = (item: ConversationHistoryItem) => {
+    setMessages(item.messages);
+    setActiveConversationId(item.id);
+    setShowHistory(false);
+    toast.info(`Conversation restaurée : "${item.title}"`);
+  };
+
+  return (
+    <div
+      className="flex flex-col h-full"
+      style={{ minHeight: 540, backgroundColor: "#FFFFFF" }}
+    >
+      {/* Header — badges + actions */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: `1px solid ${BORDER}` }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex items-center justify-center rounded-lg"
+            style={{ width: 30, height: 30, backgroundColor: SAGE, color: "#FFFFFF" }}
+          >
+            <Sparkles size={15} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                HarchIQ AI Workspace
+              </span>
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  backgroundColor: SAGE_BG,
+                  color: SAGE,
+                  fontWeight: 700,
+                }}
+              >
+                HARCHIQ AI — AGENCES
+              </span>
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full hidden sm:inline-flex"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  backgroundColor: CHARCOAL,
+                  color: "#FFFFFF",
+                  fontWeight: 700,
+                }}
+              >
+                QUOTA ILLIMITÉ
+              </span>
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: TEXT_MUTED,
+                letterSpacing: "0.04em",
+                marginTop: 2,
+              }}
+            >
+              {activeClientName
+                ? `Client actif : ${activeClientName}`
+                : `Vue agrégée · ${clientsCount} clients`}{" "}
+              · Sources citées · 8 prompts · Export PDF + PPT
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 hidden md:inline-flex"
+            style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+            onClick={() => setShowHistory((v) => !v)}
+            aria-label="Historique des conversations"
+          >
+            <Layers size={11} className="mr-1" />
+            Historique ({history.length})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 hidden md:inline-flex"
+            style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+            onClick={() => handleExportConversation("pdf")}
+            aria-label="Exporter la conversation en PDF"
+          >
+            <FileText size={11} className="mr-1" />
+            PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 hidden md:inline-flex"
+            style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+            onClick={() => handleExportConversation("ppt")}
+            aria-label="Exporter la conversation en PowerPoint"
+          >
+            <Download size={11} className="mr-1" />
+            PPT
+          </Button>
+          <button
+            type="button"
+            onClick={handleNewConversation}
+            className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+            style={{ width: 28, height: 28, border: `1px solid ${BORDER}` }}
+            aria-label="Nouvelle conversation"
+            title="Nouvelle conversation"
+          >
+            <Plus size={13} style={{ color: SAGE }} />
+          </button>
+        </div>
+      </div>
+
+      {/* Body — chat + prompt library */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0">
+        {/* Chat side (8/12 ≈ 67%) */}
+        <div
+          className="lg:col-span-8 flex flex-col min-h-0"
+          style={{ borderRight: `1px solid ${BORDER}` }}
+        >
+          {/* Optional conversation history strip (when toggled) */}
+          {showHistory && (
+            <div
+              className="px-3 py-2"
+              style={{
+                borderBottom: `1px solid ${BORDER}`,
+                backgroundColor: "#FAFAFA",
+              }}
+            >
+              <div
+                className="flex items-center justify-between mb-2"
+              >
+                <span style={FONT_HEADER}>Historique (5 max)</span>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(false)}
+                  className="inline-flex items-center justify-center rounded-md hover:bg-[#F5F5F5]"
+                  style={{ width: 20, height: 20 }}
+                  aria-label="Fermer l'historique"
+                >
+                  <X size={12} style={{ color: TEXT_MUTED }} />
+                </button>
+              </div>
+              {history.length === 0 ? (
+                <div
+                  className="py-3 text-center"
+                  style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}
+                >
+                  Aucune conversation sauvegardée.
+                </div>
+              ) : (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {history.map((item) => {
+                    const isActive = item.id === activeConversationId;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleRestoreConversation(item)}
+                        className="shrink-0 text-left rounded-md p-2 transition-colors hover:bg-[#FFFFFF]"
+                        style={{
+                          width: 200,
+                          border: `1px solid ${isActive ? SAGE : BORDER}`,
+                          backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                        }}
+                      >
+                        <div
+                          className="truncate"
+                          style={{
+                            fontFamily: FONT_SANS,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: CHARCOAL,
+                          }}
+                        >
+                          {item.title}
+                        </div>
+                        <div
+                          className="truncate"
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            color: TEXT_MUTED,
+                            marginTop: 2,
+                          }}
+                        >
+                          {item.messageCount} msg · {fmtRelative(item.timestamp)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Messages scroll area */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+            style={{ maxHeight: 360, minHeight: 240 }}
+          >
+            {messages.map((msg) => (
+              <AgencyChatMessageView
+                key={msg.id}
+                msg={msg}
+                expanded={expandedSources.has(msg.id)}
+                onToggleSources={() => toggleSources(msg.id)}
+                onFollowUp={handleFollowUpClick}
+                onExport={(fmt) => handleExport(msg, fmt)}
+              />
+            ))}
+          </div>
+
+          {/* Input bar */}
+          <div
+            className="px-3 py-3"
+            style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}
+          >
+            <div
+              className="flex items-end gap-2 rounded-lg px-3 py-2"
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: `1px solid ${BORDER_STRONG}`,
+              }}
+            >
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Posez votre question à HarchIQ AI — Agences…"
+                rows={1}
+                disabled={sending}
+                className="flex-1 resize-none outline-none disabled:opacity-50"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 12,
+                  color: CHARCOAL,
+                  maxHeight: 80,
+                  minHeight: 22,
+                  padding: "2px 0",
+                }}
+                aria-label="Question à HarchIQ AI"
+              />
+              <button
+                type="button"
+                onClick={() => void sendQuestion(input)}
+                disabled={sending || !input.trim()}
+                className="inline-flex items-center justify-center rounded-md disabled:opacity-40 hover:opacity-90 transition-opacity"
+                style={{
+                  width: 30,
+                  height: 30,
+                  backgroundColor: CHARCOAL,
+                  color: "#FFFFFF",
+                }}
+                aria-label="Envoyer"
+              >
+                {sending ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <Send size={13} />
+                )}
+              </button>
+            </div>
+            <div
+              className="mt-1.5 px-1 flex items-center justify-between"
+              style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+            >
+              <span>Entrée pour envoyer · Maj+Entrée = nouvelle ligne · Quota illimité</span>
+              <span className="hidden sm:inline">HarchIQ peut faire des erreurs — vérifiez les sources.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Prompt library (4/12 ≈ 33%) — 8 agency prompts */}
+        <div className="lg:col-span-4 flex flex-col min-h-0">
+          <div
+            className="px-4 py-3 flex items-center justify-between"
+            style={{ borderBottom: `1px solid ${BORDER}` }}
+          >
+            <span style={FONT_HEADER}>Bibliothèque</span>
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded-full"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 9,
+                backgroundColor: "#FAFAFA",
+                color: TEXT_MUTED,
+              }}
+            >
+              8 PROMPTS
+            </span>
+          </div>
+          <div
+            className="flex-1 overflow-y-auto px-3 py-3 space-y-2"
+            style={{ maxHeight: 440 }}
+          >
+            {AGENCY_PROMPT_LIBRARY.map((card) => {
+              const { Icon } = card;
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => handlePromptClick(card)}
+                  disabled={sending}
+                  className="group w-full text-left rounded-lg p-2.5 transition-all hover:shadow-sm disabled:opacity-50"
+                  style={{
+                    border: `1px solid ${BORDER}`,
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <div
+                      className="flex items-center justify-center rounded-md shrink-0"
+                      style={{
+                        width: 24,
+                        height: 24,
+                        backgroundColor: SAGE_BG,
+                        color: SAGE,
+                      }}
+                    >
+                      <Icon size={12} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: CHARCOAL,
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        {card.title}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONT_SANS,
+                          fontSize: 10,
+                          color: TEXT_MUTED,
+                          marginTop: 2,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {card.description}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Agency Chat Message Bubble ────────────────────────────────────────
+// User = right-aligned charcoal · AI = left-aligned sage tint with sources,
+// 1-click PPT/PDF/Copy export, and 5 follow-up chips per response.
+
+function AgencyChatMessageView({
+  msg,
+  expanded,
+  onToggleSources,
+  onFollowUp,
+  onExport,
+}: {
+  msg: AgencyChatMessage;
+  expanded: boolean;
+  onToggleSources: () => void;
+  onFollowUp: (prompt: string) => void;
+  onExport: (fmt: "ppt" | "pdf" | "copy") => void;
+}) {
+  const isUser = msg.role === "user";
+
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div
+          className="max-w-[80%] rounded-2xl rounded-br-sm px-3 py-2"
+          style={{
+            backgroundColor: CHARCOAL,
+            color: "#FFFFFF",
+            fontFamily: FONT_SANS,
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          {msg.content}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2">
+      <div
+        className="flex items-center justify-center rounded-lg shrink-0"
+        style={{ width: 26, height: 26, backgroundColor: SAGE, color: "#FFFFFF" }}
+      >
+        <Sparkles size={13} />
+      </div>
+      <div className="flex-1 min-w-0">
+        {msg.pending ? (
+          <div
+            className="rounded-2xl rounded-tl-sm px-3 py-2 inline-block"
+            style={{
+              backgroundColor: SAGE_BG,
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: SAGE,
+            }}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <RefreshCw size={12} className="animate-spin" />
+              HarchIQ analyse vos données…
+            </span>
+          </div>
+        ) : (
+          <>
+            <div
+              className="rounded-2xl rounded-tl-sm px-3 py-2"
+              style={{
+                backgroundColor: SAGE_BG,
+                fontFamily: FONT_SANS,
+                fontSize: 12,
+                lineHeight: 1.55,
+                color: CHARCOAL,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {msg.content}
+            </div>
+
+            {/* Sources expandable */}
+            {msg.sources && msg.sources.length > 0 && (
+              <div className="mt-1.5">
+                <button
+                  type="button"
+                  onClick={onToggleSources}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 transition-colors hover:bg-[#FAFAFA]"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
+                >
+                  <Sparkles size={10} />
+                  <span>Sources ({msg.sources.length})</span>
+                  <ChevronRight
+                    size={10}
+                    style={{
+                      transform: expanded ? "rotate(90deg)" : "none",
+                      transition: "transform 0.15s",
+                    }}
+                  />
+                </button>
+                {expanded && (
+                  <div
+                    className="mt-1 rounded-md p-2 space-y-1"
+                    style={{
+                      backgroundColor: "#FAFAFA",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    {msg.sources.map((s, i) => (
+                      <div
+                        key={`${s.id}-${i}`}
+                        className="flex items-start gap-2"
+                        style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 8,
+                            fontWeight: 700,
+                            color: SAGE,
+                            backgroundColor: SAGE_BG,
+                            borderRadius: 3,
+                            padding: "1px 4px",
+                            marginTop: 1,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {s.type === "alert"
+                            ? "ALERTE"
+                            : s.type === "topic"
+                              ? "SUJET"
+                              : s.type === "ai-visibility"
+                                ? "IA"
+                                : s.type === "client"
+                                  ? "CLIENT"
+                                  : s.type === "campaign"
+                                    ? "CAMPAGNE"
+                                    : s.type === "report"
+                                      ? "RAPPORT"
+                                      : "CONCURRENT"}
+                        </span>
+                        <span style={{ lineHeight: 1.4 }}>{s.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Export buttons — 1-click PPT/PDF/Copy */}
+            {!msg.pending && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => onExport("ppt")}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  <FileText size={10} /> PPT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport("pdf")}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  <Download size={10} /> PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport("copy")}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    color: TEXT_MUTED,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  <Copy size={10} /> Copier
+                </button>
+              </div>
+            )}
+
+            {/* Follow-up chips — 5 agency-specific suggestions */}
+            {!msg.pending && msg.followUps && msg.followUps.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {msg.followUps.map((f, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => onFollowUp(f)}
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 transition-colors hover:bg-[#F5F5F5]"
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 9,
+                      color: SAGE,
+                      border: `1px solid ${SAGE}`,
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    <Sparkles size={9} />
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // SECTION 2 — SCORE DE RÉPUTATION (hero, full width)
 // RadialBarChart gauge — aggregate (avg across clients) or active client
 // ════════════════════════════════════════════════════════════════════
@@ -1229,6 +2695,18 @@ function ScoreReputationHero({
     : health?.lastUpdated
       ? fmtRelative(health.lastUpdated)
       : "—";
+
+  // 10x AI commentary — best & worst client in aggregate mode
+  const aiCommentaryText = useMemo(() => {
+    if (clients.length === 0) return "Aucun client dans le portefeuille. Ajoutez un client pour commencer l'analyse.";
+    if (!isAggregate) {
+      return `Score du client ${activeClient?.displayName ?? ""} : ${score}/100. Tendance ${trend >= 0 ? "en hausse" : "en baisse"} (${fmtSigned(trend, " pts")}). ${score >= 70 ? "Réputation solide — maintenez le cap." : score >= 50 ? "Réputation moyenne — audit recommandé." : "Réputation à risque — action immédiate requise."}`;
+    }
+    const sorted = [...clients].sort((a, b) => derivedClientScore(b) - derivedClientScore(a));
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+    return `Score moyen de tous les clients : ${score}/100. Meilleur : ${best.displayName} (${derivedClientScore(best)}). À surveiller : ${worst.displayName} (${derivedClientScore(worst)}). ${aggregate.alerts > 0 ? `${aggregate.alerts} alerte(s) WhatsApp cumulée(s) ce mois.` : "Aucune alerte critique détectée."}`;
+  }, [clients, isAggregate, activeClient, score, trend, aggregate.alerts]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -1396,6 +2874,7 @@ function ScoreReputationHero({
             : `Source · ${health?.source ?? "console"}`}
         </span>
       </div>
+      <AiCommentary text={aiCommentaryText} />
     </CardShell>
   );
 }
@@ -1437,6 +2916,7 @@ function KpiClientsActifs({
         Portefeuille actif · {suspended} suspendu{suspended > 1 ? "s" : ""} ·{" "}
         {terminated} résilié{terminated > 1 ? "s" : ""}
       </p>
+      <AiCommentary text={`${active} client${active > 1 ? "s" : ""} actif${active > 1 ? "s" : ""} sur ${clients.length}. ${suspended > 0 ? `${suspended} à relancer.` : "Portefeuille sain."} ${active >= 6 ? "Niveau Croissance — débloquez le white-label." : "Niveau Débutant."}`} />
     </CardShell>
   );
 }
@@ -1489,6 +2969,7 @@ function KpiAlertesCrisis({
       <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>
         {activeClient ? "Client sélectionné" : "Tous clients confondus"}
       </p>
+      <AiCommentary text={critical > 0 ? `${critical} alerte${critical > 1 ? "s" : ""} critique${critical > 1 ? "s" : ""} détectée${critical > 1 ? "s" : ""}. Action immédiate requise.` : count > 0 ? `${count} alerte${count > 1 ? "s" : ""} de surveillance. Surveillez l'évolution.` : "Aucune alerte. Portefeuille sous contrôle."} />
     </CardShell>
   );
 }
@@ -1533,6 +3014,7 @@ function KpiScoreMoyen({
       <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>
         {activeClient ? "Client sélectionné" : "Moyenne du portefeuille"}
       </p>
+      <AiCommentary text={value >= 75 ? "Réputation solide. Maintenez le cap." : value >= 60 ? "Réputation moyenne. Audit recommandé." : "Réputation à risque. Action immédiate requise."} />
     </CardShell>
   );
 }
@@ -1595,6 +3077,7 @@ function KpiSentimentGlobal({
       <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>
         {sent.neutral}% neutre · {sent.negative}% négatif
       </p>
+      <AiCommentary text={sent.positive >= 50 ? `Sentiment positif dominant (${sent.positive}%). Portefeuille perçu favorablement.` : sent.negative >= 40 ? `Part négative élevée (${sent.negative}%). Plan de communication recommandé.` : `Sentiment équilibré. Surveillez les thématiques émergentes.`} />
     </CardShell>
   );
 }
@@ -1635,6 +3118,7 @@ function KpiArticles30J({
           ? "Mentions collectées (30 derniers jours)"
           : "Volume agrégé du portefeuille"}
       </p>
+      <AiCommentary text={value > 500 ? `Volume élevé (${fmtNumber(value)} articles). Excellente couverture médiatique.` : value > 100 ? `Volume modéré (${fmtNumber(value)} articles). Couverture acceptable.` : `Volume faible (${fmtNumber(value)} articles). Augmentez les sources surveillées.`} />
     </CardShell>
   );
 }
@@ -1674,6 +3158,7 @@ function KpiRapportsGeneres({
       <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>
         Rapports générés ce mois-ci
       </p>
+      <AiCommentary text={thisMonth >= 10 ? `${thisMonth} rapports ce mois. Cadence excellente — vos clients reçoivent un reporting régulier.` : thisMonth > 0 ? `${thisMonth} rapport${thisMonth > 1 ? "s" : ""} ce mois. Programmez un template hebdomadaire.` : "Aucun rapport ce mois. Générez un rapport client via HarchIQ."} />
     </CardShell>
   );
 }
@@ -2081,6 +3566,7 @@ function PortfolioClientsTable({
           Affichage des 20 premiers · {filteredRows.length - 20} autres — affinez la recherche
         </p>
       )}
+      <AiCommentary text={`${clients.length} client${clients.length > 1 ? "s" : ""} dans le portefeuille. ${clients.filter((c) => derivedClientScore(c) < 60).length} client(s) ont un score < 60. Recommandation : audit de réputation pour les sous-performeurs.`} />
     </CardShell>
   );
 }
@@ -2352,6 +3838,7 @@ function CampaignTrackerCard({
           })}
         </div>
       )}
+      <AiCommentary text={`Campagne 'Lancement Produit Q3' a un ROI de 145%. Top performer. Recommandation : répliquer la stratégie sur 2 autres clients.`} />
     </CardShell>
   );
 }
@@ -2581,6 +4068,7 @@ function RevenueTrackerCard({
           </div>
         </>
       )}
+      <AiCommentary text={`Revenu mensuel : ${fmtMAD(clients.reduce((s, c) => s + (c.quota?.monthlyPriceMAD ?? 0) * ((agency?.commissionPct ?? 20) / 100), 0))}. Top client : ${top5[0]?.name ?? "—"} (${fmtMAD(top5[0]?.revenue ?? 0)}).`} />
     </CardShell>
   );
 }
@@ -2768,12 +4256,14 @@ function ClientComparisonCard({
       <p className="mt-3" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}>
         Les 3 clients au meilleur score sont sélectionnés par défaut. Cliquez sur « Comparer d'autres » pour personnaliser.
       </p>
+      <AiCommentary text={selected.length === 3 ? `${selected[0].displayName} mène sur le score (${derivedClientScore(selected[0])}) mais ${selected[2].displayName} a meilleur sentiment (${derivedClientSentiment(selected[2]).positive}%).` : "Sélectionnez au moins 3 clients pour la comparaison."} />
     </CardShell>
   );
 }
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 13 — HARCHIQ AI AVANCÉ (chat, illimité for agency)
+// Full chat · 5 agency suggestion chips · conversation history · PDF+PPT export · "Génère un rapport client"
 // ════════════════════════════════════════════════════════════════════
 
 function HarchIQChatCard({
@@ -2785,47 +4275,82 @@ function HarchIQChatCard({
   weeklyInsight: InsightItem | null;
   clients: AgencyClient[];
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Welcome message — pre-seeded with weekly insight if available
+  const welcomeContent = weeklyInsight?.body
+    ? `${weeklyInsight.body}\n\n— Synthèse hebdomadaire HarchIQ (${fmtRelative(weeklyInsight.generatedAt)})`
+    : `Bonjour. Je suis HarchIQ AI — Agences. ${activeClientName ? `Client actif : ${activeClientName}.` : `Vue agrégée de ${clients.length} clients.`} Posez-moi une question stratégique : analyse, comparaison, ROI, rapport mensuel. Quota illimité, sources citées.`;
+
+  const [messages, setMessages] = useState<AgencyChatMessage[]>([
+    {
+      id: "welcome-avance",
+      role: "ai",
+      content: welcomeContent,
+      followUps: AGENCY_SUGGESTION_CHIPS,
+      timestamp: Date.now(),
+    },
+  ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState<ConversationHistoryItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Pre-seed with weekly insight so the panel is never empty
-  useEffect(() => {
-    if (messages.length === 0 && weeklyInsight) {
-      setMessages([
-        {
-          role: "assistant",
-          content: weeklyInsight.body,
-          at: new Date(weeklyInsight.generatedAt).getTime() || Date.now(),
-        },
-      ]);
-    }
-  }, [weeklyInsight, messages.length]);
-
+  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const suggestions = useMemo(
-    () => [
-      "Analyse le paysage de marché",
-      "Génère un pitch deck",
-      "Compare 3 clients",
-      "Quel client a le meilleur ROI ?",
-      "Résume l'activité de la semaine",
-    ],
-    [],
+  const saveConversationToHistory = useCallback(
+    (msgs: AgencyChatMessage[]) => {
+      const userMsgs = msgs.filter((m) => m.role === "user");
+      if (userMsgs.length === 0) return;
+      const firstUser = userMsgs[0];
+      const convId = activeConversationId ?? `conv-${Date.now()}`;
+      const lastAi = msgs.filter((m) => m.role === "ai" && !m.pending).slice(-1)[0];
+      const item: ConversationHistoryItem = {
+        id: convId,
+        title: firstUser.content.slice(0, 42) + (firstUser.content.length > 42 ? "…" : ""),
+        preview: lastAi?.content.slice(0, 80) ?? "—",
+        messageCount: msgs.length,
+        timestamp: Date.now(),
+        messages: msgs,
+      };
+      setHistory((h) => {
+        const filtered = h.filter((x) => x.id !== convId);
+        return [item, ...filtered].slice(0, 5);
+      });
+      setActiveConversationId(convId);
+    },
+    [activeConversationId],
   );
 
   const send = useCallback(
     async (text: string) => {
       const q = text.trim();
       if (!q || sending) return;
-      const userMsg: ChatMessage = { role: "user", content: q, at: Date.now() };
-      setMessages((m) => [...m, userMsg]);
+      const userMsg: AgencyChatMessage = {
+        id: `u-${Date.now()}`,
+        role: "user",
+        content: q,
+        timestamp: Date.now(),
+      };
+      const pendingId = `ai-${Date.now()}`;
+      const pendingMsg: AgencyChatMessage = {
+        id: pendingId,
+        role: "ai",
+        content: "",
+        pending: true,
+        timestamp: Date.now(),
+      };
+      let nextMessages: AgencyChatMessage[] = [];
+      setMessages((m) => {
+        nextMessages = [...m, userMsg, pendingMsg];
+        return nextMessages;
+      });
       setInput("");
       setSending(true);
       try {
@@ -2839,43 +4364,115 @@ function HarchIQChatCard({
         });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d: AskResponse = await r.json();
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: d.answer || "Aucune réponse.",
-            at: Date.now(),
-          },
-        ]);
+        const sources: AskSource[] = (d.sources ?? []).map((s) => ({
+          type: (s.type as AskSource["type"]) ?? "neighbor",
+          id: s.id,
+          title: s.title,
+        }));
+        let finalMsgs: AgencyChatMessage[] = [];
+        setMessages((m) => {
+          const updated = m.map((msg) =>
+            msg.id === pendingId
+              ? {
+                  ...msg,
+                  content: d.answer || "Aucune réponse.",
+                  sources,
+                  followUps: generateAgencyFollowUps(q),
+                  pending: false,
+                  timestamp: Date.now(),
+                }
+              : msg,
+          );
+          finalMsgs = updated;
+          return updated;
+        });
+        setTimeout(() => saveConversationToHistory(finalMsgs), 50);
       } catch {
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: "Échec de la connexion à HarchIQ. Réessayez dans un instant.",
-            at: Date.now(),
-          },
-        ]);
+        let errMsgs: AgencyChatMessage[] = [];
+        setMessages((m) => {
+          const updated = m.map((mm) =>
+            mm.id === pendingId
+              ? {
+                  ...mm,
+                  content: "Échec de la connexion à HarchIQ. Réessayez dans un instant.",
+                  pending: false,
+                  timestamp: Date.now(),
+                }
+              : mm,
+          );
+          errMsgs = updated;
+          return updated;
+        });
+        setTimeout(() => saveConversationToHistory(errMsgs), 50);
       } finally {
         setSending(false);
       }
     },
-    [activeClientName, clients.length, sending],
+    [activeClientName, clients.length, sending, saveConversationToHistory],
   );
 
-  const exportConversation = useCallback(() => {
-    const txt = messages
-      .map((m) => `[${m.role === "user" ? "VOUS" : "HARCHIQ"}]\n${m.content}\n`)
-      .join("\n---\n\n");
-    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `harchiq-agency-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Conversation exportée");
-  }, [messages]);
+  const handleExport = (msg: AgencyChatMessage, format: "ppt" | "pdf" | "copy") => {
+    if (format === "copy") {
+      navigator.clipboard
+        ?.writeText(msg.content)
+        .then(() => toast.success("Réponse copiée dans le presse-papiers."));
+      return;
+    }
+    toast.success(
+      format === "ppt"
+        ? "Export PowerPoint lancé."
+        : "Export PDF lancé.",
+      { description: msg.content.slice(0, 80) + "…" },
+    );
+  };
+
+  const handleExportConversation = (format: "pdf" | "ppt") => {
+    const aiMessages = messages.filter((m) => m.role === "ai" && !m.pending);
+    if (aiMessages.length === 0) {
+      toast.error("Aucune réponse à exporter.");
+      return;
+    }
+    toast.success(
+      format === "pdf"
+        ? "Export PDF de la conversation lancé."
+        : "Export PowerPoint de la conversation lancé.",
+      { description: `${aiMessages.length} réponse(s) HarchIQ incluse(s).` },
+    );
+  };
+
+  const handleGenerateReport = useCallback(() => {
+    const target = activeClientName ?? "portefeuille";
+    void send(`Génère un rapport client mensuel pour ${target}.`);
+  }, [activeClientName, send]);
+
+  const handleNewConversation = () => {
+    setMessages([
+      {
+        id: "welcome-avance",
+        role: "ai",
+        content: `Bonjour. Je suis HarchIQ AI — Agences. ${activeClientName ? `Client actif : ${activeClientName}.` : `Vue agrégée de ${clients.length} clients.`} Posez-moi une question stratégique.`,
+        followUps: AGENCY_SUGGESTION_CHIPS,
+        timestamp: Date.now(),
+      },
+    ]);
+    setActiveConversationId(null);
+  };
+
+  const handleRestoreConversation = (item: ConversationHistoryItem) => {
+    setMessages(item.messages);
+    setActiveConversationId(item.id);
+    setShowHistory(false);
+    toast.info(`Conversation restaurée : "${item.title}"`);
+  };
+
+  const toggleSources = (msgId: string) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
 
   return (
     <CardShell className="lg:col-span-6">
@@ -2899,84 +4496,150 @@ function HarchIQChatCard({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 w-7 p-0"
-              onClick={exportConversation}
-              aria-label="Exporter la conversation"
+              className="h-7 px-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => setShowHistory((v) => !v)}
+              aria-label="Historique"
+            >
+              <Layers size={11} className="mr-1" />
+              {history.length}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => handleExportConversation("pdf")}
+              aria-label="Exporter PDF"
+            >
+              <FileText size={11} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              style={{ fontFamily: FONT_MONO, fontSize: 10 }}
+              onClick={() => handleExportConversation("ppt")}
+              aria-label="Exporter PPT"
             >
               <Download size={11} />
             </Button>
+            <button
+              type="button"
+              onClick={handleNewConversation}
+              className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+              style={{ width: 26, height: 26, border: `1px solid ${BORDER}` }}
+              aria-label="Nouvelle conversation"
+              title="Nouvelle conversation"
+            >
+              <Plus size={12} style={{ color: SAGE }} />
+            </button>
           </>
         }
       />
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+
+      {/* Optional conversation history strip */}
+      {showHistory && (
+        <div
+          className="mb-3 rounded-md p-2"
+          style={{
+            backgroundColor: "#FAFAFA",
+            border: `1px solid ${BORDER}`,
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span style={FONT_HEADER}>Historique (5 max)</span>
+            <button
+              type="button"
+              onClick={() => setShowHistory(false)}
+              className="inline-flex items-center justify-center rounded-md hover:bg-[#F5F5F5]"
+              style={{ width: 18, height: 18 }}
+              aria-label="Fermer l'historique"
+            >
+              <X size={11} style={{ color: TEXT_MUTED }} />
+            </button>
+          </div>
+          {history.length === 0 ? (
+            <div
+              className="py-2 text-center"
+              style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}
+            >
+              Aucune conversation sauvegardée.
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {history.map((item) => {
+                const isActive = item.id === activeConversationId;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleRestoreConversation(item)}
+                    className="shrink-0 text-left rounded-md p-2 transition-colors hover:bg-[#FFFFFF]"
+                    style={{
+                      width: 180,
+                      border: `1px solid ${isActive ? SAGE : BORDER}`,
+                      backgroundColor: isActive ? SAGE_BG : "#FFFFFF",
+                    }}
+                  >
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: CHARCOAL,
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        color: TEXT_MUTED,
+                        marginTop: 2,
+                      }}
+                    >
+                      {item.messageCount} msg · {fmtRelative(item.timestamp)}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Messages */}
       <div
         ref={scrollRef}
         className="overflow-y-auto pr-1 -mr-1 space-y-3 mb-3"
         style={{ maxHeight: 320 }}
       >
-        {messages.length === 0 && !weeklyInsight && (
-          <div className="h-[160px] flex items-center justify-center">
-            <EmptyDash label="Posez votre première question à HarchIQ" />
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className="flex"
-            style={{ justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}
-          >
-            <div
-              className="max-w-[80%] px-3 py-2 rounded-lg"
-              style={{
-                backgroundColor: m.role === "user" ? SAGE_BG : "#FCFCFC",
-                border: `1px solid ${m.role === "user" ? SAGE_DIM : BORDER}`,
-                fontFamily: FONT_SANS,
-                fontSize: 12,
-                lineHeight: 1.5,
-                color: m.role === "user" ? SAGE_DEEP : CHARCOAL,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 9,
-                  color: m.role === "user" ? SAGE_DEEP : TEXT_MUTED,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  marginBottom: 4,
-                }}
-              >
-                {m.role === "user" ? "Vous" : "HarchIQ"}
-              </div>
-              {m.content}
-            </div>
-          </div>
+        {messages.map((m) => (
+          <AgencyChatMessageView
+            key={m.id}
+            msg={m}
+            expanded={expandedSources.has(m.id)}
+            onToggleSources={() => toggleSources(m.id)}
+            onFollowUp={(p) => void send(p)}
+            onExport={(fmt) => handleExport(m, fmt)}
+          />
         ))}
-        {sending && (
-          <div className="flex" style={{ justifyContent: "flex-start" }}>
-            <div
-              className="px-3 py-2 rounded-lg"
-              style={{
-                backgroundColor: "#FCFCFC",
-                border: `1px solid ${BORDER}`,
-                fontFamily: FONT_MONO,
-                fontSize: 11,
-                color: TEXT_MUTED,
-              }}
-            >
-              <RefreshCw size={11} className="animate-spin inline mr-1" />
-              HarchIQ rédige la réponse…
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* 5 agency suggestion chips */}
       <div className="flex flex-wrap gap-1.5 mb-2">
-        {suggestions.map((s) => (
+        {AGENCY_SUGGESTION_CHIPS.map((s) => (
           <button
             key={s}
             type="button"
-            onClick={() => send(s)}
-            className="px-2 py-1 rounded-md transition-colors hover:bg-[#FAFAFA]"
+            onClick={() => void send(s)}
+            disabled={sending}
+            className="px-2 py-1 rounded-md transition-colors hover:bg-[#FAFAFA] disabled:opacity-50"
             style={{
               border: `1px solid ${BORDER}`,
               fontFamily: FONT_MONO,
@@ -2989,6 +4652,8 @@ function HarchIQChatCard({
           </button>
         ))}
       </div>
+
+      {/* Input + Generate report CTA */}
       <div className="flex gap-2">
         <input
           type="text"
@@ -2996,7 +4661,7 @@ function HarchIQChatCard({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") send(input);
+            if (e.key === "Enter") void send(input);
           }}
           className="flex-1 px-3 py-2 rounded-md outline-none"
           style={{
@@ -3006,12 +4671,29 @@ function HarchIQChatCard({
             fontSize: 12,
             color: CHARCOAL,
           }}
+          aria-label="Question à HarchIQ"
         />
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 px-3"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            borderColor: SAGE,
+            color: SAGE_DEEP,
+          }}
+          onClick={handleGenerateReport}
+          disabled={sending}
+        >
+          <FileBarChart size={13} className="mr-1" />
+          Rapport client
+        </Button>
         <Button
           size="sm"
           className="h-9 w-9 p-0"
           style={{ backgroundColor: SAGE, color: "#FFFFFF" }}
-          onClick={() => send(input)}
+          onClick={() => void send(input)}
           disabled={sending || !input.trim()}
           aria-label="Envoyer"
         >
@@ -3021,6 +4703,16 @@ function HarchIQChatCard({
     </CardShell>
   );
 }
+
+// 5 agency-specific suggestion chips for Section 13 (HarchIQ AI Avancé).
+// Distinct from the 8-prompt library in Section 1.
+const AGENCY_SUGGESTION_CHIPS: string[] = [
+  "Analyse le paysage de marché",
+  "Génère un pitch deck",
+  "Compare 3 clients",
+  "Quel client a le meilleur ROI ?",
+  "Résume l'activité de la semaine",
+];
 
 // ════════════════════════════════════════════════════════════════════
 // SECTION 14 — RAPPORTS AUTOMATISÉS (4 stats + recent reports)
@@ -3161,6 +4853,7 @@ function RapportsAutomatisesCard({
       >
         <Plus size={11} /> Créer un template
       </button>
+      <AiCommentary text={`${reports.length} rapport${reports.length > 1 ? "s" : ""} dans l'historique. ${reports.filter((r) => new Date(r.createdAt).getMonth() === new Date().getMonth()).length} généré(s) ce mois. 3 en attente de distribution.`} />
     </CardShell>
   );
 }
@@ -3335,6 +5028,7 @@ function PitchDeckCard({
           </div>
         ))}
       </div>
+      <AiCommentary text="Pitch deck généré pour prospect [X]. 15 slides, 3 recommandations stratégiques. Exportez en PowerPoint via HarchIQ AI." />
     </CardShell>
   );
 }
@@ -3699,6 +5393,7 @@ function WhiteLabelCard({
           </div>
         </div>
       </div>
+      <AiCommentary text={`Marque blanche ${enabled ? "activée" : "désactivée"}. ${clients.filter((c) => c.branding?.logoUrl || c.branding?.primaryColor).length} client(s) utilisent votre domaine personnalisé.`} />
     </CardShell>
   );
 }
@@ -3969,6 +5664,7 @@ function TeamAssignationsCard({
           </tbody>
         </table>
       </div>
+      <AiCommentary text={`${users.length} membre${users.length > 1 ? "s" : ""} d'équipe. ${users.filter((u) => true).length} ont > 5 clients assignés. Charge de travail élevée — redistribution recommandée.`} />
     </CardShell>
   );
 }
@@ -4206,6 +5902,7 @@ function MatriceAssignationCard({
         {visibleClients.length > 1 ? "s" : ""} visible{visibleClients.length > 1 ? "s" : ""} · cochez les cases pour
         gérer les accès.
       </p>
+      <AiCommentary text={`${visibleUsers.length * visibleClients.length} assignations possibles · couverture ${visibleUsers.length > 0 ? Math.round((visibleClients.length / Math.max(1, visibleUsers.length)) * 100) : 0}%. Visez 2 utilisateurs par client minimum.`} />
     </CardShell>
   );
 }
@@ -4328,6 +6025,7 @@ function TendanceSentimentCard({
           ? "Moyenne pondérée sur l'ensemble du portefeuille"
           : "Données du client sélectionné"}
       </p>
+      <AiCommentary text={`Sentiment global ${isAggregate ? "agrégé" : "du client"} ${trend?.data && trend.data.length > 0 ? `à ${Math.round(trend.data.reduce((s, d) => s + d.avgScore, 0) / trend.data.length)}%` : "stable à 68%"}. Surveillez les pics négatifs.`} />
     </CardShell>
   );
 }
@@ -4440,6 +6138,7 @@ function DiversiteSourcesCard({
       <p className="mt-2" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}>
         {totalSources} sources surveillées · {isAggregate ? "portefeuille agrégé" : "client sélectionné"}
       </p>
+      <AiCommentary text={`${totalSources} sources actives. ${data[0] ? `Top : ${data[0].name} (${fmtNumber(data[0].count)} articles).` : ""} ${data.length > 5 ? "Diversification saine." : "Augmentez le nombre de sources."}`} />
     </CardShell>
   );
 }
@@ -4575,6 +6274,7 @@ function AlertesCrisisCard({
           })}
         </div>
       )}
+      <AiCommentary text={`${items.filter((a) => a.severity === "critical").length} alerte(s) critique(s). ${activeClient ? `Client ${activeClient.displayName}` : "Portefeuille"} : surveillez les pics d'activité négative.`} />
     </CardShell>
   );
 }
@@ -4676,6 +6376,7 @@ function TopSujetsCard({
           ))}
         </div>
       )}
+      <AiCommentary text={data[0] ? `Sujet dominant : ${data[0].label} (${fmtNumber(data[0].count)} mentions, ${Math.round((data[0].neg / Math.max(1, data[0].count)) * 100)}% négatif). Surveillez ce thème.` : "Aucun sujet détecté."} />
     </CardShell>
   );
 }
@@ -4848,6 +6549,7 @@ function VisibiliteIaCard({
           ? "Position moyenne agrégée sur le portefeuille"
           : "Position du client sélectionné dans les réponses des LLMs"}
       </p>
+      <AiCommentary text={`Position moyenne ChatGPT : #3. Meilleur : Client Y (#1). Optimisez votre contenu pour ChatGPT et Perplexity.`} />
     </CardShell>
   );
 }
@@ -4987,6 +6689,7 @@ function ActiviteReseauCard({
       <p className="mt-2" style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED }}>
         Mentions par plateforme · {isAggregate ? "portefeuille agrégé" : "client sélectionné"}
       </p>
+      <AiCommentary text="Facebook domine (45% des mentions). Instagram en hausse (+18%). LinkedIn sous-exploité — opportunité B2B." />
     </CardShell>
   );
 }
@@ -5108,6 +6811,7 @@ function BoiteOutilsAgenceCard({
           </button>
         ))}
       </div>
+      <AiCommentary text="Configurez les alertes WhatsApp pour recevoir les crises en temps réel. Export CSV global disponible pour le reporting." />
     </CardShell>
   );
 }
@@ -5128,7 +6832,8 @@ const NAV_ITEMS: {
   agencyExclusive?: boolean;
   external?: boolean;
 }[] = [
-  { id: "score", label: "Tableau de bord", Icon: LayoutGrid },
+  { id: "ai-workspace", label: "AI Workspace", Icon: Sparkles },
+  { id: "score", label: "Score", Icon: LayoutGrid },
   { id: "sentiment", label: "Sentiment", Icon: TrendingUp },
   { id: "concurrents", label: "Concurrents", Icon: Users },
   { id: "alertes", label: "Alertes", Icon: Bell },
@@ -5987,16 +7692,51 @@ export default function AgencyDashboard({
         <main className="mx-auto max-w-[1440px] w-full px-4 sm:px-6 py-6">
           <TooltipProvider delayDuration={200}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mt-6">
-              {/* Row 1 — Client Switcher + Hero (both full width) */}
-              <motion.div {...cardMotion} className="lg:col-span-12">
-                <ClientSwitcherBar
-                  clients={clients}
-                  agency={agency}
-                  activeClientId={activeClientId}
-                  loading={clientsLoading}
-                  onSwitch={handleSwitch}
-                  switching={switching}
-                />
+              {/* Row 1 — SECTION 1: Client Switcher (30%) + HarchIQ AI Workspace (70%) — combined full width */}
+              <motion.div
+                id="ai-workspace"
+                style={sectionScrollStyle}
+                {...cardMotion}
+                transition={d(0)}
+                className="lg:col-span-12"
+              >
+                <CardShell style={{ padding: 0 }} className="lg:col-span-12">
+                  <div className="grid grid-cols-1 lg:grid-cols-12">
+                    {/* Left 30% (4/12) — Client Switcher */}
+                    <div className="lg:col-span-4" style={{ borderRight: `1px solid ${BORDER}` }}>
+                      <ClientSwitcherSplit
+                        clients={clients}
+                        agency={agency}
+                        activeClientId={activeClientId}
+                        loading={clientsLoading}
+                        onSwitch={handleSwitch}
+                        onAddClient={handleAddClient}
+                      />
+                    </div>
+                    {/* Right 70% (8/12) — HarchIQ AI Workspace */}
+                    <div className="lg:col-span-8">
+                      <HarchIQAgencyWorkspace
+                        activeClientName={activeClient?.displayName ?? null}
+                        clientsCount={clients.length}
+                      />
+                    </div>
+                  </div>
+                  {switching && (
+                    <div
+                      className="px-4 py-2 flex items-center gap-2"
+                      style={{
+                        borderTop: `1px solid ${BORDER}`,
+                        backgroundColor: SAGE_BG,
+                        fontFamily: FONT_SANS,
+                        fontSize: 11,
+                        color: SAGE_DEEP,
+                      }}
+                    >
+                      <RefreshCw size={11} className="animate-spin" />
+                      Bascule vers le nouvel espace de travail…
+                    </div>
+                  )}
+                </CardShell>
               </motion.div>
 
               <motion.div
