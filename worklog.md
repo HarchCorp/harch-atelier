@@ -4901,3 +4901,130 @@ Stage Summary:
 - Code quality: tsc --noEmit → EXIT_CODE=0, 0 errors (tout le projet, pas d'erreurs ProDashboard non plus). eslint 8 errors + 4 warnings TOUS pré-existants (lignes 759/3463/3719/4441/5425/5445/5447/5454/5465 — toutes AVANT ligne 11972, dans code R3-ENTERPRISE-A / R2-ENTERPRISE-A / ENV-ENTERPRISE). AUCUNE erreur/warning dans nouveau code R4-ENTERPRISE-A (lignes 11972+).
 - 3 nouvelles localStorage keys: enterprise:resolutions (Resolution[]), enterprise:geo-feed (GeoFeedState: watchlist[]), enterprise:esg-scorecard (EsgScorecardState: overrides Record<string, number>). Toutes usePersistentState-backed (SSR-safe, quota-safe). Total Enterprise dashboard localStorage keys: 16 (10 ENV-ENTERPRISE + 3 R3-ENTERPRISE-A + 3 R4-ENTERPRISE-A).
 - 3 nouvelles sections affichées (SECTION 39 Board Resolution Tracker après SECTION 26 Board Briefing, SECTION 40 Geopolitical Risk Feed après SECTION 29 Multi-Market Map, SECTION 41 ESG Scorecard après SECTION 27 Compliance Cockpit) — toutes col-span-12, toutes framer-motion animated (cardMotion preset), toutes AiCommentary en footer.
+
+---
+Task ID: AUDIT-ENTERPRISE
+Agent: VORTEX
+Task: Exhaustive value-to-UI audit for Enterprise account
+
+Work Log:
+- Read PricingPage.tsx (lines 69-90, 153-177, 186-198) to extract Grandes Entreprises plan verbatim: tagline, capabilities[5], bestFor[3], keyFeatures[3], comparison matrix 17 rows, FAQ onboarding + engagement.
+- Scanned EnterpriseDashboard.tsx (13 642 lines) end-to-end. Identified 43 distinct UI sections (header announces 25, footer says 36 — both inaccurate). Mapped every `function XxxCard` (41 cards) + 11 atomic helpers.
+- Grep'd all `useApi<T>()` + `fetch("/api/...")` calls: 14 endpoints (13 GET + 1 POST). Read each route file (`/api/console/{brand-health,crisis-alerts,ai-visibility,sentiment-trend,source-distribution,competitor-radar,share-of-voice,influencers,regulatory-feed,briefing/list,settings/users,team-activity}/route.ts` + `/api/console/ask/route.ts`). Confirmed all are Prisma-backed with demo fallback (`buildDemo()` / `demoFilterFromSession()`).
+- For each section, documented 4 axes: (1) Promesse & Origine Commerciale (pricing verbatim), (2) Route & Ingestion (Prisma / mock / proxy), (3) Traitement & Logique (formulas, client-side heuristics), (4) Rendu UI (component type, states, section line).
+- Scanned landing/public pages (AtelierHome.tsx, AboutPage.tsx, MethodPage.tsx, ChangelogPage.tsx) for Enterprise mentions: AtelierHome "board-ready PDF" (line 3 984), AboutPage "Rapport PDF board-ready mensuel" (line 348) + Enterprise Risk Intelligence product page (line 129) + API & MCP product page (line 130), MethodPage "score board-ready" (lines 10/42/163), ChangelogPage enterprise references (lines 33/40/58/68/81/126/129-130/211).
+- Identified 5 critical gaps (promises without UI): SSO/SAML promised but 0 UI, Quota IA illimité not instrumented server-side, MCP integrations are mock toggles only, Workflows backend is toast-only (no persistence), PDF generation is toast-only (no /api/pdf POST).
+- Identified 18 orphan UI sections (no explicit pricing promise): DEFCON Crise, Multi-Market Map (8 markets), Executive Milestone Tracker, Risk Heatmap 5×5, Regulatory Calendar, Board PDF Template Gallery, Audit Log Timeline, SIEM Configurator, Crisis War Room, Stakeholder Mapping, Regulatory Change Feed, Board Resolution Tracker, Geopolitical Risk Feed, ESG Scorecard, plus partial orphans in Features 9/10/11/13/15/18/23/24.
+- Identified 4 functional duplications: (a) HarchIQ chat appears 3× (Features 1, 16, 27 — all POST /ask), (b) API & Intégrations appears 2× (Features 19, 29), (c) ESG appears 2× (Features 24, 41), (d) Veille Réglementaire appears 3× (Features 25, 32, 38).
+- Flagged 13 anomalies: hardcoded RBAC role "comms" (line 13 254), Math.random() sparkline in Feature 10 (re-renders change values), synthetic competitor series in Feature 11 (sin/cos formulas), 5/9 LLMs in Feature 15 are client-fabricated when DB only has 4, hardcoded quotas (50K API calls, 600 req/min, 142 current), teamCount=12 hardcoded, Feature 22 handleGenerate is toast-only (no POST), usePersistentState SSR pattern, section numbering broken (43 sections but header/footer say 25/36), duplicate SECTION 31/32/33/26 numbers.
+- Wrote report to /home/z/my-project/audit-enterprise.md (~1 100 lines, 43 features documented across 4 axes, 5 gaps, 18 orphans, 13 anomalies, 10 strategic recommendations).
+
+Stage Summary:
+- Total features audited: 43 (header says 25, footer says 36, reality is 43).
+- API-backed sections: 17 (all Prisma + demo fallback, 14 distinct endpoints).
+- 100% mock sections (client-only + localStorage): 22 (R2/R3/R4-ENTERPRISE-A/B additions, all persisted via usePersistentState).
+- Critical gaps (promise no UI): 5 — SSO/SAML, Quota IA instrumentation, MCP real endpoints, Workflows backend persistence, PDF generation server-side.
+- Orphan UI (no pricing promise): 18 sections.
+- Functional duplications: 4 (HarchIQ ×3, API & Intégrations ×2, ESG ×2, Veille Réglementaire ×3).
+- Anomalies flagged: 13 (hardcoded RBAC, Math.random sparkline, synthetic competitors, fabricated LLMs, hardcoded quotas, toast-only handlers, broken section numbering, SSR pattern).
+- Strategic recommendations: 10 (fill SSO gap, instrument quota, wire MCP to real endpoints, persist workflows server-side, generate real PDFs, deduplicate 4 functional areas, renumber sections 1-43).
+- Code unchanged (RESEARCH ONLY — 0 lines modified).
+
+---
+Task ID: AUDIT-PRO
+Agent: VORTEX
+Task: Exhaustive value-to-UI audit for Pro account
+Work Log:
+- Read /home/z/my-project/src/app/atelier/pricing/PricingPage.tsx (1 085 lines) — extracted PLANS[1] Pro verbatim (name, tagline, highlighted, capabilities[4], bestFor[3], keyFeatures[3]) + COMPARISON matrix (18 critères, colonne Pro) + FAQ (2 entries mentioning Pro) + badge "Le plus populaire".
+- Read /home/z/my-project/src/app/atelier/console/pro/ProDashboard.tsx (14 165 lines) — mapped 34 numbered sections + 8 structural features (sidebar, header, ProFilterBar, Custom Dashboard Layout, AnnotationTrigger, AnomalySummaryStrip, Competitor Setup Wizard, Period Compare Toggle).
+- Grep'd all `fetch(`/`useApi(`/`/api/` calls — identified 13 routes actually called + 3 routes commented in header but never invoked (exposure-trend, insights, harch100/latest) + 1 PATCH route available but unused (alert-config PATCH).
+- Read all 13 API route.ts files under /home/z/my-project/src/app/api/console/ + /api/harch100/latest/route.ts — documented data source (Prisma models), demo fallbacks, and processing logic for each.
+- Read /home/z/my-project/src/app/atelier/AtelierHome.tsx section pricing (lignes 3593-3648) — discovered 3-tier incompatible naming (Émergence/Corporate/Sovereign vs Essentiel/Pro/Grandes Entreprises/Agences).
+- Grep'd About/Method/Changelog for Pro mentions — ChangelogPage v3.0.0 documents the rename Starter/Pro/Enterprise → Émergence/Corporate/Sovereign (2026-07-21), but PricingPage was never migrated.
+- Identified 3 ORPHAN widgets (sentiment-heatmap, campaign-tracker, dashboard-templates) — defined in DEFAULT_WIDGET_ORDER and as components (~1 150 lines of code) but absent from the widgets mapping object (lignes 13910-13977), silently filtered by the reconciliation logic.
+- Mapped each feature to 4 axes (Promesse & Origine Commerciale, Route & Ingestion Données, Traitement & Logique Métier, Rendu UI & Expérience) — 34 entries + 8 structural entries.
+- Detected 12 anomalies (naming conflict, quota 200/jour non vérifié serveur, concurrents limités à 2 vs 5 promis, wizard ignoré par l'API, 3 widgets orphelins, 3 routes commentées non appelées, sidebar "Harch 100" pointe vers upsell, filtres Sources/Sentiment/Langue non transmis, "temps réel" contredit par fenêtres 7-30j, constantes ×47/×850/×0.06 non sourcées, "Concurrents" proExclusive sans ligne matrice dédiée).
+- Wrote final report to /home/z/my-project/audit-pro.md (~17 KB, 8 sections + 34 feature entries + 8 structural entries + 12 anomalies).
+- Code unchanged (RESEARCH ONLY — 0 lines modified).
+Stage Summary:
+- Total features audited: 34 (4 axes complets each) + 8 structural features.
+- REAL: 22 | HYBRID: 6 | MOCKED: 8 | ORPHAN (defined but never rendered): 3.
+- Routes API commented but never called: 3 (exposure-trend, insights, harch100/latest).
+- Routes API PATCH/POST available but never called from ProDashboard: 2 (PATCH /alert-config, POST /insights).
+- Promises with NO UI (gaps): 11 (notably quota 200/j non vérifié serveur, Copilot absent de ai-visibility, onboarding 5-10j absent, "Tableaux prédéfinis" orphelin).
+- UI with NO commercial promise (orphans marketing): 7 (notably 3 widgets Influenceurs alors que Marketing d'influence = "—" pour Pro dans la matrice PricingPage).
+- Anomalies flagged: 12 (naming conflict PricingPage vs AtelierHome, 3 widgets orphelins ~1 150 lignes code fantôme, quota HarchIQ purement client-side, concurrents limités à 2 vs 5 promis, Competitor Setup Wizard ignoré par l'API, sidebar "Harch 100" → upsell, filtres Sources/Sentiment/Langue non transmis à l'API, constantes ×47/×850/×0.06 non sourcées).
+- Strategic recommendations: top 3 gaps critiques (quota serveur, widgets orphelins, naming conflict) + top 3 mocks à remplacer (§1.17 Recherches/Alertes, §1.27 Programmation Rapports, §1.32 Analyse Contenu Concurrents articles synthétisés).
+- Code unchanged (RESEARCH ONLY — 0 lines modified).
+
+---
+Task ID: AUDIT-ESSENTIEL
+Agent: VORTEX
+Task: Exhaustive value-to-UI audit for Essentiel account
+Work Log:
+- Read PricingPage.tsx (1 084 lines) — extracted Essentiel plan card VERBATIM: tagline "Pour les petites équipes de communication et marketing qui démarrent leur veille réputationnelle et leur suivi de la visibilité IA.", 4 capabilities (Veille médiatique, Social listening, Suivi visibilité IA GenAI Lens, Relations médias), 3 bestFor, 3 keyFeatures ("HarchIQ AI (50 questions/jour)", "Alertes et rapports", "Tableaux de bord prédéfinis"). Extracted 19-row comparison matrix (Essentiel column): Niveau HarchIQ "Standard", 50 questions/jour, Benchmarking —, Tableaux personnalisés —, Rapports board-ready —, Intégrations API/MCP —, Gouvernance —, SSO —, Multi-clients —, White-label —, Facturation par compte —.
+- Read EssentialDashboard.tsx (10 941 lines) end-to-end in 22 chunks. Identified 38 distinct UI features + 2 utility components = 40 entities. Mapped every `function XxxCard` + every `motion.div className="lg:col-span-X"` block. Documented per-feature: section number (SECTION 1-21 + R2/R3/R4-ESSENTIEL-A/B rounds), line range, html id, col-span, composant UI (RadialBarChart, ComposedChart, ScatterChart, BarChart, LineChart, AreaChart, Phone mockup, Email mockup, Dialog modal, Command Palette, Guided Tour spotlight, Progressive List, Milestone cards, Quota Widget, Notification Bell dropdown, etc.).
+- Grep'd all `useApi<T>()` + `fetch("/api/...")` calls: 10 distinct endpoints (8 GET + 1 POST + 1 streaming CSV). Read each route file end-to-end: `/api/console/{brand-health, crisis-alerts, insights, ai-visibility, sentiment-trend, topics, source-distribution, ask, export-csv}/route.ts` + `/api/harch100/latest/route.ts`.
+- CRITICAL FINDING #1 (RBAC mismatch): `auth.config.ts:28` declares `accountType: essential | pro | enterprise | agency` (4 Harch plans). But `prisma.schema.prisma:716` defines `accountType` as `brand-monitor | market-competitor | investment-bank | harch-alpha` (legacy ISOLATED account types). The API routes `/api/console/{sentiment-trend, topics, ai-visibility}/route.ts` have `allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"]` (ai-visibility adds "harch-alpha"). Result: any user with `accountType === "essential"` (the actual Essentiel plan user) gets HTTP 403 Forbidden on 3 of the 10 backend routes — Features 5 (Citations IA KPI), 7 (Tendance Sentiment), 11 (Snapshot Visibilité IA), 12 (Top 5 Sujets), 19 (Volume Mentions 7j) are entirely broken for real Essentiel users.
+- CRITICAL FINDING #2 (range 90j fallback): `sentiment-trend/route.ts:29-32` supports `RANGE_DAYS = {7d: 7, 30d: 30, 365d: 365}`. Dashboard sends `range=${7d|30d|90d}`. The `90d` value is not in the mapping and silently falls back to `30d` via `?? 30`. User clicks "90j" tab, sees 30 days of data.
+- CRITICAL FINDING #3 (sources count contradiction): FAQ `faq-data.ts` entry 20 says "Essentiel : 1 marque, **10 sources**, 3 moteurs IA, dashboard, WhatsApp digest". Dashboard `EssentialDashboard.tsx:3039` helpText says "Plan Essentiel : **20 sources surveillées**." `QuotaUsageWidget:5091` declares `SOURCES_TOTAL = 20`. Same product, two contradictory public numbers.
+- CRITICAL FINDING #4 (AtelierHome tier inconsistency): AtelierHome.tsx pricing section (lignes 3592-3713) still displays LEGACY tiers **Émergence (15K MAD/mo) / Corporate (40K MAD/mo) / Sovereign (75K MAD/mo)** with different features. PricingPage.tsx displays current tiers **Essentiel/Pro/Grandes Entreprises/Agences** ("Sur devis"). Changelog v3.0.0 (Jul 21, 2026) confirms the Émergence/Corporate/Sovereign rename from Starter/Pro/Enterprise, but no entry traces the subsequent rename to Essentiel/Pro/Grandes Entreprises/Agences. AtelierHome also promises "Data hosted in EU" — directly contradicting FAQ 22 "datacenter Tier-III Casablanca, ISO 27001".
+- CRITICAL FINDING #5 (mocked features sold as real): 9 features are 100% simulated client-side with NO backend route: F14 Carte Chaleur Géo (6 villes codées en dur), F16 Activité Réseau Social (30j Math.sin/cos/random), F17 Météo Sentiments par Langue (3 langues codées en dur), F28 Notification Bell (3 seed notifications au premier visit), F32 Brand Mention Feed (pool 22 sources × 21 headlines + récursif setTimeout 8-12s), F33 WhatsApp Alert Preview (3 bulles + bouton Tester = toast seulement), F34 Saved Searches Starter (localStorage, filtre feed simulé). Plus 7 features partiellement mockées: F15 Position Harch 100 (rang réel, historique 6 mois Math.random), F18 Évolution Score 30j (score courant réel, historique sin/cos + markers codés en dur + référence "Attijariwafa" fabriquée), F35 Weekly Digest Email (KPIs réels + topArticles pool codé en dur + envoi mock), F36 Source Credibility Scoring (sources réelles + 4 facteurs simulés par hash déterministe), F37 Sentiment Timeline (mentionCount24h réel + 24 buckets horaires simulés par pattern).
+- CRITICAL FINDING #6 (toast-only promises): 3 mock toast handlers masquerading as real features — "Exporter PDF" (F10 ligne 3516, `toast.success("Export PDF lancé")` sans route), "Recevoir sur WhatsApp" (F27 ligne 6158, toast sans route), "Mode Crise" (F13 ligne 4016, `toast.info("Mode Crise — workflow activé")` sans workflow). Routes `/api/console/reports/[id]/pdf`, `/api/user/whatsapp`, `/api/cron/whatsapp-alerts` exist elsewhere but are NOT called by EssentialDashboard.
+- Cross-referenced 12 commercial promises (PricingPage + FAQ) vs 38 UI features vs 10 backend routes. Identified 10 GAPS (promises without UI): G1 Relations médias (capability sans UI), G2 PDF 8 pages Essentiel (mock toast), G3 WhatsApp digest (mock toast), G4 Crawl 5 min (aucune indication UI), G5 1 marque (aucun sélecteur), G6 Tableaux de bord prédéfinis (un seul dashboard fixe), G7 Formation 2h visio (aucune intégration visio), G8 48h mise en place (aucun tracker), G9 Engagement annuel + remise 15% (aucun billing), G11 Préavis 30 jours annulation (aucune UI annulation).
+- Identified 14 ORPHAN UI features (no commercial promise): Carte Chaleur Géo, Activité Réseau Social, Météo par Langue, Évolution Score 30j (chevauche F2), Volume Mentions 7j (chevauche F4), Welcome Banner, Milestone Badge, Quick Start, Milestone Tracker, Daily Briefing TTS, Guided Tour, Command Palette, Brand Mention Feed, Saved Searches, Weekly Digest Email Preview, Source Credibility Scoring, Sentiment Timeline.
+- Flagged 16 contradictions (C1-C16) catalogued in §3.1: sources count, utilisateurs max, moteurs IA, RBAC, range 90j, tier naming, hébergement EU vs Maroc, tier legacy AtelierHome, rapport PDF mock, WhatsApp mock, engagement, mise en place, crawl 5 min, formation 2h, Relations médias manquante, Social listening simulé.
+- Wrote report to /home/z/my-project/audit-essentiel.md (~1 050 lines, 38 features documented across 4 axes, 16 contradictions, 10 gaps, 14 orphans, 14 strategic recommendations).
+
+Stage Summary:
+- Total features audited: 38 (Features 1-38 incl. spacer "Rappel Dircom") + 2 utility components = 40 entities.
+- API-backed sections: 9 fully functional for `essential` user (F1, F2, F6, F9, F13, F15, F20, F27, F38).
+- Partially functional (fallback persona or partial data): 8 (F3, F4, F8, F10, F22, F35, F36, F37).
+- ENTIRELY BROKEN (HTTP 403 Forbidden): 5 (F5 Citations IA, F7 Tendance Sentiment, F11 Snapshot Visibilité IA, F12 Top 5 Sujets, F19 Volume Mentions 7j) — `allowedTypes` exclut `"essential"`.
+- 100% mock (no backend route): 9 (F14, F16, F17, F21, F28, F32, F33, F34 + F18 partiel).
+- Gamification/utility localStorage only: 7 (F23, F24, F25, F26, F29, F30, F31).
+- Critical gaps (promise no UI): 10 — Relations médias, PDF 8 pages, WhatsApp digest, Crawl 5 min, 1 marque, Tableaux prédéfinis, Formation 2h visio, 48h setup, Engagement annuel, Préavis annulation.
+- Orphan UI (no pricing promise): 14 sections.
+- Contradictions (commercial ↔ UI ↔ backend): 16 (top 3: sources 10 vs 20, RBAC essential exclue, AtelierHome tiers legacy).
+- Toast-only handlers masquerading as real features: 3 (Exporter PDF, Recevoir WhatsApp, Mode Crise).
+- Strategic recommendations: 14 (top 3: ajouter "essential" aux allowedTypes, réconcilier auth.config vs prisma.schema, trancher contradiction sources 10 vs 20).
+- Code unchanged (RESEARCH ONLY — 0 lines modified).
+
+---
+Task ID: AUDIT-AGENCY
+Agent: VORTEX
+Task: Exhaustive value-to-UI audit for Agency account
+Work Log:
+- Read /home/z/my-project/src/app/atelier/pricing/PricingPage.tsx (lines 91-114, 153-177, 599-617) — extracted Agences card verbatim + comparison matrix Agences column + 3-tier note.
+- Discovered 3 distinct agency UI surfaces:
+  (A) /atelier/agency — mounted, "Brick 8 White-Label Engine" (1193-line AgencyDashboard.tsx + 808-line AgencyClientDetail.tsx) with GLM-4 WhatsApp Import.
+  (B) /atelier/console/agency — mounted, shared Dashboard + AgencyConsole.tsx (2302 lines, 5 sections).
+  (C) /atelier/console/agency/AgencyDashboard.tsx — 16898 lines, NOT IMPORTED (orphan), Task ID FINAL-AGENCY, 25 base + 18 task-tagged features.
+- Read AgencyConsole.tsx end-to-end (5 sections: Client Switcher, Portfolio Table, ROI Calculator, Pitch Deck Generator, Reports Panel).
+- Read AgencyDashboard.tsx (orphan) in chunks across 16898 lines: header (1-200), types (200-893), helpers (893-1564), 25 numbered sections (1565-8041), 18 ENV/R2/R3/R4 features (8042-15450), nav + sidebar (15451-15919), root component (15920-16898).
+- Read older /atelier/agency/AgencyDashboard.tsx (1193 lines) + AgencyClientDetail.tsx (808 lines).
+- Grep'd dashboard for fetch( and /api/ — confirmed 14 endpoints (8 agency-specific + 6 shared console).
+- Read all 6 agency API route files: clients (GET/POST), clients/[id] (GET/PATCH), switch (POST), quota (GET), branding (GET public), whatsapp-import (POST with GLM-4 + Zod prompt-injection defense).
+- Read agency-session.ts, quota.ts (PLAN_DEFAULTS emergence/corporate/sovereign 15K/40K/75K MAD), branding.ts.
+- Grep'd AtelierHome.tsx (no agency section), AboutPage.tsx (no agency mentions), ChangelogPage.tsx (9 agency-specific entries referencing orphan features).
+- Grep'd faq-data.ts (22 agency mentions including "3 to 50 clients" range + "15 to 30%" commission range), PartnersPage.tsx (4 partner types, PR agencies = 20% flat), tokens.ts nav, request-access, products/ProductHubPage.
+- Documented 3 conflicting sub-level definitions: Definition A (6/50, live), Definition B (5/20, orphan only with 20/25/30% commission), Definition C (narrative on pricing page).
+- Identified orphan code: 16898-line file has zero importers — all 43 features invisible to users.
+- Identified mock vs real breakdown: Surface A all real (8/8), Surface B all real with 3 toast-only buttons (5/5), Surface C ~15 real + ~16 deterministic-hash-mock + ~15 pure localStorage fiction + ~15 toast-only buttons.
+- Wrote 11-section audit report to /home/z/my-project/audit-agency.md (exhaustive per-feature 4-axe breakdown for all 3 surfaces + 6 API routes + 3-tier analysis + 10 gaps + 9 recommendations).
+- Code unchanged (RESEARCH ONLY — 0 lines modified).
+
+Stage Summary:
+- Features audited: ~56 distinct (8 Surface A + 5 Surface B + 43 Surface C orphan).
+- Mounted features (visible to users): 13 (8 + 5).
+- Orphan features (dead code, 16898 lines): 43 — entire FINAL-AGENCY / ENV-AGENCY / R2-AGENCY-A / R2-AGENCY-B / R3-AGENCY-A / R4-AGENCY-A surface.
+- 3-tier sub-level analysis: 3 conflicting definitions of Débutant/Croissance/Entreprise found:
+  * Definition A (live, AgencyConsole): thresholds 1-5 / 6-49 / 50+, label-only (no commission).
+  * Definition B (orphan AgencyDashboard): thresholds 1-4 / 5-19 / 20+, commission 20/25/30%, with 6 benefits per tier.
+  * Definition C (pricing page): narrative only, no thresholds.
+  * FAQ: "3 to 50 clients" range + "15 to 30% commission".
+  * Partners page: 20% flat for PR agencies, 15% for Referral Partners.
+- API routes: 6 agency-specific (clients GET/POST, clients/[id] GET/PATCH, switch POST, quota GET unused, branding GET public, whatsapp-import POST GLM-4). NO endpoints for: commission, campaigns, templates, team assignments, pitch pipeline, white-label theme (full), lifecycle, upsell, churn, benchmark, forecast, team performance, pitch analytics, client health trend, revenue tracker setup/overage.
+- Mock classification: 16 deterministic-hash-mock features (real clientId + hashStr to fabricate trends/fees/overage/NPS/onboarding time) + 15 pure localStorage fiction (no API) + 15 toast-only buttons (no backend).
+- Top gaps: orphan code (43 invisible features), 3-tier commission ladder is client-side fiction (DB has single Agency.commissionPct), conflicting thresholds (6/50 vs 5/20), WhatsApp Import not on mounted console, simulated PDF/PPT exports, team assignment checkbox does nothing, sentiment column hardcoded "—", benchmark sources appear fabricated, 12 localStorage-only features lost on browser cache clear.
+- Code unchanged (RESEARCH ONLY — 0 lines modified).
