@@ -640,7 +640,7 @@ export default function AboutPage() {
         <section style={sectionStyle}>
           <div
             style={{
-              background: C.surface,
+              background: C.bg,
               borderRadius: "16px",
               padding: "48px 32px",
               border: `1px solid ${C.border}`,
@@ -673,7 +673,7 @@ export default function AboutPage() {
             <p
               style={{
                 fontSize: "15px",
-                color: C.textSec,
+                color: C.textBody,
                 fontFamily: C.fontSans,
                 maxWidth: "640px",
                 lineHeight: 1.6,
@@ -705,17 +705,17 @@ export default function AboutPage() {
                     display: "block",
                     padding: "16px",
                     background: C.bg,
-                    border: `1px solid ${C.borderLight}`,
+                    border: `1px solid ${C.border}`,
                     borderRadius: "8px",
                     textDecoration: "none",
                     transition: "border-color 0.2s, box-shadow 0.2s",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = C.accent;
-                    e.currentTarget.style.boxShadow = C.shadow;
+                    e.currentTarget.style.boxShadow = C.shadowSm;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = C.borderLight;
+                    e.currentTarget.style.borderColor = C.border;
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
