@@ -636,6 +636,154 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* ─── BUILDING IN PUBLIC ─────────────────────────────────── */}
+        <section style={sectionStyle}>
+          <div
+            style={{
+              background: C.surface,
+              borderRadius: "16px",
+              padding: "48px 32px",
+              border: `1px solid ${C.border}`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "11px",
+                fontFamily: C.fontMono,
+                color: C.textMuted,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: "12px",
+              }}
+            >
+              Building in Public
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(24px, 3.5vw, 32px)",
+                fontWeight: 700,
+                fontFamily: C.fontSans,
+                letterSpacing: "-0.02em",
+                marginBottom: "16px",
+                color: C.text,
+              }}
+            >
+              Chaque changement est documenté. Publiquement.
+            </h2>
+            <p
+              style={{
+                fontSize: "15px",
+                color: C.textSec,
+                fontFamily: C.fontSans,
+                maxWidth: "640px",
+                lineHeight: 1.6,
+                marginBottom: "32px",
+              }}
+            >
+              Pas de release notes cachées. Pas de changelog privé. Chaque fix, chaque feature,
+              chaque ajustement de pricing est tracé sur notre page publique Changelog.
+              Dernière mise à jour : v3.1.0 — UX hardening (persistance, accessibilité, statut système).
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
+                gap: "16px",
+                marginBottom: "32px",
+              }}
+            >
+              {[
+                { v: "v3.1.0", l: "UX hardening", d: "11 août 2026" },
+                { v: "v3.0.0", l: "Tier rename", d: "21 juil. 2026" },
+                { v: "v2.4.0", l: "Mega-menu + 16 pages", d: "19 juil. 2026" },
+                { v: "v2.3.0", l: "Content expansion", d: "18 juil. 2026" },
+              ].map((item) => (
+                <a
+                  key={item.v}
+                  href="/atelier/changelog"
+                  style={{
+                    display: "block",
+                    padding: "16px",
+                    background: C.bg,
+                    border: `1px solid ${C.borderLight}`,
+                    borderRadius: "8px",
+                    textDecoration: "none",
+                    transition: "border-color 0.2s, box-shadow 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = C.accent;
+                    e.currentTarget.style.boxShadow = C.shadow;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = C.borderLight;
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      fontFamily: C.fontMono,
+                      color: C.accent,
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {item.v}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      color: C.text,
+                      fontFamily: C.fontSans,
+                      fontWeight: 600,
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {item.l}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      color: C.textMuted,
+                      fontFamily: C.fontMono,
+                    }}
+                  >
+                    {item.d}
+                  </div>
+                </a>
+              ))}
+            </div>
+            <a
+              href="/atelier/changelog"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                fontFamily: C.fontSans,
+                color: C.accent,
+                textDecoration: "none",
+                padding: "10px 20px",
+                border: `1px solid ${C.accent}`,
+                borderRadius: "8px",
+                transition: "background 0.2s, color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.accent;
+                e.currentTarget.style.color = "#FFFFFF";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = C.accent;
+              }}
+            >
+              Voir le changelog complet
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </section>
+
         {/* ─── FINAL CTA ─────────────────────────────────────────── */}
         <section style={sectionStyle}>
           <div
