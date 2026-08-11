@@ -31,6 +31,22 @@ export async function createPDFDocument(type: PDFDocumentType, locale: 'en' | 'f
       const { NetworkDatasheet } = await import('@/pdf/documents/NetworkDatasheet');
       return React.createElement(NetworkDatasheet, { locale });
     }
+    case 'board-briefing': {
+      const { BoardBriefing } = await import('@/pdf/documents/BoardBriefing');
+      return React.createElement(BoardBriefing, { locale });
+    }
+    case 'compliance-report': {
+      const { ComplianceReport } = await import('@/pdf/documents/ComplianceReport');
+      return React.createElement(ComplianceReport, { locale });
+    }
+    case 'esg-report': {
+      const { EsgReport } = await import('@/pdf/documents/EsgReport');
+      return React.createElement(EsgReport, { locale });
+    }
+    case 'board-report': {
+      const { BoardReport } = await import('@/pdf/documents/BoardReport');
+      return React.createElement(BoardReport, { locale });
+    }
     default:
       throw new Error(`Unknown PDF type: ${type}`);
   }

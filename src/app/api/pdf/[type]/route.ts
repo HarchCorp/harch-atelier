@@ -26,6 +26,10 @@ export async function GET(
     'sustainability-report',
     'security-overview',
     'network-datasheet',
+    'board-briefing',
+    'compliance-report',
+    'esg-report',
+    'board-report',
   ];
 
   if (!validTypes.includes(type as PDFDocumentType)) {

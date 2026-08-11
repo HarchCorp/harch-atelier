@@ -9,7 +9,11 @@ export type PDFDocumentType =
   | 'infrastructure-whitepaper'
   | 'sustainability-report'
   | 'security-overview'
-  | 'network-datasheet';
+  | 'network-datasheet'
+  | 'board-briefing'
+  | 'compliance-report'
+  | 'esg-report'
+  | 'board-report';
 
 export interface PDFDocumentMeta {
   id: PDFDocumentType;
@@ -88,6 +92,50 @@ export const PDF_CATALOG: PDFDocumentMeta[] = [
     descriptionEn: 'Submarine cable connectivity, backbone specifications, peering details, and latency from Dakhla to major cities.',
     descriptionFr: 'Connectivité par câbles sous-marins, spécifications backbone, détails de peering et latence depuis Dakhla vers les principales villes.',
     category: 'network',
+    featured: false,
+  },
+  {
+    id: 'board-briefing',
+    type: 'report',
+    pages: 3,
+    titleEn: 'Board Briefing — Executive Synthesis',
+    titleFr: 'Briefing Board-Ready — Synthèse Exécutive',
+    descriptionEn: 'One-page executive briefing for the board: reputation score, key risks, decisions required. Board-ready layout.',
+    descriptionFr: 'Briefing exécutif one-page pour le COMEX : score de réputation, risques clés, décisions attendues. Format board-ready.',
+    category: 'governance',
+    featured: false,
+  },
+  {
+    id: 'compliance-report',
+    type: 'report',
+    pages: 4,
+    titleEn: 'Compliance Cockpit — Regulatory Report',
+    titleFr: 'Compliance Cockpit — Rapport Réglementaire',
+    descriptionEn: 'Multi-regulator compliance status, audit trail, risk score, and remediation roadmap. AMMC, BAM, CNDP, RGPD.',
+    descriptionFr: 'Statut conformité multi-régulateurs, piste d\'audit, score de risque et feuille de route de remédiation. AMMC, BAM, CNDP, RGPD.',
+    category: 'governance',
+    featured: false,
+  },
+  {
+    id: 'esg-report',
+    type: 'report',
+    pages: 4,
+    titleEn: 'ESG Scorecard — Extra-Financial Report',
+    titleFr: 'Scorecard ESG — Rapport Extra-Financier',
+    descriptionEn: 'Environmental, Social, Governance pillars. Per-pillar scores, benchmark gap, sub-metrics, and improvement roadmap.',
+    descriptionFr: 'Piliers Environnement, Social, Gouvernance. Scores par pilier, écart vs benchmark, sous-métriques et feuille de route d\'amélioration.',
+    category: 'sustainability',
+    featured: false,
+  },
+  {
+    id: 'board-report',
+    type: 'report',
+    pages: 6,
+    titleEn: 'Board-Ready Report — Quarterly Synthesis',
+    titleFr: 'Rapport Board-Ready — Synthèse Trimestrielle',
+    descriptionEn: 'Multi-section board report: executive synthesis, quarterly KPIs, risk mapping, compliance status, recommendations.',
+    descriptionFr: 'Rapport board multi-sections : synthèse exécutive, KPI trimestriels, cartographie des risques, statut conformité, recommandations.',
+    category: 'governance',
     featured: false,
   },
 ];
