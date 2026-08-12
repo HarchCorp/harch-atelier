@@ -880,7 +880,7 @@ export default function NewsPage() {
             display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap",
           }}>
             <a
-              href="/atelier/contact"
+              href="/atelier/audit"
               style={{
                 display: "inline-block",
                 padding: "16px 32px",

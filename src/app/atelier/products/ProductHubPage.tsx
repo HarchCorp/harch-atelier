@@ -39,7 +39,7 @@ const PLANS: Plan[] = [
       "Alertes email (seuil critique)",
       "Historique 90 jours",
     ],
-    href: "/atelier/contact",
+    href: "/atelier/audit",
   },
   {
     name: "Pro",
@@ -61,7 +61,7 @@ const PLANS: Plan[] = [
       "Historique 12 mois",
       "API lecture (1 000 appels/mois)",
     ],
-    href: "/atelier/contact",
+    href: "/atelier/audit",
   },
   {
     name: "Grandes Entreprises",
@@ -83,7 +83,7 @@ const PLANS: Plan[] = [
       "API complète (100k appels/mois)",
       "SLA 99,9 % + onboarding dédié",
     ],
-    href: "/atelier/contact",
+    href: "/atelier/audit",
   },
   {
     name: "Agences",
@@ -103,7 +103,7 @@ const PLANS: Plan[] = [
       "Historique illimité",
       "Support dédié + formation équipe",
     ],
-    href: "/atelier/contact",
+    href: "/atelier/audit",
   },
 ];
 
@@ -119,7 +119,7 @@ const SIDEBAR_CTA = [
     icon: "💬",
     title: "Besoin d'aide ?",
     desc: "Un expert vous rappelle sous 24h pour vous orienter vers le plan adapté à votre périmètre.",
-    href: "/atelier/contact",
+    href: "/atelier/audit",
     cta: "Parler à un expert",
   },
   {
@@ -643,7 +643,7 @@ export default function ProductHubPage() {
               bancaire, sans engagement.
             </p>
             <a
-              href="/atelier/contact"
+              href="/atelier/audit"
               style={{
                 display: "inline-flex",
                 alignItems: "center",

@@ -30,7 +30,7 @@ import {
 //   01  Hero + search
 //   02  Category filter tabs (Tous / Plateforme / Sécurité / Tarifs / Méthodologie / Conformité / Comptes)
 //   03  FAQ list (52 questions, accordion — one open at a time, chevron rotate)
-//   04  "Pas trouvé votre question ?" CTA → /atelier/contact
+//   04  "Pas trouvé votre question ?" CTA → /atelier/audit
 //   05  Footer
 //
 // ═══════════════════════════════════════════════════════════════════════
@@ -881,7 +881,7 @@ function AnswerBody({
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// SECTION 04 — "PAS TROUVÉ VOTRE QUESTION ?" CTA → /atelier/contact
+// SECTION 04 — "PAS TROUVÉ VOTRE QUESTION ?" CTA → /atelier/audit
 // ═══════════════════════════════════════════════════════════════════════
 
 function ContactCTA() {
@@ -956,7 +956,7 @@ function ContactCTA() {
             }}
           >
             <a
-              href="/atelier/contact"
+              href="/atelier/audit"
               style={{
                 display: "inline-flex",
                 alignItems: "center",

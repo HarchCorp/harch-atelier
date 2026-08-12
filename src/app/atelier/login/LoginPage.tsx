@@ -161,7 +161,7 @@ export function LoginPage() {
 
           {/* Forgot password link */}
           <div style={forgotWrapperStyle}>
-            <a href="/atelier/contact" style={forgotLinkStyle} className="harch-forgot-link">
+            <a href="/atelier/audit" style={forgotLinkStyle} className="harch-forgot-link">
               Mot de passe oublie?
             </a>
           </div>

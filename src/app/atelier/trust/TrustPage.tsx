@@ -1396,7 +1396,7 @@ export default function TrustPage() {
                   security@harchcorp.com →
                 </a>
                 <a
-                  href="/atelier/contact"
+                  href="/atelier/audit"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -1859,7 +1859,7 @@ export default function TrustPage() {
             }}
           >
             <a
-              href="/atelier/contact"
+              href="/atelier/audit"
               style={{
                 display: "inline-block",
                 padding: "12px 24px",

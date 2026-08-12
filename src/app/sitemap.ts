@@ -27,7 +27,7 @@ const STATIC_ROUTES: { path: string; priority: number; changefreq: 'daily' | 'we
   { path: '/atelier/pricing', priority: 0.9, changefreq: 'monthly' },
   { path: '/atelier/audit', priority: 0.9, changefreq: 'monthly' },
   { path: '/atelier/flagship-report', priority: 0.9, changefreq: 'monthly' },
-  { path: '/atelier/contact', priority: 0.7, changefreq: 'monthly' },
+  { path: '/atelier/audit', priority: 0.7, changefreq: 'monthly' },
   // Company / about
   { path: '/atelier/about', priority: 0.7, changefreq: 'monthly' },
   { path: '/atelier/careers', priority: 0.6, changefreq: 'weekly' },

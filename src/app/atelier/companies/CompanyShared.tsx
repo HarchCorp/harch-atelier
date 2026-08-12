@@ -1768,7 +1768,7 @@ export function CompanyPageLayout({ data }: { data: CompanyData }) {
               }}>
                 Get a full audit for your company →
               </a>
-              <a href="/atelier/contact" style={{
+              <a href="/atelier/audit" style={{
                 display: "inline-block", padding: "14px 28px",
                 background: "transparent", color: "#FFFFFF",
                 fontSize: "15px", fontWeight: 600,

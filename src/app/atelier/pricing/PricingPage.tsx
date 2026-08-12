@@ -436,7 +436,7 @@ export default function PricingPage() {
 
                   {/* ─── CTA ─────────────────────────────────────────── */}
                   <a
-                    href="/atelier/contact"
+                    href="/atelier/audit"
                     style={{
                       display: "block",
                       textAlign: "center",
@@ -1046,7 +1046,7 @@ export default function PricingPage() {
               et établir un devis précis.
             </p>
             <a
-              href="/atelier/contact"
+              href="/atelier/audit"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -1073,6 +1073,185 @@ export default function PricingPage() {
               Contacter le service commercial →
             </a>
           </div>
+        </section>
+
+        {/* ─── MODALITÉS DE PAIEMENT ──────────────────────────── */}
+        <section
+          style={{
+            maxWidth: "900px",
+            margin: "0 auto",
+            padding: "48px 16px 32px",
+            borderTop: `1px solid ${C.border}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "11px",
+              fontFamily: C.fontMono,
+              color: C.textMuted,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              marginBottom: "12px",
+            }}
+          >
+            Modalités de paiement
+          </div>
+          <h2
+            style={{
+              fontSize: "clamp(20px, 3vw, 26px)",
+              fontWeight: 700,
+              fontFamily: C.fontSans,
+              letterSpacing: "-0.02em",
+              marginBottom: "16px",
+              color: C.text,
+            }}
+          >
+            Paiement par virement bancaire
+          </h2>
+          <p
+            style={{
+              fontSize: "15px",
+              color: C.textBody,
+              fontFamily: C.fontSans,
+              lineHeight: 1.6,
+              marginBottom: "24px",
+              maxWidth: "640px",
+            }}
+          >
+            Harch Atelier n'accepte pas les paiements par carte bancaire en ligne.
+            Toutes les factures sont réglées par <strong>virement bancaire</strong> sur
+            le compte de Harch Corp. Une facture PDF est émise à la signature du contrat
+            et transmise par email. Les coordonnées bancaires (RIB/IBAN) figurent sur
+            chaque facture.
+          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+              gap: "16px",
+            }}
+          >
+            <div
+              style={{
+                padding: "20px",
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  fontFamily: C.fontMono,
+                  color: C.textMuted,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "6px",
+                }}
+              >
+                Échéance
+              </div>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, fontFamily: C.fontSans }}>
+                30 jours nets
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "4px" }}>
+                Dès réception de la facture
+              </div>
+            </div>
+            <div
+              style={{
+                padding: "20px",
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  fontFamily: C.fontMono,
+                  color: C.textMuted,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "6px",
+                }}
+              >
+                Devise
+              </div>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, fontFamily: C.fontSans }}>
+                MAD (Dirham marocain)
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "4px" }}>
+                EUR/USD sur devis
+              </div>
+            </div>
+            <div
+              style={{
+                padding: "20px",
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  fontFamily: C.fontMono,
+                  color: C.textMuted,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "6px",
+                }}
+              >
+                Facturation
+              </div>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, fontFamily: C.fontSans }}>
+                PDF + email
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "4px" }}>
+                Mensuelle ou trimestrielle
+              </div>
+            </div>
+            <div
+              style={{
+                padding: "20px",
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  fontFamily: C.fontMono,
+                  color: C.textMuted,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "6px",
+                }}
+              >
+                Bénéficiaire
+              </div>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: C.text, fontFamily: C.fontSans }}>
+                Harch Corp
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "4px" }}>
+                Casablanca, Maroc
+              </div>
+            </div>
+          </div>
+          <p
+            style={{
+              fontSize: "13px",
+              color: C.textMuted,
+              fontFamily: C.fontSans,
+              marginTop: "20px",
+              lineHeight: 1.5,
+            }}
+          >
+            Pour toute question relative à la facturation, contactez votre commercial
+            référent ou écrivez à <a href="mailto:atelier@harchcorp.com" style={{ color: C.accent, textDecoration: "none" }}>atelier@harchcorp.com</a>.
+          </p>
         </section>
       </main>
 

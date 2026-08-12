@@ -208,7 +208,7 @@ export function StandbyBanner({
           >
             Questions?{" "}
             <a
-              href="/atelier/contact"
+              href="/atelier/audit"
               style={{
                 color: C.accent,
                 textDecoration: "none",
