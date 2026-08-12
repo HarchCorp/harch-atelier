@@ -7,6 +7,7 @@ import {
   requireUserCompany,
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/reports
@@ -27,9 +28,8 @@ export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
+    return NextResponse.json({ error: "Forbidden — insufficient account permissions" }, { status: 403 });
   }
 
   try {

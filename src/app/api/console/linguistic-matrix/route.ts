@@ -12,6 +12,7 @@ import {
   type LanguageSentimentSnapshot,
   type ContentType,
 } from "@/lib/harchiq/linguistic-matrix";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/linguistic-matrix
@@ -31,10 +32,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — linguistic matrix is for brand-monitor, market-competitor and investment-bank accounts" },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 },
     );
   }

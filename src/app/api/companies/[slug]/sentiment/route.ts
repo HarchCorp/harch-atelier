@@ -24,7 +24,9 @@ export async function GET(
       );
     }
 
-    const where = { companyId: company.id };
+    // isDemo:false — demo-seeded sentiment scores never exposed publicly.
+    // See AUDIT-API-ROUTES P0-2.
+    const where = { companyId: company.id, isDemo: false };
     const skip = (page - 1) * limit;
 
     const [sentiments, total] = await Promise.all([

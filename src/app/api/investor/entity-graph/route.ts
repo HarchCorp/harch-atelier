@@ -61,6 +61,7 @@ import {
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
 import { logInfo, logWarn, logError } from "@/lib/logger";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -148,14 +149,11 @@ async function authorize() {
   if (!session?.user?.id) {
     return { ok: false as const, status: 401, error: "Unauthorized — session invalid" };
   }
-  if (
-    session.user?.accountType !== "investment-bank" &&
-    session.user?.role !== "admin"
-  ) {
+  if (!isAccountTypeAllowed(session, ["enterprise"])) {
     return {
       ok: false as const,
       status: 403,
-      error: "Forbidden — investment-bank account required",
+      error: "Forbidden — enterprise account required",
     };
   }
   return {

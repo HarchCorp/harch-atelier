@@ -10,6 +10,7 @@ import { aggregateAlertsByCity, knownCities, type GeoAlertInput } from "@/lib/ha
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoGeoSignalsResponse } from "@/lib/demo-console-api";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/geo-signals?range=7d|30d|all
@@ -49,10 +50,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — geo signals are for brand-monitor, market-competitor, investment-bank accounts" },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 },
     );
   }

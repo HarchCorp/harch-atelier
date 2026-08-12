@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/trader/assets
@@ -21,9 +22,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   // Admin can access any API (to preview what users see)
-  if (session.user?.accountType !== "harch-alpha" && session.user?.role !== "admin") {
+  if (!isAccountTypeAllowed(session, ["agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — harch-alpha account required" },
+      { error: "Forbidden — agency account required" },
       { status: 403 }
     );
   }

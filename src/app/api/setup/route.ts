@@ -27,7 +27,15 @@ const SetupSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
   password: z.string().min(8).max(100),
-  accountType: z.enum(["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"]).default("brand-monitor"),
+  accountType: z
+    .enum([
+      // New canonical types (post P0-2 migration)
+      "essential", "pro", "enterprise", "agency",
+      // Legacy types (kept during migration for back-compat with
+      // existing DB rows — /api/console/migrate-account-types normalises them)
+      "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
+    ])
+    .default("essential"),
 });
 
 export const dynamic = "force-dynamic";

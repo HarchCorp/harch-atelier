@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth/auth.config";
 import { CoreAnalyticsEngine } from "@/lib/engine/CoreAnalyticsEngine";
 import { LEXICON_STATS } from "@/lib/harchiq/sentiment-analyzer";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/console/analyze-sentiment
@@ -38,18 +39,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowedTypes = [
-    "brand-monitor",
-    "market-competitor",
-    "investment-bank",
-    "harch-alpha",
-  ];
-  if (
-    !allowedTypes.includes(session.user.accountType || "") &&
-    session.user.role !== "admin"
-  ) {
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — sentiment analysis is for console accounts only" },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 },
     );
   }

@@ -79,16 +79,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate accountType
+    // Validate accountType — accept both new canonical types
+    // (essential/pro/enterprise/agency) and legacy types
+    // (brand-monitor/market-competitor/investment-bank/harch-alpha)
+    // during the migration window. The default for invitees is the
+    // new canonical "essential" (formerly "brand-monitor").
     const validAccountTypes = [
-      "brand-monitor",
-      "market-competitor",
-      "investment-bank",
-      "harch-alpha",
+      "essential", "pro", "enterprise", "agency",
+      "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
     ];
     const finalAccountType = validAccountTypes.includes(accountType ?? "")
       ? (accountType as string)
-      : "brand-monitor";
+      : "essential";
 
     // Validate role: company-admin can invite as "user" or "company-admin".
     // (Super-admin goes through /api/admin/invitations for "admin" role.)

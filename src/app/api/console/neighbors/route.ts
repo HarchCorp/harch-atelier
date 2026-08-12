@@ -9,6 +9,7 @@ import {
 import { isDemoEmail } from "@/lib/demo-session";
 import { demoNeighborsResponse } from "@/lib/demo-console-api";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/neighbors
@@ -58,11 +59,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ACCOUNT TYPE GATE — competitors data is brand-monitor + market-competitor + investment-bank only
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
+  // ACCOUNT TYPE GATE — canonical RBAC (legacy types are normalised
+  // by isAccountTypeAllowed, so brand-monitor etc. still pass during
+  // the migration window).
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — competitor data is for brand-monitor, market-competitor and investment-bank accounts only" },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 }
     );
   }

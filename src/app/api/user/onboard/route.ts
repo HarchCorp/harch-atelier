@@ -54,11 +54,13 @@ interface OnboardBody {
   skip?: unknown;
 }
 
+// Accept both new canonical types (essential/pro/enterprise/agency)
+// and legacy types (brand-monitor/market-competitor/investment-bank/
+// harch-alpha) during the migration window. The fallback default is
+// the new canonical "essential" (formerly "brand-monitor").
 const VALID_ACCOUNT_TYPES = new Set([
-  "brand-monitor",
-  "market-competitor",
-  "investment-bank",
-  "harch-alpha",
+  "essential", "pro", "enterprise", "agency",
+  "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
 ]);
 
 const VALID_TOPICS = new Set([
@@ -185,7 +187,7 @@ export async function POST(req: NextRequest) {
 
   const accountType = VALID_ACCOUNT_TYPES.has(existingUser.accountType)
     ? existingUser.accountType
-    : "brand-monitor";
+    : "essential";
 
   const skip = body.skip === true;
 

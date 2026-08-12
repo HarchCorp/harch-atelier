@@ -26,7 +26,9 @@ export async function GET(
       );
     }
 
-    const where: Record<string, unknown> = { companyId: company.id };
+    // isDemo:false — demo-seeded risk assessments never exposed publicly.
+    // See AUDIT-API-ROUTES P0-2.
+    const where: Record<string, unknown> = { companyId: company.id, isDemo: false };
     if (severity) where.riskLevel = severity;
     if (category) where.category = category;
 

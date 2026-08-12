@@ -191,10 +191,14 @@ async function handle(req: NextRequest) {
   logInfo("cron.generate-reports", `start period=${period} label=${label}`);
 
   try {
-    // 2. Find all enterprise users (exclude harch-alpha traders and admins without a company)
+    // 2. Find all canonical account-type users (essential, pro,
+    //    enterprise, agency). Legacy types (brand-monitor,
+    //    market-competitor, investment-bank, harch-alpha) should have
+    //    been migrated by /api/console/migrate-account-types; until
+    //    that's confirmed we filter on the new canonical types only.
     const users = await prisma.user.findMany({
       where: {
-        accountType: { in: ["brand-monitor", "market-competitor", "investment-bank"] },
+        accountType: { in: ["essential", "pro", "enterprise", "agency"] },
       },
       select: { id: true, email: true, name: true, accountType: true },
     });

@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
         email,
         name,
         passwordHash: placeholderHash,
-        accountType: "brand-monitor",
+        accountType: "essential",
         role: dbRole,
         createdById: session.user.id,
         companyId: caller.companyId || null,

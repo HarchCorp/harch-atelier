@@ -10,6 +10,7 @@ import { isDemoEmail } from "@/lib/demo-session";
 import { demoWeatherResponse } from "@/lib/demo-console-api";
 import { withQuotaCheck } from "@/lib/agency/quota";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/weather
@@ -40,12 +41,12 @@ export async function getHandler(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ACCOUNT TYPE GATE — only brand-monitor + market-competitor + investment-bank accounts can see
-  // company reputation data. Traders monitor markets, not companies.
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
+  // ACCOUNT TYPE GATE — canonical RBAC (legacy types are normalised
+  // by isAccountTypeAllowed, so brand-monitor etc. still pass during
+  // the migration window). Traders are excluded at the plan level.
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — this data is for brand-monitor, market-competitor and investment-bank accounts only" },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 }
     );
   }

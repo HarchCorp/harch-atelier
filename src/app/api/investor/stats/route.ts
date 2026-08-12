@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/investor/stats
@@ -28,8 +29,8 @@ export async function GET() {
     );
   }
   const userId = session.user.id;
-  if (session.user?.accountType !== "investment-bank" && session.user?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden — investment-bank account required" }, { status: 403 });
+  if (!isAccountTypeAllowed(session, ["enterprise"])) {
+    return NextResponse.json({ error: "Forbidden — enterprise account required" }, { status: 403 });
   }
 
   try {

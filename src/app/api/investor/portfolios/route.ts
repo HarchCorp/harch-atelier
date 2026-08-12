@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { demoFilterFromSession } from "@/lib/harchiq/company-session";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/investor/portfolios
@@ -26,9 +27,9 @@ export async function GET() {
   }
   const userId = session.user.id;
   // Admin can access any API (to preview what investors see)
-  if (session.user?.accountType !== "investment-bank" && session.user?.role !== "admin") {
+  if (!isAccountTypeAllowed(session, ["enterprise"])) {
     return NextResponse.json(
-      { error: "Forbidden — investment-bank account required" },
+      { error: "Forbidden — enterprise account required" },
       { status: 403 }
     );
   }

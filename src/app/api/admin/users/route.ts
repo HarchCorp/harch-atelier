@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
+import { canAccessAdmin } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/logger";
 
@@ -40,7 +41,7 @@ interface AdminUser {
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user?.role !== "admin" && session.user?.role !== "super_admin" && session.user?.role !== "super_admin")) {
+  if (!session?.user?.id || !canAccessAdmin(session.user.role)) {
     return NextResponse.json(
       { error: "Forbidden — admin only" },
       { status: 403 },

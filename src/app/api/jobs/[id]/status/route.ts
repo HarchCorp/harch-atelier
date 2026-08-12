@@ -26,6 +26,9 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+import { canAccessAdmin } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/logger";
 
@@ -75,11 +78,28 @@ function extractProgress(
 }
 
 // ─── GET /api/jobs/[id]/status ───────────────────────────────────
-
+//
+// Auth: admin only (admin | super_admin | commercial).
+// This route is NOT cron-only — it was historically polled by the
+// /atelier/intelligence client page to track an audit's progress.
+// The Job model has no ownerId column, so a per-user ownership
+// check is not possible without a schema migration. Closing the
+// anonymous leak takes priority; non-admin callers will now receive
+// 403. Follow-up: add `ownerId String?` to the Job model + scope
+// the query so authenticated non-admin users can poll their own
+// jobs (unblocks the IntelligencePage polling flow).
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !canAccessAdmin(session.user.role)) {
+    return NextResponse.json(
+      { error: "Forbidden — admin only" },
+      { status: 403 },
+    );
+  }
+
   try {
     const { id } = await params;
 

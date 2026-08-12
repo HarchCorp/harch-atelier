@@ -28,6 +28,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+import { canAccessAdmin } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/logger";
 
@@ -88,8 +91,21 @@ function extractProgress(status: string, parsedResult: unknown): number {
 }
 
 // ─── GET /api/jobs ───────────────────────────────────────────────
-
+//
+// Auth: admin only (admin | super_admin | commercial).
+// This route is NOT cron-only — the job queue is consumed by the
+// admin audit dashboard (recent-jobs table) and exposes internal
+// pipeline state (status, payload, result, progress) for every job
+// in the system. Anonymous access closed per AUDIT-API-ROUTES P0-1.
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !canAccessAdmin(session.user.role)) {
+    return NextResponse.json(
+      { error: "Forbidden — admin only" },
+      { status: 403 },
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
 

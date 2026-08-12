@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { fetchBVCQuote } from "@/lib/scrapers/bvc-prices";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/trader/stream?tickers=OCP,IAM,ATW
@@ -49,12 +50,9 @@ export async function GET(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (
-    session.user?.accountType !== "harch-alpha" &&
-    session.user?.role !== "admin"
-  ) {
+  if (!isAccountTypeAllowed(session, ["agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — harch-alpha account required" },
+      { error: "Forbidden — agency account required" },
       { status: 403 },
     );
   }

@@ -36,13 +36,16 @@ export async function GET(req: Request) {
     const since = new Date();
     since.setMinutes(since.getMinutes() - LOOKBACK_MINUTES);
 
-    // Resolve every user that belongs to an accountType that has
-    // access to the console alerts (brand-monitor, market-competitor,
-    // investment-bank). Harch Alpha users monitor assets, not
-    // articles — they don't receive article-driven alerts here.
+    // Resolve every user that belongs to a canonical accountType
+    // (essential, pro, enterprise, agency). Legacy types
+    // (brand-monitor, market-competitor, investment-bank, harch-alpha)
+    // should have been migrated by /api/console/migrate-account-types;
+    // until that's confirmed, we filter on the new canonical types
+    // only — legacy rows that haven't been migrated are skipped (they
+    // have no canonical equivalent here without normalisation).
     const users = await prisma.user.findMany({
       where: {
-        accountType: { in: ["brand-monitor", "market-competitor", "investment-bank"] },
+        accountType: { in: ["essential", "pro", "enterprise", "agency"] },
       },
       select: { id: true, accountType: true, name: true, email: true },
     });

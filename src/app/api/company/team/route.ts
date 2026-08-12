@@ -143,12 +143,13 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Validate accountType
+    // Validate accountType — accept both new canonical types
+    // (essential/pro/enterprise/agency) and legacy types
+    // (brand-monitor/market-competitor/investment-bank/harch-alpha)
+    // during the migration window.
     const validAccountTypes = [
-      "brand-monitor",
-      "market-competitor",
-      "investment-bank",
-      "harch-alpha",
+      "essential", "pro", "enterprise", "agency",
+      "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
     ];
     const finalAccountType =
       accountType && validAccountTypes.includes(accountType)

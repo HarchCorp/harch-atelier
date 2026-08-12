@@ -27,7 +27,9 @@ export async function GET(
       );
     }
 
-    const where: Record<string, unknown> = { companyId: company.id };
+    // isDemo:false — demo-seeded articles never exposed to public callers.
+    // See AUDIT-API-ROUTES P0-2.
+    const where: Record<string, unknown> = { companyId: company.id, isDemo: false };
     if (source) where.source = source;
     if (language) where.language = language;
     if (sentimentLabel) where.sentimentLabel = sentimentLabel;

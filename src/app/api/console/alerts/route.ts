@@ -10,6 +10,7 @@ import { isDemoEmail } from "@/lib/demo-session";
 import { demoAlertsResponse } from "@/lib/demo-console-api";
 import { withQuotaCheck } from "@/lib/agency/quota";
 import { logError } from "@/lib/logger";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/console/alerts
@@ -31,9 +32,8 @@ export async function getHandler(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
-  if (!allowedTypes.includes(session.user.accountType || "") && session.user.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
+    return NextResponse.json({ error: "Forbidden — insufficient account permissions" }, { status: 403 });
   }
 
   // ─── DEMO BYPASS ─────────────────────────────────────────────

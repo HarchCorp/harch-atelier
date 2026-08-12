@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth.config";
+import { canAccessAdmin } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/logger";
 
+// Auth: admin only (admin | super_admin | commercial).
+// Scraper logs expose source IDs + scrape payloads — never public.
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !canAccessAdmin(session.user.role)) {
+    return NextResponse.json(
+      { error: "Forbidden — admin only" },
+      { status: 403 },
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));

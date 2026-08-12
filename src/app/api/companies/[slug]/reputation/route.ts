@@ -23,8 +23,10 @@ export async function GET(
 
     // Fetch the latest reputation record per pillar by getting recent records
     // and grouping by the pillar-like fields we expose.
+    // isDemo:false — demo-seeded reputation scores never exposed publicly.
+    // See AUDIT-API-ROUTES P0-2.
     const records = await prisma.reputationScore.findMany({
-      where: { companyId: company.id },
+      where: { companyId: company.id, isDemo: false },
       orderBy: { calculatedAt: "desc" },
       take: 100,
     });

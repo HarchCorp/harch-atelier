@@ -21,9 +21,11 @@ export async function GET(
       );
     }
 
-    // Fetch recent records then de-duplicate by platform (keep latest)
+    // Fetch recent records then de-duplicate by platform (keep latest).
+    // isDemo:false — demo-seeded AI visibility rows never exposed publicly.
+    // See AUDIT-API-ROUTES P0-2.
     const records = await prisma.aIVisibility.findMany({
-      where: { companyId: company.id },
+      where: { companyId: company.id, isDemo: false },
       orderBy: { checkedAt: "desc" },
       take: 200,
     });

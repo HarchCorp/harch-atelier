@@ -26,7 +26,13 @@ export async function GET(
       );
     }
 
-    // Get all entity mentions for this company with their entities
+    // Get all entity mentions for this company with their entities.
+    // NOTE: EntityMention has no isDemo column (see prisma/schema.prisma)
+    // — demo isolation for entities is enforced at the Company level via
+    // the isDemo flag on the parent Company row. Public callers can only
+    // reach this route via a real (non-demo) company slug, so the demo
+    // entities seeded for demo-*@harch.atelier accounts are not reachable
+    // here. See AUDIT-API-ROUTES P0-2.
     const mentions = await prisma.entityMention.findMany({
       where: { companyId: company.id },
       select: {

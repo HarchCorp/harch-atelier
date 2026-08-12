@@ -144,7 +144,7 @@ export async function POST(req: Request) {
             email: normalizedEmail,
             name: name.trim(),
             company: domain,
-            accountType: "brand-monitor",
+            accountType: "essential",
             status: "pending",
             message: `Self-registration attempted with domain "${domain}". No matching company found in the directory.`,
           },
@@ -204,7 +204,7 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         passwordHash,
         role: "user",
-        accountType: "brand-monitor", // default — user can change via onboarding
+        accountType: "essential", // default — user can change via onboarding
         companyId: company.id,
         onboardingCompleted: false, // force the wizard on first login
         isDemo: false, // explicit — this is a real user

@@ -294,7 +294,7 @@ Return ONLY valid JSON. No markdown, no explanation.`;
               name: extracted.contact_name || extracted.company_name,
               passwordHash: await bcrypt.hash(tempPassword, 10),
               role: "user",
-              accountType: "brand-monitor",
+              accountType: "essential",
               companyId: company.id,
               status: "invited",
               onboardingCompleted: false,

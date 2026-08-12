@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/logger";
 
+// Public company profile endpoint — powers the /atelier/companies/[slug]
+// marketing pages. INTENTIONALLY PUBLIC (no auth) but filtered to
+// isDemo:false so demo-seeded data is never exposed to anonymous
+// callers. See AUDIT-API-ROUTES P0-2.
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -13,22 +17,27 @@ export async function GET(
       where: { slug },
       include: {
         articles: {
+          where: { isDemo: false },
           orderBy: { publishedAt: "desc" },
           take: 20,
         },
         riskAssessments: {
+          where: { isDemo: false },
           orderBy: { assessedAt: "desc" },
           take: 10,
         },
         sentimentScores: {
+          where: { isDemo: false },
           orderBy: { calculatedAt: "desc" },
           take: 1,
         },
         reputationScores: {
+          where: { isDemo: false },
           orderBy: { calculatedAt: "desc" },
           take: 1,
         },
         aiVisibility: {
+          where: { isDemo: false },
           orderBy: { checkedAt: "desc" },
           take: 1,
         },
