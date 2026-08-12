@@ -130,6 +130,9 @@ interface AccessRequest {
   country: string | null;
   referralSource: string | null;
   message: string | null;
+  // Task FIX-FORMS-1 — page that produced the submission.
+  // Values: audit-page | contact-page | request-access-page | landing-page | partner-application
+  source: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -1015,6 +1018,38 @@ function planLabel(t: string | null | undefined): string {
   return PLAN_LABELS_FR[t] || t;
 }
 
+// ─── Source page labels (Task FIX-FORMS-1) ──────────────────────
+// Maps the `source` field (which page produced the submission) to a
+// short French label shown in badges + the detail drawer. The
+// canonical enum matches the values accepted by /api/access-request.
+const SOURCE_LABELS_FR: Record<string, string> = {
+  "audit-page": "Audit",
+  "contact-page": "Contact",
+  "request-access-page": "Demande d'accès",
+  "request-access": "Demande d'accès",
+  "landing-page": "Landing",
+  "partner-application": "Partenaire",
+};
+
+const SOURCE_COLORS: Record<string, { color: string; bg: string }> = {
+  "audit-page": { color: "#4A7B5F", bg: "rgba(74,123,95,0.10)" },         // sage
+  "contact-page": { color: "#4A5D6E", bg: "rgba(74,93,110,0.10)" },       // accent
+  "request-access-page": { color: "#8B5A2B", bg: "rgba(139,90,43,0.10)" },// amber-brown
+  "request-access": { color: "#8B5A2B", bg: "rgba(139,90,43,0.10)" },
+  "landing-page": { color: "#71717A", bg: "rgba(113,113,122,0.10)" },     // neutral
+  "partner-application": { color: "#A0524B", bg: "rgba(160,82,75,0.10)" },// red-brown
+};
+
+function sourceLabel(s: string | null | undefined): string {
+  if (!s) return "Contact";
+  return SOURCE_LABELS_FR[s] || s;
+}
+
+function sourceColor(s: string | null | undefined): { color: string; bg: string } {
+  if (!s) return SOURCE_COLORS["contact-page"];
+  return SOURCE_COLORS[s] || SOURCE_COLORS["contact-page"];
+}
+
 function parseBudget(budget: string | null | undefined): { monthly: number | null; annual: number | null; raw: string } | null {
   if (!budget) return null;
   const m = budget.match(/([\d.,]+)\s*(k|m)?\s*(?:€|eur|mad|dh)?/i);
@@ -1199,6 +1234,7 @@ function RequestsTab({
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [budgetFilter, setBudgetFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [annotFilter, setAnnotFilter] = useState<AnnotationTypeFilter>("all");
@@ -1259,6 +1295,18 @@ function RequestsTab({
         if (budgetFilter === "mid" && (m == null || m < 1000 || m > 5000)) return false;
         if (budgetFilter === "high" && (m == null || m < 5000)) return false;
       }
+      // Source filter — matches the canonical enum + alias. "all"
+      // passes everything; legacy rows without a source are bucketed
+      // under "contact-page" (the schema default) so they appear in
+      // the Contact filter, not just in "all".
+      if (sourceFilter !== "all") {
+        const rs = r.source || "contact-page";
+        if (sourceFilter === "contact-page" && rs !== "contact-page") return false;
+        if (sourceFilter === "audit-page" && rs !== "audit-page") return false;
+        if (sourceFilter === "request-access-page" && rs !== "request-access-page" && rs !== "request-access") return false;
+        if (sourceFilter === "landing-page" && rs !== "landing-page") return false;
+        if (sourceFilter === "partner-application" && rs !== "partner-application") return false;
+      }
       if (dateFrom && new Date(r.createdAt) < new Date(dateFrom)) return false;
       if (dateTo && new Date(r.createdAt) > new Date(dateTo + "T23:59:59")) return false;
       if (annotFilter === "with" && annotCount(r.id) === 0) return false;
@@ -1297,7 +1345,7 @@ function RequestsTab({
     });
 
     return arr;
-  }, [requests, statusFilter, planFilter, countryFilter, sizeFilter, budgetFilter, dateFrom, dateTo, annotFilter, search, sort, annotCount, lastContact]);
+  }, [requests, statusFilter, planFilter, countryFilter, sizeFilter, budgetFilter, sourceFilter, dateFrom, dateTo, annotFilter, search, sort, annotCount, lastContact]);
 
   const byStatus = useMemo(() => {
     const groups: Record<string, AccessRequest[]> = {};
@@ -1442,12 +1490,13 @@ function RequestsTab({
   const exportCsv = (all: boolean) => {
     const list = all ? requests : filtered.filter((r) => selected.has(r.id));
     const headers = [
-      "id", "createdAt", "updatedAt", "status", "name", "email", "phone", "company",
+      "id", "createdAt", "updatedAt", "status", "source", "name", "email", "phone", "company",
       "role", "accountType", "companySize", "budget", "country", "referralSource",
       "useCase", "message", "annotations_count", "contacts_count",
     ];
     const rows = list.map((r) => [
       r.id, r.createdAt, r.updatedAt, STATUS_LABEL_FR[r.status] || r.status,
+      sourceLabel(r.source),
       r.name, r.email, r.phone || "", r.company || "", r.role || "",
       planLabel(r.accountType), sizeLabel(r.companySize) || "", r.budget || "",
       r.country || "", r.referralSource || "",
@@ -1482,13 +1531,13 @@ function RequestsTab({
   const resetFilters = () => {
     setSearch(""); setStatusFilter("all"); setPlanFilter("all");
     setCountryFilter("all"); setSizeFilter("all"); setBudgetFilter("all");
-    setDateFrom(""); setDateTo(""); setAnnotFilter("all"); setSort("date_desc");
+    setSourceFilter("all"); setDateFrom(""); setDateTo(""); setAnnotFilter("all"); setSort("date_desc");
   };
 
   const activeFilters = [
     statusFilter !== "all", planFilter !== "all", countryFilter !== "all",
-    sizeFilter !== "all", budgetFilter !== "all", dateFrom !== "", dateTo !== "",
-    annotFilter !== "all",
+    sizeFilter !== "all", budgetFilter !== "all", sourceFilter !== "all",
+    dateFrom !== "", dateTo !== "", annotFilter !== "all",
   ].filter(Boolean).length;
 
   const drawerRequest = drawerId ? requests.find((r) => r.id === drawerId) || null : null;
@@ -1658,6 +1707,16 @@ function RequestsTab({
               <option value="low">Faible (&le;1k/mois)</option>
               <option value="mid">Moyen (1k-5k/mois)</option>
               <option value="high">Élevé (&ge;5k/mois)</option>
+            </select>
+          </FilterField>
+          <FilterField label="Source">
+            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} style={monoInputStyle}>
+              <option value="all">Toutes ({requests.length})</option>
+              <option value="audit-page">Audit ({requests.filter((r) => (r.source || "") === "audit-page").length})</option>
+              <option value="contact-page">Contact ({requests.filter((r) => (r.source || "contact-page") === "contact-page").length})</option>
+              <option value="request-access-page">Demande d'accès ({requests.filter((r) => { const s = r.source || ""; return s === "request-access-page" || s === "request-access"; }).length})</option>
+              <option value="landing-page">Landing ({requests.filter((r) => (r.source || "") === "landing-page").length})</option>
+              <option value="partner-application">Partenaire ({requests.filter((r) => (r.source || "") === "partner-application").length})</option>
             </select>
           </FilterField>
           <FilterField label="Date depuis">
@@ -2041,7 +2100,7 @@ function RequestCard({
           <MoveHorizontal size={12} color={C.textMuted} style={{ flexShrink: 0, marginTop: "2px" }} />
         )}
       </div>
-      {/* Company + plan */}
+      {/* Company + plan + source */}
       <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px", flexWrap: "wrap" }}>
         {request.company && (
           <span style={{
@@ -2060,6 +2119,26 @@ function RequestCard({
             textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700,
           }}>{planLabel(request.accountType)}</span>
         )}
+        {/* Source badge (Task FIX-FORMS-1) — colored pill showing which
+            page produced the lead, so the boss can triage at a glance. */}
+        {(() => {
+          const sc = sourceColor(request.source);
+          return (
+            <span
+              title={`Source: ${sourceLabel(request.source)}`}
+              style={{
+                fontSize: "9px", fontFamily: C.fontMono,
+                color: sc.color, background: sc.bg,
+                padding: "2px 6px", borderRadius: "3px",
+                border: `1px solid ${sc.color}30`,
+                textTransform: "uppercase", letterSpacing: "0.04em",
+                fontWeight: 700, marginLeft: "auto",
+              }}
+            >
+              {sourceLabel(request.source)}
+            </span>
+          );
+        })()}
       </div>
       {/* Budget + time */}
       <div style={{
@@ -2141,9 +2220,12 @@ function RequestTable({
   annotCount: (id: string) => number;
   lastContact: (id: string) => ContactLog | null;
 }) {
+  // Source column added (Task FIX-FORMS-1) — narrow 110px slot for
+  // the colored source badge so the boss can triage per origin page
+  // without opening the drawer.
   const cols = bulkMode
-    ? "32px minmax(180px,2fr) minmax(140px,1.4fr) minmax(110px,1fr) 110px 130px 150px 50px 40px"
-    : "minmax(180px,2fr) minmax(140px,1.4fr) minmax(110px,1fr) 110px 130px 150px 50px 40px";
+    ? "32px minmax(180px,2fr) minmax(140px,1.4fr) minmax(110px,1fr) 110px 110px 130px 150px 50px 40px"
+    : "minmax(180px,2fr) minmax(140px,1.4fr) minmax(110px,1fr) 110px 110px 130px 150px 50px 40px";
   const allSelected = requests.length > 0 && selected.size === requests.length;
   return (
     <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
@@ -2162,6 +2244,7 @@ function RequestTable({
         <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Contact</div>
         <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Société</div>
         <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Plan</div>
+        <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Source</div>
         <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Budget</div>
         <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Date</div>
         <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Statut</div>
@@ -2207,6 +2290,28 @@ function RequestTable({
               <span style={{ fontSize: "10px", fontFamily: C.fontMono, color: C.accent, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {planLabel(r.accountType)}
               </span>
+            </div>
+            {/* Source badge cell (Task FIX-FORMS-1) */}
+            <div style={{ background: "inherit", padding: "12px 16px" }}>
+              {(() => {
+                const sc = sourceColor(r.source);
+                return (
+                  <span
+                    title={`Source: ${sourceLabel(r.source)}`}
+                    style={{
+                      display: "inline-flex", alignItems: "center",
+                      padding: "2px 6px", background: sc.bg,
+                      border: `1px solid ${sc.color}30`,
+                      color: sc.color, borderRadius: "3px",
+                      fontSize: "9px", fontFamily: C.fontMono,
+                      textTransform: "uppercase", letterSpacing: "0.04em",
+                      fontWeight: 700, whiteSpace: "nowrap",
+                    }}
+                  >
+                    {sourceLabel(r.source)}
+                  </span>
+                );
+              })()}
             </div>
             <div style={{ background: "inherit", padding: "12px 16px", fontFamily: C.fontMono, fontSize: "11px", color: C.textBody }}>
               {budget ? `${fmtMoney(budget.monthly)}/mo` : (r.budget || "—")}
@@ -2405,7 +2510,7 @@ function RequestDetailDrawer({
                   <X size={18} />
                 </button>
               </div>
-              {/* Status badge + quick actions */}
+              {/* Status badge + source badge + quick actions */}
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
                 <span style={{
                   display: "inline-flex", alignItems: "center", gap: "6px",
@@ -2416,6 +2521,25 @@ function RequestDetailDrawer({
                   <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: stage.dot }} />
                   {stage.label}
                 </span>
+                {/* Source badge — page d'origine (Task FIX-FORMS-1) */}
+                {(() => {
+                  const sc = sourceColor(request.source);
+                  return (
+                    <span
+                      title={`Page d'origine: ${sourceLabel(request.source)} (source=${request.source || "contact-page"})`}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "5px",
+                        padding: "4px 10px", background: sc.bg, border: `1px solid ${sc.color}40`,
+                        color: sc.color, borderRadius: "12px", fontSize: "10px",
+                        fontFamily: C.fontMono, fontWeight: 700,
+                        textTransform: "uppercase", letterSpacing: "0.04em",
+                      }}
+                    >
+                      <ExternalLink size={10} />
+                      {sourceLabel(request.source)}
+                    </span>
+                  );
+                })()}
                 {request.status === "pending" && (
                   <button onClick={() => onStatusChange("interested")} style={drawerActionBtnStyle}>
                     <Mail size={11} /> Marquer contacté
@@ -2528,6 +2652,11 @@ function RequestDetailDrawer({
 
               {/* SOURCE & TRACKING */}
               <Section title="Source & tracking" icon={<ExternalLink size={12} />}>
+                <FieldRow
+                  label="Page d'origine"
+                  value={sourceLabel(request.source)}
+                  insight={`source: ${request.source || "contact-page"} (valeur par défaut)`}
+                />
                 <FieldRow label="Source referral" value={request.referralSource} />
                 {referral && Object.keys(referral.utm).length > 0 && (
                   <div style={{

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import BrandBadge from "@/components/BrandBadge";
 import { AtelierNav } from "./components/AtelierNav";
@@ -4437,12 +4437,59 @@ function PdfMetric({
 
 function FinalCTA() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Synchronous rage-click guard — prevents double-submit when the
+  // user double-clicks the CTA before the loading state paints.
+  const submittingRef = useRef(false);
   const [form, setForm] = useState({ name: "", email: "", company: "" });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.name && form.email && form.company) {
-      setSubmitted(true);
+    if (!form.name || !form.email || !form.company) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setError(null);
+
+    // Task FIX-FORMS-1: POST to /api/access-request with
+    // source="landing-page" so the admin can triage FinalCTA leads
+    // separately from the contact / audit / request-access flows.
+    try {
+      const res = await fetch("/api/access-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          company: form.company.trim(),
+          country: "Morocco",
+          source: "landing-page",
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        return;
+      }
+
+      if (res.status === 409) {
+        // A request or account already exists — still surface a
+        // friendly success state so we don't leak lead status.
+        setSubmitted(true);
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      setError(
+        (data?.error as string) ||
+          "Échec de l'envoi. Veuillez réessayer."
+      );
+    } catch {
+      setError("Erreur réseau. Vérifiez votre connexion.");
+    } finally {
+      setSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -4561,6 +4608,7 @@ function FinalCTA() {
             </div>
             <button
               type="submit"
+              disabled={submitting}
               style={{
                 display: "flex",
                 width: "100%",
@@ -4568,26 +4616,53 @@ function FinalCTA() {
                 justifyContent: "center",
                 gap: "10px",
                 padding: "15px 28px",
-                background: C.cta, // emerald-500 — DS V2 primary CTA
+                background: submitting ? C.ctaHover : C.cta, // emerald-500 — DS V2 primary CTA
                 color: C.textOnDark, // white
                 fontSize: "15px",
                 fontWeight: 600,
                 border: `1px solid ${C.cta}`,
                 borderRadius: "3px",
-                cursor: "pointer",
+                cursor: submitting ? "wait" : "pointer",
                 fontFamily: FONT.sans,
-                transition: "background-color 0.2s",
+                transition: "background-color 0.2s, opacity 0.2s",
+                opacity: submitting ? 0.7 : 1,
               }}
               onMouseEnter={(e) => {
+                if (submitting) return;
                 e.currentTarget.style.background = C.ctaHover; // emerald-400
               }}
               onMouseLeave={(e) => {
+                if (submitting) return;
                 e.currentTarget.style.background = C.cta;
               }}
             >
-              Get my free audit
-              <IconArrow dir="right" size={16} color={C.textOnDark} />
+              {submitting ? "Envoi en cours…" : "Get my free audit"}
+              {!submitting && (
+                <IconArrow dir="right" size={16} color={C.textOnDark} />
+              )}
             </button>
+            {/* Inline error banner (Task FIX-FORMS-1) — surfaces API
+                failures so the user can retry without losing form
+                state. */}
+            {error && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: "12px",
+                  padding: "10px 14px",
+                  background: "rgba(160,82,75,0.06)",
+                  border: `1px solid ${C.red}`,
+                  borderRadius: "4px",
+                  fontSize: "13px",
+                  color: C.red,
+                  fontFamily: FONT.sans,
+                  lineHeight: 1.5,
+                  textAlign: "center",
+                }}
+              >
+                {error}
+              </div>
+            )}
             <div
               style={{
                 marginTop: "16px",

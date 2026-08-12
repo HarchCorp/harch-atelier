@@ -5608,3 +5608,117 @@ Stage Summary:
 - Commercial fiches persistence confirmed: localStorage "admin:commercials" (CommercialFiche[]) via usePersistentState.
 - RBAC: both tabs HIDDEN for commercial role via canSeeKPIs/canSeeCommercials sidebar guards + ADDED useEffect defense-in-depth guard that bounces restricted-tab state back to "requests".
 - 0 other tabs touched. 0 new API routes. 0 new files. Surgical, in-place enhancement of existing functions — no duplicates created.
+
+---
+Task ID: FIX-FORMS-1
+Agent: VORTEX (Principal Systems & Security Engineer)
+Task: Wire /atelier/audit form (3-step, 10 fields) to /api/access-request — data was being LOST (only setSubmitted(true)). Add `source` field across the entire access-request pipeline so the boss can triage per origin page. Connect any other disconnected forms.
+
+Work Log:
+- Read worklog tail (last 3 entries: BATCAVE-1B-REQUESTS, BATCAVE-4B-KPI-COMMERCIAL, P3-GLM4-WHATSAPP-CONSOLE). Read /api/access-request/route.ts (zod schema, prisma create, 409 dedup logic), ContactPage.tsx (already POSTs with source: "contact-page"), RequestAccessPage.tsx (already POSTs with source: "request-access" + plan/fonction legacy fields), PartnerRegistration.tsx (already POSTs with source: "partner-application"), AuditPage.tsx (handleSubmit just setSubmitted(true) — NO API call), AtelierHome.tsx FinalCTA (just setSubmitted(true) — NO API call), ResiliencePage.tsx (demo lab, no access form), retro-audit/page.tsx (internal retro tool, no access form), prisma/schema.prisma AccessRequest model, AdminDashboard.tsx RequestsTab + RequestCard + RequestTable + RequestDetailDrawer.
+
+1. EXTENDED /api/access-request route (src/app/api/access-request/route.ts):
+   - Schema expanded: added `source` (z.string().max(50).optional()), audit extras `website`, `sector`, `competitors`, `sources` (array max 20), `goals`, plus legacy `fonction` + `plan` accepted from RequestAccessPage. Loosened `accountType` from enum-with-default to z.string().max(50).optional() (admin UI planLabel handles all legacy + canonical values).
+   - SOURCE_ALIASES map: { "request-access": "request-access-page" } — normalizes legacy payload to canonical enum without breaking the existing RequestAccessPage flow.
+   - Field mapping logic (the "OR better" path from the brief):
+     • goals → useCase (goals takes precedence over useCase)
+     • website/sector/competitors/sources → packed into `message` as formatted text block ("--- Demande d'audit ---\n...\n--- Fin ---") prepended to existing message
+     • fonction → role fallback
+     • plan → accountType fallback
+     • referralSource = data.referralSource || source (keeps UTM strings from existing pages, defaults new submissions to source page)
+     • source persisted to new `source` column
+   - Response now includes `source: request.source` so the admin can filter.
+   - Backwards compat preserved: ContactPage (source="contact-page", accountType="brand-monitor"), RequestAccessPage (source="request-access" → aliased), PartnerRegistration (source="partner-application") all continue to work unchanged.
+
+2. FIXED AuditPage.tsx handleSubmit (src/app/atelier/audit/AuditPage.tsx):
+   - Added `submitting` + `submitError` state + `submittingRef` rage-click guard (same pattern as ContactPage).
+   - handleSubmit now async: POST /api/access-request with payload {name, email, company, role, phone: whatsapp, country: "Morocco", goals, website, sector, competitors, sources, source: "audit-page"}.
+   - On res.ok: setSubmitted(true) + window.scrollTo (existing SuccessState UI untouched).
+   - On 409: friendly inline French error "Une demande est déjà en cours pour cet email, ou un compte existe déjà…".
+   - On other 4xx/5xx: surfaces server error.message, fallback "Échec de l'envoi…".
+   - On network failure: "Erreur réseau. Vérifiez votre connexion."
+   - Submit button shows "Envoi en cours…" while submitting, disabled (cursor:wait). Back button also disabled during submit. IconArrow hidden during submit to keep the button clean.
+   - Inline error banner shown only on step 3 when submitError is set — keeps the form state intact so the user can fix the email and retry.
+   - UI structure preserved exactly — only the submit handler + button state + error banner added.
+
+3. ADDED source field to Prisma schema (prisma/schema.prisma AccessRequest model):
+   - `source String? @default("contact-page")` with comment block explaining the canonical enum + Task ID.
+   - Did NOT run `prisma migrate` (per brief). Ran `bunx prisma generate` to regenerate @prisma/client types so `prisma.accessRequest.create({ data: { source } })` type-checks.
+   - Default "contact-page" ensures legacy rows bucket under Contact in the admin filter.
+
+4. UPDATED admin RequestsTab (src/app/atelier/admin/AdminDashboard.tsx):
+   - AccessRequest interface: added `source: string | null`.
+   - Added 3 module-level helpers: SOURCE_LABELS_FR (FR labels: Audit/Contact/Demande d'accès/Landing/Partenaire), SOURCE_COLORS (sage/accent/amber-brown/neutral/red-brown), sourceLabel() + sourceColor() — pure functions, no side effects.
+   - RequestsTab state: added `sourceFilter` ("all" default).
+   - Filter logic: extended `filtered` useMemo to filter by source — legacy null/undefined rows bucket under "contact-page" so the boss still sees them in the Contact filter (and in "all"). Alias "request-access" → "request-access-page" handled.
+   - Advanced filters UI: added new FilterField "Source" dropdown with 6 options (Toutes/Audit/Contact/Demande d'accès/Landing/Partenaire) showing live counts per source.
+   - resetFilters: now resets sourceFilter too.
+   - activeFilters counter: includes sourceFilter.
+   - exportCsv: added "source" column (between status and name) using sourceLabel() for human-readable CSV.
+   - RequestCard (pipeline view): added source badge in the "Company + plan" row — colored pill (sage/accent/amber/neutral/red) with FR label, pushed to the right via marginLeft:auto so it sits next to the plan label. Title attribute shows the canonical source string.
+   - RequestTable (table view): added new "Source" column (110px) between Plan and Budget. Grid columns widened from 8 to 9 in both bulk and non-bulk modes. Source badge cell shows the same colored pill.
+   - RequestDetailDrawer: added source FieldRow in the "Source & tracking" section ("Page d'origine" with insight showing the raw source value) + a colored source badge in the drawer header (next to the status badge) for high visibility.
+
+5. CONNECTED AtelierHome FinalCTA (src/app/atelier/AtelierHome.tsx):
+   - Was: just setSubmitted(true) — data LOST (same bug as audit page).
+   - Now: POST /api/access-request with {name, email, company, country: "Morocco", source: "landing-page"}.
+   - Added `submitting` + `error` state + `submittingRef` rage-click guard.
+   - On 409: treats as success (no lead-status leakage — the user already has an account, no point surfacing the conflict).
+   - Submit button shows "Envoi en cours…" while submitting, disabled. Hover handlers no-op during submit.
+   - Inline error banner (red border) shown below the button on failure.
+   - Success state UI untouched.
+
+6. OTHER FORMS AUDIT (per brief — verification only, no changes needed):
+   - PartnerRegistration.tsx: ALREADY submits to /api/access-request with source="partner-application" + referralSource="partner-application:<type>". ✓
+   - ResiliencePage.tsx: NO access form — it's a resilience demo lab (rate-limit, prompt-injection, etc.). The only inputs feed the demo API /api/resilience/demo/[slug]. ✓ (out of scope)
+   - retro-audit/page.tsx: NO access form — it's an internal retro-analysis tool that generates historical crisis reports via /api/console/retro-audit. ✓ (out of scope)
+
+CONSTRAINTS VERIFIED:
+- 'use client' on AuditPage.tsx + AtelierHome.tsx + AdminDashboard.tsx (preserved).
+- Existing zod validation pattern reused (z.object + safeParse + 400 on invalid).
+- French, NO emojis (source labels: "Audit"/"Contact"/"Demande d'accès"/"Landing"/"Partenaire").
+- TypeScript: NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0 (0 errors, verified once after all edits).
+- No prisma migrate run — only `prisma generate` (type regen) + schema field + comment added.
+- Existing contact/request-access/partner-application submissions NOT broken — all 3 payload shapes still validate, store, and return successfully. accountType field preserved for back-compat (legacy "brand-monitor" still accepted and persisted; new audit submissions default to "essential" via schema column default).
+
+Stage Summary:
+- 5 files touched: src/app/api/access-request/route.ts (rewritten), prisma/schema.prisma (1 field + comment), src/app/atelier/audit/AuditPage.tsx (handleSubmit + loading/error state), src/app/atelier/admin/AdminDashboard.tsx (interface + filter + badge in 3 places + CSV column), src/app/atelier/AtelierHome.tsx (FinalCTA wired to API).
+- 0 TS errors. 0 new files. 0 existing submissions broken.
+- Audit form data no longer lost: every submission creates a real AccessRequest row with source="audit-page", goals in useCase, and website/sector/competitors/sources packed into message as a formatted block readable in the drawer.
+- Boss can now filter the Requests tab by 5 source pages, sees a colored source badge on every card + table row + drawer header, and exports source-aware CSV.
+- FinalCTA on /atelier home now also creates real AccessRequest rows (source="landing-page") instead of fake setSubmitted(true).
+- Next action (out of scope): add a source breakdown to /api/admin/stats so the boss sees conversion rate per origin page in the KPI strip. Add a `source` filter to the admin GET /api/admin/requests query params for server-side filtering (currently the admin fetches all and filters client-side — fine for hundreds of rows, server-side filter needed at scale).
+
+---
+Task ID: FIX-DUPLICATES-1
+Agent: AURA
+Task: Audit duplicate pages + broken links
+Work Log:
+- Read worklog.md tail 200 lines (last entry: P3 source-badge work on /atelier/audit form). Confirmed scope: RESEARCH ONLY, no code modifications, output a comprehensive audit report.
+- Cataloged all 96 page.tsx files under /src/app/atelier/ (excluding /components/ and /console/views/). Built a per-page metadata table by reading each page.tsx + its sibling component file (Purpose, Form?, Form → endpoint, Outbound atelier links, Incoming link count via rg).
+- Extracted ATELIER_NAV_LINKS (tokens.ts L103-243) + ATELIER_FOOTER_LINKS (tokens.ts L245-286) to know which paths are in the global nav vs only reachable by internal links. Confirmed AtelierNav/AtelierFooter are NOT in layout.tsx — they're per-page imports (48 files import them).
+- For each page, ran `rg -l "\"${route}\"" src/ | grep -v own_folder | wc -l` to count incoming-link source files. Produced a sorted orphan list (0 incoming).
+- For each page, ran `rg -o '"/atelier/[^"]+"' <folder>` to extract outbound atelier hrefs and identified 9 dead-end pages (no outbound AND no global nav AND no BrandBadge-with-href escape).
+- Verified broken links by cross-checking all referenced paths against existing page.tsx files. Found 2 critical broken redirects:
+  • /atelier/console/brand-monitor — referenced in 4 source files (console/page.tsx admin redirect, agency/AgencyDashboard.tsx L156 router.push, agency/clients/[id]/AgencyClientDetail.tsx L150 router.push, console/StandbyBanner.tsx L34 DEFAULT_CTA_HREF). Page does NOT exist — was renamed to /console/essential per the account-type migration.
+  • /atelier/client-dashboard — referenced in lib/auth/auth.config.ts L356 getConsolePath() for regular users. Page does NOT exist. Regular users can't be redirected post-login.
+- Found 6 broken sitemap.ts entries (paths listed in sitemap but no page.tsx): /atelier/approach, /atelier/expertise, /atelier/industries, /atelier/companies, /atelier/insight-reports (all parent paths with only children) + /atelier/demo (no page at all).
+- Identified that /atelier/audit's 3-step wizard (AuditPage.tsx L391 handleSubmit) only calls setSubmitted(true) — no fetch, no API call. The /api/atelier/audit POST route exists (9810 bytes) but is unreferenced from this page. 27 inbound CTAs point at this dead form.
+- Identified that /atelier/contact, /atelier/request-access, AND /atelier/partners/apply all POST to the same /api/access-request endpoint — 3 duplicate lead-gen funnels.
+- Identified 2 parallel agency dashboards: /atelier/agency (legacy 1193 lines) vs /atelier/console/agency (new 17842 lines per P0-1 worklog). getConsolePath() L353 routes agency-admin → /atelier/agency (legacy); the new one is unreachable except by direct URL.
+- Identified ~7384 lines of dead console code: ConsoleShell.tsx (3556 lines, exported function never imported as JSX), Dashboard.tsx (1526 lines, only mentioned in comments), AgencyConsole.tsx (2302 lines, replaced by AgencyDashboard per P0-1).
+- Identified NAV_STRUCTURE in src/lib/constants.ts (L32-178, ~150 lines) — never imported anywhere; AtelierNav uses ATELIER_NAV_LINKS from tokens.ts instead. Dead code with stale path references.
+- Identified 2 content hubs with near-identical content: /atelier/insights (14 featured items) vs /atelier/resources (9 items, strict subset of insights).
+- Identified 2 overlapping trackers: /atelier/reputation-tracker vs /atelier/harch-100 (both surface ranked-company lists); /atelier/risk-tracker is distinct (risk-focused).
+- Wrote comprehensive audit report to /home/z/my-project/audit-pages.md (440 lines, 6 sections: full catalog, duplicate groups, orphans, dead ends, broken links, recommended actions priority-ordered P0→P3).
+
+Stage Summary:
+- 1 file written (audit-pages.md, 440 lines, RESEARCH ONLY — 0 code files modified).
+- 96 page.tsx files cataloged. 7 duplicate groups identified (lead-gen ×4, content ×2, agency dash ×2, trackers ×2, products/solutions/use-cases ×3, method/approach ×4, trust/security/commitment ×3).
+- 9 true orphans (lab, sales, products/integrations, use-cases, health, partners/apply, api-docs, glossary, intelligence). 7 acceptable orphans (console subpages, dynamic routes, email-routed invite).
+- 9 dead-end pages (no escape route — retro-audit, sales, intelligence, templates, lab/polymorphic, lab/zkp, console/settings/security, super-admin/audit-logs, products/enterprise-risk-intelligence).
+- 2 CRITICAL broken redirects: /atelier/console/brand-monitor (admin login 404s) + /atelier/client-dashboard (regular-user post-login 404s). 6 broken sitemap entries (404 for crawlers).
+- 1 CRITICAL data-loss form: /atelier/audit (27 inbound CTAs drive users to a form whose handleSubmit only sets UI state — data silently discarded).
+- ~7384 lines of dead console code (ConsoleShell + Dashboard + AgencyConsole) + ~150 lines of dead NAV_STRUCTURE in constants.ts.
+- 18 recommended actions priority-ordered (P0: 3 critical fixes, P1: 3 high fixes, P2: 7 medium fixes, P3: 5 low-priority cleanups). Detailed per-page action plan with inbound-link counts to update.
+- Next action: hand off to implementation agent to execute P0 fixes first (wire /atelier/audit form, fix getConsolePath() regular-user destination, replace /atelier/console/brand-monitor references).

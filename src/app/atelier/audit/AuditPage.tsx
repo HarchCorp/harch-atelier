@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import {
@@ -355,6 +355,11 @@ function HeroStat({ value, label }: { value: string; label: string }) {
 function AuditFormSection() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  // Synchronous rage-click guard — prevents double-submit when the
+  // user clicks the CTA multiple times before the loading state paints.
+  const submittingRef = useRef(false);
   const [form, setForm] = useState({
     company: "",
     website: "",
@@ -388,10 +393,65 @@ function AuditFormSection() {
     return false;
   };
 
-  const handleSubmit = () => {
-    if (canProceed()) {
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleSubmit = async () => {
+    if (!canProceed()) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    // ─── Map audit form → /api/access-request payload ───────────
+    // Task FIX-FORMS-1: pack website/sector/competitors/sources into
+    // the `message` field (no dedicated columns), goals → useCase,
+    // whatsapp → phone, source = "audit-page".
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      company: form.company.trim() || undefined,
+      role: form.role.trim() || undefined,
+      phone: form.whatsapp.trim() || undefined,
+      country: "Morocco",
+      // goals → useCase (the column that represents "what they want
+      // to monitor / achieve")
+      goals: form.goals.trim() || undefined,
+      // Extra audit context — packed into `message` by the API.
+      website: form.website.trim() || undefined,
+      sector: form.sector || undefined,
+      competitors: form.competitors.trim() || undefined,
+      sources: form.sources,
+      source: "audit-page",
+    };
+
+    try {
+      const res = await fetch("/api/access-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (res.status === 409) {
+        setSubmitError(
+          "Une demande est déjà en cours pour cet email, ou un compte existe déjà. Notre équipe vous recontactera."
+        );
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      setSubmitError(
+        (data?.error as string) ||
+          "Échec de l'envoi de la demande. Veuillez réessayer."
+      );
+    } catch {
+      setSubmitError("Erreur réseau. Vérifiez votre connexion.");
+    } finally {
+      setSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -572,11 +632,35 @@ function AuditFormSection() {
               {step === 2 && <Step2 form={form} toggleSource={toggleSource} />}
               {step === 3 && <Step3 form={form} updateForm={updateForm} />}
 
+              {/* Submit error banner — only shown on step 3 when the
+                  POST to /api/access-request fails (network, 409, 4xx,
+                  5xx). Inline so the user can retry without losing
+                  the form state. */}
+              {step === 3 && submitError && (
+                <div
+                  role="alert"
+                  style={{
+                    marginTop: "16px",
+                    padding: "12px 14px",
+                    background: "rgba(160,82,75,0.06)",
+                    border: `1px solid ${C.red}`,
+                    borderRadius: "4px",
+                    fontSize: "13px",
+                    color: C.red,
+                    fontFamily: FONT.sans,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {submitError}
+                </div>
+              )}
+
               {/* Navigation */}
               <div style={{ display: "flex", gap: "12px", marginTop: "28px", paddingTop: "24px", borderTop: `1px solid ${C.borderLight}` }}>
                 {step > 1 && (
                   <button
                     onClick={() => setStep(step - 1)}
+                    disabled={submitting}
                     style={{
                       padding: "12px 20px",
                       background: "transparent",
@@ -585,9 +669,10 @@ function AuditFormSection() {
                       fontWeight: 500,
                       border: `1px solid ${C.border}`,
                       borderRadius: "3px",
-                      cursor: "pointer",
+                      cursor: submitting ? "not-allowed" : "pointer",
                       fontFamily: FONT.sans,
                       transition: "all 0.2s",
+                      opacity: submitting ? 0.5 : 1,
                     }}
                   >
                     Back
@@ -621,17 +706,17 @@ function AuditFormSection() {
                 ) : (
                   <button
                     onClick={handleSubmit}
-                    disabled={!canProceed()}
+                    disabled={!canProceed() || submitting}
                     style={{
                       flex: 1,
                       padding: "12px 20px",
-                      background: canProceed() ? C.sage : C.border,
-                      color: canProceed() ? "#FFFFFF" : C.textFaint,
+                      background: canProceed() && !submitting ? C.sage : C.border,
+                      color: canProceed() && !submitting ? "#FFFFFF" : C.textFaint,
                       fontSize: "14px",
                       fontWeight: 600,
-                      border: `1px solid ${canProceed() ? C.sage : C.border}`,
+                      border: `1px solid ${canProceed() && !submitting ? C.sage : C.border}`,
                       borderRadius: "3px",
-                      cursor: canProceed() ? "pointer" : "not-allowed",
+                      cursor: canProceed() && !submitting ? "pointer" : "not-allowed",
                       fontFamily: FONT.sans,
                       transition: "all 0.2s",
                       display: "flex",
@@ -640,8 +725,10 @@ function AuditFormSection() {
                       gap: "8px",
                     }}
                   >
-                    Start my free audit
-                    <IconArrow size={14} color={canProceed() ? "#FFFFFF" : C.textFaint} />
+                    {submitting ? "Envoi en cours…" : "Start my free audit"}
+                    {!submitting && (
+                      <IconArrow size={14} color={canProceed() ? "#FFFFFF" : C.textFaint} />
+                    )}
                   </button>
                 )}
               </div>

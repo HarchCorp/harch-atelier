@@ -946,12 +946,18 @@ model AccessRequest {
   role          String?
   accountType   String?  @default("essential") // essential | pro | enterprise | agency (4 plans Harch Atelier)
   companySize   String?  // startup | sme | mid-market | enterprise
-  useCase       String?  // what they want to monitor
+  useCase       String?  // what they want to monitor (audit form: goals → useCase)
   budget        String?  // monthly budget range
   phone         String?  // for WhatsApp
   country       String?  // default: Morocco
   referralSource String? // how they heard about us
   message       String?
+  // ─── Task: FIX-FORMS-1 ───────────────────────────────────────
+  // Identifies the public page that produced the submission so the
+  // admin can filter and triage per origin. Updated by the
+  // /api/access-request route (default "contact-page").
+  // Values: audit-page | contact-page | request-access-page | landing-page | partner-application
+  source        String?  @default("contact-page")
   status        String   @default("pending")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
