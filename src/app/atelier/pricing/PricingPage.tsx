@@ -163,7 +163,7 @@ const PLANS: Plan[] = [
       "Pour les petites équipes de communication et marketing qui démarrent leur veille réputationnelle et leur suivi de la visibilité IA.",
     capabilities: [
       "Veille médiatique",
-      "Social listening",
+      "Veille sociale",
       "Suivi de la visibilité IA (GenAI Lens)",
       "Relations médias",
     ],
@@ -185,7 +185,7 @@ const PLANS: Plan[] = [
     highlighted: true,
     capabilities: [
       "Veille médiatique",
-      "Social listening",
+      "Veille sociale",
       "Suivi de la visibilité IA (GenAI Lens)",
       "Relations médias",
     ],
@@ -206,7 +206,7 @@ const PLANS: Plan[] = [
       "Pour les marques leaders et internationales qui industrialisent l'intelligence réputationnelle avec gouvernance et conformité.",
     capabilities: [
       "Veille médiatique",
-      "Social listening",
+      "Veille sociale",
       "Suivi de la visibilité IA (GenAI Lens)",
       "Marketing d'influence",
       "Relations médias",
@@ -228,7 +228,7 @@ const PLANS: Plan[] = [
       "Pour les agences RP et cabinets de conseil qui gèrent plusieurs clients en portefeuille avec white-label et gouvernance multi-comptes.",
     capabilities: [
       "Veille médiatique",
-      "Social listening",
+      "Veille sociale",
       "Suivi de la visibilité IA (GenAI Lens)",
       "Marketing d'influence",
       "Relations médias",
@@ -256,7 +256,7 @@ const SOLUTIONS = [
     icon: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z",
   },
   {
-    title: "Social listening",
+    title: "Veille sociale",
     desc: "Capturez les conversations sur X, LinkedIn, Facebook, Instagram et identifiez les tendances narratives émergentes.",
     icon: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z",
   },
@@ -287,7 +287,7 @@ interface Row {
 const COMPARISON: Row[] = [
   // ─── Capacités incluses ───────────────────────────────────────
   { category: "Capacités incluses", label: "Veille médiatique", values: ["✓", "✓", "✓", "✓"] },
-  { category: "Capacités incluses", label: "Social listening", values: ["✓", "✓", "✓", "✓"] },
+  { category: "Capacités incluses", label: "Veille sociale", values: ["✓", "✓", "✓", "✓"] },
   { category: "Capacités incluses", label: "Suivi de la visibilité IA (GenAI Lens)", values: ["✓", "✓", "✓", "✓"] },
   { category: "Capacités incluses", label: "Relations médias", values: ["✓", "✓", "✓", "✓"] },
   { category: "Capacités incluses", label: "Marketing d'influence", values: ["—", "—", "✓", "✓"] },

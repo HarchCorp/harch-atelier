@@ -603,7 +603,7 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
           {/* ─── Left: copy + CTAs ─── */}
           <div>
             <Eyebrow color={C.accent}>
-              AI Reputation Intelligence · Decision Augmentation
+              Intelligence réputationnelle IA · Augmentation de décision
             </Eyebrow>
             <h1
               style={{
@@ -615,10 +615,10 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
                 margin: "0 0 24px",
               }}
             >
-              Promote. Protect.{" "}
+              Promouvoir. Protéger.{" "}
               {/* DS V2 §5 + Benchmark Pattern 2 — H1 split-color.
                   Mot accent en stone-500 (C.accent). */}
-              <span style={{ color: C.accent }}>Shape.</span>
+              <span style={{ color: C.accent }}>Façonner.</span>
             </h1>
             <p
               style={{
@@ -715,10 +715,10 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
               }}
               stagger={0.1}
             >
-              <StaggerItem><TrustStat value="5M+" label="Articles ingested/day" /></StaggerItem>
-              <StaggerItem><TrustStat value="100M+" label="Entities labeled/day" /></StaggerItem>
-              <StaggerItem><TrustStat value="120+" label="Languages translated" /></StaggerItem>
-              <StaggerItem><TrustStat value="32" label="Risk categories" /></StaggerItem>
+              <StaggerItem><TrustStat value="5M+" label="Articles ingérés/jour" /></StaggerItem>
+              <StaggerItem><TrustStat value="100M+" label="Entités labellisées/jour" /></StaggerItem>
+              <StaggerItem><TrustStat value="120+" label="Langues traduites" /></StaggerItem>
+              <StaggerItem><TrustStat value="32" label="Catégories de risque" /></StaggerItem>
             </StaggerContainer>
           </div>
 
@@ -1202,31 +1202,31 @@ function WhatWeDo() {
   const features = [
     {
       icon: <IconRadar size={32} color={C.sage} />,
-      title: "Media Monitoring",
-      desc: "We track 30+ Moroccan & African media sources — Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui Le Maroc and more — 24/7.",
+      title: "Veille médiatique",
+      desc: "Nous surveillons 30+ sources media marocaines et africaines — Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui Le Maroc et plus — 24/7.",
       stat: "30+",
       statLabel: "sources",
     },
     {
       icon: <IconAI size={32} color={C.sage} />,
-      title: "AI Visibility",
-      desc: "See what ChatGPT, Perplexity, Gemini, and Claude say about your brand. Track your rank on the prompts that matter to your customers.",
+      title: "Visibilité IA",
+      desc: "Voyez ce que ChatGPT, Perplexity, Gemini et Claude disent de votre marque. Suivez votre rang sur les prompts qui comptent pour vos clients.",
       stat: "8",
-      statLabel: "AI engines",
+      statLabel: "moteurs IA",
     },
     {
       icon: <IconSentiment size={32} color={C.sage} />,
-      title: "Sentiment Analysis",
-      desc: "HarchIQ analyzes every mention in French, Arabic & English. Get positive / neutral / negative breakdowns per entity, topic, and source.",
+      title: "Analyse de sentiment",
+      desc: "HarchIQ analyse chaque mention en français, arabe et anglais. Répartition positif / neutre / négatif par entité, sujet et source.",
       stat: "3",
-      statLabel: "languages",
+      statLabel: "langues",
     },
     {
       icon: <IconBell size={32} color={C.sage} />,
-      title: "Crisis Alerts",
-      desc: "When negative sentiment spikes on a topic, you get a WhatsApp alert within 5 minutes — before it becomes a crisis.",
+      title: "Alertes de crise",
+      desc: "Quand le sentiment négatif grimpe sur un sujet, vous recevez une alerte WhatsApp sous 5 minutes — avant que cela ne devienne une crise.",
       stat: "< 5min",
-      statLabel: "alert latency",
+      statLabel: "latence d'alerte",
     },
   ];
 
@@ -1246,14 +1246,16 @@ function WhatWeDo() {
           padding: "0 16px",
         }}
       >
-        <Eyebrow>What we do</Eyebrow>
+        <Eyebrow>Notre métier</Eyebrow>
         <SectionTitle>
-          Four pillars of reputation intelligence.
+          Quatre piliers de l'intelligence réputationnelle.
         </SectionTitle>
         <SectionSub>
-          Most reputation tools were built for American brands on English media.
-          We built Harch Atelier for the francophone and African reality — Arabic
-          sources, French business press, and AI engines your customers actually use.
+          La plupart des outils de réputation ont été conçus pour les marques
+          américaines sur des médias anglophones. Nous avons construit Harch
+          Atelier pour la réalité francophone et africaine — sources arabes,
+          presse économique francophone, et moteurs IA que vos clients utilisent
+          réellement.
         </SectionSub>
 
         <StaggerContainer
@@ -1413,33 +1415,33 @@ function WhatsAppPreview() {
         <div className="whatsapp-split">
           {/* Left: copy */}
           <div>
-            <Eyebrow color={C.sage}>WhatsApp delivery</Eyebrow>
+            <Eyebrow color={C.sage}>Livraison WhatsApp</Eyebrow>
             <SectionTitle>
-              Your morning briefing, on WhatsApp.
+              Votre brief matinal, sur WhatsApp.
             </SectionTitle>
             <SectionSub>
-              Every morning at 7:00, you receive a structured digest of what
-              was said about your brand in the last 24 hours — media, social,
-              and AI engines. No app to open. No dashboard to check. Just
-              open WhatsApp.
+              Chaque matin à 7h00, vous recevez un digest structuré de ce qui
+              s'est dit sur votre marque dans les dernières 24 heures — média,
+              social, et moteurs IA. Pas d'app à ouvrir. Pas de dashboard à
+              consulter. Il suffit d'ouvrir WhatsApp.
             </SectionSub>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <WhatsAppFeature
-                title="Daily digest at 7:00"
-                desc="Media articles, social mentions, AI citations — all in one message."
+                title="Digest quotidien à 7h00"
+                desc="Articles média, mentions sociales, citations IA — tout dans un seul message."
               />
               <WhatsAppFeature
-                title="Real-time crisis alerts"
-                desc="When negative sentiment spikes on a topic, you get an alert within 5 minutes."
+                title="Alertes de crise en temps réel"
+                desc="Quand le sentiment négatif grimpe sur un sujet, vous recevez une alerte sous 5 minutes."
               />
               <WhatsAppFeature
-                title="Reply to ask questions"
-                desc="Text “Quel est mon score cette semaine?” and get an instant answer from our AI."
+                title="Répondez pour poser des questions"
+                desc="Textez « Quel est mon score cette semaine ? » et obtenez une réponse instantanée de notre IA."
               />
               <WhatsAppFeature
-                title="Share with your team"
-                desc="Forward the digest to your comms team, CEO, or board in one tap."
+                title="Partagez avec votre équipe"
+                desc="Transférez le digest à votre équipe comms, au CEO, ou au board en un tap."
               />
             </div>
           </div>
@@ -1868,14 +1870,15 @@ function DashboardPreview() {
           padding: "0 16px",
         }}
       >
-        <Eyebrow>The dashboard</Eyebrow>
+        <Eyebrow>Le dashboard</Eyebrow>
         <SectionTitle>
-          One dashboard. Every signal that matters.
+          Un dashboard. Chaque signal qui compte.
         </SectionTitle>
         <SectionSub>
-          Media monitoring, sentiment trends, competitor benchmarking, AI
-          visibility, and crisis alerts — all in one place. Built for comms
-          directors and CEOs who need the full picture in 60 seconds.
+          Veille médiatique, tendances de sentiment, benchmark concurrents,
+          visibilité IA et alertes de crise — tout au même endroit. Conçu pour
+          les directeurs comms et les CEO qui veulent la vision complète en
+          60 secondes.
         </SectionSub>
 
         <DashboardMockup />
@@ -1886,11 +1889,11 @@ function DashboardPreview() {
 
 function DashboardMockup() {
   const navItems = [
-    { icon: <IconMonitor size={16} color={C.sage} />, label: "Monitoring", active: true },
+    { icon: <IconMonitor size={16} color={C.sage} />, label: "Veille", active: true },
     { icon: <IconChart size={16} color={C.textMuted} />, label: "Sentiment", active: false },
-    { icon: <IconUsers size={16} color={C.textMuted} />, label: "Competitors", active: false },
-    { icon: <IconBell size={16} color={C.textMuted} />, label: "Alerts", active: false, badge: "3" },
-    { icon: <IconReport size={16} color={C.textMuted} />, label: "Reports", active: false },
+    { icon: <IconUsers size={16} color={C.textMuted} />, label: "Concurrents", active: false },
+    { icon: <IconBell size={16} color={C.textMuted} />, label: "Alertes", active: false, badge: "3" },
+    { icon: <IconReport size={16} color={C.textMuted} />, label: "Rapports", active: false },
   ];
 
   return (
@@ -2095,7 +2098,7 @@ function DashboardMockup() {
                 Pro
               </div>
               <div style={{ fontSize: "11px", color: C.textMuted, marginTop: "4px" }}>
-                28 days remaining
+                28 jours restants
               </div>
               <a
                 href="/atelier/pricing"
@@ -2108,7 +2111,7 @@ function DashboardMockup() {
                   fontWeight: 600,
                 }}
               >
-                Upgrade →
+                Mettre à niveau →
               </a>
             </div>
           </div>
@@ -2155,12 +2158,12 @@ function DashboardMockup() {
                   letterSpacing: "-0.02em",
                 }}
               >
-                Sentiment Analysis
+                Analyse de sentiment
               </h3>
             </div>
             {/* Filter pills */}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["7 days", "30 days", "90 days"].map((range, i) => (
+              {["7 jours", "30 jours", "90 jours"].map((range, i) => (
                 <span
                   key={range}
                   style={{
@@ -2208,13 +2211,13 @@ function DashboardMockup() {
                   color: C.textPrimary,
                 }}
               >
-                Sentiment over time
+                Sentiment dans le temps
               </div>
               {/* Legend */}
               <div style={{ display: "flex", gap: "16px" }}>
-                <ChartLegend color={C.sage} label="Positive" />
-                <ChartLegend color={C.neutral} label="Neutral" />
-                <ChartLegend color={C.red} label="Negative" />
+                <ChartLegend color={C.sage} label="Positif" />
+                <ChartLegend color={C.neutral} label="Neutre" />
+                <ChartLegend color={C.red} label="Négatif" />
               </div>
             </div>
 
@@ -2230,7 +2233,7 @@ function DashboardMockup() {
                 padding: "0 4px",
               }}
             >
-              {["Jul 1", "Jul 8", "Jul 15", "Jul 22", "Jul 29"].map((d) => (
+              {["1 juil", "8 juil", "15 juil", "22 juil", "29 juil"].map((d) => (
                 <span
                   key={d}
                   style={{
@@ -2256,19 +2259,19 @@ function DashboardMockup() {
             }}
           >
             <DashMiniStat
-              label="Avg sentiment"
+              label="Sentiment moyen"
               value="68%"
               change="+4.2"
               positive
             />
             <DashMiniStat
-              label="Mentions / day"
+              label="Mentions / jour"
               value="47"
               change="+12"
               positive
             />
             <DashMiniStat
-              label="AI citations"
+              label="Citations IA"
               value="12"
               change="+3"
               positive
@@ -2295,7 +2298,7 @@ function DashboardMockup() {
               marginBottom: "16px",
             }}
           >
-            Top 5 Topics
+            Top 5 sujets
           </div>
 
           {TOPICS.map((topic, i) => (
@@ -2322,7 +2325,7 @@ function DashboardMockup() {
                 marginBottom: "10px",
               }}
             >
-              AI Visibility
+              Visibilité IA
             </div>
             <div style={{ fontSize: "13px", color: C.textSecondary, marginBottom: "12px" }}>
               <strong style={{ color: C.textPrimary }}>&laquo; meilleure banque Maroc &raquo;</strong>
@@ -2683,14 +2686,15 @@ function Harch100() {
           padding: "0 16px",
         }}
       >
-        <Eyebrow color={C.sage}>The HARCH 100</Eyebrow>
+        <Eyebrow color={C.sage}>Le HARCH 100</Eyebrow>
         <SectionTitle>
-          Morocco&rsquo;s most reputable companies.
+          Les entreprises marocaines les plus réputées.
         </SectionTitle>
         <SectionSub>
-          Updated monthly. The HARCH 100 ranks Moroccan companies by reputation
-          score — a composite of media sentiment, social mention volume, AI
-          visibility, and share of voice. Here are the top 10 for July 2026.
+          Mis à jour mensuellement. Le HARCH 100 classe les entreprises
+          marocaines par score de réputation — un composite de sentiment média,
+          volume de mentions sociales, visibilité IA et share of voice. Voici
+          le top 10 pour juillet 2026.
         </SectionSub>
 
         {/* Table card */}
@@ -2722,10 +2726,10 @@ function Harch100() {
             }}
             className="harch-table-head"
           >
-            <span>Rank</span>
-            <span>Company</span>
+            <span>Rang</span>
+            <span>Entreprise</span>
             <span>Score</span>
-            <span>30d Trend</span>
+            <span>Tendance 30j</span>
             <span>Sentiment</span>
           </div>
 
@@ -2753,8 +2757,8 @@ function Harch100() {
               color: C.textMuted,
             }}
           >
-            Updated 01/07/2026 · Methodology: weighted sentiment (40%) + volume
-            (25%) + AI visibility (20%) + share of voice (15%)
+            Mis à jour 01/07/2026 · Méthodologie : sentiment pondéré (40 %) +
+            volume (25 %) + visibilité IA (20 %) + share of voice (15 %)
           </div>
           <a
             href="/atelier/harch-100"
@@ -2768,7 +2772,7 @@ function Harch100() {
               gap: "6px",
             }}
           >
-            View full HARCH 100
+            Voir le HARCH 100 complet
             <IconArrow dir="right" size={14} color={C.sage} />
           </a>
         </div>
@@ -2800,21 +2804,22 @@ function Harch100() {
               marginBottom: "16px",
             }}>
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10B981", animation: "pulse 2s infinite" }} />
-              New · Flagship Report
+              Nouveau · Rapport phare
             </div>
             <h3 style={{
               fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 800,
               color: "#FAFAFA", letterSpacing: "-0.02em", lineHeight: 1.1,
               margin: "0 0 8px",
             }}>
-              Morocco Reputation Intelligence Report 2026
+              Rapport Intelligence Réputation Maroc 2026
             </h3>
             <p style={{
               fontSize: "14px", color: "#A3A3A3", lineHeight: 1.5,
               margin: 0, maxWidth: "520px",
             }}>
-              The most comprehensive analysis ever produced. 8 companies, 20 real people,
-              1,858 articles, 416 weekly sentiment snapshots, 3,726 BVC prices — across 365 days.
+              L'analyse la plus complète jamais produite. 8 entreprises, 20
+              personnes réelles, 1 858 articles, 416 instantanés de sentiment
+              hebdomadaires, 3 726 cours BVC — sur 365 jours.
             </p>
           </div>
           <a
@@ -2829,7 +2834,7 @@ function Harch100() {
             onMouseEnter={(e) => { e.currentTarget.style.background = "#10B981"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "#059669"; }}
           >
-            Read the report
+            Lire le rapport
             <IconArrow dir="right" size={14} color="#FFFFFF" />
           </a>
         </div>
@@ -3007,23 +3012,23 @@ function HowItWorks() {
   const steps = [
     {
       num: "01",
-      title: "We monitor",
-      desc: "30+ Moroccan & African media sources, social platforms, and 8 AI engines — scanned 24/7 in French, Arabic & English.",
-      detail: "Sources: Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui Le Maroc, Le360, Yabiladi, Bladi, MâadBarid…",
+      title: "Nous surveillons",
+      desc: "30+ sources media marocaines et africaines, plateformes sociales, et 8 moteurs IA — scannés 24/7 en français, arabe et anglais.",
+      detail: "Sources : Le Matin, L'Économiste, Hespress, TelQuel, Médias24, Aujourd'hui Le Maroc, Le360, Yabiladi, Bladi, MâadBarid…",
       icon: <IconRadar size={36} color={C.sage} />,
     },
     {
       num: "02",
-      title: "AI analyzes",
-      desc: "HarchIQ processes every mention — sentiment classification, topic extraction, trend detection, and crisis scoring. All in real-time.",
-      detail: "Engine: HarchIQ · Languages: FR / AR / EN · Latency: < 30 sec per article",
+      title: "L'IA analyse",
+      desc: "HarchIQ traite chaque mention — classification de sentiment, extraction de sujets, détection de tendances et scoring de crise. Le tout en temps réel.",
+      detail: "Moteur : HarchIQ · Langues : FR / AR / EN · Latence : < 30 sec par article",
       icon: <IconAI size={36} color={C.sage} />,
     },
     {
       num: "03",
-      title: "You receive",
-      desc: "Daily WhatsApp digest at 7:00. Live dashboard with full drill-down. Monthly PDF report. Real-time alerts when sentiment shifts.",
-      detail: "Channels: WhatsApp · Web dashboard · Email PDF · API (Grandes Entreprises)",
+      title: "Vous recevez",
+      desc: "Digest WhatsApp quotidien à 7h00. Dashboard live avec drill-down complet. Rapport PDF mensuel. Alertes en temps réel quand le sentiment bouge.",
+      detail: "Canaux : WhatsApp · Dashboard web · Email PDF · API (Grandes Entreprises)",
       icon: <IconBell size={36} color={C.sage} />,
     },
   ];
@@ -3043,13 +3048,13 @@ function HowItWorks() {
           padding: "0 16px",
         }}
       >
-        <Eyebrow>How it works</Eyebrow>
+        <Eyebrow>Comment ça marche</Eyebrow>
         <SectionTitle>
-          Three steps. Zero noise.
+          Trois étapes. Zéro bruit.
         </SectionTitle>
         <SectionSub>
-          From a media mention to your WhatsApp in under 5 minutes. Here&rsquo;s
-          the pipeline that powers Harch Atelier.
+          D'une mention média à votre WhatsApp en moins de 5 minutes. Voici
+          le pipeline qui alimente Harch Atelier.
         </SectionSub>
 
         <div
@@ -3299,14 +3304,14 @@ function TimelineDot({ label, time }: { label: string; time: string }) {
 function HowItWorksInteractive() {
   return (
     <div style={{ marginTop: "80px" }}>
-      <Eyebrow color={C.accent}>See it in action</Eyebrow>
-      <SectionTitle maxW="720px">Three phases. One pipeline.</SectionTitle>
+      <Eyebrow color={C.accent}>Voir en action</Eyebrow>
+      <SectionTitle maxW="720px">Trois phases. Un seul pipeline.</SectionTitle>
       <SectionSub>
-        Click a tab to see what happens at each phase — from raw media
-        scrape to your WhatsApp inbox.
+        Cliquez sur un onglet pour voir ce qui se passe à chaque phase — du
+        scrape média brut à votre boîte WhatsApp.
       </SectionSub>
       <TeslaTabs
-        ariaLabel="Harch Atelier pipeline phases"
+        ariaLabel="Phases du pipeline Harch Atelier"
         tabs={[
           { label: "Discovery", content: <DiscoveryView /> },
           { label: "Build", content: <BuildView /> },
@@ -3363,7 +3368,7 @@ function DiscoveryView() {
           letterSpacing: "-0.02em",
         }}
       >
-        We scrape 30+ Moroccan and African media + 8 AI engines.
+        Nous scrapeons 30+ media marocains et africains + 8 moteurs IA.
       </h3>
       <div
         style={{
@@ -3383,7 +3388,7 @@ function DiscoveryView() {
               marginBottom: "12px",
             }}
           >
-            Moroccan &amp; African media · 30+
+            Media marocains &amp; africains · 30+
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {mediaSources.map((s) => (
@@ -3415,7 +3420,7 @@ function DiscoveryView() {
               marginBottom: "12px",
             }}
           >
-            AI engines · 8
+            Moteurs IA · 8
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {aiEngines.map((s) => (
@@ -3467,7 +3472,7 @@ function DiscoveryView() {
               letterSpacing: "0.1em",
             }}
           >
-            articles ingested/day
+            articles ingérés/jour
           </div>
         </div>
         <div>
@@ -3490,7 +3495,7 @@ function DiscoveryView() {
               letterSpacing: "0.1em",
             }}
           >
-            languages translated
+            langues traduites
           </div>
         </div>
         <div>
@@ -3513,7 +3518,7 @@ function DiscoveryView() {
               letterSpacing: "0.1em",
             }}
           >
-            scanning frequency
+            fréquence de scan
           </div>
         </div>
       </div>
@@ -3523,10 +3528,10 @@ function DiscoveryView() {
 
 function BuildView() {
   const pipeline = [
-    { step: "Ingest", desc: "Raw article + metadata captured", time: "~5s" },
-    { step: "NLP", desc: "Language detection + entity extraction", time: "~10s" },
-    { step: "Score", desc: "Sentiment + risk + topic classification", time: "~8s" },
-    { step: "Alert", desc: "Threshold check → WhatsApp if crisis", time: "~2s" },
+    { step: "Ingest", desc: "Article brut + métadonnées capturés", time: "~5s" },
+    { step: "NLP", desc: "Détection de langue + extraction d'entités", time: "~10s" },
+    { step: "Score", desc: "Sentiment + risque + classification de sujets", time: "~8s" },
+    { step: "Alerte", desc: "Vérification de seuil → WhatsApp si crise", time: "~2s" },
   ];
   return (
     <div>
@@ -3551,7 +3556,7 @@ function BuildView() {
           letterSpacing: "-0.02em",
         }}
       >
-        HarchIQ analyzes sentiment, risk, AI visibility per entity.
+        HarchIQ analyse sentiment, risque et visibilité IA par entité.
       </h3>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {pipeline.map((p, i) => (
@@ -3616,7 +3621,7 @@ function BuildView() {
           textAlign: "center",
         }}
       >
-        Engine: HarchIQ · Languages: FR / AR / EN · Latency: &lt; 30 sec per
+        Moteur : HarchIQ · Langues : FR / AR / EN · Latence : &lt; 30 sec par
         article
       </div>
     </div>
@@ -3626,22 +3631,22 @@ function BuildView() {
 function VaultView() {
   const channels = [
     {
-      name: "WhatsApp Daily Digest",
-      desc: "7:00 every morning — your reputation in 60-second read",
+      name: "Digest quotidien WhatsApp",
+      desc: "7h00 chaque matin — votre réputation en 60 secondes de lecture",
       icon: "✆",
-      detail: "Real-time crisis alerts when sentiment shifts",
+      detail: "Alertes de crise en temps réel quand le sentiment bouge",
     },
     {
-      name: "Web Dashboard",
-      desc: "Full drill-down — articles, entities, trends, competitors",
+      name: "Dashboard web",
+      desc: "Drill-down complet — articles, entités, tendances, concurrents",
       icon: "▦",
-      detail: "Drag-and-drop visualization builder (Pro+)"
+      detail: "Constructeur de visualisation drag-and-drop (Pro+)"
     },
     {
-      name: "Monthly PDF Report",
-      desc: "Board-ready, 12 pages, branded with your logo",
+      name: "Rapport PDF mensuel",
+      desc: "Format board-ready, 12 pages, brandé à votre logo",
       icon: "▤",
-      detail: "Executive summary + risk matrix + recommendations",
+      detail: "Synthèse exécutive + matrice des risques + recommandations",
     },
   ];
   return (
@@ -3667,7 +3672,7 @@ function VaultView() {
           letterSpacing: "-0.02em",
         }}
       >
-        You get WhatsApp Daily Digest + dashboard + monthly PDF.
+        Vous obtenez Digest WhatsApp + dashboard + PDF mensuel.
       </h3>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {channels.map((c) => (
@@ -3752,7 +3757,7 @@ function Pricing() {
       tagline: "Pour les petites équipes de communication et marketing qui démarrent leur veille réputationnelle.",
       features: [
         "Veille médiatique",
-        "Social listening",
+        "Veille sociale",
         "Suivi de la visibilité IA (GenAI Lens)",
         "Relations médias",
         "HarchIQ AI (50 questions/jour)",
@@ -3831,13 +3836,13 @@ function Pricing() {
           padding: "0 16px",
         }}
       >
-        <Eyebrow color={C.sage}>Pricing</Eyebrow>
+        <Eyebrow color={C.sage}>Tarifs</Eyebrow>
         <SectionTitle>
-          Pricing that scales with your reputation.
+          Une tarification qui passe à l'échelle de votre réputation.
         </SectionTitle>
         <SectionSub>
-          All plans include a 14-day free trial. No credit card required. Prices
-          in MAD (Moroccan Dirham). Cancel anytime.
+          Tous les plans incluent un essai gratuit de 14 jours. Sans carte
+          bancaire. Prix en MAD (dirham marocain). Annulable à tout moment.
         </SectionSub>
 
         <StaggerContainer
@@ -3873,11 +3878,11 @@ function Pricing() {
             boxShadow: SHADOW.card,
           }}
         >
-          <PricingNote icon="✓" text="14-day free trial" />
-          <PricingNote icon="✓" text="No credit card required" />
-          <PricingNote icon="✓" text="Cancel anytime" />
-          <PricingNote icon="✓" text="MAD & EUR invoicing" />
-          <PricingNote icon="✓" text="Data hosted in EU" />
+          <PricingNote icon="✓" text="Essai gratuit 14 jours" />
+          <PricingNote icon="✓" text="Sans carte bancaire" />
+          <PricingNote icon="✓" text="Annulable à tout moment" />
+          <PricingNote icon="✓" text="Facturation MAD et EUR" />
+          <PricingNote icon="✓" text="Données hébergées en UE" />
         </div>
       </div>
     </section>
@@ -4161,37 +4166,37 @@ function ReportPreview() {
         <div className="report-split">
           {/* Left: copy */}
           <div>
-            <Eyebrow>Monthly report</Eyebrow>
+            <Eyebrow>Rapport mensuel</Eyebrow>
             <SectionTitle>
-              A board-ready PDF, every month.
+              Un PDF board-ready, chaque mois.
             </SectionTitle>
             <SectionSub>
-              On the 1st of every month, you receive a 12-page reputation report
-              in your inbox. Executive summary, sentiment trends, competitor
-              benchmark, top topics, AI visibility — formatted for your CEO and
-              your board.
+              Le 1er de chaque mois, vous recevez un rapport de réputation de
+              12 pages dans votre boîte mail. Synthèse exécutive, tendances de
+              sentiment, benchmark concurrents, sujets émergents, visibilité
+              IA — formaté pour votre CEO et votre board.
             </SectionSub>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <ReportFeature
-                title="Executive summary"
-                desc="One page your CEO will actually read."
+                title="Synthèse exécutive"
+                desc="Une page que votre CEO lira réellement."
               />
               <ReportFeature
-                title="Sentiment trends"
-                desc="30-day charts by source, topic, and entity."
+                title="Tendances de sentiment"
+                desc="Graphiques 30 jours par source, sujet et entité."
               />
               <ReportFeature
-                title="Competitor benchmark"
-                desc="How you rank vs. your top 3 competitors."
+                title="Benchmark concurrents"
+                desc="Votre rang vs. vos 3 principaux concurrents."
               />
               <ReportFeature
-                title="AI visibility report"
-                desc="What ChatGPT & Perplexity said about you this month."
+                title="Rapport de visibilité IA"
+                desc="Ce que ChatGPT et Perplexity ont dit de vous ce mois-ci."
               />
               <ReportFeature
-                title="Crisis watchlist"
-                desc="Topics trending negative — before they become news."
+                title="Watchlist de crise"
+                desc="Sujets qui trendent négatif — avant qu'ils ne deviennent des actualités."
               />
             </div>
 
@@ -4209,7 +4214,7 @@ function ReportPreview() {
               }}
             >
               <IconReport size={18} color={C.sage} />
-              Download sample report (PDF, 2.4 MB)
+              Télécharger un exemple de rapport (PDF, 2,4 Mo)
             </a>
           </div>
 
@@ -4700,7 +4705,7 @@ function FinalCTA() {
       >
         <Eyebrow color={C.sage}>
           <span style={{ display: "inline-flex", justifyContent: "center", width: "100%" }}>
-            Free reputation audit
+            Audit de réputation gratuit
           </span>
         </Eyebrow>
         <h2
@@ -4713,7 +4718,7 @@ function FinalCTA() {
             margin: "0 0 20px",
           }}
         >
-          Get your free reputation audit.
+          Obtenez votre audit de réputation gratuit.
         </h2>
         <p
           style={{
@@ -4723,9 +4728,9 @@ function FinalCTA() {
             margin: "0 0 40px",
           }}
         >
-          We&rsquo;ll scan 30+ media sources and 8 AI engines for your brand,
-          then send you a one-page reputation snapshot within 48 hours. No
-          commitment, no credit card.
+          Nous scanons 30+ sources média et 8 moteurs IA pour votre marque,
+          puis vous envoyons un instantané de réputation d'une page sous 48
+          heures. Sans engagement, sans carte bancaire.
         </p>
 
         {/* Form */}
@@ -4752,14 +4757,14 @@ function FinalCTA() {
               }}
             >
               <FormField
-                label="Full name"
+                label="Nom complet"
                 type="text"
                 placeholder="Aicha Bennani"
                 value={form.name}
                 onChange={(v) => setForm({ ...form, name: v })}
               />
               <FormField
-                label="Work email"
+                label="Email professionnel"
                 type="email"
                 placeholder="aicha@boa.ma"
                 value={form.email}
@@ -4768,7 +4773,7 @@ function FinalCTA() {
             </div>
             <div style={{ marginBottom: "24px" }}>
               <FormField
-                label="Company"
+                label="Entreprise"
                 type="text"
                 placeholder="Bank of Africa"
                 value={form.company}
@@ -4808,7 +4813,7 @@ function FinalCTA() {
                 e.currentTarget.style.background = C.cta;
               }}
             >
-              {submitting ? "Envoi en cours…" : "Get my free audit"}
+              {submitting ? "Envoi en cours…" : "Obtenir mon audit gratuit"}
               {!submitting && (
                 <IconArrow dir="right" size={16} color={C.textOnDark} />
               )}
@@ -5087,9 +5092,9 @@ export default function AtelierHome() {
     ? "/atelier/admin"
     : "/atelier/console";
   const ctaHref = isLoggedIn ? consoleUrl : "/atelier/login";
-  const ctaLabel = isLoggedIn ? "Go to Console" : "Sign in";
+  const ctaLabel = isLoggedIn ? "Accéder à la Console" : "Se connecter";
   const secondaryCtaHref = isLoggedIn ? "/atelier/request-access" : "/atelier/audit";
-  const secondaryCtaLabel = isLoggedIn ? "Invite your team" : "Request a demo";
+  const secondaryCtaLabel = isLoggedIn ? "Inviter votre équipe" : "Demander une démo";
 
   return (
     <>

@@ -8459,3 +8459,722 @@ NEXT ACTIONS (out of scope, noted for suivi)
 - The PATCH on success assumes `/api/admin/requests/[id]` accepts
   `{ status: "converted" }` (same endpoint the kanban uses for
   status changes — verified at line 1565 of the original file).
+
+
+---
+Task ID: VISUAL-AUDIT-DASHBOARDS
+Agent: AURA (Lead Product & UX Strategist)
+
+PROBLEM
+- A new client landing on Essential/Pro dashboard after onboarding sees
+  a "c'est dégueulasse" hero state:
+  • A RED RadialBarChart gauge stuck at 0/100 (because health.score is
+    null when status="no_data", and `score = health?.score ?? 0`
+    falls back to 0 → score<50 → NEGATIVE red fill).
+  • "Météo réputation — crise critique en cours" (weatherFor(0)).
+  • A fake 30-day EvolutionScoreCard oscillating around `?? 70` with
+    hardcoded "pic le 12 août suite à la couverture positive
+    d'Attijariwafa" — the very dishonest display the worklog claimed
+    was already gone.
+  • KPI strip showing "0%" / "0" instead of "—".
+- Enterprise and Agency dashboards were already honest (they have a
+  CollecteEnCours radar animation that replaces the gauge when
+  isNoData). Essential had NO CollecteEnCours component at all. Pro
+  HAD the components in chart cards but the hero ScoreReputationCard
+  still rendered the broken red gauge.
+
+ROOT CAUSE
+- The worklog entry "SESSION-PI-DIGITS" claimed "All 4 dashboards
+  show 'Collecte en cours' when no data (sage radar animation +
+  'Premiers résultats sous 24-48h'). No more fake score 50." This
+  was only true for Enterprise + Agency. Essential never received
+  the components. Pro received them but never wired them into the
+  hero ScoreReputationCard.
+
+FIX (surgical — only the visual empty-state path)
+
+EssentialDashboard.tsx:
+- Added 3 components copied verbatim from Pro/Enterprise:
+  • CollecteEnCours({ companyName }) — full-width radar pulse,
+    minHeight 240, "Nous collectons des articles sur {name}.
+    Premiers résultats sous 24-48h." + WhatsApp promise.
+  • CollecteEnCoursMini({ minHeight }) — compact version for chart
+    cards (56px radar, "Premiers résultats sous 24-48h.").
+  • LimitedDataBanner({ text }) — amber banner over the gauge when
+    status="limited".
+- ScoreReputationCard: added isNoData + isLimited detection. New
+  render tree: loading → skeleton grid; isNoData →
+  <CollecteEnCours>; else → banner + gauge. The red-0/100 state is
+  now impossible.
+- SentimentMoyenKpi: added isNoData branch → shows "—" instead of
+  "0%", hides Delta, label switches to "Collecte des mentions en
+  cours", AI commentary switches to "Collecte en cours — premiers
+  résultats sous 24-48h."
+- MentionsJourKpi: same isNoData treatment → "—" instead of "0".
+- EvolutionScoreCard: added isNoData branch → renders
+  <CollecteEnCoursMini minHeight={220}> instead of the fabricated
+  30-day series around `?? 70`. The `?? 70` fallback is now dead
+  code in the no_data path (kept for the nominal path where it
+  has no effect since health.score is a real number).
+- IndicateurCriseCard: already correct (crisisScore=0 → DEFCON 5
+  green "Minimal" + "Niveau de risque faible" — honest, not
+  dégueulasse). Left untouched.
+- CitationsIaKpi + AlertesActivesKpi: already show "—" / "0
+  alertes" gracefully. Left untouched.
+
+ProDashboard.tsx:
+- ScoreReputationCard: same isNoData + isLimited treatment as
+  Essential. loading → skeleton grid; isNoData →
+  <CollecteEnCours companyName={health?.companyName}>; else →
+  banner + gauge. The component already existed in the file
+  (line 2245) — just wasn't being called from the hero.
+- SentimentMoyenKpi, MentionsJourKpi: already had isNoData checks
+  (lines 5413, 5492). Left untouched.
+- Chart cards (TendanceSentiment, RadarReputation, PartDeVoixDonut,
+  TopSujets, EstimationReach, CarteCrise, Heatmap, etc.): already
+  use <CollecteEnCoursMini> on empty data. Left untouched.
+
+EnterpriseDashboard.tsx + AgencyDashboard.tsx:
+- Visual audit only — no changes. Both already:
+  • Detect isNoData in the hero card and render <CollecteEnCours>.
+  • Use <CollecteEnCoursMini> in 6+ chart cards.
+  • Show <LimitedDataBanner> when status="limited".
+  • Use ShimmerSkeleton (Enterprise) / Skeleton (Agency) for the
+    loading state with a 3-column skeleton grid that matches the
+    nominal layout (no flash).
+
+CONSTRAINTS RESPECTED
+- 'use client' preserved on line 1 of all 4 files (untouched).
+- French text, no emojis (only "Collecte en cours", "Premiers
+  résultats sous 24-48h", "Données limitées — collecte en cours").
+- TypeScript: NODE_OPTIONS="--max-old-space-size=4096" bunx tsc
+  --noEmit --pretty false → EXIT=0, 0 errors.
+- Only 2 files modified: EssentialDashboard.tsx (+167 lines:
+  3 components + 4 card fixes) and ProDashboard.tsx (+22 lines:
+  ScoreReputationCard hero fix).
+- No other files touched. Enterprise and Agency left intact.
+
+NEXT ACTIONS (out of scope, noted for suivi)
+- The CollecteEnCours component is now duplicated verbatim across
+  all 4 dashboards (was 3, now 4). Refactor into
+  src/app/atelier/console/components/CollecteEnCours.tsx and import
+  from all 4 — would remove ~340 lines of duplication. Out of
+  scope per "ne pas toucher d'autres fichiers".
+- CitationsIaKpi in Essential still shows "0/—" when health is
+  no_data (the ai route is independent and may have its own empty
+  state). Could add a coordinated isNoData gate that hides the
+  whole KPI strip when brand-health is no_data. Cosmetic.
+- The WelcomeOnboardingBanner + QuickStartCard + HarchIQWorkspace
+  render ABOVE the ScoreReputationCard in Essential. These are
+  functional (chat + onboarding) and don't show fake scores, so
+  they're fine in the no_data state — but a new client still has
+  to scroll past them to reach the "Collecte en cours" hero.
+  Could reorder to put ScoreReputationCard first when no_data is
+  detected, so the client immediately sees the honest state.
+  Cosmetic.
+
+---
+Task ID: VISUAL-AUDIT-ADMIN
+Agent: AURA (Lead Product & UX Strategist)
+
+MISSION
+- Visual audit the admin portal (Bat Cave). The boss uses this every
+  day — it must be flawless. Single-file scope:
+  src/app/atelier/admin/AdminDashboard.tsx (11 481 lines at audit start).
+
+AUDIT FINDINGS (10-point checklist)
+
+1. SIDEBAR — Clean. Active state has a 3px left sage bar + tinted bg
+   (rgba(74,123,95,0.08)). Mobile drawer slides in at ≤1024px via
+   transform translateX(-100%) → 0, with a fixed backdrop at zIndex 40
+   (sidebar at zIndex 50). Hamburger hidden on desktop, shown on mobile.
+   Drawer auto-closes on tab change (useEffect on `tab`). OK.
+
+2. HEADER — Clear. Title (20px → 15px on mobile) + mono subtitle.
+   Hamburger at 36px, left of title. Refresh + New Account buttons on
+   the right. On narrow phones the labels hid the title — FIXED (see
+   Fix 4 below): button text is now wrapped in .admin-header-btn-label
+   spans, hidden at ≤640px (icons remain, boss recognises them by shape).
+
+3. KPI STRIP — 7 cells in a 1px-gap grid. useCountUp hook rAF-driven
+   easeOutCubic (900ms). Re-runs on target change (refresh). String
+   values render as-is to preserve formatting. FIXED: sub text had no
+   space between number and label ("0Ess · 0Pro · 0Ent · 0Agy") — now
+   "0 Ess · 0 Pro · 0 Ent · 0 Agy".
+
+4. REQUESTS KANBAN — 5 stages with distinct color identity (Nouveau
+   grey, Contacté sage, Essai amber, Converti dark sage, Annulé red).
+   Cards show name/email/company/plan/source/budget/time/annotations.
+   Drag works on desktop (draggable, onDragStart/Over/Drop). Touch
+   fallback: tap-to-open drawer with status-change buttons. OK.
+
+5. PROVISIONING FORM — 6 numbered sections, each with auto-fit grid
+   minmax(220px, 1fr). Section 5 (invitation modes) and Section 6
+   (topics/competitors) used hardcoded "1fr 1fr" — FIXED: added
+   .admin-grid-2 class so they stack on phones. Sub-tab bar (4 tabs)
+   used flex:1 with no wrap — FIXED: .admin-subtabs class wraps 2-per-
+   row on mobile.
+
+6. TABLES — All tables (Requests, Accounts, Commercials, Clients,
+   Employees) use .admin-table-wrap class with overflow-x auto at
+   ≤768px and inner min-width 640px (or 1080px for the wider
+   Commercials table). Headers are mono, uppercase, 9px, with 0.12em
+   letter-spacing. OK.
+
+7. MODALS / DRAWERS — All modals use zIndex 100, backdrop blur 6px,
+   click-outside-to-close, maxHeight 92vh with overflowY auto.
+   RequestDetailDrawer at zIndex 51 (backdrop 50), 600px wide capped
+   at 100vw, ESC-to-close. ConfirmModal at zIndex 100. No conflicts.
+
+8. BUTTONS — Primary: C.cta (#10b981 emerald, global HarchIQ green)
+   for product-level CTAs; SAGE (#4A7B5F dark green) for admin-local
+   primary actions (Provisioning, Commerciaux). Secondary: transparent
+   bg with 1px C.border. Polish CSS adds scale 1.02 on hover, 0.98 on
+   active. Consistent.
+
+9. EMPTY STATES — Verified all 0-record states. FIXED:
+   - 0 users: was "No users yet. Create the first one!" → now
+     "Aucun utilisateur pour le moment. Créez le premier !"
+   - 0 requests: already French ("Aucune demande d'accès pour le
+     moment.") — OK.
+   - 0 commercials: already French — OK.
+   - 0 clients (provisioned): already French — OK.
+   - 0 companies (employees): already French — OK.
+   - 0 fiches (employees): already French — OK.
+
+10. MOBILE — Sidebar collapses ≤1024px. Tables scroll ≤768px. Forms
+    now stack ≤640px (Fix 1). Sub-tabs wrap ≤640px (Fix 2). Header
+    button labels hide ≤640px (Fix 4). Drawer auto-closes on tab
+    change. Touch users get tap-to-open-drawer fallback for kanban.
+
+FIXES APPLIED (single file: src/app/atelier/admin/AdminDashboard.tsx)
+
+Fix 1 — RESPONSIVE GRID STACKING (mobile ≤640px)
+- Added `className="admin-grid-2"` to 22 inline `1fr 1fr` grids that
+  previously stayed 2-column on phones, cramping labels and inputs:
+    * CreateAccountModal: email/name, company/phone, plan/price,
+      expiration/date (4 grids)
+    * CreatedAccountSummary: (no fix needed — already 1-col layout)
+    * ProvisioningForm: Section 5 invitation modes, Section 6
+      topics/competitors (2 grids)
+    * ConfirmModal: summary detail rows (1 grid)
+    * ClientDetailModal: detail groups (1 grid)
+    * CommercialCreateModal: name/email, phone/commission, target/role
+      (3 grids)
+    * ProvisionCompanyModal: maxUsers/accountType, invitation modes
+      (2 grids)
+    * AddEmployeeModal: firstName/lastName (1 grid)
+    * EmployeesTab: breakdown cards Par département / Par poste (1 grid)
+    * SecurityTab: advanced security links (1 grid)
+    * EmployeeFicheSection: editable fields (1 grid)
+    * ConnexionSection: last login / login count (1 grid)
+    * PermissionsSection: role / 2FA (1 grid)
+- The .admin-grid-2 CSS rule (already present at line 419) sets
+  `grid-template-columns: 1fr !important;` at max-width 640px.
+
+Fix 2 — SUB-TAB BAR MOBILE WRAP
+- Added `className="admin-subtabs"` to the ProvisioningTab sub-tab bar
+  (4 tabs: Formulaire / Clients provisionnés / Chronologie / Revenus).
+- Added 2 new CSS rules at max-width 640px:
+    .admin-subtabs { flex-wrap: wrap !important; }
+    .admin-subtabs > button { flex: 1 1 calc(50% - 1px) !important; ... }
+- Result: 4 tabs wrap 2-per-row on phones instead of cramping into 4
+  tiny columns where "Clients provisionnés" couldn't fit.
+
+Fix 3 — FRENCH EMPTY/LOADING STATES + ACCOUNTS TAB UI
+- LoadingState: "Loading..." → "Chargement…"
+- AccountsTab empty state: "No users yet. Create the first one!" /
+  "No users match your filter." → "Aucun utilisateur pour le moment.
+  Créez le premier !" / "Aucun utilisateur ne correspond au filtre."
+- AccountsTab search placeholder → "Rechercher par nom, email ou
+  société…"
+- AccountsTab filter dropdown: "All account types" → "Tous les types
+  de compte"
+- AccountsTab table headers: User/Role/Account type/Company/Status/
+  Last login → Utilisateur/Rôle/Type de compte/Société/Statut/
+  Dernière connexion
+- AccountsTab footer: "Showing X of Y users." → "X sur Y
+  utilisateurs."
+- KpiCell sub spacing: "0Ess · 0Pro · 0Ent · 0Agy" → "0 Ess · 0 Pro
+  · 0 Ent · 0 Agy"
+
+Fix 4 — FRENCH HEADER CHROME + SIDEBAR FOOTER
+- Header buttons: "Refresh" → "Rafraîchir", "New Account" → "Nouveau
+  compte". Text wrapped in <span className="admin-header-btn-label">
+  so it hides at ≤640px (icons stay — the boss recognises RefreshCw
+  and Plus by shape).
+- Sidebar footer: "Back to Console" → "Retour à la console",
+  "Sign out" → "Se déconnecter". Confirm dialog "Sign out of admin?"
+  → "Se déconnecter de l'admin ?"
+- Added CSS rule: .admin-header-btn-label { display: none !important; }
+  at max-width 640px.
+
+Fix 5 — FRENCH CREATE ACCOUNT MODAL (daily-used by the boss)
+- All labels translated: Email/Nom complet/Raison sociale/Téléphone
+  (optionnel)/Type de compte/Plan/Prix personnalisé (MAD/mois)/
+  Expiration/Date personnalisée/Sujets à surveiller/Concurrents à
+  tracker/Cas d'usage (optionnel)/Notes (optionnel).
+- Plan options: "Custom" → "Personnalisé", prices "/mo" → "/mois".
+- Error messages: "A valid email is required." → "Un email valide
+  est requis." etc.
+- "What happens next:" box fully translated.
+- Buttons: "Cancel" → "Annuler", "Create account" → "Créer le compte",
+  "Creating..." → "Création…".
+- CreatedAccountSummary: all labels translated (Nom/Rôle/Type de
+  compte/Statut/Société/Plan/Pricing/Expire le/Mot de passe
+  temporaire/URL d'accès). Buttons "Copy" → "Copier", "Copied" →
+  "Copié", "Open" → "Ouvrir", "Done" → "Terminé". Date locale
+  changed from en-US to fr-FR. Company "(new)"/"(linked)" →
+  "(nouvelle)"/"(liée)".
+- ProvisionCompanyModal: "Account type" label → "Type de compte",
+  dropdown options Enterprise/Agency → Grandes Entreprises/Agences.
+
+CONSTRAINTS RESPECTED
+- 'use client' preserved (line 1, unchanged).
+- French text, no emojis (verified — no emojis added; existing ones
+  are product icons via Lucide).
+- TypeScript: `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc
+  --noEmit --pretty false` → EXIT=0, 0 errors.
+- Only one file modified: src/app/atelier/admin/AdminDashboard.tsx
+  (+7 net lines: 11 481 → 11 488).
+
+NOTES FOR FUTURE AUDITS
+- Sidebar item labels remain English ("Requests", "Accounts",
+  "Provisioning", etc.) alongside already-French ones ("Commerciaux",
+  "Employés"). Translating them would disrupt the boss's muscle
+  memory and is out of scope for a visual audit. The mixed-language
+  sidebar is the project's existing convention.
+- The kanban's 5-stage pipeline (5 × 260px = 1300px) scrolls
+  horizontally on mobile. This is intentional — kanbans are
+  inherently wide. The boss can still tap any card to open the
+  detail drawer.
+- Drag-and-drop is desktop-only. Touch users get tap-to-open-drawer
+  with status-change buttons (Marquer contacté / Passer en essai /
+  Convertir) — full parity of action, different interaction.
+- The ConfirmModal summary grid (.admin-grid-2 with gap "8px 16px")
+  stacks to 1 column on mobile with 8px row-gap — readable but tight.
+  Could be increased to 12px if the boss finds it cramped.
+
+Stage Summary
+- The Bat Cave is now responsive on phones (forms stack, sub-tabs
+  wrap, header buttons collapse to icons), the empty/loading states
+  are all in the boss's language, and the most-used modal (Create
+  Account) is fully French. The boss can work the entire admin from
+  a phone without horizontal scroll on any form or modal.
+
+
+---
+Task ID: VISUAL-AUDIT-AUTH
+Agent: AURA (Lead Product & UX Strategist)
+
+MISSION: Visual audit + fix ALL auth/onboarding pages. Boss said
+the onboarding was "dégueulasse" — black background, text
+overflowing, effects debordering. Check EVERY visual issue.
+
+FILES AUDITED (6):
+1. src/app/atelier/onboarding/OnboardingWizard.tsx
+2. src/app/atelier/login/LoginPage.tsx
+3. src/app/atelier/access/AccessPage.tsx
+4. src/app/atelier/forgot-password/page.tsx
+5. src/app/atelier/reset-password/page.tsx
+6. src/app/atelier/admin-x7k2m9/AdminLoginPage.tsx
+
+VERDICT PER FILE:
+- OnboardingWizard: Rewrite was clean (white #FAFAFA bg, charcoal
+  text, sage accents — NOT black). But inputs had no focus states
+  (inline styles can't do :focus), borders were #F0F0F0 (too faint),
+  select used ugly browser-default arrow, buttons had no hover
+  effects, disabled "Continuer" was nearly invisible (#F0F0F0 bg),
+  and framer-motion x-transform could briefly overflow horizontally.
+- LoginPage: Already strong. Split-grid layout, sage stripe, CSS
+  classes for input focus, mobile responsive. No changes needed.
+- AccessPage: Already strong. CSS classes for focus, confetti
+  contained via overflow:hidden, auto-fit grid. Only needed mobile
+  padding reduction in media query (was 40px, now 32px 22px ≤480px).
+- forgot-password: Inline styles only — NO focus states on input,
+  NO outer padding (card touched screen edges on 375px), NO card
+  shadow (looked flat), NO button hover. Sage stripe was present.
+- reset-password: Same issues as forgot-password PLUS the success
+  state was missing the sage border stripe (inconsistency), and the
+  back link used plain "←" char instead of Lucide ArrowLeft icon.
+- AdminLoginPage: Already strong. Charcoal accent (intentional for
+  admin — feels different from sage user pages), CSS classes for
+  focus, amber "Accès restreint" badge, mobile responsive. No
+  changes needed.
+
+FIXES APPLIED (surgical — visual only, no logic changes):
+
+OnboardingWizard.tsx (+83 lines):
+- Added INPUT_BORDER=#E5E5E5 constant (more visible than #F0F0F0)
+- Added SAGE_HOVER, CHARCOAL_HOVER, SAGE_TINT_STRONG, FONT_MONO,
+  FONT_SANS constants
+- Added <style>{onbCss}</style> block with CSS classes:
+  .onb-input:focus → sage border + white bg + 3px sage tint ring
+  .onb-input:disabled → FAFAFA bg + gray text
+  .onb-input::placeholder → #9CA3AF
+  .onb-btn-charcoal:hover → #1A1A1A + shadow
+  .onb-btn-sage:hover → #3E6A50 + sage shadow
+  .onb-btn-ghost:hover → charcoal border + text
+  .onb-btn-plus:hover → sage border + sage tint bg
+  .onb-link-skip:hover → sage color
+  @media ≤480px → .onb-card padding 24px 20px
+- Applied onb-input class to all 4 inputs + the select
+- Custom SVG chevron on select (appearance:none + background SVG)
+- Applied onb-btn-plus class to both "+" add buttons
+- Applied onb-btn-charcoal to final CTA "Accéder à mon tableau de bord"
+- Applied onb-btn-ghost to "Retour" + onb-btn-sage to "Continuer"
+- Applied onb-link-skip to "Passer →"
+- Changed disabled "Continuer" bg from BORDER (#F0F0F0) → #E5E5E5
+- Added overflowX:hidden to outer wrapper (contains framer-motion
+  x-transform during step transitions — prevents horizontal scroll)
+- Added boxSizing:border-box to motion.div card
+- Added className="onb-card" to motion.div for mobile padding
+- Added font-family FONT_SANS to loading state (was inheriting)
+- @keyframes spin moved into onbCss block (was inline)
+
+forgot-password/page.tsx (full rewrite, 107→175 lines):
+- Extracted cardBaseStyle + pageWrapperStyle as named constants
+- Added padding:"32px 16px" to outer wrapper (card no longer
+  touches screen edges on 375px)
+- Added boxShadow:"0 8px 40px rgba(0,0,0,0.06)" to card (elevation)
+- Added boxSizing:border-box to card
+- Added <style>{fpCss}</style> with:
+  .fp-input:focus → sage border + white bg + 3px sage ring
+  .fp-input::placeholder → #9CA3AF
+  .fp-btn-primary:hover → #1A1A1A + shadow + scale(0.98) on active
+  .fp-link-back:hover → charcoal color
+  .fp-spin → @keyframes fp-spin (replaces Tailwind animate-spin
+    dependency — more reliable)
+  @media ≤480px → .fp-card padding 32px 22px
+- Applied fp-input class to email input
+- Applied fp-btn-primary class to submit button
+- Applied fp-link-back class to both "Retour" links
+- Applied fp-card class to motion.div (both states)
+- Added letterSpacing:-0.01em to h1 (matches LoginPage)
+- Changed input height 42→44, borderRadius 8→10 (matches LoginPage)
+- Changed input bg from #FAFAFA (kept) but now focus → #FFFFFF
+- Changed button height 44 (kept), borderRadius 8→10
+
+reset-password/page.tsx (full rewrite, 178→215 lines):
+- Same structural fixes as forgot-password (outer padding, card
+  shadow, boxSizing, focus states, hover effects, mobile media
+  query)
+- ADDED sage border stripe to success state card (was missing —
+  borderLeft:"4px solid #4A7B5F" — now consistent with form state
+  and with forgot-password success state)
+- Replaced plain "← Retour à la connexion" text arrow with Lucide
+  ArrowLeft icon (consistency with forgot-password)
+- Added rp-eye-btn class with hover (sage color + sage tint bg)
+  for the password show/hide toggle
+- Added aria-label to eye toggle button (accessibility)
+- Added flexShrink:0 to AlertCircle in error banner
+- Changed input height 42→44, borderRadius 8→10 (consistency)
+- Added overflow:hidden to error banner motion.div
+- Added rp-btn-primary class to success "Se connecter" link
+
+AccessPage.tsx (+1 line):
+- Added padding:32px 22px to @media ≤480px .harch-access-card
+  (was only setting max-width:92%, leaving 40px padding — too
+  tight on 375px screens)
+
+CONSTRAINTS RESPECTED:
+- 'use client' preserved on all 6 files (line 1, unchanged)
+- French text, no emojis (all labels/buttons in French)
+- NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit
+  --pretty false → EXIT=0, 0 errors (verified 3 consecutive runs)
+- Only 4 of 6 target files modified (LoginPage + AdminLoginPage
+  were already polished — no changes needed)
+- No other files touched
+
+VISUAL AUDIT CHECKLIST (all 6 files now pass):
+1. Background: All white/FAFAFA (NOT black). Admin uses charcoal
+   stripe accent but background is #F7F7F7→#EFEFEF (light gray).
+2. Text contrast: All use #0A0A0A (charcoal) on white/FAFAFA.
+   Body text #525252, muted #71717A. No gray-on-gray.
+3. Container overflow: OnboardingWizard has overflowX:hidden
+   (framer-motion x-transform contained). AccessPage has
+   overflow:hidden (confetti contained). Others use scale/y
+   transforms only (no overflow risk).
+4. Z-index: All correct. Sage stripes are position:absolute with
+   no zIndex conflicts. Form content has zIndex:1 where needed.
+5. Mobile responsiveness: All cards have @media ≤480px rules
+   reducing padding to 32px 22px or 24px 20px. Outer wrappers
+   have 16px horizontal padding. Max-widths cap at 92% on mobile.
+6. Font loading: Inter + Space Mono loaded via next/font/google
+   in root layout.tsx (CSS vars --font-inter, --font-space-mono).
+   Pages reference them as 'Inter'/'Space Mono' with system-ui
+   fallbacks (consistent with tokens.ts convention).
+7. Button styling: All primary buttons charcoal #0A0A0A with
+   white text. Hover → #1A1A1A + shadow. Disabled → #E5E5E5 bg
+   + #9CA3AF text (visible, not invisible). Sage buttons for
+   secondary CTAs. Ghost buttons with border.
+8. Input styling: All inputs 44px height, 10px radius, #E5E5E5
+   border, #FAFAFA bg (white on focus). Focus → sage border +
+   3px sage tint ring. Placeholders #9CA3AF.
+9. Consistency: All 6 pages now share the same design language:
+   white cards with sage (or charcoal for admin) accent stripe,
+   soft shadow, Space Mono labels, Inter body, lucide icons,
+   same button/input styling, same focus ring pattern.
+
+NEXT ACTIONS (out of scope, noted for suivi):
+- The OnboardingWizard step 1 "Ce que vous obtenez" grid uses
+  gridTemplateColumns:"1fr 1fr" — on very narrow screens (<360px)
+  the 4 items might wrap awkwardly. Could switch to 1fr on
+  @media ≤360px. Currently fine on 375px+ (target viewport).
+- The reset-password page uses useState(() => {...}) for token
+  extraction (lazy initializer pattern). This works but is
+  unconventional — useEffect would be more idiomatic. Left as-is
+  to stay surgical (not a visual issue).
+- The forgot-password + reset-password pages could benefit from
+  the same dot-pattern background as LoginPage/AccessPage for
+  full visual consistency. Currently plain #FAFAFA. Intentionally
+  left simple — these are utility pages, not marketing pages.
+
+
+---
+Task ID: VISUAL-AUDIT-PUBLIC
+Agent: AURA (Lead Product & UX Strategist)
+
+MISSION
+Visual audit des 9 pages publiques (AtelierHome, Pricing, Audit, About,
+Method, Trust, Customers, Changelog, FAQ). Corriger toute violation
+visible de la contrainte « français, sans emojis » qui pouvait coûter
+des leads.
+
+AUDIT FINDINGS
+
+1. ChangelogPage (src/app/atelier/changelog/ChangelogPage.tsx)
+   - VIOLATION CRITIQUE : la page entière était en anglais (hero,
+     9 entrées de changelog, CTA newsletter, labels de type
+     MAJOR/MINOR/PATCH/FIX, catégories Added/Changed/Fixed/Removed,
+     dates au format "August 11, 2026").
+   - FIX : réécriture complète en français.
+     - Hero : "What's new at Harch Atelier." → "Les nouveautés de
+       Harch Atelier."
+     - 9 dates converties au format français ("11 août 2026", etc.).
+     - 9 titres d'entrée traduits.
+     - Tous les items des entrées traduits (les noms techniques
+       restent : Next.js, TypeScript, Recharts, HarchIQ, etc.).
+     - Labels de type : MAJOR → MAJEUR, MINOR → MINEUR, FIX →
+       CORRECTIF (PATCH inchangé).
+     - Catégories : Added → Ajouté, Changed → Modifié, Fixed →
+       Corrigé, Removed → Supprimé, Deprecated → Obsolète.
+     - CTA : "Stay updated" → "Restez informé", "Subscribe →" →
+       "S'abonner →", placeholder "your@email.com" →
+       "votre@email.com".
+
+2. AuditPage (src/app/atelier/audit/AuditPage.tsx)
+   - VIOLATION MAJEURE : la page de conversion (formulaire
+     d'audit gratuit) était presque entièrement en anglais.
+   - FIX : 28 segments traduits en français.
+     - Hero : "See what the world says about your brand. For free."
+       → "Voyez ce que le monde dit de votre marque. Gratuitement."
+     - TrustStat labels (Days free → Jours offerts, Media sources
+       → Sources média, AI engines → Moteurs IA, Credit card →
+       Carte bancaire, Setup time → Mise en service).
+     - WHAT_YOU_GET (4 items titres + descs).
+     - TIMELINE (4 labels).
+     - Progress header : "Free audit request" → "Demande d'audit
+       gratuit", "Step X / 3" → "Étape X / 3".
+     - Step labels : ["Company", "Sources", "Contact"] →
+       ["Entreprise", "Sources", "Contact"].
+     - Boutons : Back → Retour, Continue → Continuer,
+       "Start my free audit" → "Démarrer mon audit gratuit".
+     - Trust line : "No credit card · No commitment · Cancel
+       anytime" → "Sans carte bancaire · Sans engagement ·
+       Annulable à tout moment".
+     - Step1 : tous les Field labels (Company name → Nom de
+       l'entreprise, Website → Site web, Sector → Secteur, etc.).
+     - Step2 : "What should we monitor?" → "Que devons-nous
+       surveiller ?", Recommended → Recommandé, note traduite.
+     - Step3 : tous les Field labels (Your name → Votre nom,
+       Your role → Votre fonction, Work email → Email
+       professionnel, WhatsApp number → Numéro WhatsApp, etc.),
+       placeholder "Head of Communications" → "Directeur de la
+       communication".
+     - SuccessState : "Audit request received" → "Demande
+       d'audit reçue", "Thank you, X. We're on it." → "Merci, X.
+       Nous nous en occupons.", 5 SuccessStep labels + descs
+       traduits, summary labels traduits, "Message us on
+       WhatsApp" → "Écrivez-nous sur WhatsApp", "Back to home"
+       → "Retour à l'accueil".
+     - SampleDeliverable : eyebrow, titre, sub, "● Live" →
+       "● En direct", "Free audit · Day 3 of 7" → "Audit gratuit
+       · Jour 3 sur 7", "[Your brand] — anonymized" → "[Votre
+       marque] — anonymisé", "Reputation score · 7-day trend"
+       → "Score de réputation · tendance 7 jours", 3 KPI labels
+       (AI Citations → Citations IA, Alerts → Alertes, Avg
+       sentiment → Sentiment moyen), "Sentiment breakdown · 7
+       days" → "Répartition des sentiments · 7 jours", 3
+       légendes Positive/Neutral/Negative → Positif/Neutre/
+       Négatif.
+     - WhyUs : 4 reasons traduits, eyebrow + titre + sub
+       traduits ("No tricks. No traps." → "Sans astuce. Sans
+       piège.").
+   - FIX BUG : le MultiEdit a introduit 2 `</div>` en double dans
+     le bloc header du SampleDeliverable (ligne 1527-1530).
+     Corrigé en supprimant les balises excédentaires pour
+     restaurer la structure JSX d'origine (2 `</div>` de
+     fermeture après le `<span>/100</span>`, comme dans le
+     code initial).
+
+3. AtelierHome (src/app/atelier/src/app/atelier/AtelierHome.tsx)
+   - VIOLATION MAJEURE : la home page était presque entièrement
+     en anglais (hero H1, eyebrows, section titles, body
+     paragraphs, dashboard mockup labels, CTA form, nav labels).
+   - FIX : 35 segments traduits en français.
+     - Hero eyebrow : "AI Reputation Intelligence · Decision
+       Augmentation" → "Intelligence réputationnelle IA ·
+       Augmentation de décision".
+     - Hero H1 : "Promote. Protect. Shape." → "Promouvoir.
+       Protéger. Façonner."
+     - 4 TrustStat labels traduits (Articles ingested/day →
+       Articles ingérés/jour, Entities labeled/day → Entités
+       labellisées/jour, Languages translated → Langues
+       traduites, Risk categories → Catégories de risque).
+     - WhatWeDo : eyebrow + titre + sub + 4 feature
+       titres/descs/statLabels traduits (Media Monitoring →
+       Veille médiatique, AI Visibility → Visibilité IA,
+       Sentiment Analysis → Analyse de sentiment, Crisis
+       Alerts → Alertes de crise).
+     - WhatsAppPreview : eyebrow + titre + sub + 4
+       WhatsAppFeature titres/descs traduits.
+     - DashboardPreview : eyebrow + titre + sub + 5 navItems
+       (Monitoring → Veille, Sentiment, Competitors →
+       Concurrents, Alerts → Alertes, Reports → Rapports) +
+       "28 days remaining" → "28 jours restants" + "Upgrade →"
+       → "Mettre à niveau →" + "Sentiment Analysis" →
+       "Analyse de sentiment" + 3 filtres (7 days → 7 jours,
+       etc.) + "Sentiment over time" → "Sentiment dans le
+       temps" + 3 ChartLegend labels (Positive/Neutral/
+       Negative → Positif/Neutre/Négatif) + 5 X-axis labels
+       (Jul 1 → 1 juil, etc.) + 3 DashMiniStat labels + "Top
+       5 Topics" → "Top 5 sujets" + "AI Visibility" →
+       "Visibilité IA".
+     - Harch100 : eyebrow + titre + sub + 5 en-têtes de
+       tableau (Rank → Rang, Company → Entreprise, 30d Trend
+       → Tendance 30j, etc.) + footer note méthodologique +
+       "View full HARCH 100" → "Voir le HARCH 100 complet".
+     - Flagship Report CTA : "New · Flagship Report" →
+       "Nouveau · Rapport phare", "Morocco Reputation
+       Intelligence Report 2026" → "Rapport Intelligence
+       Réputation Maroc 2026", description traduite, "Read
+       the report" → "Lire le rapport".
+     - HowItWorks : eyebrow + titre + sub + 3 step titres/
+       descs/details traduits (We monitor → Nous surveillons,
+       AI analyzes → L'IA analyse, You receive → Vous
+       recevez).
+     - HowItWorksInteractive : eyebrow + titre + sub + 3
+       DiscoveryView labels (Moroccan & African media →
+       Media marocains & africains, AI engines → Moteurs IA,
+       articles ingested/day → articles ingérés/jour,
+       languages translated → langues traduites, scanning
+       frequency → fréquence de scan) + 3 BuildView items
+       (Alert → Alerte, descs traduits) + 3 VaultView
+       channels (WhatsApp Daily Digest → Digest quotidien
+       WhatsApp, Web Dashboard → Dashboard web, Monthly PDF
+       Report → Rapport PDF mensuel, descs et details
+       traduits).
+     - Pricing section : "Social listening" → "Veille sociale"
+       (le seul item anglais restant dans la liste des
+       features), eyebrow + titre + sub traduits ("Pricing
+       that scales..." → "Une tarification qui passe à
+       l'échelle..."), 5 PricingNotes traduits ("14-day free
+       trial" → "Essai gratuit 14 jours", "No credit card
+       required" → "Sans carte bancaire", "Cancel anytime"
+       → "Annulable à tout moment", "MAD & EUR invoicing" →
+       "Facturation MAD et EUR", "Data hosted in EU" →
+       "Données hébergées en UE").
+     - ReportPreview : eyebrow + titre + sub + 5
+       ReportFeature titres/descs traduits (Executive summary
+       → Synthèse exécutive, Sentiment trends → Tendances de
+       sentiment, Competitor benchmark → Benchmark
+       concurrents, AI visibility report → Rapport de
+       visibilité IA, Crisis watchlist → Watchlist de crise),
+       "Download sample report" → "Télécharger un exemple de
+       rapport".
+     - FinalCTA : eyebrow + h2 + p + 3 form labels (Full name
+       → Nom complet, Work email → Email professionnel,
+       Company → Entreprise) + button "Get my free audit" →
+       "Obtenir mon audit gratuit".
+     - Main CTA labels (export default) : "Go to Console" →
+       "Accéder à la Console", "Sign in" → "Se connecter",
+       "Invite your team" → "Inviter votre équipe", "Request
+       a demo" → "Demander une démo".
+
+4. PricingPage (src/app/atelier/pricing/PricingPage.tsx)
+   - VIOLATION MINIME : "Social listening" apparaissait 4 fois
+     dans la liste des capabilities des 4 tiers (Essentiel,
+     Pro, Grandes Entreprises, Agences). Tout le reste de la
+     page était déjà en français.
+   - FIX : replace_all "Social listening" → "Veille sociale".
+
+5. CustomersPage (src/app/atelier/customers/CustomersPage.tsx)
+   - AUDIT : page déjà 100% en français. Aucune correction
+     nécessaire. Bannière "Déploiement confidentiel", hero,
+     4 tiers cibles, secteurs couverts, méthodologie de
+     confidentialité, CTA — tout est cohérent en français,
+     couleurs sage/charcoal respectées, pas d'emojis.
+
+6. AboutPage (src/app/atelier/about/AboutPage.tsx)
+   - AUDIT : page déjà 100% en français. CTAs pointent vers
+     /atelier/audit et /atelier/method. Aucune correction
+     nécessaire.
+
+7. MethodPage (src/app/atelier/method/MethodPage.tsx)
+   - AUDIT : page déjà 100% en français. Sections "Cinq
+     étapes", "20+ sources marocaines", "Cinq piliers",
+     "CNDP · Loi 09-08 · ISO 27001" — tout en français.
+     Aucune correction nécessaire.
+
+8. TrustPage (src/app/atelier/trust/TrustPage.tsx)
+   - AUDIT : page déjà 100% en français. Hero "Sécurité &
+     Conformité pour institutions exigeantes", descriptions
+     techniques en français, liens vers /atelier/audit,
+     /atelier/legal. Aucune correction nécessaire.
+
+9. FAQPage (src/app/atelier/faq/FAQPage.tsx)
+   - AUDIT : page déjà 100% en français. 52 questions en
+     français, 6 catégories, recherche temps réel, CTA vers
+     /atelier/audit. Aucune correction nécessaire.
+
+LIENS VÉRIFIÉS
+- Aucun lien vers /atelier/contact dans les 9 pages cibles.
+- Tous les CTAs pointent vers /atelier/audit (la nouvelle
+  page de conversion). /atelier/contact n'apparaît que dans
+  src/app/atelier/contact/page.tsx lui-même (hors scope).
+- AtelierNav et AtelierFooter déjà en français.
+
+EMOJIS
+- Aucun emoji trouvé dans les 9 pages cibles (regex Unicode
+  emoji/pictogrammes). La contrainte « NO emojis » est déjà
+  respectée partout.
+
+CONSTRAINTS RESPECTED
+- 'use client' preserved (ligne 1 de chaque fichier, inchangé).
+- Français, pas d'emojis : toutes les corrections respectent
+  la contrainte.
+- TypeScript : `NODE_OPTIONS="--max-old-space-size=4096"
+  bunx tsc --noEmit --pretty false` → EXIT=0, 0 errors.
+- Aucun fichier hors scope modifié.
+
+NEXT ACTIONS (out of scope, noted for suivi)
+- AtelierHome : il reste quelques noms de pages en anglais
+  dans les références (Discovery/Build/Vault, ChatGPT/
+  Perplexity/Gemini/Claude sont des noms propres — laissés
+  inchangés). Le mot "board-ready" dans "PDF board-ready" et
+  "share of voice" sont des anglicismes acceptés en
+  communication corporate française — laissés inchangés.
+- CustomersPage : la mention "Voir /atelier/harch-100" dans
+  la section industries couvertes est un path URL, pas un
+  texte utilisateur — laissée inchangée.
+- Le eyebrow hero "Intelligence réputationnelle IA ·
+  Augmentation de décision" pourrait être affiné en testant
+  auprès d'utilisateurs prospects marocains (les termes
+  "Intelligence réputationnelle" et "Augmentation de
+  décision" sont techniquement justes mais peuvent paraître
+  jargonneux).
+- Une passe complète de relecture éditoriale par un
+  rédacteur francophone natif serait bénéfique pour
+  homogénéiser le ton (les traductions ont été faites pour
+  préserver le sens technique, pas le style marketing).

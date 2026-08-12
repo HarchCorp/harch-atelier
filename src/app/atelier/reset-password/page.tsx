@@ -2,9 +2,100 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
-// Minimal reset password page — sage accent, same design system
+// ═══════════════════════════════════════════════════════════════
+//  RESET PASSWORD — Nouveau mot de passe
+//
+//  URL: /atelier/reset-password?token=XXX
+//
+//  Design system: White #FFFFFF · Sage #4A7B5F · Charcoal #0A0A0A
+//  Typography: Space Mono (labels) · Inter (body)
+//  Visual: sage accent stripe on left edge, soft shadow, focus ring.
+//  Consistent with forgot-password + LoginPage + AccessPage.
+// ═══════════════════════════════════════════════════════════════
+
+const SAGE = "#4A7B5F";
+const SAGE_TINT_STRONG = "rgba(74,123,95,0.12)";
+const CHARCOAL = "#0A0A0A";
+const CHARCOAL_HOVER = "#1A1A1A";
+const WHITE = "#FFFFFF";
+const FONT_MONO = "'Space Mono', ui-monospace, monospace";
+const FONT_SANS = "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+
+const rpCss = `
+  @keyframes rp-spin { to { transform: rotate(360deg); } }
+
+  .rp-input {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  }
+  .rp-input::placeholder {
+    color: #9CA3AF;
+  }
+  .rp-input:focus {
+    border-color: ${SAGE} !important;
+    background: ${WHITE} !important;
+    box-shadow: 0 0 0 3px ${SAGE_TINT_STRONG} !important;
+  }
+
+  .rp-btn-primary:not(:disabled):hover {
+    background: ${CHARCOAL_HOVER} !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.14) !important;
+  }
+  .rp-btn-primary:not(:disabled):active {
+    transform: scale(0.98) !important;
+  }
+  .rp-btn-primary:disabled {
+    cursor: not-allowed !important;
+  }
+
+  .rp-eye-btn {
+    transition: color 180ms ease, background 180ms ease;
+  }
+  .rp-eye-btn:hover {
+    color: ${SAGE};
+    background: ${SAGE_TINT_STRONG};
+  }
+
+  .rp-link-back {
+    transition: color 180ms ease;
+  }
+  .rp-link-back:hover {
+    color: ${CHARCOAL} !important;
+  }
+
+  .rp-spin {
+    animation: rp-spin 1s linear infinite;
+  }
+
+  @media (max-width: 480px) {
+    .rp-card {
+      padding: 32px 22px !important;
+    }
+  }
+`;
+
+const cardBaseStyle = {
+  maxWidth: 400,
+  width: "100%",
+  padding: 40,
+  background: WHITE,
+  border: "1px solid #F0F0F0",
+  borderRadius: 12,
+  borderLeft: `4px solid ${SAGE}`,
+  boxShadow: "0 8px 40px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0,0,0,0.04)",
+  boxSizing: "border-box" as const,
+};
+
+const pageWrapperStyle = {
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#FAFAFA",
+  fontFamily: FONT_SANS,
+  padding: "32px 16px",
+};
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState("");
@@ -59,12 +150,14 @@ export default function ResetPasswordPage() {
 
   if (status === "success") {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FAFAFA", fontFamily: "Inter, system-ui, sans-serif" }}>
+      <div style={pageWrapperStyle}>
+        <style>{rpCss}</style>
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, type: "spring", stiffness: 200 }}
-          style={{ maxWidth: 400, width: "100%", padding: 40, background: "#FFFFFF", border: "1px solid #F0F0F0", borderRadius: 12, textAlign: "center" }}
+          style={{ ...cardBaseStyle, textAlign: "center" }}
+          className="rp-card"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -72,13 +165,13 @@ export default function ResetPasswordPage() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             style={{ width: 64, height: 64, margin: "0 auto 24px", background: "rgba(74,123,95,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            <CheckCircle2 size={32} color="#4A7B5F" />
+            <CheckCircle2 size={32} color={SAGE} />
           </motion.div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0A0A0A", margin: "0 0 8px" }}>Mot de passe réinitialisé</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: CHARCOAL, margin: "0 0 8px", letterSpacing: "-0.01em" }}>Mot de passe réinitialisé</h1>
           <p style={{ fontSize: 14, color: "#525252", marginBottom: 24, lineHeight: 1.6 }}>
             Votre mot de passe a été modifié. Vous pouvez vous connecter.
           </p>
-          <a href="/atelier/login" style={{ display: "inline-block", padding: "12px 24px", background: "#0A0A0A", color: "#FFFFFF", fontSize: 14, fontWeight: 600, textDecoration: "none", borderRadius: 8 }}>
+          <a href="/atelier/login" className="rp-btn-primary" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 24px", background: CHARCOAL, color: WHITE, fontSize: 14, fontWeight: 600, textDecoration: "none", borderRadius: 10, fontFamily: "inherit", transition: "background 180ms ease, box-shadow 180ms ease, transform 180ms ease" }}>
             Se connecter →
           </a>
         </motion.div>
@@ -87,14 +180,16 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FAFAFA", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={pageWrapperStyle}>
+      <style>{rpCss}</style>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        style={{ maxWidth: 400, width: "100%", padding: 40, background: "#FFFFFF", border: "1px solid #F0F0F0", borderRadius: 12, borderLeft: "4px solid #4A7B5F" }}
+        style={cardBaseStyle}
+        className="rp-card"
       >
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0A0A0A", margin: "0 0 8px" }}>Nouveau mot de passe</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: CHARCOAL, margin: "0 0 8px", letterSpacing: "-0.01em" }}>Nouveau mot de passe</h1>
         <p style={{ fontSize: 14, color: "#525252", marginBottom: 24, lineHeight: 1.5 }}>
           Choisissez un nouveau mot de passe pour votre compte.
         </p>
@@ -105,16 +200,16 @@ export default function ResetPasswordPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, fontSize: 13, color: "#EF4444", display: "flex", gap: 8, alignItems: "center" }}
+              style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, fontSize: 13, color: "#EF4444", display: "flex", gap: 8, alignItems: "center", overflow: "hidden" }}
             >
-              <AlertCircle size={14} />
-              {error}
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span>{error}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#9CA3AF", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#71717A", fontFamily: FONT_MONO, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
             Nouveau mot de passe *
           </label>
           <div style={{ position: "relative" }}>
@@ -123,11 +218,15 @@ export default function ResetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Minimum 8 caractères"
-              style={{ width: "100%", height: 42, border: "1px solid #E5E5E5", borderRadius: 8, padding: "0 40px 0 14px", fontSize: 14, background: "#FAFAFA", color: "#0A0A0A", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+              className="rp-input"
+              style={{ width: "100%", height: 44, border: "1px solid #E5E5E5", borderRadius: 10, padding: "0 44px 0 14px", fontSize: 14, background: "#FAFAFA", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
             />
             <button
+              type="button"
               onClick={() => setShowPassword(!showPassword)}
-              style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#71717A" }}
+              aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              className="rp-eye-btn"
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", padding: 6, cursor: "pointer", color: "#71717A", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -135,7 +234,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#9CA3AF", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#71717A", fontFamily: FONT_MONO, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
             Confirmer *
           </label>
           <input
@@ -143,10 +242,11 @@ export default function ResetPasswordPage() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Retapez votre mot de passe"
-            style={{ width: "100%", height: 42, border: "1px solid #E5E5E5", borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FAFAFA", color: "#0A0A0A", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+            className="rp-input"
+            style={{ width: "100%", height: 44, border: "1px solid #E5E5E5", borderRadius: 10, padding: "0 14px", fontSize: 14, background: "#FAFAFA", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
           />
           {confirm.length > 0 && (
-            <p style={{ fontSize: 11, marginTop: 4, color: passwordsMatch ? "#4A7B5F" : "#EF4444" }}>
+            <p style={{ fontSize: 11, marginTop: 6, color: passwordsMatch ? SAGE : "#EF4444", display: "flex", alignItems: "center", gap: 4 }}>
               {passwordsMatch ? "✓ Mots de passe identiques" : "✗ Ne correspondent pas"}
             </p>
           )}
@@ -155,11 +255,12 @@ export default function ResetPasswordPage() {
         <button
           onClick={handleSubmit}
           disabled={!passwordsMatch || status === "loading"}
-          style={{ width: "100%", height: 44, background: passwordsMatch ? "#0A0A0A" : "#E5E5E5", color: passwordsMatch ? "#FFFFFF" : "#9CA3AF", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: passwordsMatch ? "pointer" : "not-allowed", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          className="rp-btn-primary"
+          style={{ width: "100%", height: 44, background: passwordsMatch ? CHARCOAL : "#E5E5E5", color: passwordsMatch ? WHITE : "#9CA3AF", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: passwordsMatch ? "pointer" : "not-allowed", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 180ms ease, box-shadow 180ms ease, transform 180ms ease" }}
         >
           {status === "loading" ? (
             <>
-              <Loader2 size={16} className="animate-spin" />
+              <Loader2 size={16} className="rp-spin" />
               Réinitialisation...
             </>
           ) : (
@@ -168,8 +269,8 @@ export default function ResetPasswordPage() {
         </button>
 
         <div style={{ marginTop: 16, textAlign: "center" }}>
-          <a href="/atelier/login" style={{ fontSize: 13, color: "#71717A", textDecoration: "none" }}>
-            ← Retour à la connexion
+          <a href="/atelier/login" className="rp-link-back" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#71717A", textDecoration: "none" }}>
+            <ArrowLeft size={14} /> Retour à la connexion
           </a>
         </div>
       </motion.div>

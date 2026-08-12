@@ -5183,6 +5183,9 @@ function ChatMessageView({
 // ════════════════════════════════════════════════════════════════════
 
 function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; loading: boolean }) {
+  // HONEST-EMPTY-STATES — détection des trois états (no_data / limited / nominal).
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
+  const isLimited = !!health && health.status === "limited" && health.score !== null;
   const score = health?.score ?? 0;
   const trend = health?.trend ?? 0;
   const { label: weather, Icon: WeatherIcon } = weatherFor(score);
@@ -5194,6 +5197,7 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
   // AI commentary — built from real data signals, data-driven + actionable
   const aiCommentary = useMemo(() => {
     if (!health) return "En attente des données de réputation…";
+    if (isNoData) return "Aucun article collecté pour le moment — la veille démarre à présent.";
     const dir = trend > 0 ? "amélioré" : trend < 0 ? "dégradé" : "stabilisé";
     const parts: string[] = [`Votre score s'est ${dir} de ${Math.abs(trend)} points cette semaine`];
     if (health.sentiment.positive >= 50) {
@@ -5208,7 +5212,7 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
       parts.push(` Visibilité IA : ${citedCount}/${health.aiVisibility.length} moteurs vous citent.`);
     }
     return parts.join("");
-  }, [health, trend]);
+  }, [health, trend, isNoData]);
 
   return (
     <motion.div id="score" {...cardMotion}>
@@ -5247,6 +5251,29 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          // HONEST-EMPTY-STATES — pendant le chargement on garde l'existant
+          // (grille de skeletons) pour ne pas introduire de flash visuel.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="lg:col-span-3 flex justify-center">
+              <Skeleton className="h-[200px] w-[200px] rounded-full" />
+            </div>
+            <div className="lg:col-span-5 space-y-3">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+            <div className="lg:col-span-4">
+              <Skeleton className="h-40 w-full" />
+            </div>
+          </div>
+        ) : isNoData ? (
+          // HONEST-EMPTY-STATES — état no_data : on remplace le gauge par
+          // l'illustration radar + message « Collecte en cours ».
+          <CollecteEnCours companyName={health?.companyName} />
+        ) : (
+          <>
+        {isLimited && <LimitedDataBanner text={health?.warning} />}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           <div className="lg:col-span-3 flex justify-center">
             <div style={{ position: "relative", width: 200, height: 200 }}>
@@ -5372,6 +5399,8 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
             <MiniStat label="Négatif" value={health ? `${health.sentiment.negative}%` : "—"} dotColor={NEGATIVE} />
           </div>
         </div>
+          </>
+        )}
       </CardShell>
     </motion.div>
   );

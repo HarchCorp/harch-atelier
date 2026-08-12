@@ -419,6 +419,13 @@ const ADMIN_POLISH_CSS = `
   .admin-grid-2 { grid-template-columns: 1fr !important; }
   .admin-grid-3 { grid-template-columns: 1fr !important; }
   .admin-grid-4 { grid-template-columns: 1fr !important; }
+  /* Sub-tab bar (Provisioning) — wrap 2-per-row so labels stay readable
+     instead of cramping into 4 tiny columns on narrow phones. */
+  .admin-subtabs { flex-wrap: wrap !important; }
+  .admin-subtabs > button { flex: 1 1 calc(50% - 1px) !important; font-size: 11px !important; }
+  /* Header chrome — hide button text labels under 480px so the icons
+     alone fit next to the title; the boss recognises them by shape. */
+  .admin-header-btn-label { display: none !important; }
 }
 `;
 
@@ -674,11 +681,11 @@ export function AdminDashboard() {
             }}
           >
             <ArrowUpRight size={14} />
-            Back to Console
+            Retour à la console
           </a>
           <button
             onClick={() => {
-              if (confirm("Sign out of admin?")) window.location.href = "/api/auth/signout";
+              if (confirm("Se déconnecter de l'admin ?")) window.location.href = "/api/auth/signout";
             }}
             style={{
               width: "100%",
@@ -695,7 +702,7 @@ export function AdminDashboard() {
               textTransform: "uppercase",
             }}
           >
-            Sign out
+            Se déconnecter
           </button>
         </div>
       </aside>
@@ -787,7 +794,7 @@ export function AdminDashboard() {
               }}
             >
               <RefreshCw size={13} />
-              Refresh
+              <span className="admin-header-btn-label">Rafraîchir</span>
             </button>
             <button
               onClick={() => openCreateModal()}
@@ -808,7 +815,7 @@ export function AdminDashboard() {
               }}
             >
               <Plus size={14} strokeWidth={2.5} />
-              New Account
+              <span className="admin-header-btn-label">Nouveau compte</span>
             </button>
           </div>
         </header>
@@ -824,7 +831,7 @@ export function AdminDashboard() {
               borderBottom: `1px solid ${C.border}`,
             }}
           >
-            <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users["essential"]}Ess · ${stats.users["pro"]}Pro · ${stats.users["enterprise"]}Ent · ${stats.users["agency"]}Agy`} />
+            <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users["essential"]} Ess · ${stats.users["pro"]} Pro · ${stats.users["enterprise"]} Ent · ${stats.users["agency"]} Agy`} />
             <KpiCell label="Pending requests" value={pendingRequests.length} color={pendingRequests.length > 0 ? C.warning : undefined} />
             <KpiCell label="Interested" value={interestedRequests.length} color={interestedRequests.length > 0 ? C.cta : undefined} />
             <KpiCell label="Converted" value={convertedRequests.length} color={convertedRequests.length > 0 ? C.cta : undefined} />
@@ -3559,7 +3566,7 @@ function AccountsTab({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search users by name, email, or company..."
+            placeholder="Rechercher par nom, email ou société…"
             style={{ ...inputStyle, paddingLeft: "32px" }}
           />
         </div>
@@ -3568,7 +3575,7 @@ function AccountsTab({
           onChange={(e) => setFilterType(e.target.value)}
           style={{ ...monoInputStyle, minWidth: "180px", cursor: "pointer" }}
         >
-          <option value="all">All account types</option>
+          <option value="all">Tous les types de compte</option>
           <option value="essential">Essentiel</option>
           <option value="pro">Pro</option>
           <option value="enterprise">Grandes Entreprises</option>
@@ -3577,7 +3584,7 @@ function AccountsTab({
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState text={users.length === 0 ? "No users yet. Create the first one!" : "No users match your filter."} />
+        <EmptyState text={users.length === 0 ? "Aucun utilisateur pour le moment. Créez le premier !" : "Aucun utilisateur ne correspond au filtre."} />
       ) : (
         <div className="admin-table-wrap" style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
           <div
@@ -3594,12 +3601,12 @@ function AccountsTab({
               fontWeight: 700,
             }}
           >
-            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>User</div>
-            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Role</div>
-            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Account type</div>
-            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Company</div>
-            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Status</div>
-            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Last login</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Utilisateur</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Rôle</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Type de compte</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Société</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Statut</div>
+            <div style={{ background: C.bgSubtle, padding: "10px 16px" }}>Dernière connexion</div>
           </div>
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             {filtered.map((u) => (
@@ -3617,7 +3624,7 @@ function AccountsTab({
           fontFamily: C.fontMono,
         }}
       >
-        Showing {filtered.length} of {users.length} users.
+        {filtered.length} sur {users.length} utilisateurs.
       </div>
     </div>
   );
@@ -4435,15 +4442,15 @@ function CreateAccountModal({
   const handleCreate = async () => {
     setError(null);
     if (!email.trim() || !email.includes("@")) {
-      setError("A valid email is required.");
+      setError("Un email valide est requis.");
       return;
     }
     if (!name.trim()) {
-      setError("A name is required.");
+      setError("Un nom est requis.");
       return;
     }
     if (!companyName.trim()) {
-      setError("A company name is required.");
+      setError("Une raison sociale est requise.");
       return;
     }
 
@@ -4451,7 +4458,7 @@ function CreateAccountModal({
     let expirationDate: string | null = null;
     if (expirationPreset === "custom") {
       if (!customDate) {
-        setError("Pick a custom expiration date.");
+        setError("Veuillez choisir une date d'expiration personnalisée.");
         return;
       }
       expirationDate = customDate;
@@ -4489,10 +4496,10 @@ function CreateAccountModal({
         setCreated(d as CreatedAccount);
         onCreated();
       } else {
-        setError(d.error || "Failed to create account");
+        setError(d.error || "Échec de la création du compte");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : "Erreur réseau");
     }
     setCreating(false);
   };
@@ -4545,10 +4552,10 @@ function CreateAccountModal({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
                 <div style={{ ...labelStyle, marginBottom: "4px" }}>
-                  {seed ? "Review & create account" : "New account"}
+                  {seed ? "Revoir & créer le compte" : "Nouveau compte"}
                 </div>
                 <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.01em" }}>
-                  {seed ? "From WhatsApp extraction" : "Create account with custom pricing"}
+                  {seed ? "Depuis l'extraction WhatsApp" : "Créer un compte avec pricing custom"}
                 </h2>
               </div>
               <button
@@ -4566,30 +4573,30 @@ function CreateAccountModal({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={labelStyle}>Email *</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@company.com" style={inputStyle} />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="utilisateur@société.com" style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Full name *</label>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" style={inputStyle} />
+                  <label style={labelStyle}>Nom complet *</label>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Salim El Amrani" style={inputStyle} />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={labelStyle}>Company name *</label>
+                  <label style={labelStyle}>Raison sociale *</label>
                   <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Bank of Africa" style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Phone (optional)</label>
+                  <label style={labelStyle}>Téléphone (optionnel)</label>
                   <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+212 6 12 34 56 78" style={inputStyle} />
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>Account type *</label>
+                <label style={labelStyle}>Type de compte *</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "8px" }}>
                   {[
                     { value: "essential", label: "Essentiel", desc: "Petites équipes com/marketing" },
@@ -4617,34 +4624,34 @@ function CreateAccountModal({
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={labelStyle}>Plan tier *</label>
+                  <label style={labelStyle}>Plan *</label>
                   <select
                     value={planTier}
                     onChange={(e) => setPlanTier(e.target.value as typeof planTier)}
                     style={{ ...inputStyle, cursor: "pointer" }}
                   >
-                    <option value="essential">Essentiel (~15K MAD/mo)</option>
-                    <option value="pro">Pro (~40K MAD/mo)</option>
-                    <option value="enterprise">Grandes Entreprises (~75K MAD/mo)</option>
-                    <option value="agency">Agences (~150K MAD/mo)</option>
-                    <option value="custom">Custom</option>
+                    <option value="essential">Essentiel (~15K MAD/mois)</option>
+                    <option value="pro">Pro (~40K MAD/mois)</option>
+                    <option value="enterprise">Grandes Entreprises (~75K MAD/mois)</option>
+                    <option value="agency">Agences (~150K MAD/mois)</option>
+                    <option value="custom">Personnalisé</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Custom price (MAD/mo)</label>
+                  <label style={labelStyle}>Prix personnalisé (MAD/mois)</label>
                   <input
                     type="text"
                     value={customPrice}
                     onChange={(e) => setCustomPrice(e.target.value)}
-                    placeholder="50000 — type any number"
+                    placeholder="50000 — saisir n'importe quel montant"
                     style={{ ...inputStyle, fontFamily: C.fontMono }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={labelStyle}>Expiration *</label>
                   <select
@@ -4659,30 +4666,30 @@ function CreateAccountModal({
                 </div>
                 {expirationPreset === "custom" && (
                   <div>
-                    <label style={labelStyle}>Custom date *</label>
+                    <label style={labelStyle}>Date personnalisée *</label>
                     <input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} style={inputStyle} />
                   </div>
                 )}
               </div>
 
               <div>
-                <label style={labelStyle}>Topics to monitor (comma-separated)</label>
-                <input type="text" value={topics} onChange={(e) => setTopics(e.target.value)} placeholder="brand reputation, ESG narrative, boycott risk" style={inputStyle} />
+                <label style={labelStyle}>Sujets à surveiller (séparés par virgule)</label>
+                <input type="text" value={topics} onChange={(e) => setTopics(e.target.value)} placeholder="réputation marque, narratif ESG, risque boycott" style={inputStyle} />
               </div>
 
               <div>
-                <label style={labelStyle}>Competitors to track (comma-separated)</label>
+                <label style={labelStyle}>Concurrents à tracker (séparés par virgule)</label>
                 <input type="text" value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder="Attijariwafa, Bank of Africa" style={inputStyle} />
               </div>
 
               <div>
-                <label style={labelStyle}>Use case (optional)</label>
-                <textarea value={useCase} onChange={(e) => setUseCase(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="What the prospect wants to achieve..." />
+                <label style={labelStyle}>Cas d'usage (optionnel)</label>
+                <textarea value={useCase} onChange={(e) => setUseCase(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="Ce que le prospect veut accomplir…" />
               </div>
 
               <div>
-                <label style={labelStyle}>Notes (optional)</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="Decision-makers, timeline, constraints..." />
+                <label style={labelStyle}>Notes (optionnel)</label>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="Décideurs, timeline, contraintes…" />
               </div>
 
               {error && (
@@ -4692,9 +4699,9 @@ function CreateAccountModal({
               )}
 
               <div style={{ padding: "12px 14px", background: C.bgSubtle, borderRadius: "5px", fontSize: "11px", color: C.textBody, lineHeight: 1.5 }}>
-                <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase" }}>What happens next:</strong>
+                <strong style={{ color: C.text, fontFamily: C.fontMono, fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Ce qui se passe ensuite :</strong>
                 {" "}
-                A User row (status=invited), Company (dedup by ICE/slug/name), CompanySettings (pricing encoded in alertThresholds), and Invitation are created. A temporary password is generated — share it with the user along with the access URL.
+                Un User (statut=invited), une Company (dédup par ICE/slug/nom), des CompanySettings (pricing encodé dans alertThresholds) et une Invitation sont créés. Un mot de passe temporaire est généré — partagez-le avec l'utilisateur ainsi que l'URL d'accès.
               </div>
 
               <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "4px" }}>
@@ -4712,7 +4719,7 @@ function CreateAccountModal({
                     borderRadius: "5px",
                   }}
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <button
                   onClick={handleCreate}
@@ -4734,7 +4741,7 @@ function CreateAccountModal({
                   }}
                 >
                   {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} strokeWidth={2.5} />}
-                  {creating ? "Creating..." : "Create account"}
+                  {creating ? "Création…" : "Créer le compte"}
                 </button>
               </div>
             </div>
@@ -4774,7 +4781,7 @@ function CreatedAccountSummary({
           <Check size={18} color={C.cta} strokeWidth={2.5} />
         </div>
         <div>
-          <div style={{ ...labelStyle, marginBottom: "2px" }}>Account created</div>
+          <div style={{ ...labelStyle, marginBottom: "2px" }}>Compte créé</div>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.01em" }}>
             {account.user.email}
           </h2>
@@ -4783,29 +4790,29 @@ function CreatedAccountSummary({
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <SummaryRow label="User ID" value={account.user.id} mono onCopy={() => onCopy(account.user.id, "userId")} copied={copiedField === "userId"} />
-        <SummaryRow label="Name" value={account.user.name || "—"} />
-        <SummaryRow label="Role" value={account.user.role} />
-        <SummaryRow label="Account type" value={account.user.accountType} />
-        <SummaryRow label="Status" value={account.user.status} highlight={account.user.status === "invited"} />
-        <SummaryRow label="Company" value={`${account.company.name} ${account.company.created ? "(new)" : "(linked)"}`} />
+        <SummaryRow label="Nom" value={account.user.name || "—"} />
+        <SummaryRow label="Rôle" value={account.user.role} />
+        <SummaryRow label="Type de compte" value={account.user.accountType} />
+        <SummaryRow label="Statut" value={account.user.status} highlight={account.user.status === "invited"} />
+        <SummaryRow label="Société" value={`${account.company.name} ${account.company.created ? "(nouvelle)" : "(liée)"}`} />
         <SummaryRow
-          label="Plan tier"
+          label="Plan"
           value={account.pricing.planTier}
         />
         {account.pricing.customPriceMAD != null && (
           <SummaryRow
             label="Pricing"
-            value={`${account.pricing.customPriceMAD.toLocaleString()} MAD/mo`}
+            value={`${account.pricing.customPriceMAD.toLocaleString()} MAD/mois`}
             mono
             highlight
           />
         )}
         <SummaryRow
-          label="Expires"
-          value={new Date(account.invitation.expiresAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          label="Expire le"
+          value={new Date(account.invitation.expiresAt).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" })}
         />
         <SummaryRow
-          label="Temporary password"
+          label="Mot de passe temporaire"
           value={account.user.temporaryPassword}
           mono
           highlight
@@ -4813,7 +4820,7 @@ function CreatedAccountSummary({
           copied={copiedField === "pw"}
         />
         <div>
-          <label style={labelStyle}>Access URL</label>
+          <label style={labelStyle}>URL d'accès</label>
           <div style={{ display: "flex", gap: "8px" }}>
             <input
               readOnly
@@ -4846,7 +4853,7 @@ function CreatedAccountSummary({
               }}
             >
               {copiedField === "url" ? <Check size={13} /> : <Copy size={13} />}
-              {copiedField === "url" ? "Copied" : "Copy"}
+              {copiedField === "url" ? "Copié" : "Copier"}
             </button>
             <a
               href={account.invitation.url}
@@ -4867,7 +4874,7 @@ function CreatedAccountSummary({
               }}
             >
               <ExternalLink size={13} />
-              Open
+              Ouvrir
             </a>
           </div>
         </div>
@@ -4887,7 +4894,7 @@ function CreatedAccountSummary({
             cursor: "pointer",
           }}
         >
-          Done
+          Terminé
         </button>
       </div>
     </div>
@@ -4957,7 +4964,7 @@ function LoadingState() {
   return (
     <div style={{ padding: "60px 32px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "12px" }}>
       <Loader2 size={20} className="animate-spin" style={{ margin: "0 auto 12px", color: C.accent }} />
-      <div>Loading...</div>
+      <div>Chargement…</div>
     </div>
   );
 }
@@ -5238,7 +5245,7 @@ function SecurityTab({ users, loading, onRefresh }: {
       </div>
 
       {/* Links to advanced security pages */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
         <a href="/atelier/super-admin/audit-logs" style={{ display: "block", padding: "16px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", textDecoration: "none", color: "inherit", boxShadow: C.shadowSm }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <ScrollText size={16} color="#10b981" />
@@ -7228,7 +7235,7 @@ function CommercialCreateModal({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div>
               <label style={labelStyle}>Nom complet *</label>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Salim Bennani" style={inputStyle} />
@@ -7238,7 +7245,7 @@ function CommercialCreateModal({
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="s.bennani@harchcorp.com" style={inputStyle} />
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div>
               <label style={labelStyle}>Téléphone *</label>
               <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+212 6 11 22 33 44" style={inputStyle} />
@@ -7248,7 +7255,7 @@ function CommercialCreateModal({
               <input type="text" value={territory} onChange={(e) => setTerritory(e.target.value)} placeholder="Casablanca · Rabat" style={inputStyle} />
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div>
               <label style={labelStyle}>Taux commission (%)</label>
               <input type="text" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} style={{ ...inputStyle, fontFamily: C.fontMono }} />
@@ -7724,7 +7731,7 @@ function ProvisioningTab({
   return (
     <div>
       {/* Sub-tab bar */}
-      <div style={{ display: "flex", gap: "1px", background: C.border, border: `1px solid ${C.border}`, borderRadius: "8px 8px 0 0", overflow: "hidden", marginBottom: 0 }}>
+      <div className="admin-subtabs" style={{ display: "flex", gap: "1px", background: C.border, border: `1px solid ${C.border}`, borderRadius: "8px 8px 0 0", overflow: "hidden", marginBottom: 0 }}>
         {SUB_TABS.map((t) => {
           const disabled = t.restricted && !isFinancial;
           const active = sub === t.id;
@@ -8292,7 +8299,7 @@ function ProvisioningForm({
           </Field>
         </div>
         <Field label="Mode d'invitation">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <button
               onClick={() => set("invitationMode", "boss-invite")}
               style={{
@@ -8336,7 +8343,7 @@ function ProvisioningForm({
       {/* Section 6 — Configuration */}
       <div style={{ marginBottom: "28px" }}>
         {sectionTitle(6, "Configuration", <Target size={14} />)}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+        <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
           <Field label="Sujets à surveiller (séparés par virgule)">
             <input style={inputStyle} value={form.topics} onChange={(e) => set("topics", e.target.value)} placeholder="réputation marque, narratif ESG, risque boycott" />
           </Field>
@@ -8473,7 +8480,7 @@ function ConfirmModal({
         <p style={{ fontSize: "13px", color: C.textBody, lineHeight: 1.55, margin: "0 0 16px" }}>
           Vous allez créer un compte client pour <strong>{form.companyName || "—"}</strong> ({form.contactEmail || "—"}). Vérifiez les détails ci-dessous :
         </p>
-        <div style={{ background: C.bgSubtle, borderRadius: "6px", padding: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: "12px", marginBottom: "20px" }}>
+        <div className="admin-grid-2" style={{ background: C.bgSubtle, borderRadius: "6px", padding: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: "12px", marginBottom: "20px" }}>
           <ConfirmRow label="Plan" value={form.accountType} />
           <ConfirmRow label="Cycle" value={form.billingCycle} />
           <ConfirmRow label="Prix effectif" value={effectivePrice != null ? `${effectivePrice.toLocaleString()} MAD` : "—"} highlight />
@@ -8840,7 +8847,7 @@ function ClientDetailModal({
           </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
+        <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
           <DetailGroup title="Contact">
             <DetailRow label="Nom" value={client.contactName} />
             <DetailRow label="Email" value={client.contactEmail} mono />
@@ -9994,7 +10001,7 @@ function EmployeesTab() {
             </div>
           </div>
 
-          <div style={{
+          <div className="admin-grid-2" style={{
             display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px",
             marginBottom: "20px",
           }}>
@@ -10151,25 +10158,25 @@ function ProvisionCompanyModal({
             <label style={labelStyle}>Nom de la société *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Maroc Telecom" style={inputStyle} />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
               <label style={labelStyle}>Nombre max d'employés *</label>
               <input type="number" min={1} value={maxUsers} onChange={(e) => setMaxUsers(Math.max(1, Number(e.target.value) || 1))} style={{ ...inputStyle, fontFamily: C.fontMono }} />
             </div>
             <div>
-              <label style={labelStyle}>Account type</label>
+              <label style={labelStyle}>Type de compte</label>
               <select value={accountType} onChange={(e) => setAccountType(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                 <option value="essential">Essentiel</option>
                 <option value="pro">Pro</option>
-                <option value="enterprise">Enterprise</option>
-                <option value="agency">Agency</option>
+                <option value="enterprise">Grandes Entreprises</option>
+                <option value="agency">Agences</option>
               </select>
             </div>
           </div>
 
           <div>
             <label style={labelStyle}>Mode d'invitation *</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
               <button onClick={() => setMode("chef")} style={{
                 padding: "14px", textAlign: "left",
                 background: mode === "chef" ? SAGE_BG : "transparent",
@@ -10753,7 +10760,7 @@ function AddEmployeeModal({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div>
               <label style={labelStyle}>Prénom *</label>
               <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Salim" style={inputStyle} />
@@ -11068,7 +11075,7 @@ function FicheSection({
   onUpdate: (patch: Partial<EmployeeFiche>) => void;
 }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+    <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
       <EditableField label="Prénom" value={fiche.firstName} onChange={(v) => onUpdate({ firstName: v })} />
       <EditableField label="Nom" value={fiche.lastName} onChange={(v) => onUpdate({ lastName: v })} />
       <EditableField label="Email" value={fiche.email} onChange={(v) => onUpdate({ email: v })} mono />
@@ -11220,7 +11227,7 @@ function InvitationSection({
 function ConnexionSection({ fiche }: { fiche: EmployeeFiche }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
         <div style={{ padding: "12px 14px", background: C.bgSubtle, borderRadius: "5px" }}>
           <div style={{ ...labelStyle, marginBottom: "4px" }}>Dernière connexion</div>
           <div style={{ fontSize: "13px", color: C.text, fontFamily: C.fontMono }}>
@@ -11370,7 +11377,7 @@ function PermissionsSection({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
         <div>
           <label style={labelStyle}>Rôle système</label>
           <select

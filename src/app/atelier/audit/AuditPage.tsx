@@ -265,35 +265,35 @@ const SOURCES_OPTIONS = [
 const WHAT_YOU_GET = [
   {
     n: "01",
-    title: "7-day monitoring",
-    desc: "We run the full pipeline on your brand for 7 days. Same coverage as Corporate tier.",
+    title: "Monitoring de 7 jours",
+    desc: "Nous déployons le pipeline complet sur votre marque pendant 7 jours. Même couverture que le tier Corporate.",
     icon: "radar",
   },
   {
     n: "02",
-    title: "Live dashboard access",
-    desc: "Real-time dashboard with your reputation score, sentiment split, top topics.",
+    title: "Accès au dashboard live",
+    desc: "Dashboard en temps réel avec votre score de réputation, la répartition de sentiment, les sujets émergents.",
     icon: "chart",
   },
   {
     n: "03",
-    title: "3 WhatsApp digests",
-    desc: "Sample morning digests delivered to your WhatsApp — see exactly what you'd get.",
+    title: "3 digests WhatsApp",
+    desc: "Exemples de digests matinaux livrés sur votre WhatsApp — voyez exactement ce que vous recevrez.",
     icon: "bell",
   },
   {
     n: "04",
-    title: "Sample PDF report",
-    desc: "8-page mini report at the end of the audit — board-ready format.",
+    title: "Rapport PDF d'exemple",
+    desc: "Mini-rapport de 8 pages à la fin de l'audit — format board-ready.",
     icon: "doc",
   },
 ];
 
 const TIMELINE = [
-  { day: "Jour 1", label: "Onboarding call (30 min) + setup", color: C.sage },
-  { day: "Jour 1-7", label: "Monitoring runs on your brand", color: C.accentDark },
-  { day: "Jour 3", label: "First WhatsApp digest delivered", color: C.sage },
-  { day: "Jour 7", label: "Final PDF report + debrief call", color: C.red },
+  { day: "Jour 1", label: "Appel d'onboarding (30 min) + configuration", color: C.sage },
+  { day: "Jour 1-7", label: "Monitoring actif sur votre marque", color: C.accentDark },
+  { day: "Jour 3", label: "Premier digest WhatsApp livré", color: C.sage },
+  { day: "Jour 7", label: "Rapport PDF final + appel de debrief", color: C.red },
 ];
 
 // ─── SHARED HELPERS ────────────────────────────────────────────────────
@@ -464,7 +464,7 @@ function Hero() {
       <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
       <Reveal style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1, textAlign: "center" }}>
-        <Eyebrow color={C.sage}>Free audit · 7 days</Eyebrow>
+        <Eyebrow color={C.sage}>Audit gratuit · 7 jours</Eyebrow>
         <h1
           style={{
             fontSize: "clamp(40px, 5.5vw, 64px)",
@@ -475,9 +475,9 @@ function Hero() {
             margin: "0 0 24px",
           }}
         >
-          See what the world says
+          Voyez ce que le monde dit
           <br />
-          <span style={{ color: C.sage }}>about your brand. For free.</span>
+          <span style={{ color: C.sage }}>de votre marque. Gratuitement.</span>
         </h1>
         <p
           style={{
@@ -488,9 +488,9 @@ function Hero() {
             margin: "0 auto 40px",
           }}
         >
-          7 days of full monitoring — same pipeline as our Corporate tier. You get a
-          live dashboard, three WhatsApp digests, and a sample PDF report.
-          No credit card. No commitment.
+          7 jours de monitoring complet — même pipeline que notre tier Corporate.
+          Vous obtenez un dashboard live, trois digests WhatsApp, et un rapport
+          PDF d'exemple. Sans carte bancaire. Sans engagement.
         </p>
 
         {/* Hero stats */}
@@ -504,11 +504,11 @@ function Hero() {
           }}
           stagger={0.1}
         >
-          <StaggerItem><HeroStat value="7" label="Days free" /></StaggerItem>
-          <StaggerItem><HeroStat value="30+" label="Media sources" /></StaggerItem>
-          <StaggerItem><HeroStat value="8" label="AI engines" /></StaggerItem>
-          <StaggerItem><HeroStat value="0" label="Credit card" /></StaggerItem>
-          <StaggerItem><HeroStat value="48h" label="Setup time" /></StaggerItem>
+          <StaggerItem><HeroStat value="7" label="Jours offerts" /></StaggerItem>
+          <StaggerItem><HeroStat value="30+" label="Sources média" /></StaggerItem>
+          <StaggerItem><HeroStat value="8" label="Moteurs IA" /></StaggerItem>
+          <StaggerItem><HeroStat value="0" label="Carte bancaire" /></StaggerItem>
+          <StaggerItem><HeroStat value="48h" label="Mise en service" /></StaggerItem>
         </StaggerContainer>
       </Reveal>
     </section>
@@ -660,11 +660,11 @@ function AuditFormSection() {
           {/* Left: What you get */}
           <div>
             <Reveal>
-            <Eyebrow color={C.sage}>What you get</Eyebrow>
-            <SectionTitle>Four deliverables, in 7 days.</SectionTitle>
+            <Eyebrow color={C.sage}>Ce que vous obtenez</Eyebrow>
+            <SectionTitle>Quatre livrables, en 7 jours.</SectionTitle>
             <p style={{ fontSize: "16px", color: C.textSecondary, lineHeight: 1.6, margin: "0 0 40px" }}>
-              The audit is not a sales pitch. It's the real product, running on
-              your brand, for a week. You decide at the end.
+              L'audit n'est pas un pitch commercial. C'est le vrai produit,
+              déployé sur votre marque, pendant une semaine. Vous décidez à la fin.
             </p>
             </Reveal>
 
@@ -733,7 +733,7 @@ function AuditFormSection() {
               }}
             >
               <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "16px" }}>
-                Timeline
+                Calendrier
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 {TIMELINE.map((t, i) => (
@@ -779,10 +779,10 @@ function AuditFormSection() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
                 <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                  Free audit request
+                  Demande d'audit gratuit
                 </span>
                 <span style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.sage, fontWeight: 700 }}>
-                  Step {step} / 3
+                  Étape {step} / 3
                 </span>
               </div>
               {/* Progress bar */}
@@ -802,7 +802,7 @@ function AuditFormSection() {
                 ))}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginTop: "10px" }}>
-                {["Company", "Sources", "Contact"].map((label, i) => (
+                {["Entreprise", "Sources", "Contact"].map((label, i) => (
                   <span
                     key={label}
                     style={{
@@ -880,7 +880,7 @@ function AuditFormSection() {
                     whileTap={submitting ? undefined : { scale: 0.98 }}
                     transition={{ duration: 0.15, ease: "easeOut" }}
                   >
-                    Back
+                    Retour
                   </motion.button>
                 )}
                 {step < 3 ? (
@@ -908,7 +908,7 @@ function AuditFormSection() {
                     whileTap={canProceed() ? { scale: 0.98 } : undefined}
                     transition={{ duration: 0.15, ease: "easeOut" }}
                   >
-                    Continue
+                    Continuer
                     <IconArrow size={14} color={canProceed() ? "#FFFFFF" : C.textFaint} />
                   </motion.button>
                 ) : (
@@ -936,7 +936,7 @@ function AuditFormSection() {
                     whileTap={canProceed() && !submitting ? { scale: 0.98 } : undefined}
                     transition={{ duration: 0.15, ease: "easeOut" }}
                   >
-                    {submitting ? "Envoi en cours…" : "Start my free audit"}
+                    {submitting ? "Envoi en cours…" : "Démarrer mon audit gratuit"}
                     {!submitting && (
                       <IconArrow size={14} color={canProceed() ? "#FFFFFF" : C.textFaint} />
                     )}
@@ -947,7 +947,7 @@ function AuditFormSection() {
               {/* Trust line */}
               <div style={{ marginTop: "16px", textAlign: "center", fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                 <IconCheck size={11} color={C.sage} />
-                No credit card · No commitment · Cancel anytime
+                Sans carte bancaire · Sans engagement · Annulable à tout moment
               </div>
             </div>
           </div>
@@ -963,13 +963,13 @@ function Step1({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
   return (
     <div>
       <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-        Tell us about your company
+        Parlez-nous de votre entreprise
       </h3>
       <p style={{ fontSize: "13px", color: C.textMuted, margin: "0 0 24px" }}>
-        We use this to set up your brand monitoring.
+        Nous utilisons ces informations pour configurer votre monitoring de marque.
       </p>
 
-      <Field label="Company name" required>
+      <Field label="Nom de l'entreprise" required>
         <input
           type="text"
           value={form.company}
@@ -979,7 +979,7 @@ function Step1({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
         />
       </Field>
 
-      <Field label="Website">
+      <Field label="Site web">
         <input
           type="text"
           value={form.website}
@@ -989,20 +989,20 @@ function Step1({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
         />
       </Field>
 
-      <Field label="Sector" required>
+      <Field label="Secteur" required>
         <select
           value={form.sector}
           onChange={(e) => updateForm("sector", e.target.value)}
           style={{ ...inputStyle, cursor: "pointer", appearance: "none", backgroundImage: "none" }}
         >
-          <option value="">Select your sector...</option>
+          <option value="">Sélectionnez votre secteur...</option>
           {SECTORS.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
       </Field>
 
-      <Field label="Main competitors (optional)" hint="One per line — we'll benchmark them too">
+      <Field label="Principaux concurrents (optionnel)" hint="Un par ligne — nous les benchmarkerons aussi">
         <textarea
           value={form.competitors}
           onChange={(e) => updateForm("competitors", e.target.value)}
@@ -1020,10 +1020,10 @@ function Step2({ form, toggleSource }: { form: typeof INITIAL_FORM; toggleSource
   return (
     <div>
       <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-        What should we monitor?
+        Que devons-nous surveiller ?
       </h3>
       <p style={{ fontSize: "13px", color: C.textMuted, margin: "0 0 24px" }}>
-        Pick the sources you want us to cover. You can change this later.
+        Sélectionnez les sources que nous devons couvrir. Vous pourrez modifier cela plus tard.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1081,7 +1081,7 @@ function Step2({ form, toggleSource }: { form: typeof INITIAL_FORM; toggleSource
                     fontWeight: 700,
                   }}
                 >
-                  Recommended
+                  Recommandé
                 </span>
               )}
             </button>
@@ -1090,7 +1090,7 @@ function Step2({ form, toggleSource }: { form: typeof INITIAL_FORM; toggleSource
       </div>
 
       <div style={{ marginTop: "20px", padding: "14px 16px", background: C.surfaceAlt, border: `1px solid ${C.borderLight}`, borderRadius: "6px", fontSize: "12px", color: C.textSecondary, lineHeight: 1.55 }}>
-        <strong style={{ color: C.textPrimary }}>Note:</strong> The free audit covers all selected sources for 7 days. After the audit, your tier determines how many sources remain active.
+        <strong style={{ color: C.textPrimary }}>Note :</strong> L'audit gratuit couvre toutes les sources sélectionnées pendant 7 jours. Après l'audit, votre tier détermine combien de sources restent actives.
       </div>
     </div>
   );
@@ -1102,13 +1102,13 @@ function Step3({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
   return (
     <div>
       <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-        Where do we send the results?
+        Où devons-nous envoyer les résultats ?
       </h3>
       <p style={{ fontSize: "13px", color: C.textMuted, margin: "0 0 24px" }}>
-        We'll set up your dashboard and WhatsApp digests within 48 hours.
+        Nous configurons votre dashboard et vos digests WhatsApp sous 48 heures.
       </p>
 
-      <Field label="Your name" required>
+      <Field label="Votre nom" required>
         <input
           type="text"
           value={form.name}
@@ -1118,17 +1118,17 @@ function Step3({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
         />
       </Field>
 
-      <Field label="Your role">
+      <Field label="Votre fonction">
         <input
           type="text"
           value={form.role}
           onChange={(e) => updateForm("role", e.target.value)}
-          placeholder="Head of Communications"
+          placeholder="Directeur de la communication"
           style={inputStyle}
         />
       </Field>
 
-      <Field label="Work email" required>
+      <Field label="Email professionnel" required>
         <input
           type="email"
           value={form.email}
@@ -1138,7 +1138,7 @@ function Step3({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
         />
       </Field>
 
-      <Field label="WhatsApp number" required hint="For daily digests — we won't share it">
+      <Field label="Numéro WhatsApp" required hint="Pour les digests quotidiens — nous ne le partagerons pas">
         <input
           type="tel"
           value={form.whatsapp}
@@ -1148,11 +1148,11 @@ function Step3({ form, updateForm }: { form: typeof INITIAL_FORM; updateForm: (k
         />
       </Field>
 
-      <Field label="What do you want to learn?" hint="Optional — helps us tailor the audit">
+      <Field label="Que souhaitez-vous apprendre ?" hint="Optionnel — nous aide à adapter l'audit">
         <textarea
           value={form.goals}
           onChange={(e) => updateForm("goals", e.target.value)}
-          placeholder="We want to know what media says about our new product launch..."
+          placeholder="Nous voulons savoir ce que les médias disent de notre lancement produit..."
           style={{ ...inputStyle, minHeight: "70px", resize: "vertical", fontFamily: FONT.sans }}
         />
       </Field>
@@ -1262,7 +1262,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
           <IconCheck size={36} color={C.sage} />
         </motion.div>
 
-        <Eyebrow color={C.sage}>Audit request received</Eyebrow>
+        <Eyebrow color={C.sage}>Demande d'audit reçue</Eyebrow>
         <h1
           style={{
             fontSize: "clamp(32px, 5vw, 48px)",
@@ -1273,9 +1273,9 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
             margin: "0 0 20px",
           }}
         >
-          Thank you, {form.name.split(" ")[0] || "there"}.
+          Merci, {form.name.split(" ")[0] || "à vous"}.
           <br />
-          <span style={{ color: C.sage }}>We're on it.</span>
+          <span style={{ color: C.sage }}>Nous nous en occupons.</span>
         </h1>
         <p
           style={{
@@ -1286,9 +1286,9 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
             margin: "0 auto 40px",
           }}
         >
-          We received your request to audit <strong style={{ color: C.textPrimary }}>{form.company || "your brand"}</strong>.
-          You'll get a confirmation email at <strong style={{ color: C.textPrimary }}>{form.email || "your inbox"}</strong> within
-          the next hour, and our team will reach out on WhatsApp to set up the onboarding call.
+          Nous avons bien reçu votre demande d'audit pour <strong style={{ color: C.textPrimary }}>{form.company || "votre marque"}</strong>.
+          Vous recevrez un email de confirmation à <strong style={{ color: C.textPrimary }}>{form.email || "votre boîte mail"}</strong> dans l'heure qui vient,
+          et notre équipe vous contactera sur WhatsApp pour planifier l'appel d'onboarding.
         </p>
 
         {/* What happens next */}
@@ -1304,14 +1304,14 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
           }}
         >
           <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "20px", textAlign: "center" }}>
-            What happens next
+            Ce qui se passe ensuite
           </div>
           <StaggerContainer style={{ display: "flex", flexDirection: "column", gap: "16px" }} stagger={0.1}>
-            <StaggerItem><SuccessStep n="01" label="Within 1 hour" desc="Confirmation email + WhatsApp message from our team." /></StaggerItem>
-            <StaggerItem><SuccessStep n="02" label="Within 24 hours" desc="30-min onboarding call to finalize sources and prompts." /></StaggerItem>
-            <StaggerItem><SuccessStep n="03" label="Day 1" desc="Monitoring starts. Your dashboard goes live." /></StaggerItem>
-            <StaggerItem><SuccessStep n="04" label="Day 3" desc="First WhatsApp digest delivered at 7:00." /></StaggerItem>
-            <StaggerItem><SuccessStep n="05" label="Day 7" desc="Final PDF report + 30-min debrief call." /></StaggerItem>
+            <StaggerItem><SuccessStep n="01" label="Sous 1 heure" desc="Email de confirmation + message WhatsApp de notre équipe." /></StaggerItem>
+            <StaggerItem><SuccessStep n="02" label="Sous 24 heures" desc="Appel d'onboarding de 30 min pour finaliser les sources et les prompts." /></StaggerItem>
+            <StaggerItem><SuccessStep n="03" label="Jour 1" desc="Le monitoring démarre. Votre dashboard est en ligne." /></StaggerItem>
+            <StaggerItem><SuccessStep n="04" label="Jour 3" desc="Premier digest WhatsApp livré à 7h00." /></StaggerItem>
+            <StaggerItem><SuccessStep n="05" label="Jour 7" desc="Rapport PDF final + appel de debrief de 30 min." /></StaggerItem>
           </StaggerContainer>
         </div>
 
@@ -1327,15 +1327,15 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
           }}
         >
           <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "14px" }}>
-            Your request summary
+            Récapitulatif de votre demande
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "12px" }}>
-            <SummaryItem label="Company" value={form.company || "—"} />
-            <SummaryItem label="Sector" value={form.sector || "—"} />
+            <SummaryItem label="Entreprise" value={form.company || "—"} />
+            <SummaryItem label="Secteur" value={form.sector || "—"} />
             <SummaryItem label="Contact" value={form.name || "—"} />
             <SummaryItem label="Email" value={form.email || "—"} />
             <SummaryItem label="WhatsApp" value={form.whatsapp || "—"} />
-            <SummaryItem label="Sources" value={`${form.sources.length} selected`} />
+            <SummaryItem label="Sources" value={`${form.sources.length} sélectionnées`} />
           </div>
         </div>
 
@@ -1364,7 +1364,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
             onMouseEnter={(e) => (e.currentTarget.style.background = C.sageDark)}
             onMouseLeave={(e) => (e.currentTarget.style.background = C.sage)}
           >
-            Message us on WhatsApp
+            Écrivez-nous sur WhatsApp
             <IconArrow size={14} color="#FFFFFF" />
           </motion.a>
           <motion.a
@@ -1391,7 +1391,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
             onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(74,93,110,0.06)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            Back to home
+            Retour à l'accueil
           </motion.a>
         </div>
       </Reveal>
@@ -1452,11 +1452,11 @@ function SampleDeliverable() {
     >
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Reveal>
-        <Eyebrow color={C.sage}>Sample deliverable</Eyebrow>
-        <SectionTitle>Here's what your dashboard will look like.</SectionTitle>
+        <Eyebrow color={C.sage}>Exemple de livrable</Eyebrow>
+        <SectionTitle>Voici à quoi ressemblera votre dashboard.</SectionTitle>
         <SectionSub>
-          A real example from a recent audit (anonymized). This is the live
-          dashboard you'll get access to on Day 1.
+          Un exemple réel issu d'un audit récent (anonymisé). C'est le dashboard
+          live auquel vous aurez accès dès le Jour 1.
         </SectionSub>
         </Reveal>
 
@@ -1501,7 +1501,7 @@ function SampleDeliverable() {
                 border: "1px solid rgba(74,123,95,0.2)",
               }}
             >
-              ● Live
+              ● En direct
             </span>
           </div>
 
@@ -1510,13 +1510,13 @@ function SampleDeliverable() {
             <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "20px", alignItems: "flex-start", marginBottom: "28px" }}>
               <div>
                 <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
-                  Free audit · Day 3 of 7
+                  Audit gratuit · Jour 3 sur 7
                 </div>
                 <div style={{ fontSize: "22px", fontWeight: 700, color: C.textPrimary, marginBottom: "4px" }}>
-                  [Your brand] — anonymized
+                  [Votre marque] — anonymisé
                 </div>
                 <div style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.sage }}>
-                  ↑ +6.8 pts since Day 1
+                  ↑ +6,8 pts depuis le Jour 1
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
@@ -1546,9 +1546,9 @@ function SampleDeliverable() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
                   <span style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                    Reputation score · 7-day trend
+                    Score de réputation · tendance 7 jours
                   </span>
-                  <span style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.sage, fontWeight: 700 }}>↑ +6.8 pts</span>
+                  <span style={{ fontSize: "12px", fontFamily: FONT.mono, color: C.sage, fontWeight: 700 }}>↑ +6,8 pts</span>
                 </div>
                 <svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none">
                   <defs>
@@ -1567,25 +1567,25 @@ function SampleDeliverable() {
                   ))}
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "10px", fontFamily: FONT.mono, color: C.textMuted, marginTop: "8px" }}>
-                  <span>Day 1 · 67</span>
-                  <span>Day 4 · 71</span>
-                  <span>Day 7 · 74</span>
+                  <span>Jour 1 · 67</span>
+                  <span>Jour 4 · 71</span>
+                  <span>Jour 7 · 74</span>
                 </div>
               </div>
 
               {/* Right: KPIs */}
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <SampleKpi label="Mentions" value="342" delta="+18%" color={C.sage} />
-                <SampleKpi label="AI Citations" value="9" delta="+3" color={C.accentDark} />
-                <SampleKpi label="Alerts" value="2" delta="-1" color={C.red} />
-                <SampleKpi label="Avg sentiment" value="+0.42" delta="+0.08" color={C.sage} />
+                <SampleKpi label="Citations IA" value="9" delta="+3" color={C.accentDark} />
+                <SampleKpi label="Alertes" value="2" delta="-1" color={C.red} />
+                <SampleKpi label="Sentiment moyen" value="+0,42" delta="+0,08" color={C.sage} />
               </div>
             </div>
 
             {/* Sentiment split */}
             <div style={{ marginTop: "24px" }}>
               <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "10px" }}>
-                Sentiment breakdown · 7 days
+                Répartition des sentiments · 7 jours
               </div>
               <div style={{ display: "flex", height: "14px", borderRadius: "7px", overflow: "hidden", marginBottom: "10px", background: C.borderLight }}>
                 <div style={{ width: "71%", background: C.sage }} />
@@ -1595,17 +1595,17 @@ function SampleDeliverable() {
               <div style={{ display: "flex", gap: "20px", fontSize: "12px" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span style={{ width: "8px", height: "8px", background: C.sage, borderRadius: "2px" }} />
-                  <span style={{ color: C.textSecondary }}>Positive</span>
+                  <span style={{ color: C.textSecondary }}>Positif</span>
                   <span style={{ fontFamily: FONT.mono, color: C.textPrimary, fontWeight: 700 }}>71%</span>
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span style={{ width: "8px", height: "8px", background: C.neutral, borderRadius: "2px" }} />
-                  <span style={{ color: C.textSecondary }}>Neutral</span>
+                  <span style={{ color: C.textSecondary }}>Neutre</span>
                   <span style={{ fontFamily: FONT.mono, color: C.textPrimary, fontWeight: 700 }}>20%</span>
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span style={{ width: "8px", height: "8px", background: C.red, borderRadius: "2px" }} />
-                  <span style={{ color: C.textSecondary }}>Negative</span>
+                  <span style={{ color: C.textSecondary }}>Négatif</span>
                   <span style={{ fontFamily: FONT.mono, color: C.textPrimary, fontWeight: 700 }}>9%</span>
                 </span>
               </div>
@@ -1646,10 +1646,10 @@ function SampleKpi({ label, value, delta, color }: { label: string; value: strin
 
 function WhyUs() {
   const reasons = [
-    { title: "No credit card", desc: "We don't take payment info. The audit is genuinely free." },
-    { title: "Real product, not a demo", desc: "You get the same pipeline as paying clients. No sandbox." },
-    { title: "No sales calls", desc: "One onboarding call to set up. No upsell, no follow-up drip campaign." },
-    { title: "Your data is yours", desc: "Export to CSV anytime. We don't lock you in." },
+    { title: "Sans carte bancaire", desc: "Nous ne demandons aucune information de paiement. L'audit est réellement gratuit." },
+    { title: "Le vrai produit, pas une démo", desc: "Vous bénéficiez du même pipeline que les clients payants. Pas de sandbox." },
+    { title: "Pas d'appels commerciaux", desc: "Un seul appel d'onboarding pour la configuration. Pas d'upsell, pas de campagne de relance." },
+    { title: "Vos données vous appartiennent", desc: "Export CSV à tout moment. Nous ne vous enfermons pas." },
   ];
   return (
     <section
@@ -1661,12 +1661,12 @@ function WhyUs() {
     >
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
         <Reveal>
-        <Eyebrow>Why our audit is different</Eyebrow>
-        <SectionTitle>No tricks. No traps.</SectionTitle>
+        <Eyebrow>Pourquoi notre audit est différent</Eyebrow>
+        <SectionTitle>Sans astuce. Sans piège.</SectionTitle>
         <SectionSub>
-          We've seen the SaaS playbook — free trial that requires a card,
-          demo that hides the real product, sales calls disguised as
-          "onboarding". We do the opposite.
+          Nous connaissons le playbook SaaS — essai gratuit qui exige une carte,
+          démo qui masque le vrai produit, appels commerciaux déguisés en
+          « onboarding ». Nous faisons l'inverse.
         </SectionSub>
         </Reveal>
 

@@ -7,11 +7,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Plus, X, Check, Loader2 } from "lucide-react";
 
 const SAGE = "#4A7B5F";
+const SAGE_HOVER = "#3E6A50";
 const CHARCOAL = "#0A0A0A";
+const CHARCOAL_HOVER = "#1A1A1A";
 const TEXT_BODY = "#525252";
 const TEXT_MUTED = "#71717A";
 const BORDER = "#F0F0F0";
+const INPUT_BORDER = "#E5E5E5";
+const INPUT_BORDER_FOCUS = SAGE;
+const SAGE_TINT_STRONG = "rgba(74,123,95,0.12)";
 const BG = "#FAFAFA";
+const FONT_MONO = "'Space Mono', ui-monospace, monospace";
+const FONT_SANS = "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
 
 const SECTORS = [
   { value: "banking", label: "Banque" },
@@ -95,7 +102,8 @@ export function OnboardingWizard() {
 
   if (status === "loading") {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: BG }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: BG, fontFamily: FONT_SANS }}>
+        <style>{onbCss}</style>
         <Loader2 size={24} style={{ color: SAGE, animation: "spin 1s linear infinite" }} />
       </div>
     );
@@ -129,7 +137,8 @@ export function OnboardingWizard() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: CHARCOAL, display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: FONT_SANS, color: CHARCOAL, display: "flex", flexDirection: "column", alignItems: "center", overflowX: "hidden" }}>
+      <style>{onbCss}</style>
       {/* Progress bar */}
       <div style={{ width: "100%", maxWidth: 560, padding: "24px 20px 0" }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -153,7 +162,8 @@ export function OnboardingWizard() {
           {step < 4 && (
             <button
               onClick={() => { setDirection(1); setStep(4); }}
-              style={{ background: "none", border: "none", fontSize: 11, color: TEXT_MUTED, cursor: "pointer", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: "0.06em" }}
+              className="onb-link-skip"
+              style={{ background: "none", border: "none", fontSize: 11, color: TEXT_MUTED, cursor: "pointer", fontFamily: FONT_MONO, textTransform: "uppercase", letterSpacing: "0.06em", padding: 0, transition: "color 180ms ease" }}
             >
               Passer →
             </button>
@@ -171,7 +181,8 @@ export function OnboardingWizard() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            style={{ width: "100%", background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: 32 }}
+            style={{ width: "100%", background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: 32, boxSizing: "border-box" }}
+            className="onb-card"
           >
             {/* STEP 1: Welcome */}
             {step === 1 && (
@@ -228,7 +239,8 @@ export function OnboardingWizard() {
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Ex: Chari"
-                    style={{ width: "100%", height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                    className="onb-input"
+                    style={{ width: "100%", height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                   />
                 </div>
 
@@ -239,7 +251,8 @@ export function OnboardingWizard() {
                   <select
                     value={sector}
                     onChange={(e) => setSector(e.target.value)}
-                    style={{ width: "100%", height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit", cursor: "pointer" }}
+                    className="onb-input"
+                    style={{ width: "100%", height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit", cursor: "pointer", appearance: "none", WebkitAppearance: "none", MozAppearance: "none", backgroundImage: "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", paddingRight: 36 }}
                   >
                     <option value="">Choisir...</option>
                     {SECTORS.map((s) => (
@@ -257,7 +270,8 @@ export function OnboardingWizard() {
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder="exemple.ma"
-                    style={{ width: "100%", height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                    className="onb-input"
+                    style={{ width: "100%", height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                   />
                 </div>
 
@@ -273,12 +287,14 @@ export function OnboardingWizard() {
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCompetitor(); } }}
                       placeholder="Ajouter un concurrent"
                       disabled={competitors.length >= 5}
-                      style={{ flex: 1, height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      className="onb-input"
+                      style={{ flex: 1, height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                     />
                     <button
                       onClick={addCompetitor}
                       disabled={!competitorInput.trim() || competitors.length >= 5}
-                      style={{ width: 42, height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, background: "#FFFFFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: SAGE }}
+                      className="onb-btn-plus"
+                      style={{ width: 42, height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, background: "#FFFFFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: SAGE, flexShrink: 0, transition: "border-color 180ms ease, background 180ms ease" }}
                     >
                       <Plus size={16} />
                     </button>
@@ -319,12 +335,14 @@ export function OnboardingWizard() {
                     onChange={(e) => setTopicInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTopic(); } }}
                     placeholder="Ex: boycott, frais bancaires, ESG"
-                    style={{ flex: 1, height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                    className="onb-input"
+                    style={{ flex: 1, height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, padding: "0 14px", fontSize: 14, background: "#FFFFFF", color: CHARCOAL, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                   />
                   <button
                     onClick={addTopic}
                     disabled={!topicInput.trim()}
-                    style={{ width: 42, height: 42, border: `1px solid ${BORDER}`, borderRadius: 8, background: "#FFFFFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: SAGE }}
+                    className="onb-btn-plus"
+                    style={{ width: 42, height: 42, border: `1px solid ${INPUT_BORDER}`, borderRadius: 8, background: "#FFFFFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: SAGE, flexShrink: 0, transition: "border-color 180ms ease, background 180ms ease" }}
                   >
                     <Plus size={16} />
                   </button>
@@ -422,7 +440,8 @@ export function OnboardingWizard() {
 
                     <button
                       onClick={() => router.push("/atelier/console")}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 32px", background: CHARCOAL, color: "#FFFFFF", fontSize: 15, fontWeight: 600, border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}
+                      className="onb-btn-charcoal"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 32px", background: CHARCOAL, color: "#FFFFFF", fontSize: 15, fontWeight: 600, border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", transition: "background 180ms ease, box-shadow 180ms ease, transform 180ms ease" }}
                     >
                       Accéder à mon tableau de bord
                       <ArrowRight size={16} />
@@ -441,7 +460,8 @@ export function OnboardingWizard() {
           {step > 1 ? (
             <button
               onClick={goBack}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 16px", background: "transparent", border: `1px solid ${BORDER}`, color: TEXT_BODY, fontSize: 13, fontWeight: 600, borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}
+              className="onb-btn-ghost"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 16px", background: "transparent", border: `1px solid ${INPUT_BORDER}`, color: TEXT_BODY, fontSize: 13, fontWeight: 600, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", transition: "border-color 180ms ease, color 180ms ease" }}
             >
               <ArrowLeft size={14} /> Retour
             </button>
@@ -450,14 +470,77 @@ export function OnboardingWizard() {
           <button
             onClick={goNext}
             disabled={!canProceed()}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", background: canProceed() ? SAGE : BORDER, color: canProceed() ? "#FFFFFF" : TEXT_MUTED, fontSize: 13, fontWeight: 600, border: "none", borderRadius: 8, cursor: canProceed() ? "pointer" : "not-allowed", fontFamily: "inherit" }}
+            className={canProceed() ? "onb-btn-sage" : undefined}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", background: canProceed() ? SAGE : "#E5E5E5", color: canProceed() ? "#FFFFFF" : TEXT_MUTED, fontSize: 13, fontWeight: 600, border: "none", borderRadius: 8, cursor: canProceed() ? "pointer" : "not-allowed", fontFamily: "inherit", transition: "background 180ms ease, box-shadow 180ms ease, transform 180ms ease" }}
           >
             Continuer <ArrowRight size={14} />
           </button>
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{onbCss}</style>
     </div>
   );
 }
+
+// ─── CSS (focus states + button hover) ───────────────────────────
+const onbCss = `
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .onb-input {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  }
+  .onb-input::placeholder {
+    color: #9CA3AF;
+  }
+  .onb-input:focus {
+    border-color: ${INPUT_BORDER_FOCUS} !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 0 0 3px ${SAGE_TINT_STRONG} !important;
+  }
+  .onb-input:disabled {
+    background: #FAFAFA !important;
+    color: #9CA3AF !important;
+    cursor: not-allowed;
+  }
+
+  .onb-btn-charcoal:hover {
+    background: ${CHARCOAL_HOVER} !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.14) !important;
+  }
+  .onb-btn-charcoal:active {
+    transform: scale(0.98) !important;
+  }
+
+  .onb-btn-sage:hover {
+    background: ${SAGE_HOVER} !important;
+    box-shadow: 0 8px 20px rgba(74,123,95,0.20) !important;
+  }
+  .onb-btn-sage:active {
+    transform: scale(0.98) !important;
+  }
+
+  .onb-btn-ghost:hover {
+    border-color: ${CHARCOAL} !important;
+    color: ${CHARCOAL} !important;
+  }
+
+  .onb-btn-plus:not(:disabled):hover {
+    border-color: ${SAGE} !important;
+    background: ${SAGE_TINT_STRONG} !important;
+  }
+  .onb-btn-plus:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5;
+  }
+
+  .onb-link-skip:hover {
+    color: ${SAGE} !important;
+  }
+
+  @media (max-width: 480px) {
+    .onb-card {
+      padding: 24px 20px !important;
+    }
+  }
+`;

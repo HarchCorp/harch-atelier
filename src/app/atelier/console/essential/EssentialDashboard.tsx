@@ -1168,6 +1168,172 @@ function LoadingBlock({
   );
 }
 
+// ════════════════════════════════════════════════════════════════════
+// HONEST-EMPTY-STATES — Composants « Collecte en cours »
+// Affichés quand /api/console/brand-health renvoie status="no_data"
+// (0 article) ou quand une route de graphique renvoie un tableau vide.
+// Animations radar/pulse 100 % framer-motion — pas de keyframes globaux.
+// ════════════════════════════════════════════════════════════════════
+
+/** CollecteEnCours — pleine largeur, utilisé dans le hero (ScoreReputationCard). */
+function CollecteEnCours({ companyName }: { companyName?: string }) {
+  const name = companyName ?? "votre marque";
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "28px 20px", minHeight: 240 }}
+    >
+      <div style={{ position: "relative", width: 104, height: 104, marginBottom: 20 }}>
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `1.5px solid ${SAGE_DIM}`,
+            }}
+            initial={{ scale: 0.35, opacity: 0 }}
+            animate={{ scale: 1, opacity: [0, 0.7, 0] }}
+            transition={{
+              duration: 2.4,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: i * 0.8,
+            }}
+          />
+        ))}
+        <motion.span
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 14,
+            height: 14,
+            marginLeft: -7,
+            marginTop: -7,
+            borderRadius: "50%",
+            backgroundColor: SAGE,
+          }}
+          animate={{ scale: [1, 1.18, 1], opacity: [0.75, 1, 0.75] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 15,
+          fontWeight: 700,
+          color: CHARCOAL,
+        }}
+      >
+        Collecte en cours
+      </div>
+      <p
+        className="mt-1.5 max-w-[440px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 13, color: TEXT_BODY, lineHeight: 1.55 }}
+      >
+        Nous collectons des articles sur {name}. Premiers résultats sous 24-48h.
+      </p>
+      <p
+        className="mt-2"
+        style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}
+      >
+        Vous recevrez une alerte WhatsApp dès que votre score sera disponible.
+      </p>
+    </div>
+  );
+}
+
+/** CollecteEnCoursMini — version compacte pour les cartes de graphiques. */
+function CollecteEnCoursMini({ minHeight = 180 }: { minHeight?: number }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "20px 16px", minHeight }}
+    >
+      <div style={{ position: "relative", width: 56, height: 56, marginBottom: 12 }}>
+        {[0, 1].map((i) => (
+          <motion.span
+            key={i}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `1.5px solid ${SAGE_DIM}`,
+            }}
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: [0, 0.7, 0] }}
+            transition={{
+              duration: 2.2,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: i * 0.7,
+            }}
+          />
+        ))}
+        <motion.span
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 10,
+            height: 10,
+            marginLeft: -5,
+            marginTop: -5,
+            borderRadius: "50%",
+            backgroundColor: SAGE,
+          }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.75, 1, 0.75] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          fontWeight: 700,
+          color: CHARCOAL,
+        }}
+      >
+        Collecte en cours
+      </div>
+      <p
+        className="mt-1 max-w-[320px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}
+      >
+        Premiers résultats sous 24-48h.
+      </p>
+    </div>
+  );
+}
+
+/** LimitedDataBanner — bannière ambre au-dessus du gauge quand status="limited". */
+function LimitedDataBanner({ text }: { text?: string }) {
+  return (
+    <div
+      className="mb-3 flex items-center gap-2 rounded-md"
+      style={{
+        backgroundColor: "rgba(245,158,11,0.10)",
+        border: `1px solid ${NEUTRAL_AMBER}`,
+        padding: "8px 12px",
+      }}
+    >
+      <AlertTriangle size={14} style={{ color: NEUTRAL_AMBER, flexShrink: 0 }} />
+      <span
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          color: "#92400E",
+          fontWeight: 600,
+        }}
+      >
+        {text ?? "Données limitées — collecte en cours"}
+      </span>
+    </div>
+  );
+}
+
 /** Skip-link — visible only when focused via keyboard. */
 function SkipLink({ href = "#main-content", children = "Aller au contenu principal" }: { href?: string; children?: string }) {
   return (
@@ -2604,6 +2770,9 @@ function ScoreReputationCard({
   dismissedHelp?: Set<string>;
   onDismissHelp?: (key: string) => void;
 }) {
+  // HONEST-EMPTY-STATES — détection des trois états (no_data / limited / nominal).
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
+  const isLimited = !!health && health.status === "limited" && health.score !== null;
   const score = health?.score ?? 0;
   const trend = health?.trend ?? 0;
   const { label: weather, Icon: WeatherIcon } = weatherFor(score);
@@ -2615,6 +2784,7 @@ function ScoreReputationCard({
   // AI commentary — built from real data signals
   const aiCommentary = useMemo(() => {
     if (!health) return "En attente des données de réputation…";
+    if (isNoData) return "Aucun article collecté pour le moment — la veille démarre à présent.";
     const dir = trend > 0 ? "amélioré" : trend < 0 ? "dégradé" : "stabilisé";
     const parts: string[] = [`Votre score s'est ${dir} de ${Math.abs(trend)} points cette semaine`];
     if (health.sentiment.positive >= 50) {
@@ -2626,7 +2796,7 @@ function ScoreReputationCard({
       parts.push(`. Le narrative « ${health.topNarrative.label} » ${health.topNarrative.momentum === "rising" ? "gagne du momentum" : "reste stable"}.`);
     }
     return parts.join(" ");
-  }, [health, trend]);
+  }, [health, trend, isNoData]);
 
   return (
     <motion.div id="score" {...cardMotion}>
@@ -2669,6 +2839,29 @@ function ScoreReputationCard({
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {loading ? (
+          // HONEST-EMPTY-STATES — pendant le chargement on garde une grille de
+          // skeletons pour ne pas introduire de flash visuel.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="lg:col-span-3 flex justify-center">
+              <LiveSkeleton className="h-[200px] w-[200px] rounded-full" label="Chargement du score" />
+            </div>
+            <div className="lg:col-span-5 space-y-3">
+              <LiveSkeleton className="h-5 w-3/4" label="Chargement du score" />
+              <LiveSkeleton className="h-4 w-1/2" label="Chargement du score" />
+              <LiveSkeleton className="h-12 w-full" label="Chargement du score" />
+            </div>
+            <div className="lg:col-span-4">
+              <LiveSkeleton className="h-40 w-full" label="Chargement du score" />
+            </div>
+          </div>
+        ) : isNoData ? (
+          // HONEST-EMPTY-STATES — état no_data : on remplace le gauge par
+          // l'illustration radar + message « Collecte en cours ».
+          <CollecteEnCours companyName={health?.companyName} />
+        ) : (
+          <>
+        {isLimited && <LimitedDataBanner text={health?.warning} />}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           <div className="lg:col-span-3 flex justify-center">
             <div style={{ position: "relative", width: 200, height: 200 }}>
@@ -2783,6 +2976,8 @@ function ScoreReputationCard({
             <MiniStat label="Négatif" value={health ? `${health.sentiment.negative}%` : "—"} dotColor={NEGATIVE} />
           </div>
         </div>
+          </>
+        )}
       </CardShell>
     </motion.div>
   );
@@ -2793,6 +2988,8 @@ function ScoreReputationCard({
 // ════════════════════════════════════════════════════════════════════
 
 function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | null; trend: SentimentTrendResp | null; loading: boolean }) {
+  // HONEST-EMPTY-STATES — en mode no_data on affiche « — » plutôt que « 0% ».
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
   const value = health?.sentiment?.positive ?? 0;
   const delta = health?.trend ?? 0;
 
@@ -2801,13 +2998,15 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
     return trend.data.slice(-7).map((d) => ({ d: d.date, v: (d.positive / Math.max(1, d.count)) * 100 }));
   }, [trend]);
 
-  const insight = health
-    ? value >= 50
-      ? `Le sentiment positif domine (${value}%) — bonne dynamique globale.`
-      : value >= 35
-        ? `Sentiment mitigé (${value}% positif) — surveillez les signaux négatifs.`
-        : `Le sentiment négatif progresse — intervention Dircom recommandée.`
-    : "En attente des données…";
+  const insight = !health
+    ? "En attente des données…"
+    : isNoData
+      ? "Collecte en cours — premiers résultats sous 24-48h."
+      : value >= 50
+        ? `Le sentiment positif domine (${value}%) — bonne dynamique globale.`
+        : value >= 35
+          ? `Sentiment mitigé (${value}% positif) — surveillez les signaux négatifs.`
+          : `Le sentiment négatif progresse — intervention Dircom recommandée.`;
 
   return (
     <motion.div {...cardMotion}>
@@ -2818,7 +3017,7 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
           <div className="flex items-baseline gap-2">
             {loading ? (
               <LiveSkeleton className="h-7 w-16" />
-            ) : health ? (
+            ) : health && !isNoData ? (
               <AnimatedNumber
                 value={value}
                 suffix="%"
@@ -2841,7 +3040,7 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
                 —
               </span>
             )}
-            <Delta value={delta} />
+            {!isNoData && <Delta value={delta} />}
           </div>
           {spark.length > 0 && (
             <div style={{ width: 80, height: 28 }}>
@@ -2869,7 +3068,7 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
           )}
         </div>
         <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
-          Part des mentions positives (7 derniers jours)
+          {isNoData ? "Collecte des mentions en cours" : "Part des mentions positives (7 derniers jours)"}
         </p>
         <AiCommentary text={insight} />
       </CardShell>
@@ -2882,6 +3081,8 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
 // ════════════════════════════════════════════════════════════════════
 
 function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | null; trend: SentimentTrendResp | null; loading: boolean }) {
+  // HONEST-EMPTY-STATES — en mode no_data on n'affiche pas « 0 ».
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
   const value = health?.mentionCount24h ?? 0;
   const delta = health?.trend && health.trend > 0 ? 12 : -4;
 
@@ -2891,9 +3092,11 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
   }, [trend]);
 
   const sourcesCount = trend?.data?.length ?? 0;
-  const insight = health
-    ? `Volume quotidien ${value > 100 ? "élevé" : value > 30 ? "modéré" : "faible"} — ${sourcesCount} sources actives sur 7 jours.`
-    : "En attente des données…";
+  const insight = !health
+    ? "En attente des données…"
+    : isNoData
+      ? "Collecte en cours — premiers résultats sous 24-48h."
+      : `Volume quotidien ${value > 100 ? "élevé" : value > 30 ? "modéré" : "faible"} — ${sourcesCount} sources actives sur 7 jours.`;
 
   return (
     <motion.div {...cardMotion}>
@@ -2904,7 +3107,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
           <div className="flex items-baseline gap-2">
             {loading ? (
               <LiveSkeleton className="h-7 w-16" />
-            ) : health ? (
+            ) : health && !isNoData ? (
               <AnimatedNumber
                 value={value}
                 format={fmtNumber}
@@ -2927,7 +3130,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
                 —
               </span>
             )}
-            <Delta value={delta} />
+            {!isNoData && <Delta value={delta} />}
           </div>
           {bars.length > 0 && (
             <div style={{ width: 80, height: 28 }}>
@@ -2940,7 +3143,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
           )}
         </div>
         <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
-          Volume des dernières 24 heures · {sourcesCount} sources
+          {isNoData ? "Collecte des mentions en cours" : `Volume des dernières 24 heures · ${sourcesCount} sources`}
         </p>
         <AiCommentary text={insight} />
       </CardShell>
@@ -5083,6 +5286,9 @@ function MeteoSentimentsLangueCard({
 // ════════════════════════════════════════════════════════════════════
 
 function EvolutionScoreCard({ health, loading }: { health: BrandHealth | null; loading: boolean }) {
+  // HONEST-EMPTY-STATES — en mode no_data on n'affiche pas la fausse série 30j
+  // générée autour de `?? 70`. On remplace par CollecteEnCoursMini.
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
   const currentScore = health?.score ?? 70;
   const data = useMemo(() => {
     const days = 30;
@@ -5112,6 +5318,8 @@ function EvolutionScoreCard({ health, loading }: { health: BrandHealth | null; l
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
           <LoadingBlock height={220} label="Chargement des graphiques…" />
+        ) : isNoData ? (
+          <CollecteEnCoursMini minHeight={220} />
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>

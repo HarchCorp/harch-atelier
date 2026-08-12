@@ -169,209 +169,209 @@ interface ChangelogEntry {
 const CHANGELOG: ChangelogEntry[] = [
   {
     version: "3.1.0",
-    date: "August 11, 2026",
+    date: "11 août 2026",
     type: "minor",
-    title: "UX hardening — persistence, accessibility, system status",
+    title: "Consolidation UX — persistance, accessibilité, statut système",
     changes: [
-      { category: "Added", items: [
-        "SystemStatus indicator dans le footer global — fetch /api/health toutes les 60s, pulsing dot vert/rouge, timestamp fr-FR",
-        "Hook usePersistentState<T> — localStorage-backed state pour HarchIQ history (Agency, Pro, Enterprise)",
-        "Char counter sur le chat HarchIQ Agency (textarea) — 'N / 2000' avec couleur amber si >1800",
-        "Tooltip Recharts sur le gauge RadialBarChart Score de Réputation (Agency)",
-        "Bouton Copy sur les résultats du Pitch Deck Generator (Agency)",
+      { category: "Ajouté", items: [
+        "Indicateur SystemStatus dans le footer global — fetch /api/health toutes les 60s, point pulsant vert/rouge, timestamp fr-FR",
+        "Hook usePersistentState<T> — état sauvegardé dans localStorage pour l'historique HarchIQ (Agency, Pro, Enterprise)",
+        "Compteur de caractères sur le chat HarchIQ Agency (textarea) — 'N / 2000' avec couleur ambre si > 1800",
+        "Tooltip Recharts sur la jauge RadialBarChart du Score de Réputation (Agency)",
+        "Bouton Copier sur les résultats du Pitch Deck Generator (Agency)",
       ]},
-      { category: "Fixed", items: [
-        "HarchIQ Agency Section 13 : <input> single-line → <textarea> auto-grow avec Shift+Enter pour newline (parité restaurée vs Section 1)",
-        "Historique des conversations HarchIQ : cap 5/10 → 50, persistance localStorage (survit refresh/switch client) sur Agency, Pro, Enterprise",
-        "Pitch Deck Generator : serial-lock supprimé (3 outils en parallèle au lieu de séquentiel)",
-        "Pitch Deck Generator : fake empty state 'Pitch deck généré pour prospect [X]' remplacé par un message conditionnel contextuel",
-        "Portfolio Clients table (Agency) : keyboard a11y — tabIndex, onKeyDown (Enter/Space), aria-label, focus-visible ring (WCAG 2.1 Level A)",
-        "Footer 'Dernière maj' (Agency Score hero) : span non-cliquable → button cliquable qui déclenche handleRefresh",
+      { category: "Corrigé", items: [
+        "HarchIQ Agency Section 13 : <input> mono-ligne → <textarea> auto-extensible avec Shift+Enter pour saut de ligne (parité restaurée vs Section 1)",
+        "Historique des conversations HarchIQ : plafond 5/10 → 50, persistance localStorage (survit au refresh/switch client) sur Agency, Pro, Enterprise",
+        "Pitch Deck Generator : verrou série supprimé (3 outils en parallèle au lieu de séquentiel)",
+        "Pitch Deck Generator : faux état vide 'Pitch deck généré pour prospect [X]' remplacé par un message conditionnel contextuel",
+        "Tableau Portfolio Clients (Agency) : a11y clavier — tabIndex, onKeyDown (Entrée/Espace), aria-label, anneau focus-visible (WCAG 2.1 Level A)",
+        "Footer 'Dernière maj' (hero Agency Score) : span non-cliquable → bouton cliquable qui déclenche handleRefresh",
       ]},
-      { category: "Security", items: [
+      { category: "Sécurité", items: [
         "AbortSignal.timeout(4s) sur le fetch SystemStatus — empêche les requêtes pendantes",
       ]},
     ],
   },
   {
     version: "3.0.0",
-    date: "July 21, 2026",
+    date: "21 juillet 2026",
     type: "major",
-    title: "Tier rename — Corporate & Sovereign grade",
+    title: "Renommage des tiers — grade Corporate & Sovereign",
     changes: [
-      { category: "Changed", items: [
+      { category: "Modifié", items: [
         "Renommage des tiers : Starter / Pro / Enterprise → Émergence / Corporate / Sovereign",
-        "Nouvelle grille tarifaire : Émergence 15K · Corporate 40K · Sovereign 75K MAD/mo",
-        "Alignement avec les contrats licence (Executive 450K MAD/yr · Sovereign 850K MAD/yr)",
-        "Tokens renommés : pricingEmergence / pricingCorporate / pricingSovereign (cosmetic consistency)",
-        "Configs backend (lib/config.ts) : IDs aligned avec PricingPage (emergence / corporate / sovereign)",
-        "API rate-limit labels : API Corporate (60 req/min) · API Sovereign (600 req/min)",
-        "FAQ JSON-LD, AtelierHome pricing section, AuditPage, OurCommitment, LegalPage, ContactPage, Method, ApiMcp, Integrations, ProductsPage, ApiDocs, AskHarchIQ, BroadcastMonitor — all tier references migrated",
-        "SME / startup framing repositioned to 'structured mid-cap' / 'corporate group' / 'sovereign entity'",
+        "Nouvelle grille tarifaire : Émergence 15K · Corporate 40K · Sovereign 75K MAD/mois",
+        "Alignement avec les contrats de licence (Executive 450K MAD/an · Sovereign 850K MAD/an)",
+        "Tokens renommés : pricingEmergence / pricingCorporate / pricingSovereign (cohérence cosmétique)",
+        "Configs backend (lib/config.ts) : IDs alignés avec PricingPage (emergence / corporate / sovereign)",
+        "Libellés de rate-limit API : API Corporate (60 req/min) · API Sovereign (600 req/min)",
+        "FAQ JSON-LD, section pricing AtelierHome, AuditPage, OurCommitment, LegalPage, ContactPage, Method, ApiMcp, Integrations, ProductsPage, ApiDocs, AskHarchIQ, BroadcastMonitor — toutes les références aux tiers migrées",
+        "Positionnement PME / startup remplacé par 'mid-cap structurée' / 'groupe corporate' / 'entité souveraine'",
       ]},
-      { category: "Removed", items: [
-        "Old pricing tiers Starter (5K) / Pro (15K) / Enterprise (50K) — purged from marketing surfaces",
-        "'Designed for SMEs and startups' positioning — replaced with institutional-grade language",
+      { category: "Supprimé", items: [
+        "Anciens tiers Starter (5K) / Pro (15K) / Enterprise (50K) — purgés des surfaces marketing",
+        "Positionnement 'Designed for SMEs and startups' — remplacé par un langage institutionnel",
       ]},
     ],
   },
   {
     version: "2.4.0",
-    date: "July 19, 2026",
+    date: "19 juillet 2026",
     type: "major",
-    title: "Signal AI-style mega-menu + 16 new pages",
+    title: "Mega-menu façon Signal AI + 16 nouvelles pages",
     changes: [
-      { category: "Added", items: [
-        "Mega-menu navigation with 6 top-level items and 41 dropdown links",
-        "5 Expertise pages (Enterprise Risk, Reputation Risk, PR & Comms, ESG, Regulation)",
-        "5 Insight Report pages (Risk, Reputation Risk, Reputation, Media Impact, Deep Dive)",
-        "3 Approach pages (Our AI, Our Data, Our Commitment)",
-        "Ask HarchIQ conversational AI chat interface",
-        "Insights hub page with 14 resources",
-        "Reputation Tracker (sister to Risk Tracker)",
-        "Decision Augmentation page (Signal AI whitepaper thesis)",
-        "Customers page with 4 case studies",
-        "Media Intelligence Report (2026 year-in-review)",
-        "Trust Center (security & compliance)",
-        "Contact, Careers, Partners, Legal pages",
+      { category: "Ajouté", items: [
+        "Navigation mega-menu avec 6 entrées principales et 41 liens déroulants",
+        "5 pages Expertise (Risques Entreprise, Risques Réputation, RP & Comms, ESG, Réglementation)",
+        "5 pages Insight Report (Risque, Risque Réputation, Réputation, Impact Média, Deep Dive)",
+        "3 pages Approach (Notre IA, Nos Données, Notre Engagement)",
+        "Interface de chat IA conversationnel Ask HarchIQ",
+        "Page hub Insights avec 14 ressources",
+        "Reputation Tracker (jumeau du Risk Tracker)",
+        "Page Decision Augmentation (thèse whitepaper Signal AI)",
+        "Page Customers avec 4 études de cas",
+        "Media Intelligence Report (rétrospective 2026)",
+        "Trust Center (sécurité & conformité)",
+        "Pages Contact, Careers, Partners, Legal",
       ]},
-      { category: "Changed", items: [
-        "Replaced all GLM-4 mentions with HarchIQ (our branded trainable AI)",
-        "Engine lists now: ChatGPT, Perplexity, Gemini, Claude, Copilot, Mistral, Grok",
-        "Nav simplified to 6 items with mega-menu dropdowns",
+      { category: "Modifié", items: [
+        "Toutes les mentions GLM-4 remplacées par HarchIQ (notre IA entraînable en marque blanche)",
+        "Liste des moteurs : ChatGPT, Perplexity, Gemini, Claude, Copilot, Mistral, Grok",
+        "Navigation simplifiée à 6 entrées avec dropdowns mega-menu",
       ]},
     ],
   },
   {
     version: "2.3.0",
-    date: "July 18, 2026",
+    date: "18 juillet 2026",
     type: "major",
-    title: "Massive content expansion — News, Blog, Industries, Companies",
+    title: "Expansion massive de contenu — News, Blog, Industries, Companies",
     changes: [
-      { category: "Added", items: [
-        "Charts library: 11 reusable SVG components (BarChart, LineChart, DonutChart, Gauge, Heatmap, Sparkline, RadarChart, StackedBar, StatCard, MetricRow, HorizontalBarChart)",
-        "Live News Feed with 36 articles, 5 filters, sticky filter bar",
-        "Blog with 15 SEO articles (~21,500 words total)",
-        "6 Industry profile pages (Banking, Telecom, Mining, Aviation, Retail, Energy)",
-        "5 Company profile pages (OCP, Attijariwafa, Maroc Telecom, RAM, Bank of Africa)",
-        "Institutional Audit template (12-page PDF with blur teaser)",
-        "Risk Intelligence engine: 32 risk categories, Frequency × Impact × Velocity scoring",
-        "Signal AI 500-style Harch 100 with Innovation/Performance/Purpose pillars",
-        "Risk Tracker with Industry Risk Dashboard",
+      { category: "Ajouté", items: [
+        "Bibliothèque de charts : 11 composants SVG réutilisables (BarChart, LineChart, DonutChart, Gauge, Heatmap, Sparkline, RadarChart, StackedBar, StatCard, MetricRow, HorizontalBarChart)",
+        "Live News Feed avec 36 articles, 5 filtres, barre de filtres persistante",
+        "Blog avec 15 articles SEO (~21 500 mots au total)",
+        "6 pages Industry (Banque, Télécom, Mines, Aérien, Retail, Énergie)",
+        "5 pages Company (OCP, Attijariwafa, Maroc Telecom, RAM, Bank of Africa)",
+        "Template Institutional Audit (PDF 12 pages avec blur teaser)",
+        "Moteur Risk Intelligence : 32 catégories de risque, scoring Fréquence × Impact × Vélocité",
+        "Harch 100 façon Signal AI 500 avec piliers Innovation / Performance / Purpose",
+        "Risk Tracker avec Industry Risk Dashboard",
       ]},
     ],
   },
   {
     version: "2.2.0",
-    date: "July 17, 2026",
+    date: "17 juillet 2026",
     type: "minor",
-    title: "Signal AI-style Products + Solutions pages",
+    title: "Pages Products + Solutions façon Signal AI",
     changes: [
-      { category: "Added", items: [
-        "Products page: 5 products (Platform, API & MCP, Insight Reports, Dashboards, Briefings)",
-        "Solutions page: 4 solutions (Narrative Planning, Threat Sensing, Benchmarking, Media Monitoring)",
-        "Reputation Dashboards product page with materiality matrix",
-        "Enterprise Risk Intelligence product page with risk matrix",
-        "API & MCP product page with code examples (Python, TypeScript, cURL, MCP)",
-        "Integrations page (12 integrations: Slack, Teams, Tableau, PowerBI, Claude, etc.)",
+      { category: "Ajouté", items: [
+        "Page Products : 5 produits (Platform, API & MCP, Insight Reports, Dashboards, Briefings)",
+        "Page Solutions : 4 solutions (Narrative Planning, Threat Sensing, Benchmarking, Media Monitoring)",
+        "Page produit Reputation Dashboards avec matrice de matérialité",
+        "Page produit Enterprise Risk Intelligence avec matrice des risques",
+        "Page produit API & MCP avec exemples de code (Python, TypeScript, cURL, MCP)",
+        "Page Integrations (12 intégrations : Slack, Teams, Tableau, PowerBI, Claude, etc.)",
       ]},
-      { category: "Changed", items: [
-        "Home page hero: 'Promote. Protect. Shape.' (Signal AI style)",
-        "Stats: 5M+ articles/day, 100M+ entities, 120+ languages, 32 risk categories",
+      { category: "Modifié", items: [
+        "Hero page d'accueil : 'Promouvoir. Protéger. Façonner.' (façon Signal AI)",
+        "Stats : 5M+ articles/jour, 100M+ entités, 120+ langues, 32 catégories de risque",
       ]},
     ],
   },
   {
     version: "2.1.0",
-    date: "July 16, 2026",
+    date: "16 juillet 2026",
     type: "fix",
-    title: "Critical SEO + data consistency + accessibility fixes",
+    title: "Corrections critiques SEO + cohérence des données + accessibilité",
     changes: [
-      { category: "Fixed", items: [
-        "Double-pipe title bug on 42 pages (title: string → title: { absolute })",
-        "Canonical URLs missing /atelier/ prefix (5 company pages + 56 sitemap routes)",
-        "Cross-page data contradictions (Harch 100 scores, quarterly trends, risk levels)",
-        "Fabricated CEO name 'Mohamed El Kettani' → 'Ismail Douiri' (Attijariwafa)",
-        "Fabricated digital platforms 'TawbaTam/TikTal' → 'Tijari' (Attijariwafa)",
-        "OCP phosphate reserves 31% → 70% (was factually wrong)",
-        "Energy page logic error 'second-lowest ahead of retail' → 'lowest behind retail'",
-        "Removed fabricated 'Mohammedia refinery fire' (Samir closed since 2015)",
-        "Mega-menu keyboard accessibility (aria-expanded, aria-haspopup, onClick, Escape)",
-        "Skip-to-content link added (WCAG 2.4.1)",
-        "Harch 100 expandable rows keyboard accessible (tabIndex, role, aria-expanded, onKeyDown)",
-        "News Feed dates 2025 → 2026, stat cards honest, AR tags fixed",
+      { category: "Corrigé", items: [
+        "Bug du double-pipe dans le titre sur 42 pages (title: string → title: { absolute })",
+        "URLs canoniques manquant du préfixe /atelier/ (5 pages company + 56 routes sitemap)",
+        "Contradictions de données entre pages (scores Harch 100, tendances trimestrielles, niveaux de risque)",
+        "Nom de CEO fabriqué 'Mohamed El Kettani' → 'Ismail Douiri' (Attijariwafa)",
+        "Plateformes digitales fabriquées 'TawbaTam/TikTal' → 'Tijari' (Attijariwafa)",
+        "Réserves de phosphate OCP 31 % → 70 % (était factuellement faux)",
+        "Erreur de logique page Énergie 'second-lowest ahead of retail' → 'lowest behind retail'",
+        "Suppression du 'Mohammedia refinery fire' fabriqué (Samir fermé depuis 2015)",
+        "Accessibilité clavier du mega-menu (aria-expanded, aria-haspopup, onClick, Escape)",
+        "Lien skip-to-content ajouté (WCAG 2.4.1)",
+        "Lignes dépliables Harch 100 accessibles au clavier (tabIndex, role, aria-expanded, onKeyDown)",
+        "Dates du News Feed 2025 → 2026, cartes de stats honnêtes, tags AR corrigés",
       ]},
     ],
   },
   {
     version: "2.0.0",
-    date: "July 15, 2026",
+    date: "15 juillet 2026",
     type: "major",
-    title: "Light theme rebuild — AI Reputation Intelligence",
+    title: "Reconstruction du thème clair — AI Reputation Intelligence",
     changes: [
-      { category: "Added", items: [
-        "Complete light theme rebuild (#FAFAFA bg, sage #4A7B5F accent)",
-        "BrandBadge component: 'HARCH | Atelier' pattern",
-        "FR/EN language switcher in nav",
-        "Harch 100 ranking (Signal AI 500 style)",
+      { category: "Ajouté", items: [
+        "Reconstruction complète du thème clair (bg #FAFAFA, accent sage #4A7B5F)",
+        "Composant BrandBadge : pattern 'HARCH | Atelier'",
+        "Sélecteur de langue FR/EN dans la nav",
+        "Classement Harch 100 (façon Signal AI 500)",
         "Risk Tracker (Industry Risk Dashboard)",
-        "PDF templates with blur teaser (free → paid conversion)",
-        "WhatsApp daily digest preview",
+        "Templates PDF avec blur teaser (conversion free → paid)",
+        "Aperçu du digest quotidien WhatsApp",
       ]},
-      { category: "Removed", items: [
-        "Dark theme (user rejected: 'dégueulasse')",
-        "GEO (Generative Engine Optimization) framing — pivoted to AI Reputation Intelligence",
+      { category: "Supprimé", items: [
+        "Thème sombre (rejeté par l'utilisateur : 'dégueulasse')",
+        "Framing GEO (Generative Engine Optimization) — pivot vers AI Reputation Intelligence",
       ]},
     ],
   },
   {
     version: "1.5.0",
-    date: "July 12, 2026",
+    date: "12 juillet 2026",
     type: "minor",
-    title: "Intelligence Engine v2 — institutional-grade",
+    title: "Moteur d'intelligence v2 — grade institutionnel",
     changes: [
-      { category: "Added", items: [
-        "Entity-level sentiment analysis (FR/AR/EN trilingual, 108+ word lexicon)",
-        "Topic clustering (10 categories)",
-        "Narrative detection (5 dominant narratives with strength scoring)",
-        "Risk assessment (0-100, 5 levels)",
-        "Competitor benchmarking",
-        "Recommendation engine (prioritized, with timeline and owner)",
-        "9-step analysis pipeline (Scrape → Analyze → Score → Rank → Deliver)",
+      { category: "Ajouté", items: [
+        "Analyse de sentiment au niveau entité (trilingue FR/AR/EN, lexique 108+ mots)",
+        "Clustering de sujets (10 catégories)",
+        "Détection de narratifs (5 narratifs dominants avec scoring de force)",
+        "Évaluation des risques (0-100, 5 niveaux)",
+        "Benchmarking concurrents",
+        "Moteur de recommandations (priorisées, avec timeline et owner)",
+        "Pipeline d'analyse en 9 étapes (Scrape → Analyze → Score → Rank → Deliver)",
       ]},
     ],
   },
   {
     version: "1.0.0",
-    date: "July 8, 2026",
+    date: "8 juillet 2026",
     type: "major",
-    title: "Initial launch — Harch Atelier",
+    title: "Lancement initial — Harch Atelier",
     changes: [
-      { category: "Added", items: [
-        "Initial Next.js 16 + TypeScript + Turbopack setup",
-        "30+ Moroccan and African media sources (RSS + Google News aggregation)",
-        "Company aliases for 12 Moroccan companies",
-        "Google News RSS as primary scraper source (48+ articles per company)",
-        "Dashboard with live audit API",
-        "Pricing page (Starter 5K / Pro 15K / Enterprise 50K MAD/mois)",
+      { category: "Ajouté", items: [
+        "Setup initial Next.js 16 + TypeScript + Turbopack",
+        "30+ sources media marocaines et africaines (RSS + agrégation Google News)",
+        "Alias d'entreprises pour 12 sociétés marocaines",
+        "Google News RSS comme source principale du scraper (48+ articles par entreprise)",
+        "Dashboard avec API d'audit en direct",
+        "Page tarifs (Starter 5K / Pro 15K / Enterprise 50K MAD/mois)",
       ]},
     ],
   },
 ];
 
 const TYPE_COLORS = {
-  major: { bg: "rgba(74,123,95,0.1)", text: "#4A7B5F", label: "MAJOR" },
-  minor: { bg: "rgba(74,93,110,0.1)", text: "#4A5D6E", label: "MINOR" },
+  major: { bg: "rgba(74,123,95,0.1)", text: "#4A7B5F", label: "MAJEUR" },
+  minor: { bg: "rgba(74,93,110,0.1)", text: "#4A5D6E", label: "MINEUR" },
   patch: { bg: "rgba(184,115,51,0.1)", text: "#B87333", label: "PATCH" },
-  fix: { bg: "rgba(160,82,75,0.1)", text: "#A0524B", label: "FIX" },
+  fix: { bg: "rgba(160,82,75,0.1)", text: "#A0524B", label: "CORRECTIF" },
 };
 
 const CATEGORY_COLORS = {
-  Added: "#4A7B5F",
-  Changed: "#4A5D6E",
-  Fixed: "#A0524B",
-  Removed: "#71717A",
-  Deprecated: "#B87333",
+  Ajouté: "#4A7B5F",
+  Modifié: "#4A5D6E",
+  Corrigé: "#A0524B",
+  Supprimé: "#71717A",
+  Obsolète: "#B87333",
 };
 
 export default function ChangelogPage() {
@@ -398,7 +398,7 @@ export default function ChangelogPage() {
             marginBottom: "24px",
           }}>
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.sage, animation: "pulse 2s infinite" }} />
-            Changelog · Product updates
+            Journal · Mises à jour produit
           </div>
           </Reveal>
 
@@ -408,7 +408,7 @@ export default function ChangelogPage() {
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
             margin: "0 0 28px",
           }}>
-            What's new at <span style={{ color: C.sage }}>Harch Atelier.</span>
+            Les nouveautés de <span style={{ color: C.sage }}>Harch Atelier.</span>
           </h1>
           </Reveal>
 
@@ -417,8 +417,9 @@ export default function ChangelogPage() {
             fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "640px",
           }}>
-            Every update to the Harch Atelier platform — new features, improvements, bug fixes, and breaking changes.
-            Subscribe to our weekly digest to stay informed.
+            Chaque mise à jour de la plateforme Harch Atelier — nouvelles
+            fonctionnalités, améliorations, correctifs et changements majeurs.
+            Abonnez-vous au résumé hebdomadaire pour rester informé.
           </p>
           </Reveal>
         </div>
@@ -444,7 +445,7 @@ export default function ChangelogPage() {
                     width: "2px", background: C.border,
                   }} />
                 )}
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "40px 1fr", gap: "24px" }}>
                   {/* Timeline dot — pulses when scrolled into view */}
                   <motion.div
@@ -550,18 +551,19 @@ export default function ChangelogPage() {
       }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
           <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: C.sageBright, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "16px" }}>
-            Stay updated
+            Restez informé
           </div>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 20px", color: "#FFFFFF" }}>
-            Get the weekly product update.
+            Recevez la mise à jour produit hebdomadaire.
           </h2>
           <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.7)", marginBottom: "32px", lineHeight: 1.6 }}>
-            Every Friday: new features, improvements, and fixes. Plus early access to beta features.
+            Chaque vendredi : nouvelles fonctionnalités, améliorations et
+            correctifs. Plus un accès anticipé aux fonctionnalités bêta.
           </p>
           <form onSubmit={(e) => e.preventDefault()} style={{ display: "flex", gap: "8px", maxWidth: "440px", margin: "0 auto", flexWrap: "wrap", justifyContent: "center" }}>
             <input
               type="email"
-              placeholder="your@email.com"
+              placeholder="votre@email.com"
               required
               style={{
                 flex: 1, minWidth: "240px",
@@ -582,7 +584,7 @@ export default function ChangelogPage() {
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
             >
-              Subscribe →
+              S'abonner →
             </motion.button>
           </form>
         </div>

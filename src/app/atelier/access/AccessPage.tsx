@@ -891,6 +891,7 @@ const accessCss = `
   @media (max-width: 480px) {
     .harch-access-card {
       max-width: 92% !important;
+      padding: 32px 22px !important;
     }
   }
 `;
