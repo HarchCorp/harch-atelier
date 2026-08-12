@@ -48,7 +48,7 @@ const ALLOWED_TYPES = ["enterprise", "agency", "investment-bank", "harch-alpha"]
 
 export async function GET(
   _req: NextRequest,
-  ctx: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -58,7 +58,7 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = ctx.params;
+  const { id } = await ctx.params;
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
@@ -191,7 +191,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  ctx: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -201,7 +201,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = ctx.params;
+  const { id } = await ctx.params;
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
