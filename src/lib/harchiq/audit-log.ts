@@ -49,7 +49,17 @@ export type AuditAction =
   | "session_revoked"
   | "invitation_accepted"
   | "role_changed"
-  | "surgical_email_sent";
+  | "surgical_email_sent"
+  | "boss_bootstrap"
+  | "mcp_test"
+  | "harchiq_ask"
+  | "approval_requested"
+  | "approval_approved"
+  | "approval_rejected"
+  | "client_provisioned"
+  | "employee_invited"
+  | "request_annotated"
+  | "commercial_created";
 
 export type AuditResult = "success" | "denied" | "error";
 

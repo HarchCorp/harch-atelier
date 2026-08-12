@@ -410,3 +410,50 @@ export function isAccountTypeAllowed(
 
   return allowedNormalized.has(userNormalized);
 }
+
+// ─── COMMERCIAL ROLE (Bat Cave — BATCAVE-2) ──────────────────────
+// Sales reps who can create clients + manage invitations but CANNOT
+// see full financials or delete accounts. Level 35 (above manager,
+// below company-admin). Can access /atelier/admin but with restricted
+// tabs (Requests + Clients + Invitations + Provisioning only).
+export const COMMERCIAL_PERMISSIONS = {
+  viewRequests: true,
+  annotateRequests: true,
+  createClients: true,
+  manageInvitations: true,
+  viewEmployeeFiches: true,
+  viewKPIs: true, // own KPIs only
+  viewFinancials: false, // boss/admin only
+  deleteAccounts: false,
+  manageCommercials: false, // boss/admin only
+  viewAuditLogs: false,
+} as const;
+
+export function isCommercial(role: string | null | undefined): boolean {
+  return role === "commercial";
+}
+
+export function canAccessAdmin(role: string | null | undefined): boolean {
+  return role === "admin" || role === "super_admin" || role === "commercial";
+}
+
+export function getAdminPermissions(role: string | null | undefined) {
+  if (role === "super_admin" || role === "admin") {
+    return {
+      viewRequests: true,
+      annotateRequests: true,
+      createClients: true,
+      manageInvitations: true,
+      viewEmployeeFiches: true,
+      viewKPIs: true,
+      viewFinancials: true,
+      deleteAccounts: true,
+      manageCommercials: true,
+      viewAuditLogs: true,
+    };
+  }
+  if (role === "commercial") {
+    return COMMERCIAL_PERMISSIONS;
+  }
+  return null; // no admin access
+}
