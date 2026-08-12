@@ -223,7 +223,11 @@ const FONT_SANS = "var(--font-inter), system-ui, sans-serif";
 // ─── TYPES ────────────────────────────────────────────────────────────
 
 interface BrandHealth {
-  score: number;
+  score: number | null;
+  status?: "no_data" | "limited";
+  message?: string;
+  warning?: string;
+  companyName?: string;
   trend: number;
   sentiment: { positive: number; neutral: number; negative: number };
   shareOfVoice: number;
@@ -10754,6 +10758,15 @@ export default function EssentialDashboard() {
 
   // Real API endpoints
   const { data: health, loading: healthLoading, refetch: refetchHealth } = useApi<BrandHealth>("/api/console/brand-health");
+  // Auto-trigger first scrape when no data (P: first-scrape)
+  useEffect(() => {
+    if (health?.status === "no_data" && !healthLoading) {
+      fetch("/api/console/first-scrape", { method: "POST" })
+        .then((r) => r.json())
+        .then(() => refetchHealth())
+        .catch(() => {});
+    }
+  }, [health?.status, healthLoading, refetchHealth]);
   const { data: alerts, loading: alertsLoading, refetch: refetchAlerts } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
   const { data: insights, loading: insightsLoading, refetch: refetchInsights } = useApi<InsightsResp>("/api/console/insights");
   const { data: aiVis, loading: aiVisLoading } = useApi<AiVisibilityResp>("/api/console/ai-visibility");

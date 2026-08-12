@@ -14676,6 +14676,15 @@ export default function ProDashboard({
 
   // Real API endpoints
   const { data: health, loading: healthLoading, refetch: refetchHealth } = useApi<BrandHealth>("/api/console/brand-health");
+  // Auto-trigger first scrape when no data
+  useEffect(() => {
+    if (health?.status === "no_data" && !healthLoading) {
+      fetch("/api/console/first-scrape", { method: "POST" })
+        .then((r) => r.json())
+        .then(() => refetchHealth())
+        .catch(() => {});
+    }
+  }, [health?.status, healthLoading, refetchHealth]);
   const { data: alerts, loading: alertsLoading, refetch: refetchAlerts } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
   const { data: aiVis, loading: aiVisLoading } = useApi<AiVisibilityResp>("/api/console/ai-visibility");
   const { data: sentimentTrend, loading: trendLoading } = useApi<SentimentTrendResp>(

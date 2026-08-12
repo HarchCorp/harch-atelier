@@ -17688,6 +17688,15 @@ export default function AgencyDashboard({
     loading: healthLoading,
     refetch: refetchHealth,
   } = useApi<BrandHealth>(activeClientId ? "/api/console/brand-health" : null);
+  // Auto-trigger first scrape when no data (only in single-client mode)
+  useEffect(() => {
+    if (activeClientId && health?.status === "no_data" && !healthLoading) {
+      fetch("/api/console/first-scrape", { method: "POST" })
+        .then((r) => r.json())
+        .then(() => refetchHealth())
+        .catch(() => {});
+    }
+  }, [activeClientId, health?.status, healthLoading, refetchHealth]);
 
   const {
     data: alerts,
