@@ -53,9 +53,6 @@ export async function GET() {
         aiVisibility: [],
         recommendation: "Collecte en cours.",
         lastUpdated: new Date().toISOString(),
-      status: totalCompanyArticles < 10 ? "limited" : undefined,
-      warning: totalCompanyArticles < 10 ? `Données limitées (${totalCompanyArticles} articles). Collecte en cours.` : undefined,
-      companyName: companyInfo?.name ?? "",
         source: "neon",
       });
     }
