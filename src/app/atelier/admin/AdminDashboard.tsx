@@ -177,10 +177,10 @@ interface SystemLog {
 interface AdminStats {
   users: {
     total: number;
-    "brand-monitor": number;
-    "market-competitor": number;
-    "investment-bank": number;
-    "harch-alpha": number;
+    "essential": number;
+    "pro": number;
+    "enterprise": number;
+    "agency": number;
   };
   requests: { pending: number; accepted: number };
   invitations: { active: number; used: number };
@@ -198,7 +198,7 @@ interface WhatsAppExtraction {
   contact_name: string | null;
   email: string | null;
   phone: string | null;
-  plan_tier: "emergence" | "corporate" | "sovereign" | "custom" | null;
+  plan_tier: "essential" | "pro" | "enterprise" | "agency" | "custom" | null;
   pricing_mad: number | null;
   topics: string[];
   competitors: string[];
@@ -617,7 +617,7 @@ export function AdminDashboard() {
               borderBottom: `1px solid ${C.border}`,
             }}
           >
-            <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users["brand-monitor"]}BM · ${stats.users["market-competitor"]}MC · ${stats.users["investment-bank"]}IB · ${stats.users["harch-alpha"]}HA`} />
+            <KpiCell label="Total users" value={stats.users.total} sub={`${stats.users["essential"]}Ess · ${stats.users["pro"]}Pro · ${stats.users["enterprise"]}Ent · ${stats.users["agency"]}Agy`} />
             <KpiCell label="Pending requests" value={pendingRequests.length} color={pendingRequests.length > 0 ? C.warning : undefined} />
             <KpiCell label="Interested" value={interestedRequests.length} color={interestedRequests.length > 0 ? C.cta : undefined} />
             <KpiCell label="Converted" value={convertedRequests.length} color={convertedRequests.length > 0 ? C.cta : undefined} />
@@ -881,12 +881,12 @@ const PIPELINE_MAP: Record<string, PipelineStage> = Object.fromEntries(
 const PLAN_LABELS_FR: Record<string, string> = {
   essential: "Essentiel",
   pro: "Pro",
-  enterprise: "Enterprise",
-  agency: "Agency",
-  "brand-monitor": "Brand Monitor",
-  "market-competitor": "Market & Competitor",
-  "investment-bank": "Investment Bank",
-  "harch-alpha": "Harch Alpha",
+  enterprise: "Grandes Entreprises",
+  agency: "Agences",
+  "brand-monitor": "Essentiel (legacy)",
+  "market-competitor": "Pro (legacy)",
+  "investment-bank": "Grandes Entreprises (legacy)",
+  "harch-alpha": "Agences (legacy)",
 };
 
 const SIZE_EXPLANATIONS: Record<string, string> = {
@@ -1633,12 +1633,8 @@ function RequestsTab({
               <option value="all">Tous</option>
               <option value="essential">Essentiel</option>
               <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
-              <option value="agency">Agency</option>
-              <option value="brand-monitor">Brand Monitor</option>
-              <option value="market-competitor">Market & Competitor</option>
-              <option value="investment-bank">Investment Bank</option>
-              <option value="harch-alpha">Harch Alpha</option>
+              <option value="enterprise">Grandes Entreprises</option>
+              <option value="agency">Agences</option>
             </select>
           </FilterField>
           <FilterField label="Pays">
@@ -3100,10 +3096,10 @@ function AccountsTab({
           style={{ ...monoInputStyle, minWidth: "180px", cursor: "pointer" }}
         >
           <option value="all">All account types</option>
-          <option value="brand-monitor">Brand Monitor</option>
-          <option value="market-competitor">Market & Competitor</option>
-          <option value="investment-bank">Investment Bank</option>
-          <option value="harch-alpha">Harch Alpha</option>
+          <option value="essential">Essentiel</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Grandes Entreprises</option>
+          <option value="agency">Agences</option>
         </select>
       </div>
 
@@ -3156,10 +3152,14 @@ function AccountsTab({
 
 function UserRow({ user }: { user: AdminUser }) {
   const typeLabel: Record<string, string> = {
-    "brand-monitor": "Brand Monitor",
-    "market-competitor": "Market & Comp.",
-    "investment-bank": "Investment Bank",
-    "harch-alpha": "Harch Alpha",
+    essential: "Essentiel",
+    pro: "Pro",
+    enterprise: "Grandes Entr.",
+    agency: "Agences",
+    "brand-monitor": "Essentiel (legacy)",
+    "market-competitor": "Pro (legacy)",
+    "investment-bank": "Grandes Entr. (legacy)",
+    "harch-alpha": "Agences (legacy)",
   };
   const roleLabel: Record<string, string> = {
     user: "User",
@@ -3632,7 +3632,7 @@ Example:
 [10:42] +212 6 12 34 56 78: Bonjour, on a vu votre deck sur la veille réputationnelle. On est chez Maroc Telecom, on cherche à surveiller notre image pendant le rebranding.
 [10:43] Harch: Salim, ravi de vous lire. Quel budget mensuel?
 [10:44] +212 6 12 34 56 78: On a pensé 50K MAD/mois. On veut suivre Attijariwafa et Bank of Africa comme concurrents. Surtout les sujets ESG et le risque de boycott.
-[10:45] Harch: Parfait — ça correspond à notre plan Corporate. Je vous envoie une invitation?`}
+[10:45] Harch: Parfait — ça correspond à notre plan Pro. Je vous envoie une invitation?`}
             rows={18}
             style={{
               ...inputStyle,
@@ -3749,10 +3749,11 @@ function ExtractionReview({
   onCreate: () => void;
 }) {
   const planTierLabel: Record<string, string> = {
-    emergence: "Émergence (~15K MAD/mo)",
-    corporate: "Corporate (~40K MAD/mo)",
-    sovereign: "Sovereign (~75K MAD/mo)",
-    custom: "Custom pricing",
+    essential: "Essentiel (~15K MAD/mo)",
+    pro: "Pro (~40K MAD/mo)",
+    enterprise: "Grandes Entreprises (~75K MAD/mo)",
+    agency: "Agences (~150K MAD/mo)",
+    custom: "Tarif custom",
   };
 
   return (
@@ -3938,9 +3939,9 @@ function CreateAccountModal({
   const [name, setName] = useState(seed?.contact_name || "");
   const [companyName, setCompanyName] = useState(seed?.company_name || "");
   const [phone, setPhone] = useState(seed?.phone || "");
-  const [accountType, setAccountType] = useState("brand-monitor");
-  const [planTier, setPlanTier] = useState<"emergence" | "corporate" | "sovereign" | "custom">(
-    (seed?.plan_tier as "emergence" | "corporate" | "sovereign" | "custom") || "corporate",
+  const [accountType, setAccountType] = useState("essential");
+  const [planTier, setPlanTier] = useState<"essential" | "pro" | "enterprise" | "agency" | "custom">(
+    (seed?.plan_tier as "essential" | "pro" | "enterprise" | "agency" | "custom") || "pro",
   );
   const [customPrice, setCustomPrice] = useState<string>(
     seed?.pricing_mad != null ? String(seed.pricing_mad) : "",
@@ -4117,10 +4118,10 @@ function CreateAccountModal({
                 <label style={labelStyle}>Account type *</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "8px" }}>
                   {[
-                    { value: "brand-monitor", label: "Brand Monitor", desc: "Reputation" },
-                    { value: "market-competitor", label: "Market & Comp.", desc: "Brand + competitors" },
-                    { value: "investment-bank", label: "Investment Bank", desc: "DD + M&A" },
-                    { value: "harch-alpha", label: "Harch Alpha", desc: "Trader / assets" },
+                    { value: "essential", label: "Essentiel", desc: "Petites équipes com/marketing" },
+                    { value: "pro", label: "Pro", desc: "Équipes régionales + benchmarking" },
+                    { value: "enterprise", label: "Grandes Entreprises", desc: "Marques leaders + gouvernance" },
+                    { value: "agency", label: "Agences", desc: "Multi-clients + white-label" },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -4150,9 +4151,10 @@ function CreateAccountModal({
                     onChange={(e) => setPlanTier(e.target.value as typeof planTier)}
                     style={{ ...inputStyle, cursor: "pointer" }}
                   >
-                    <option value="emergence">Émergence (~15K MAD/mo)</option>
-                    <option value="corporate">Corporate (~40K MAD/mo)</option>
-                    <option value="sovereign">Sovereign (~75K MAD/mo)</option>
+                    <option value="essential">Essentiel (~15K MAD/mo)</option>
+                    <option value="pro">Pro (~40K MAD/mo)</option>
+                    <option value="enterprise">Grandes Entreprises (~75K MAD/mo)</option>
+                    <option value="agency">Agences (~150K MAD/mo)</option>
                     <option value="custom">Custom</option>
                   </select>
                 </div>

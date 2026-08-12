@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate accountType
-    const validAccountTypes = ["brand-monitor", "market-competitor", "investment-bank", "harch-alpha"];
-    const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "brand-monitor";
+    const validAccountTypes = ["essential", "pro", "enterprise", "agency"];
+    const finalAccountType = validAccountTypes.includes(accountType) ? accountType : "essential";
 
     // Validate role — super-admin can create any role.
     // (company-admin role implies the new user will be attached to the

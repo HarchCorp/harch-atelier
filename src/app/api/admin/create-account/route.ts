@@ -40,23 +40,24 @@ export const maxDuration = 30;
 
 // ─── TYPES ────────────────────────────────────────────────────────
 
-type PlanTier = "emergence" | "corporate" | "sovereign" | "custom";
+type PlanTier = "essential" | "pro" | "enterprise" | "agency" | "custom";
 
 const VALID_ACCOUNT_TYPES = new Set([
-  "brand-monitor",
-  "market-competitor",
-  "investment-bank",
-  "harch-alpha",
+  "essential",
+  "pro",
+  "enterprise",
+  "agency",
 ]);
 
 const VALID_PLAN_TIERS = new Set<PlanTier>([
-  "emergence",
-  "corporate",
-  "sovereign",
+  "essential",
+  "pro",
+  "enterprise",
+  "agency",
   "custom",
 ]);
 
-const VALID_ROLES = new Set(["user", "admin", "company-admin"]);
+const VALID_ROLES = new Set(["user", "admin", "company-admin", "commercial"]);
 
 interface CreateAccountBody {
   email: string;
@@ -224,7 +225,7 @@ export async function POST(req: NextRequest) {
 
   const accountType = VALID_ACCOUNT_TYPES.has(body.accountType)
     ? body.accountType
-    : "brand-monitor";
+    : "essential";
 
   const planTier = VALID_PLAN_TIERS.has(body.planTier)
     ? body.planTier

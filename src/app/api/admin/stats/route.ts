@@ -29,10 +29,10 @@ export async function GET() {
   try {
     const [
       totalUsers,
-      brandMonitorUsers,
-      marketCompetitorUsers,
-      investmentBankUsers,
-      harchAlphaUsers,
+      essentialUsers,
+      proUsers,
+      enterpriseUsers,
+      agencyUsers,
       pendingRequests,
       acceptedRequests,
       activeInvitations,
@@ -44,10 +44,10 @@ export async function GET() {
       totalDossiers,
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.user.count({ where: { accountType: "brand-monitor" } }),
-      prisma.user.count({ where: { accountType: "market-competitor" } }),
-      prisma.user.count({ where: { accountType: "investment-bank" } }),
-      prisma.user.count({ where: { accountType: "harch-alpha" } }),
+      prisma.user.count({ where: { accountType: "essential" } }),
+      prisma.user.count({ where: { accountType: "pro" } }),
+      prisma.user.count({ where: { accountType: "enterprise" } }),
+      prisma.user.count({ where: { accountType: "agency" } }),
       prisma.accessRequest.count({ where: { status: "pending" } }),
       prisma.accessRequest.count({ where: { status: "accepted" } }),
       prisma.invitation.count({ where: { usedAt: null, expiresAt: { gte: new Date() } } }),
@@ -62,10 +62,10 @@ export async function GET() {
     return NextResponse.json({
       users: {
         total: totalUsers,
-        "brand-monitor": brandMonitorUsers,
-        "market-competitor": marketCompetitorUsers,
-        "investment-bank": investmentBankUsers,
-        "harch-alpha": harchAlphaUsers,
+        "essential": essentialUsers,
+        "pro": proUsers,
+        "enterprise": enterpriseUsers,
+        "agency": agencyUsers,
       },
       requests: {
         pending: pendingRequests,
