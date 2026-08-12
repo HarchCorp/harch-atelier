@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { motion, useInView } from "framer-motion";
 import BrandBadge from "@/components/BrandBadge";
 import { AtelierNav } from "./components/AtelierNav";
 import { AtelierFooter } from "./components/AtelierFooter";
@@ -14,6 +15,147 @@ import {
   PhaseDisclaimer,
 } from "./components/shared";
 import { C as TOKENS } from "./components/tokens";
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════════════
+
+// useCountUp — animates 0 → target once `start` flips to true.
+// Uses requestAnimationFrame + easeOutCubic for smooth deceleration.
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+// AnimatedStat — animates 0 → value when the stat scrolls into view.
+// Only animates values that start with optional whitespace + a digit
+// (e.g. "5M+", "100M+", "120+", "32", "48h", "1.2K"). Values like
+// "< 5min", "Sur devis", or "Illimité" render as-is.
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  // prefix (whitespace only) + number + non-digit suffix
+  const match = value.match(/^(\s*)(\d+(?:\.\d+)?)(\D.*)?$/);
+  const target = match ? parseFloat(match[2]) : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const display = Number.isInteger(target)
+    ? Math.round(animated).toString()
+    : animated.toFixed(1);
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {display}
+      {suffix}
+    </span>
+  );
+}
+
+// Reveal — fades + lifts a section into view on scroll. Once only.
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// StaggerContainer — orchestrates staggered child reveals.
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// StaggerItem — fades + lifts in, driven by parent StaggerContainer.
+function StaggerItem({
+  children,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // HARCH ATELIER — AI REPUTATION INTELLIGENCE
@@ -498,7 +640,7 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
               className="hero-cta-row"
               style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}
             >
-              <a
+              <motion.a
                 href={ctaHref}
                 className="btn-primary"
                 style={{
@@ -517,6 +659,9 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
                   fontFamily: FONT.sans,
                   transition: "background-color 0.2s",
                 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = C.ctaHover; // emerald-400
                 }}
@@ -526,8 +671,8 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
               >
                 {ctaLabel}
                 <IconArrow dir="right" size={16} color={C.textOnDark} />
-              </a>
-              <a
+              </motion.a>
+              <motion.a
                 href={secondaryCtaHref}
                 style={{
                   display: "inline-flex",
@@ -545,6 +690,9 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
                   fontFamily: FONT.sans,
                   transition: "background-color 0.2s",
                 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = C.bgHover; // neutral-100
                 }}
@@ -553,11 +701,11 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
                 }}
               >
                 {secondaryCtaLabel}
-              </a>
+              </motion.a>
             </div>
 
             {/* Trust indicators — Signal AI style */}
-            <div
+            <StaggerContainer
               className="hero-trust"
               style={{
                 marginTop: "48px",
@@ -565,12 +713,13 @@ function Hero({ ctaHref, ctaLabel, secondaryCtaHref, secondaryCtaLabel }: {
                 gap: "32px",
                 flexWrap: "wrap",
               }}
+              stagger={0.1}
             >
-              <TrustStat value="5M+" label="Articles ingested/day" />
-              <TrustStat value="100M+" label="Entities labeled/day" />
-              <TrustStat value="120+" label="Languages translated" />
-              <TrustStat value="32" label="Risk categories" />
-            </div>
+              <StaggerItem><TrustStat value="5M+" label="Articles ingested/day" /></StaggerItem>
+              <StaggerItem><TrustStat value="100M+" label="Entities labeled/day" /></StaggerItem>
+              <StaggerItem><TrustStat value="120+" label="Languages translated" /></StaggerItem>
+              <StaggerItem><TrustStat value="32" label="Risk categories" /></StaggerItem>
+            </StaggerContainer>
           </div>
 
           {/* ─── Right: dashboard mockup ─── */}
@@ -593,7 +742,7 @@ function TrustStat({ value, label }: { value: string; label: string }) {
           letterSpacing: "-0.02em",
         }}
       >
-        {value}
+        <AnimatedStat value={value} />
       </div>
       <div
         style={{
@@ -1107,18 +1256,21 @@ function WhatWeDo() {
           sources, French business press, and AI engines your customers actually use.
         </SectionSub>
 
-        <div
+        <StaggerContainer
           className="feature-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
           }}
+          stagger={0.1}
         >
           {features.map((f, i) => (
-            <FeatureCard key={i} {...f} />
+            <StaggerItem key={i} style={{ height: "100%" }}>
+              <FeatureCard {...f} />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );
@@ -1163,6 +1315,7 @@ function FeatureCard({
       }}
     >
       <div
+        className="feature-icon-box"
         style={{
           width: "48px",
           height: "48px",
@@ -1173,6 +1326,7 @@ function FeatureCard({
           alignItems: "center",
           justifyContent: "center",
           marginBottom: "20px",
+          transition: "all 0.25s",
         }}
       >
         {icon}
@@ -1218,7 +1372,7 @@ function FeatureCard({
             letterSpacing: "-0.02em",
           }}
         >
-          {stat}
+          <AnimatedStat value={stat} />
         </span>
         <span
           style={{
@@ -2769,7 +2923,7 @@ function Harch100Row({
             letterSpacing: "-0.02em",
           }}
         >
-          {row.score}
+          <AnimatedStat value={String(row.score)} />
         </span>
         <span
           style={{
@@ -3686,7 +3840,7 @@ function Pricing() {
           in MAD (Moroccan Dirham). Cancel anytime.
         </SectionSub>
 
-        <div
+        <StaggerContainer
           className="pricing-grid"
           style={{
             display: "grid",
@@ -3694,11 +3848,14 @@ function Pricing() {
             gap: "20px",
             alignItems: "stretch",
           }}
+          stagger={0.1}
         >
           {tiers.map((tier) => (
-            <PricingCard key={tier.name} tier={tier} />
+            <StaggerItem key={tier.name} style={{ height: "100%" }}>
+              <PricingCard tier={tier} />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
 
         {/* Below pricing: comparison strip */}
         <div
@@ -3759,12 +3916,20 @@ function PricingCard({
         if (!tier.highlighted) {
           e.currentTarget.style.borderColor = C.accentDark;
           e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = SHADOW.cardHover;
+        } else {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = SHADOW.deep;
         }
       }}
       onMouseLeave={(e) => {
         if (!tier.highlighted) {
           e.currentTarget.style.borderColor = C.border;
           e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = SHADOW.card;
+        } else {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = SHADOW.cardHover;
         }
       }}
     >
@@ -3852,7 +4017,7 @@ function PricingCard({
       </p>
 
       {/* CTA — DS V2 §3 : highlighted tier = bg-emerald-500, others = secondary */}
-      <a
+      <motion.a
         href="/atelier/audit"
         style={{
           display: "block",
@@ -3872,6 +4037,9 @@ function PricingCard({
           transition: "background-color 0.2s",
           marginBottom: "28px",
         }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
         onMouseEnter={(e) => {
           if (tier.highlighted) {
             e.currentTarget.style.background = C.ctaHover; // emerald-400
@@ -3888,7 +4056,7 @@ function PricingCard({
         }}
       >
         {tier.cta}
-      </a>
+      </motion.a>
 
       {/* Features */}
       <div
@@ -4562,6 +4730,7 @@ function FinalCTA() {
 
         {/* Form */}
         {!submitted ? (
+          <Reveal>
           <form
             onSubmit={handleSubmit}
             style={{
@@ -4606,7 +4775,7 @@ function FinalCTA() {
                 onChange={(v) => setForm({ ...form, company: v })}
               />
             </div>
-            <button
+            <motion.button
               type="submit"
               disabled={submitting}
               style={{
@@ -4627,6 +4796,9 @@ function FinalCTA() {
                 transition: "background-color 0.2s, opacity 0.2s",
                 opacity: submitting ? 0.7 : 1,
               }}
+              whileHover={submitting ? undefined : { scale: 1.02 }}
+              whileTap={submitting ? undefined : { scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 if (submitting) return;
                 e.currentTarget.style.background = C.ctaHover; // emerald-400
@@ -4640,7 +4812,7 @@ function FinalCTA() {
               {!submitting && (
                 <IconArrow dir="right" size={16} color={C.textOnDark} />
               )}
-            </button>
+            </motion.button>
             {/* Inline error banner (Task FIX-FORMS-1) — surfaces API
                 failures so the user can retry without losing form
                 state. */}
@@ -4680,7 +4852,9 @@ function FinalCTA() {
               <span>✓ Cancel anytime</span>
             </div>
           </form>
+          </Reveal>
         ) : (
+          <Reveal>
           <div
             style={{
               background: C.surface,
@@ -4731,6 +4905,7 @@ function FinalCTA() {
               48 hours.
             </p>
           </div>
+          </Reveal>
         )}
       </div>
     </section>
@@ -4889,6 +5064,15 @@ const pageStyles = `
   a:focus-visible, button:focus-visible, input:focus-visible {
     outline: 2px solid ${C.accentHover}; /* stone-600 — DS V2 Atelier accent */
     outline-offset: 2px;
+  }
+
+  /* POLISH-PUBLIC · icon hover polish — subtle bg tint + scale lift
+     on the feature-card icon container (overrides inline bg via
+     !important since the icon-box has inline background). */
+  .feature-card:hover .feature-icon-box {
+    background: rgba(120,113,108,0.16) !important;
+    border-color: rgba(120,113,108,0.30) !important;
+    transform: scale(1.06);
   }
 `;
 

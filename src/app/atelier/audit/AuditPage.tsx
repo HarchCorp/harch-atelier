@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import {
@@ -8,6 +9,184 @@ import {
   CursorGlow,
   BackToTop,
 } from "../components/shared";
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════════════
+
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+// AnimatedStat — animates 0 → value when scrolled into view.
+// Only animates values that start with optional whitespace + a digit.
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const match = value.match(/^(\s*)(\d+(?:\.\d+)?)(\D.*)?$/);
+  const target = match ? parseFloat(match[2]) : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const display = Number.isInteger(target)
+    ? Math.round(animated).toString()
+    : animated.toFixed(1);
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {display}
+      {suffix}
+    </span>
+  );
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerItem({
+  children,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// SageConfetti — CSS-only sage celebration burst for the success state.
+// 24 particles with random left / delay / duration / size, falling from
+// top with rotation. Rendered once on mount; particles fade out at end.
+function SageConfetti() {
+  const particles = Array.from({ length: 24 }, (_, i) => {
+    const seed = (i * 73) % 100;
+    const left = (seed * 1.0 + (i * 13) % 7) % 100;
+    const delay = (i % 6) * 0.08;
+    const duration = 2.2 + (i % 5) * 0.3;
+    const size = 6 + (i % 4) * 2;
+    const palette = [C.sage, C.sageBright, C.accentDark];
+    const color = palette[i % palette.length];
+    return { left, delay, duration, size, color, i };
+  });
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        overflow: "hidden",
+        zIndex: 0,
+      }}
+    >
+      {particles.map((p) => (
+        <span
+          key={p.i}
+          style={{
+            position: "absolute",
+            top: "-20px",
+            left: `${p.left}%`,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            background: p.color,
+            borderRadius: "2px",
+            opacity: 0,
+            animation: `audit-confetti-fall ${p.duration}s ${p.delay}s ease-out forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // HARCH ATELIER — AUDIT PAGE (Free reputation audit form)
@@ -284,7 +463,7 @@ function Hero() {
       <div aria-hidden style={{ position: "absolute", top: "-200px", right: "-100px", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(74,123,95,0.04), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       <div aria-hidden style={{ position: "absolute", bottom: "-150px", left: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(139,157,175,0.05), transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1, textAlign: "center" }}>
+      <Reveal style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px", position: "relative", zIndex: 1, textAlign: "center" }}>
         <Eyebrow color={C.sage}>Free audit · 7 days</Eyebrow>
         <h1
           style={{
@@ -315,7 +494,7 @@ function Hero() {
         </p>
 
         {/* Hero stats */}
-        <div
+        <StaggerContainer
           className="hero-stats"
           style={{
             display: "flex",
@@ -323,14 +502,15 @@ function Hero() {
             justifyContent: "center",
             flexWrap: "wrap",
           }}
+          stagger={0.1}
         >
-          <HeroStat value="7" label="Days free" />
-          <HeroStat value="30+" label="Media sources" />
-          <HeroStat value="8" label="AI engines" />
-          <HeroStat value="0" label="Credit card" />
-          <HeroStat value="48h" label="Setup time" />
-        </div>
-      </div>
+          <StaggerItem><HeroStat value="7" label="Days free" /></StaggerItem>
+          <StaggerItem><HeroStat value="30+" label="Media sources" /></StaggerItem>
+          <StaggerItem><HeroStat value="8" label="AI engines" /></StaggerItem>
+          <StaggerItem><HeroStat value="0" label="Credit card" /></StaggerItem>
+          <StaggerItem><HeroStat value="48h" label="Setup time" /></StaggerItem>
+        </StaggerContainer>
+      </Reveal>
     </section>
   );
 }
@@ -339,7 +519,7 @@ function HeroStat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <div style={{ fontSize: "28px", fontWeight: 700, fontFamily: FONT.mono, color: C.sage, lineHeight: 1, letterSpacing: "-0.02em" }}>
-        {value}
+        <AnimatedStat value={value} />
       </div>
       <div style={{ fontSize: "11px", color: C.textMuted, fontFamily: FONT.mono, marginTop: "6px", letterSpacing: "0.06em", textTransform: "uppercase" }}>
         {label}
@@ -479,19 +659,21 @@ function AuditFormSection() {
         >
           {/* Left: What you get */}
           <div>
+            <Reveal>
             <Eyebrow color={C.sage}>What you get</Eyebrow>
             <SectionTitle>Four deliverables, in 7 days.</SectionTitle>
             <p style={{ fontSize: "16px", color: C.textSecondary, lineHeight: 1.6, margin: "0 0 40px" }}>
               The audit is not a sales pitch. It's the real product, running on
               your brand, for a week. You decide at the end.
             </p>
+            </Reveal>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <StaggerContainer style={{ display: "flex", flexDirection: "column", gap: "16px" }} stagger={0.08}>
               {WHAT_YOU_GET.map((item) => {
                 const Icon = getWhatYouGetIcon(item.icon);
                 return (
+                  <StaggerItem key={item.n}>
                   <div
-                    key={item.n}
                     style={{
                       display: "flex",
                       gap: "16px",
@@ -501,8 +683,14 @@ function AuditFormSection() {
                       borderRadius: "8px",
                       transition: "all 0.2s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.sage)}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = C.sage;
+                      e.currentTarget.style.boxShadow = SHADOW.card;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = C.border;
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
                   >
                     <div
                       style={{
@@ -527,11 +715,13 @@ function AuditFormSection() {
                       <p style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
                     </div>
                   </div>
+                  </StaggerItem>
                 );
               })}
-            </div>
+            </StaggerContainer>
 
             {/* Timeline */}
+            <Reveal delay={0.2}>
             <div
               style={{
                 marginTop: "32px",
@@ -564,6 +754,7 @@ function AuditFormSection() {
                 ))}
               </div>
             </div>
+            </Reveal>
           </div>
 
           {/* Right: 3-step form */}
@@ -599,6 +790,7 @@ function AuditFormSection() {
                 {[1, 2, 3].map((s) => (
                   <div
                     key={s}
+                    className={s === step ? "audit-progress-active" : undefined}
                     style={{
                       flex: 1,
                       height: "4px",
@@ -628,9 +820,19 @@ function AuditFormSection() {
 
             {/* Form body */}
             <div style={{ padding: "28px" }}>
-              {step === 1 && <Step1 form={form} updateForm={updateForm} />}
-              {step === 2 && <Step2 form={form} toggleSource={toggleSource} />}
-              {step === 3 && <Step3 form={form} updateForm={updateForm} />}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={step}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -24 }}
+                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {step === 1 && <Step1 form={form} updateForm={updateForm} />}
+                  {step === 2 && <Step2 form={form} toggleSource={toggleSource} />}
+                  {step === 3 && <Step3 form={form} updateForm={updateForm} />}
+                </motion.div>
+              </AnimatePresence>
 
               {/* Submit error banner — only shown on step 3 when the
                   POST to /api/access-request fails (network, 409, 4xx,
@@ -658,7 +860,7 @@ function AuditFormSection() {
               {/* Navigation */}
               <div style={{ display: "flex", gap: "12px", marginTop: "28px", paddingTop: "24px", borderTop: `1px solid ${C.borderLight}` }}>
                 {step > 1 && (
-                  <button
+                  <motion.button
                     onClick={() => setStep(step - 1)}
                     disabled={submitting}
                     style={{
@@ -674,12 +876,15 @@ function AuditFormSection() {
                       transition: "all 0.2s",
                       opacity: submitting ? 0.5 : 1,
                     }}
+                    whileHover={submitting ? undefined : { scale: 1.02 }}
+                    whileTap={submitting ? undefined : { scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
                   >
                     Back
-                  </button>
+                  </motion.button>
                 )}
                 {step < 3 ? (
-                  <button
+                  <motion.button
                     onClick={() => canProceed() && setStep(step + 1)}
                     disabled={!canProceed()}
                     style={{
@@ -699,12 +904,15 @@ function AuditFormSection() {
                       justifyContent: "center",
                       gap: "8px",
                     }}
+                    whileHover={canProceed() ? { scale: 1.02 } : undefined}
+                    whileTap={canProceed() ? { scale: 0.98 } : undefined}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
                   >
                     Continue
                     <IconArrow size={14} color={canProceed() ? "#FFFFFF" : C.textFaint} />
-                  </button>
+                  </motion.button>
                 ) : (
-                  <button
+                  <motion.button
                     onClick={handleSubmit}
                     disabled={!canProceed() || submitting}
                     style={{
@@ -724,12 +932,15 @@ function AuditFormSection() {
                       justifyContent: "center",
                       gap: "8px",
                     }}
+                    whileHover={canProceed() && !submitting ? { scale: 1.02 } : undefined}
+                    whileTap={canProceed() && !submitting ? { scale: 0.98 } : undefined}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
                   >
                     {submitting ? "Envoi en cours…" : "Start my free audit"}
                     {!submitting && (
                       <IconArrow size={14} color={canProceed() ? "#FFFFFF" : C.textFaint} />
                     )}
-                  </button>
+                  </motion.button>
                 )}
               </div>
 
@@ -1020,15 +1231,22 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
   return (
     <section
       style={{
+        position: "relative",
         background: C.bg,
         padding: "48px 16px",
         borderTop: `1px solid ${C.border}`,
         minHeight: "70vh",
+        overflow: "hidden",
       }}
     >
-      <div style={{ maxWidth: "640px", margin: "0 auto", textAlign: "center" }}>
-        {/* Success check */}
-        <div
+      {/* POLISH-PUBLIC · sage confetti burst on success mount */}
+      <SageConfetti />
+      <Reveal style={{ maxWidth: "640px", margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+        {/* Success check — spring scale+bounce on mount */}
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.15 }}
           style={{
             width: "80px",
             height: "80px",
@@ -1042,7 +1260,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
           }}
         >
           <IconCheck size={36} color={C.sage} />
-        </div>
+        </motion.div>
 
         <Eyebrow color={C.sage}>Audit request received</Eyebrow>
         <h1
@@ -1088,13 +1306,13 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
           <div style={{ fontSize: "11px", fontFamily: FONT.mono, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "20px", textAlign: "center" }}>
             What happens next
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <SuccessStep n="01" label="Within 1 hour" desc="Confirmation email + WhatsApp message from our team." />
-            <SuccessStep n="02" label="Within 24 hours" desc="30-min onboarding call to finalize sources and prompts." />
-            <SuccessStep n="03" label="Day 1" desc="Monitoring starts. Your dashboard goes live." />
-            <SuccessStep n="04" label="Day 3" desc="First WhatsApp digest delivered at 7:00." />
-            <SuccessStep n="05" label="Day 7" desc="Final PDF report + 30-min debrief call." />
-          </div>
+          <StaggerContainer style={{ display: "flex", flexDirection: "column", gap: "16px" }} stagger={0.1}>
+            <StaggerItem><SuccessStep n="01" label="Within 1 hour" desc="Confirmation email + WhatsApp message from our team." /></StaggerItem>
+            <StaggerItem><SuccessStep n="02" label="Within 24 hours" desc="30-min onboarding call to finalize sources and prompts." /></StaggerItem>
+            <StaggerItem><SuccessStep n="03" label="Day 1" desc="Monitoring starts. Your dashboard goes live." /></StaggerItem>
+            <StaggerItem><SuccessStep n="04" label="Day 3" desc="First WhatsApp digest delivered at 7:00." /></StaggerItem>
+            <StaggerItem><SuccessStep n="05" label="Day 7" desc="Final PDF report + 30-min debrief call." /></StaggerItem>
+          </StaggerContainer>
         </div>
 
         {/* Summary card */}
@@ -1122,7 +1340,7 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
         </div>
 
         <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-          <a
+          <motion.a
             href="https://wa.me/212684440682"
             style={{
               display: "inline-flex",
@@ -1140,13 +1358,16 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
               fontFamily: FONT.sans,
               transition: "all 0.2s",
             }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = C.sageDark)}
             onMouseLeave={(e) => (e.currentTarget.style.background = C.sage)}
           >
             Message us on WhatsApp
             <IconArrow size={14} color="#FFFFFF" />
-          </a>
-          <a
+          </motion.a>
+          <motion.a
             href="/atelier"
             style={{
               display: "inline-flex",
@@ -1164,13 +1385,16 @@ function SuccessState({ form, onReset }: { form: typeof INITIAL_FORM; onReset: (
               fontFamily: FONT.sans,
               transition: "all 0.2s",
             }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(74,93,110,0.06)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             Back to home
-          </a>
+          </motion.a>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -1227,13 +1451,16 @@ function SampleDeliverable() {
       }}
     >
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
+        <Reveal>
         <Eyebrow color={C.sage}>Sample deliverable</Eyebrow>
         <SectionTitle>Here's what your dashboard will look like.</SectionTitle>
         <SectionSub>
           A real example from a recent audit (anonymized). This is the live
           dashboard you'll get access to on Day 1.
         </SectionSub>
+        </Reveal>
 
+        <Reveal delay={0.1}>
         <div
           style={{
             background: C.surface,
@@ -1385,6 +1612,7 @@ function SampleDeliverable() {
             </div>
           </div>
         </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -1432,6 +1660,7 @@ function WhyUs() {
       }}
     >
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
+        <Reveal>
         <Eyebrow>Why our audit is different</Eyebrow>
         <SectionTitle>No tricks. No traps.</SectionTitle>
         <SectionSub>
@@ -1439,18 +1668,20 @@ function WhyUs() {
           demo that hides the real product, sales calls disguised as
           "onboarding". We do the opposite.
         </SectionSub>
+        </Reveal>
 
-        <div
+        <StaggerContainer
           className="why-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: "20px",
           }}
+          stagger={0.1}
         >
           {reasons.map((r, i) => (
+            <StaggerItem key={i}>
             <div
-              key={i}
               style={{
                 background: C.surface,
                 border: `1px solid ${C.border}`,
@@ -1458,14 +1689,17 @@ function WhyUs() {
                 padding: "24px",
                 boxShadow: SHADOW.card,
                 transition: "all 0.25s",
+                height: "100%",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = C.sage;
                 e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = SHADOW.cardHover;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = C.border;
                 e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = SHADOW.card;
               }}
             >
               <div
@@ -1479,6 +1713,7 @@ function WhyUs() {
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: "16px",
+                  transition: "all 0.25s",
                 }}
               >
                 <IconCheck size={18} color={C.sage} />
@@ -1486,8 +1721,9 @@ function WhyUs() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>{r.title}</h3>
               <p style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.55, margin: 0 }}>{r.desc}</p>
             </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );
@@ -1508,6 +1744,22 @@ function ResponsiveStyles() {
       }
       @media (max-width: 640px) {
         .why-grid { grid-template-columns: 1fr !important; }
+      }
+
+      /* POLISH-PUBLIC · active progress bar segment — sage pulse */
+      @keyframes audit-progress-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(74,123,95,0.45); }
+        50% { box-shadow: 0 0 0 4px rgba(74,123,95,0); }
+      }
+      .audit-progress-active {
+        animation: audit-progress-pulse 1.8s ease-in-out infinite;
+      }
+
+      /* POLISH-PUBLIC · sage confetti fall keyframe for success state */
+      @keyframes audit-confetti-fall {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+        80% { opacity: 1; }
+        100% { transform: translateY(70vh) rotate(720deg); opacity: 0; }
       }
     `}</style>
   );

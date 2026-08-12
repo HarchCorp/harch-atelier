@@ -1,9 +1,143 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion, useInView } from "framer-motion";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { C } from "../components/tokens";
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════════════
+
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+// AnimatedStat — animates 0 → value when scrolled into view.
+// Only animates values that start with optional whitespace + a digit.
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const match = value.match(/^(\s*)(\d+(?:\.\d+)?)(\D.*)?$/);
+  const target = match ? parseFloat(match[2]) : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const display = Number.isInteger(target)
+    ? Math.round(animated).toString()
+    : animated.toFixed(1);
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {display}
+      {suffix}
+    </span>
+  );
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerItem({
+  children,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  HARCH ATELIER — PRICING PAGE
@@ -263,10 +397,23 @@ export default function PricingPage() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg }}>
       <AtelierNav />
+      {/* POLISH-PUBLIC · icon hover polish — solution icon container
+          bg tint + scale lift on hover. !important overrides inline bg. */}
+      <style>{`
+        .solution-card:hover .solution-icon-box {
+          background: rgba(16,185,129,0.10) !important;
+          border-color: ${C.cta} !important;
+          transform: scale(1.06);
+        }
+        .solution-card:hover .solution-icon-box svg {
+          stroke: ${C.ctaHover};
+        }
+      `}</style>
 
       <main style={{ flex: 1 }}>
         {/* ─── HERO ──────────────────────────────────────────────── */}
         <section style={{ ...sectionStyle, paddingTop: "96px", paddingBottom: "48px", textAlign: "center" }}>
+          <Reveal>
           <div style={eyebrowStyle}>Tarifs · Harch Atelier</div>
           <h1
             style={{
@@ -327,23 +474,25 @@ export default function PricingPage() {
               </span>
             ))}
           </div>
+          </Reveal>
         </section>
 
         {/* ─── PLANS GRID (4 CARDS — MELTWATER STRUCTURE) ───────── */}
         <section style={{ ...sectionStyle, paddingTop: "16px" }}>
-          <div
+          <StaggerContainer
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
               gap: "20px",
               alignItems: "stretch",
             }}
+            stagger={0.1}
           >
             {PLANS.map((plan) => {
               const dark = false; // white cards on white bg, like Meltwater — Pro gets green border
               return (
+                <StaggerItem key={plan.name} style={{ height: "100%" }}>
                 <div
-                  key={plan.name}
                   style={{
                     position: "relative",
                     display: "flex",
@@ -356,6 +505,16 @@ export default function PricingPage() {
                     borderRadius: "12px",
                     color: C.text,
                     boxShadow: plan.highlighted ? C.shadowMd : C.shadowSm,
+                    transition: "all 0.25s ease",
+                    height: "100%",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = C.shadowMd;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = plan.highlighted ? C.shadowMd : C.shadowSm;
                   }}
                 >
                   {plan.highlighted && (
@@ -435,7 +594,7 @@ export default function PricingPage() {
                   </div>
 
                   {/* ─── CTA ─────────────────────────────────────────── */}
-                  <a
+                  <motion.a
                     href="/atelier/audit"
                     style={{
                       display: "block",
@@ -452,6 +611,9 @@ export default function PricingPage() {
                       marginBottom: "24px",
                       transition: "background 0.2s, border-color 0.2s",
                     }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
                     onMouseEnter={(e) => {
                       if (plan.highlighted) {
                         e.currentTarget.style.background = C.ctaHover;
@@ -470,7 +632,7 @@ export default function PricingPage() {
                     }}
                   >
                     Contacter le service commercial →
-                  </a>
+                  </motion.a>
 
                   {/* ─── CHOISISSEZ VOS CAPACITÉS ───────────────────── */}
                   <div style={{ marginBottom: "20px" }}>
@@ -616,9 +778,10 @@ export default function PricingPage() {
                     </div>
                   )}
                 </div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* ─── 5 SOLUTION AREAS ──────────────────────────────────── */}
@@ -630,10 +793,11 @@ export default function PricingPage() {
           }}
         >
           <div style={sectionStyle}>
+            <Reveal>
             <div style={{ marginBottom: "40px", textAlign: "center" }}>
               <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Domaines de solution</div>
               <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
-                5 domaines. Une seule plateforme.
+                <AnimatedStat value="5" /> domaines. Une seule plateforme.
               </h2>
               <p style={{ ...bodyStyle, maxWidth: "640px", margin: "0 auto" }}>
                 Composez votre périmètre en fonction de votre maturité — du premier
@@ -641,33 +805,40 @@ export default function PricingPage() {
                 réputationnelle.
               </p>
             </div>
-            <div
+            </Reveal>
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
                 gap: "20px",
               }}
+              stagger={0.08}
             >
               {SOLUTIONS.map((s) => (
+                <StaggerItem key={s.title}>
                 <div
-                  key={s.title}
+                  className="solution-card"
                   style={{
                     padding: "24px",
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "12px",
-                    transition: "border-color 0.2s, box-shadow 0.2s",
+                    transition: "all 0.25s ease",
+                    height: "100%",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = C.cta;
                     e.currentTarget.style.boxShadow = C.shadowSm;
+                    e.currentTarget.style.transform = "translateY(-2px)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = C.border;
                     e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
                   <div
+                    className="solution-icon-box"
                     style={{
                       width: "40px",
                       height: "40px",
@@ -678,6 +849,7 @@ export default function PricingPage() {
                       border: `1px solid ${C.border}`,
                       borderRadius: "8px",
                       marginBottom: "16px",
+                      transition: "all 0.25s",
                     }}
                   >
                     <svg
@@ -717,24 +889,27 @@ export default function PricingPage() {
                     {s.desc}
                   </p>
                 </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
         {/* ─── COMPARISON MATRIX ─────────────────────────────────── */}
         <section>
           <div style={sectionStyle}>
+            <Reveal>
             <div style={{ marginBottom: "32px" }}>
               <div style={eyebrowStyle}>Comparatif détaillé</div>
               <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
-                18 critères. 4 formules.
+                <AnimatedStat value="18" /> critères. <AnimatedStat value="4" /> formules.
               </h2>
               <p style={{ ...bodyStyle, maxWidth: "640px" }}>
                 Faites défiler horizontalement sur mobile pour comparer.
                 Le plan Pro est mis en avant pour les équipes régionales.
               </p>
             </div>
+            </Reveal>
             <div
               style={{
                 overflowX: "auto",
@@ -877,27 +1052,42 @@ export default function PricingPage() {
           }}
         >
           <div style={sectionStyle}>
+            <Reveal>
             <div style={{ textAlign: "center", marginBottom: "40px" }}>
               <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>Conformité</div>
               <h2 style={{ ...headingStyle, marginBottom: "12px" }}>
                 Vos données, encadrées par le droit marocain
               </h2>
             </div>
-            <div
+            </Reveal>
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
                 gap: "20px",
               }}
+              stagger={0.1}
             >
               {TRUST.map((t) => (
+                <StaggerItem key={t.label}>
                 <div
-                  key={t.label}
                   style={{
                     padding: "28px",
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "12px",
+                    transition: "all 0.25s ease",
+                    height: "100%",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = C.accent;
+                    e.currentTarget.style.boxShadow = C.shadowSm;
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = C.border;
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
                   <div
@@ -929,30 +1119,39 @@ export default function PricingPage() {
                     {t.desc}
                   </p>
                 </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
         {/* ─── FAQ ───────────────────────────────────────────────── */}
         <section>
           <div style={{ ...sectionStyle, maxWidth: "840px" }}>
+            <Reveal>
             <div style={{ textAlign: "center", marginBottom: "40px" }}>
               <div style={{ ...eyebrowStyle, marginBottom: "12px" }}>FAQ</div>
               <h2 style={headingStyle}>Questions fréquentes</h2>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            </Reveal>
+            <StaggerContainer
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+              stagger={0.06}
+            >
               {FAQ.map((item, i) => {
                 const open = openFaq === i;
                 return (
+                  <StaggerItem key={i}>
                   <div
-                    key={i}
                     style={{
                       background: C.bgSubtle,
                       border: `1px solid ${C.border}`,
                       borderRadius: "10px",
                       overflow: "hidden",
+                      transition: "all 0.2s ease",
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; }}
                   >
                     <button
                       type="button"
@@ -1003,14 +1202,16 @@ export default function PricingPage() {
                       </div>
                     )}
                   </div>
+                  </StaggerItem>
                 );
               })}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
         {/* ─── CTA ───────────────────────────────────────────────── */}
         <section style={sectionStyle}>
+          <Reveal>
           <div
             style={{
               background: C.bgDarkest,
@@ -1045,7 +1246,7 @@ export default function PricingPage() {
               30 minutes de démo suffisent pour vous orienter vers le bon plan
               et établir un devis précis.
             </p>
-            <a
+            <motion.a
               href="/atelier/audit"
               style={{
                 display: "inline-flex",
@@ -1061,6 +1262,9 @@ export default function PricingPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, transform 0.2s",
               }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.ctaHover;
                 e.currentTarget.style.transform = "translateY(-1px)";
@@ -1071,8 +1275,9 @@ export default function PricingPage() {
               }}
             >
               Contacter le service commercial →
-            </a>
+            </motion.a>
           </div>
+          </Reveal>
         </section>
 
         {/* ─── MODALITÉS DE PAIEMENT ──────────────────────────── */}

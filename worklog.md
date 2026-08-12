@@ -6485,3 +6485,171 @@ VERIFICATION:
 - No emojis, French preserved, no functionality removed.
 
 Next action (out of scope): apply the same 5 polish improvements to Essential/Pro/Enterprise dashboards. The CSS rules in DashboardStyle can be lifted as-is (the `.agency-dashboard-root` scope class can be added to each dashboard's root div). The AnimatedNumber pattern is reusable.
+
+═══════════════════════════════════════════════════════════════════════
+POLISH-PUBLIC — AtelierHome + PricingPage + AuditPage (AURA, Lead Product & UX Strategist)
+═══════════════════════════════════════════════════════════════════════
+
+MISSION: Top 5 polish improvements per public page + audit-specific extras (form slide, success celebration, progress pulse). Surgical — no rewrite, additive layer only. White #FFFFFF, sage #4A7B5F, charcoal #0A0A0A, Space Mono headers, Inter body, Lucide icons (kept the per-file existing SVG icon set — no migration), NO emojis, French preserved where it existed, English preserved where it existed.
+
+TARGET FILES (only 3 files touched):
+  1. src/app/atelier/AtelierHome.tsx (landing, 4941 → 5125 lines)
+  2. src/app/atelier/pricing/PricingPage.tsx (pricing, 1263 → 1457 lines)
+  3. src/app/atelier/audit/AuditPage.tsx (audit form — lead gen, 1537 → 1789 lines)
+
+SHARED HELPERS (added at top of each file — self-contained, no external deps beyond framer-motion):
+  - useCountUp(target, duration, start) — requestAnimationFrame + easeOutCubic, 1200ms
+  - AnimatedStat(value, style) — parses prefix/number/suffix; only animates values starting with optional whitespace + a digit (e.g. "5M+", "120+", "32", "48h", "1.2K"); leaves "< 5min", "Sur devis", "Illimité" as-is. Uses useInView for viewport-triggered start.
+  - Reveal({children, delay, y, style, className}) — motion.div, whileInView fade-up (opacity 0→1, y 20→0), once:true, margin -80px, ease [0.16,1,0.3,1] 0.5s
+  - StaggerContainer / StaggerItem — orchestrates staggered child reveals (stagger 0.08–0.1s)
+  - SageConfetti (audit-only) — 24 CSS-only sage particles (palette: sage, sageBright, accentDark), random left/delay/duration/size, falling with 720° rotation over 2.2–3.4s
+
+═══════════════════════════════════════════════════════════════════════
+ATELIER HOME (landing page) — 5 improvements delivered
+═══════════════════════════════════════════════════════════════════════
+
+1. Button micro-interactions (hover:scale 1.02 / active:scale 0.98, 150ms easeOut):
+   - Hero primary CTA `<a>` → `<motion.a>` (Sign in / Go to Console)
+   - Hero secondary CTA `<a>` → `<motion.a>` (Request a demo / Invite your team)
+   - PricingCard CTA `<a>` → `<motion.a>` (×4 cards)
+   - FinalCTA submit `<button>` → `<motion.button>` (disabled-state guarded — no scale when submitting)
+   - whileHover/whileTap preserved across all CTAs; existing onMouseEnter/Leave for bg color kept intact
+
+2. Card hover lift (shadow + translateY(-2px)):
+   - FeatureCard already had lift — kept as-is, enhanced icon-container with className "feature-icon-box" for CSS-driven hover
+   - PricingCard non-highlighted already had lift — added shadow lift (SHADOW.cardHover) on hover
+   - PricingCard highlighted (Pro) — was previously static on hover; now lifts (-2px) with deep shadow (SHADOW.deep) on hover
+
+3. Scroll animations (framer-motion whileInView, staggered):
+   - Hero trust indicators (4 stats) → StaggerContainer + StaggerItem (stagger 0.1s)
+   - WhatWeDo feature grid (4 cards) → StaggerContainer + StaggerItem (stagger 0.1s)
+   - Pricing grid (4 tiers) → StaggerContainer + StaggerItem (stagger 0.1s)
+   - FinalCTA form + success state → Reveal (single fade-up)
+
+4. Number count-up (0 → value on viewport enter, 1200ms easeOutCubic):
+   - Hero TrustStat values: "5M+", "100M+", "120+", "32" → AnimatedStat
+   - FeatureCard stat values: "30+", "8", "3" → AnimatedStat (the "< 5min" stat for Crisis Alerts is left as-is — non-numeric prefix)
+   - Harch100 ranking table: row.score (91, 84, 79, 76, 74, 72, 68, 66, 64, 62) → AnimatedStat(String(row.score))
+
+5. Icon polish (consistent sizing + hover color change):
+   - FeatureCard icon container — added className "feature-icon-box" + CSS rule in pageStyles:
+       .feature-card:hover .feature-icon-box { background: rgba(120,113,108,0.16) !important; border-color: rgba(120,113,108,0.30) !important; transform: scale(1.06); }
+   - Existing icon sizes (IconRadar/AI/Sentiment/Bell at 32px in FeatureCard, IconCheck at 14–16px, IconArrow at 14–20px) preserved — already consistent
+
+═══════════════════════════════════════════════════════════════════════
+PRICING PAGE — 5 improvements delivered
+═══════════════════════════════════════════════════════════════════════
+
+1. Button micro-interactions:
+   - All 4 plan-card CTAs `<a>` → `<motion.a>` (Contacter le service commercial →)
+   - Bottom dark CTA `<a>` → `<motion.a>` (Contacter le service commercial →)
+   - whileHover/whileTap with 150ms easeOut; existing onMouseEnter/Leave preserved
+
+2. Card hover lift:
+   - Plan cards (4): added transition "all 0.25s ease" + onMouseEnter translateY(-2px) + boxShadow C.shadowMd (highlighted Pro card lifts too — previously static)
+   - Solution cards (5): added transition "all 0.25s ease" + translateY(-2px) lift + shadow on hover (previously only border-color + shadow change)
+   - Trust cards (3): added transition + translateY(-2px) + borderColor C.accent + shadow lift
+   - FAQ items (5): added transition + borderColor C.accent on hover
+
+3. Scroll animations:
+   - Hero block (eyebrow + h1 + p + trust pills) → Reveal
+   - Plans grid → StaggerContainer + StaggerItem (stagger 0.1s)
+   - Solutions section header → Reveal; solutions grid → StaggerContainer + StaggerItem (stagger 0.08s)
+   - Comparison header → Reveal
+   - Trust section header → Reveal; trust grid → StaggerContainer + StaggerItem (stagger 0.1s)
+   - FAQ section header → Reveal; FAQ items → StaggerContainer + StaggerItem (stagger 0.06s)
+   - Bottom dark CTA card → Reveal
+
+4. Number count-up:
+   - "5 domaines. Une seule plateforme." → `<AnimatedStat value="5" /> domaines.`
+   - "18 critères. 4 formules." → `<AnimatedStat value="18" /> critères. <AnimatedStat value="4" /> formules.`
+   - Section title numbers now animate 0 → value when scrolled into view
+
+5. Icon polish:
+   - Solution icon container — added className "solution-icon-box" + scoped <style> block at page root:
+       .solution-card:hover .solution-icon-box { background: rgba(16,185,129,0.10) !important; border-color: ${C.cta} !important; transform: scale(1.06); }
+       .solution-card:hover .solution-icon-box svg { stroke: ${C.ctaHover}; }
+   - Solution SVGs all consistent at 20px (already were)
+
+═══════════════════════════════════════════════════════════════════════
+AUDIT PAGE — 5 standard + 3 audit-specific improvements delivered
+═══════════════════════════════════════════════════════════════════════
+
+1. Button micro-interactions:
+   - Back button → `<motion.button>` (disabled-state guarded — no scale when submitting)
+   - Continue button → `<motion.button>` (canProceed guarded — no scale when disabled)
+   - Submit button → `<motion.button>` (canProceed && !submitting guarded)
+   - Success state: "Message us on WhatsApp" link → `<motion.a>`
+   - Success state: "Back to home" link → `<motion.a>`
+
+2. Card hover lift:
+   - "What you get" cards (4) — added boxShadow SHADOW.card on hover (previously only border-color change)
+   - WhyUs cards (4) — added boxShadow SHADOW.cardHover on hover + transition "all 0.25s"
+
+3. Scroll animations:
+   - Hero block → Reveal (single fade-up of the entire hero content)
+   - Hero stats (5: 7 / 30+ / 8 / 0 / 48h) → StaggerContainer + StaggerItem (stagger 0.1s)
+   - "What you get" intro (eyebrow + title + p) → Reveal
+   - "What you get" cards (4) → StaggerContainer + StaggerItem (stagger 0.08s)
+   - Timeline card → Reveal delay 0.2s
+   - SampleDeliverable intro → Reveal; dashboard mockup → Reveal delay 0.1s
+   - WhyUs intro → Reveal; WhyUs cards (4) → StaggerContainer + StaggerItem (stagger 0.1s)
+   - Success state body → Reveal; "What happens next" steps (5) → StaggerContainer + StaggerItem (stagger 0.1s)
+
+4. Number count-up:
+   - HeroStat values: "7", "30+", "8", "0", "48h" → AnimatedStat (parses prefix/number/suffix, animates 0 → value)
+
+5. Icon polish:
+   - All existing audit-page icons (IconRadar/Chart/Bell/Doc at 22px in "What you get", IconCheck at 11–18px) already consistent — no migration needed
+   - "What you get" icon containers (44×44 sage-bg boxes) + WhyUs icon containers (36×36 sage-bg boxes) — added transition "all 0.25s" for smooth hover state
+
+AUDIT-SPECIFIC (the 3 key requirements):
+
+A. Form step slide transition (AnimatePresence):
+   - Step1/Step2/Step3 rendering wrapped in `<AnimatePresence mode="wait">` + `<motion.div key={step}>`
+   - initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}
+   - transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+   - Forward step = slide left-in/right-out; back step = slide right-in/left-out (via mode="wait" + key change)
+
+B. Success state celebration:
+   - SageConfetti component: 24 sage particles (palette sage/sageBright/accentDark) falling from top with 720° rotation, random left (0–100%), random delay (0–0.4s), random duration (2.2–3.4s). CSS keyframe `audit-confetti-fall` (translateY 0 → 70vh + opacity 1 → 0 over 80%).
+   - Success check icon wrapped in `<motion.div>` with `initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.15 }}` — spring scale+bounce on mount.
+   - "What happens next" SuccessSteps staggered in via StaggerContainer + StaggerItem (stagger 0.1s).
+
+C. Progress dot pulse on current step:
+   - Progress bar segment matching the current step gets className "audit-progress-active"
+   - CSS keyframe `audit-progress-pulse`: box-shadow 0 0 0 0 rgba(74,123,95,0.45) → 0 0 0 4px rgba(74,123,95,0) over 1.8s ease-in-out infinite — sage glow ring pulses on the active segment only
+
+CONSTRAINTS VERIFIED:
+- 'use client' preserved on all 3 files (line 1, untouched)
+- No functionality removed — every original button, input, fetch, persist, form state, error banner, FAQ toggle, comparison table, pricing matrix, success steps, confetti palette preserved
+- French throughout (PricingPage is French-only — preserved); AuditPage mixes English (form labels) + French (error messages, "Envoi en cours…") — preserved as-is per "don't rewrite" rule
+- NO emojis — no new icons introduced (existing inline SVG icon sets reused)
+- TypeScript: `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → EXIT=0, 0 errors (verified after all 3 pages edited)
+- Did NOT touch any other file (only the 3 target .tsx files modified)
+- MINIMAL — exactly 5 standard improvements per page + 3 audit-specific, no scope creep
+
+DIFF SUMMARY (3 files touched, ~530 lines net added):
+- AtelierHome.tsx: +184 lines (motion helpers + AnimatedStat in TrustStat/FeatureCard/Harch100 + motion.a CTAs + StaggerContainer wraps + CSS rule for feature-icon-box hover)
+- PricingPage.tsx: +194 lines (motion helpers + AnimatedStat in section titles + motion.a CTAs + StaggerContainer wraps + plan card hover lift + scoped <style> for solution-icon-box hover)
+- AuditPage.tsx: +252 lines (motion helpers + AnimatedStat in HeroStat + AnimatePresence step slide + motion.button form nav + motion.a success CTAs + SageConfetti + spring check icon + audit-progress-active pulse CSS + Reveal/StaggerContainer wraps throughout)
+
+NEW KEYFRAMES (audit page, in ResponsiveStyles):
+- audit-progress-pulse (sage box-shadow glow, 1.8s infinite)
+- audit-confetti-fall (translateY + rotate + opacity, 2.2–3.4s once)
+
+NEW CSS CLASSES (page-scoped):
+- .feature-card:hover .feature-icon-box (AtelierHome — stone-500 tint + scale 1.06)
+- .solution-card:hover .solution-icon-box / svg (PricingPage — emerald tint + scale 1.06 + stroke color change)
+- .audit-progress-active (AuditPage — sage pulse glow on current step)
+
+VERIFICATION:
+- tsc EXIT=0, 0 errors (4GB heap as specified)
+- 'use client' directive preserved on all 3 files
+- No emojis, French/English preserved per existing convention
+- No functionality removed — all forms, CTAs, fetches, error banners, toggles intact
+- AnimatePresence mode="wait" ensures step transitions don't overlap (clean slide)
+- All whileHover/whileTap are guarded by `disabled`/`submitting`/`canProceed` states — disabled buttons don't lift
+- AnimatedStat handles edge cases (non-numeric prefixes like "<" render as-is, no broken animation)
+
+Next action (out of scope): apply the same motion helpers + scroll animations to the remaining public pages (login, request-access, console marketing sub-pages). The 4 helper components (useCountUp, AnimatedStat, Reveal, StaggerContainer/Item) are self-contained and copy-pasteable across any client component. Consider extracting them to `src/app/atelier/components/motion.tsx` to share across the Atelier surface.
