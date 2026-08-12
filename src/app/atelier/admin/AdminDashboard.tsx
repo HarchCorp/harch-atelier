@@ -1898,6 +1898,28 @@ function RequestsTab({
         >
           <Download size={12} /> Exporter
         </button>
+        <button
+          onClick={async () => {
+            if (!confirm("Supprimer toutes les demandes de test (email contient 'test', 'spam', 'e2e', 'deploy', 'pen') ?")) return;
+            const testEmails = requests.filter((r) =>
+              /test|spam|e2e|deploy|pen|example|dummy|fake/i.test(r.email)
+            );
+            for (const r of testEmails) {
+              await fetch(`/api/admin/requests/${r.id}`, { method: "DELETE" }).catch(() => {});
+            }
+            onStatusChanged();
+          }}
+          title="Supprimer les demandes de test (spam, e2e, etc.)"
+          style={{
+            padding: "8px 12px", background: "transparent",
+            border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444",
+            borderRadius: "5px", fontSize: "11px", fontFamily: C.fontMono, fontWeight: 600,
+            cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+            textTransform: "uppercase", letterSpacing: "0.06em",
+          }}
+        >
+          <Trash2 size={12} /> Nettoyer tests
+        </button>
       </div>
 
       {/* Advanced filters */}
