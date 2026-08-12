@@ -18,7 +18,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
-import { logError } from "@/lib/logger";
 import { logInfo, logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
