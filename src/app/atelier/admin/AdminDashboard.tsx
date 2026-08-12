@@ -108,7 +108,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // ─── TYPES ────────────────────────────────────────────────────────
 
-type Tab = "requests" | "accounts" | "permissions" | "logs" | "audit" | "whatsapp" | "security" | "kpis" | "commerciaux" | "employees";
+type Tab = "requests" | "accounts" | "permissions" | "logs" | "audit" | "whatsapp" | "security" | "kpis" | "commerciaux" | "employees" | "provisioning";
 
 type RequestStatus =
   | "pending"
@@ -208,6 +208,63 @@ interface WhatsAppExtraction {
   competitors: string[];
   use_case: string | null;
   notes: string | null;
+}
+
+// ─── PROVISIONING SEED (request → provisioning form pre-fill) ─────
+// Task CONNECT-REQUESTS-PROVISIONING — when the boss clicks
+// "Convertir en client" on a request card or in the request detail
+// drawer, we build a ProvisioningSeed from the request data and pass
+// it to the ProvisioningTab, which pre-fills the ProvisioningForm.
+// The requestId is carried along so that, after a successful
+// provisioning POST, we can PATCH the originating request to
+// status="converted" — eliminating the double-entry problem.
+interface ProvisioningSeed {
+  requestId: string;
+  contactName: string;
+  contactEmail: string;
+  companyName: string;
+  contactPhone: string;
+  useCase: string;
+  competitors: string;
+  notes: string;
+}
+
+// Parse a competitors list packed inside a free-text message.
+// Recognises "Concurrents: X, Y, Z" / "Compétiteurs: ..." /
+// "Competitors: ...". Returns the raw trailing text (caller splits
+// on comma) or an empty string when no match is found.
+function parseCompetitorsFromMessage(message: string | null | undefined): string {
+  if (!message) return "";
+  const m = message.match(/(?:concurrents?|comp[ée]titeurs?|competitors?)\s*[:\-]\s*([^\n\r]+)/i);
+  return m && m[1] ? m[1].trim() : "";
+}
+
+// Strip the competitors line from a free-text message so the
+// resulting useCase does not duplicate it. Leaves the rest of the
+// message intact.
+function stripCompetitorsFromMessage(message: string): string {
+  return message
+    .replace(/(?:concurrents?|comp[ée]titeurs?|competitors?)\s*[:\-]\s*([^\n\r]+)/i, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// Build a ProvisioningSeed from an AccessRequest. Competitors are
+// parsed from the message (if packed there) and the useCase falls
+// back to the message body when the dedicated field is empty.
+function buildProvisioningSeedFromRequest(r: AccessRequest): ProvisioningSeed {
+  const competitors = parseCompetitorsFromMessage(r.message);
+  const rawUseCase = (r.useCase || (r.message ? stripCompetitorsFromMessage(r.message) : "")).trim();
+  return {
+    requestId: r.id,
+    contactName: r.name || "",
+    contactEmail: r.email || "",
+    companyName: r.company || "",
+    contactPhone: r.phone || "",
+    useCase: rawUseCase,
+    competitors,
+    notes: r.message || "",
+  };
 }
 
 interface CreatedAccount {
@@ -380,6 +437,12 @@ export function AdminDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createModalSeed, setCreateModalSeed] = useState<Partial<WhatsAppExtraction> | null>(null);
 
+  // Provisioning seed — Task CONNECT-REQUESTS-PROVISIONING
+  // Holds the request data pre-fill when the boss clicks
+  // "Convertir en client" on a request. Cleared after a successful
+  // provisioning POST (the request is then auto-marked "Converti").
+  const [provisioningSeed, setProvisioningSeed] = useState<ProvisioningSeed | null>(null);
+
   // Mobile sidebar drawer — Task FIX-MOBILE-CRITICAL
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -533,6 +596,13 @@ export function AdminDashboard() {
             icon={<Users size={16} />}
             label="Accounts"
             badge={stats?.users.total}
+          />
+          <SidebarItem
+            active={tab === "provisioning"}
+            onClick={() => setTab("provisioning")}
+            icon={<CalendarPlus size={16} />}
+            label="Provisioning"
+            highlight={!!provisioningSeed}
           />
           <SidebarItem
             active={tab === "permissions"}
@@ -789,9 +859,23 @@ export function AdminDashboard() {
                     use_case: r.useCase,
                     notes: r.message,
                   })}
+                  onConvertToClient={(r) => {
+                    setProvisioningSeed(buildProvisioningSeedFromRequest(r));
+                    setTab("provisioning");
+                  }}
                 />
               ) : tab === "accounts" ? (
                 <AccountsTab users={users} loading={loading} onCreate={() => openCreateModal()} />
+              ) : tab === "provisioning" ? (
+                <ProvisioningTab
+                  currentRole={currentRole}
+                  seed={provisioningSeed}
+                  onSeedConsumed={() => setProvisioningSeed(null)}
+                  onProvisioned={() => {
+                    setProvisioningSeed(null);
+                    fetchCore();
+                  }}
+                />
               ) : tab === "permissions" ? (
                 <PermissionsTab users={users} loading={loading} onRefresh={fetchUsers} />
               ) : tab === "security" ? (
@@ -1365,11 +1449,13 @@ function RequestsTab({
   invitations,
   onStatusChanged,
   onAcceptRequest,
+  onConvertToClient,
 }: {
   requests: AccessRequest[];
   invitations: Invitation[];
   onStatusChanged: () => void;
   onAcceptRequest: (r: AccessRequest) => void;
+  onConvertToClient: (r: AccessRequest) => void;
 }) {
   // ─── VIEW + FILTERS STATE ──────────────────────────────────────
   const [view, setView] = useState<ViewMode>("pipeline");
@@ -1923,6 +2009,10 @@ function RequestsTab({
           byStatus={byStatus}
           onCardClick={(id) => setDrawerId(id)}
           onQuickStatus={(id, s) => changeStatus(id, s)}
+          onConvertToClient={(id) => {
+            const r = requests.find((x) => x.id === id);
+            if (r) onConvertToClient(r);
+          }}
           onDragStart={onDragStart}
           onDragOverCol={onDragOverCol}
           onDropCol={onDropCol}
@@ -2014,6 +2104,12 @@ function RequestsTab({
             setDrawerId(null);
           }
         }}
+        onConvertToClient={() => {
+          if (drawerRequest) {
+            onConvertToClient(drawerRequest);
+            setDrawerId(null);
+          }
+        }}
         onClose={() => setDrawerId(null)}
       />
     </div>
@@ -2068,7 +2164,7 @@ function ReviewKpiStrip({ kpi }: {
 }
 
 function PipelineView({
-  stages, byStatus, onCardClick, onQuickStatus,
+  stages, byStatus, onCardClick, onQuickStatus, onConvertToClient,
   onDragStart, onDragOverCol, onDropCol, onDragEnd,
   dragId, dragOverCol, updatingId,
   bulkMode, selected, toggleSelect,
@@ -2078,6 +2174,7 @@ function PipelineView({
   byStatus: Record<string, AccessRequest[]>;
   onCardClick: (id: string) => void;
   onQuickStatus: (id: string, status: RequestStatus) => void;
+  onConvertToClient: (id: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOverCol: (e: React.DragEvent, key: string) => void;
   onDropCol: (e: React.DragEvent, key: string) => void;
@@ -2153,6 +2250,7 @@ function PipelineView({
                   stage={stage}
                   onClick={() => onCardClick(r.id)}
                   onQuickStatus={(s) => onQuickStatus(r.id, s)}
+                  onConvertToClient={() => onConvertToClient(r.id)}
                   onDragStart={(e) => onDragStart(e, r.id)}
                   onDragEnd={onDragEnd}
                   dragging={dragId === r.id}
@@ -2173,7 +2271,7 @@ function PipelineView({
 }
 
 function RequestCard({
-  request, stage, onClick, onQuickStatus, onDragStart, onDragEnd,
+  request, stage, onClick, onQuickStatus, onConvertToClient, onDragStart, onDragEnd,
   dragging, updating, bulkMode, isSelected, onToggleSelect,
   annotCount, lastContact,
 }: {
@@ -2181,6 +2279,7 @@ function RequestCard({
   stage: PipelineStage;
   onClick: () => void;
   onQuickStatus: (s: RequestStatus) => void;
+  onConvertToClient: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   dragging: boolean;
@@ -2349,6 +2448,34 @@ function RequestCard({
           {quickAction.label}
         </button>
       )}
+      {/* Convertir en client — Task CONNECT-REQUESTS-PROVISIONING
+          Pre-fills the Provisioning form with the request data and
+          switches to the Provisioning tab. Eliminates double entry. */}
+      {!bulkMode && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onConvertToClient();
+          }}
+          title="Pré-remplir le formulaire de provisioning avec cette demande"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+            width: "100%", marginTop: "6px",
+            padding: "6px 8px",
+            background: SAGE_BG,
+            color: SAGE,
+            border: `1px solid ${SAGE_BORDER}`,
+            borderRadius: "4px",
+            fontFamily: C.fontMono, fontSize: "10px", fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.06em",
+            cursor: "pointer",
+            transition: "background 0.15s, border-color 0.15s",
+          }}
+        >
+          <UserPlus size={11} />
+          Convertir en client
+        </button>
+      )}
     </div>
   );
 }
@@ -2499,7 +2626,7 @@ function RequestTable({
 function RequestDetailDrawer({
   request, annotations, contacts, nextAction,
   onAddAnnotation, onDeleteAnnotation, onAddContact, onDeleteContact,
-  onNextActionChange, onStatusChange, onAccept, onClose,
+  onNextActionChange, onStatusChange, onAccept, onConvertToClient, onClose,
 }: {
   request: AccessRequest | null;
   annotations: Annotation[];
@@ -2512,6 +2639,7 @@ function RequestDetailDrawer({
   onNextActionChange: (na: NextAction) => void;
   onStatusChange: (s: RequestStatus) => void;
   onAccept: () => void;
+  onConvertToClient: () => void;
   onClose: () => void;
 }) {
   const isOpen = !!request;
@@ -2701,6 +2829,15 @@ function RequestDetailDrawer({
                     <Check size={11} /> Convertir
                   </button>
                 )}
+                {/* Convertir en client — Task CONNECT-REQUESTS-PROVISIONING
+                    Pre-fills the Provisioning form with this request's data
+                    (name, email, company, phone, useCase, competitors parsed
+                    from the message) and switches to the Provisioning tab.
+                    After successful provisioning, the request is auto-marked
+                    "Converti". */}
+                <button onClick={onConvertToClient} style={{ ...drawerActionBtnStyle, background: SAGE, color: "#fff", borderColor: SAGE }}>
+                  <UserPlus size={11} /> Convertir en client
+                </button>
                 {!request.invitation && (
                   <button onClick={onAccept} style={{ ...drawerActionBtnStyle, background: C.text, color: "#fff", borderColor: C.text }}>
                     <Plus size={11} /> Créer compte
@@ -4821,6 +4958,7 @@ function tabTitle(tab: Tab): string {
   switch (tab) {
     case "requests": return "Access Requests";
     case "accounts": return "Accounts";
+    case "provisioning": return "Provisioning";
     case "permissions": return "Role-Based Access Control";
     case "security": return "Security & Sessions";
     case "logs": return "Errors & Logs";
@@ -4836,6 +4974,7 @@ function tabSubtitle(tab: Tab): string {
   switch (tab) {
     case "requests": return "Review and triage inbound access requests";
     case "accounts": return "All users in the system + custom account creation";
+    case "provisioning": return "Créer un compte client — pricing custom, cycle, durée, essai, équipe";
     case "permissions": return "Manage user roles — changes take effect on next request (JWT sessionVersion)";
     case "security": return "Revoke sessions + audit watchdog + device management";
     case "logs": return "SystemLog — errors, warnings, info";
@@ -7445,7 +7584,17 @@ interface ProvisionResult {
 
 type ProvisionSubTab = "formulaire" | "clients" | "chronologie" | "revenus";
 
-function ProvisioningTab({ currentRole }: { currentRole: string | null }) {
+function ProvisioningTab({
+  currentRole,
+  seed,
+  onSeedConsumed,
+  onProvisioned,
+}: {
+  currentRole: string | null;
+  seed: ProvisioningSeed | null;
+  onSeedConsumed: () => void;
+  onProvisioned: () => void;
+}) {
   const [sub, setSub] = useState<ProvisionSubTab>("formulaire");
   const isFinancial = currentRole === "admin" || currentRole === "super_admin";
   const [clients, setClients] = useState<ProvisionedClient[]>([]);
@@ -7553,10 +7702,13 @@ function ProvisioningTab({ currentRole }: { currentRole: string | null }) {
         {sub === "formulaire" ? (
           <ProvisioningForm
             commercials={commercials}
+            seed={seed}
+            onSeedConsumed={onSeedConsumed}
             onCreated={() => {
               fetchClients();
               fetchRevenue();
             }}
+            onProvisioned={onProvisioned}
           />
         ) : sub === "clients" ? (
           <ClientsTable
@@ -7652,9 +7804,15 @@ function makeInitialForm(): FormState {
 function ProvisioningForm({
   commercials,
   onCreated,
+  seed,
+  onSeedConsumed,
+  onProvisioned,
 }: {
   commercials: Commercial[];
   onCreated: () => void;
+  seed: ProvisioningSeed | null;
+  onSeedConsumed: () => void;
+  onProvisioned: () => void;
 }) {
   const [form, setForm] = usePersistentState<FormState>("admin:provisioning-form", makeInitialForm());
   const [creating, setCreating] = useState(false);
@@ -7662,9 +7820,39 @@ function ProvisioningForm({
   const [result, setResult] = useState<ProvisionResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  // requestId of the originating AccessRequest, when this form was
+  // pre-filled via "Convertir en client". Used to PATCH the request
+  // status to "converted" after a successful provisioning POST.
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  // Apply seed — Task CONNECT-REQUESTS-PROVISIONING
+  // When the boss clicks "Convertir en client" on a request, the
+  // parent passes a ProvisioningSeed. We start from a fresh
+  // makeInitialForm() (so no stale plan/price bleeds in from a
+  // previous provisioning) and overlay the request data. The effect
+  // is keyed on seed?.requestId so it only fires when a new request
+  // is selected, not on every parent re-render. After applying, we
+  // call onSeedConsumed so the parent can clear its seed state.
+  const seedKey = seed?.requestId ?? null;
+  useEffect(() => {
+    if (!seed) return;
+    setRequestId(seed.requestId);
+    setForm({
+      ...makeInitialForm(),
+      companyName: seed.companyName,
+      contactName: seed.contactName,
+      contactEmail: seed.contactEmail,
+      contactPhone: seed.contactPhone,
+      useCase: seed.useCase,
+      competitors: seed.competitors,
+      notes: seed.notes,
+    });
+    onSeedConsumed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedKey]);
 
   // Auto-calc subscriptionEndDate from preset
   useEffect(() => {
@@ -7809,6 +7997,25 @@ function ProvisioningForm({
       setResult(d as ProvisionResult);
       setShowConfirm(false);
       onCreated();
+      // Task CONNECT-REQUESTS-PROVISIONING — if this provisioning
+      // was seeded from an AccessRequest, mark that request as
+      // "Converti" so the kanban reflects the new state without
+      // manual double-entry. Fire-and-forget: provisioning itself
+      // succeeded, the status update is best-effort.
+      if (requestId) {
+        try {
+          await fetch(`/api/admin/requests/${requestId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "converted" }),
+          });
+        } catch {
+          // Non-blocking — the boss can still patch the request
+          // manually from the kanban if this fails.
+        }
+        setRequestId(null);
+        onProvisioned();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur réseau");
     }

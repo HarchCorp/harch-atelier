@@ -8385,3 +8385,77 @@ Stage Summary:
 - The product is now HUMAN: welcome email, password reset, onboarding guidance
 - The product is now ALIVE: auto-scrape gives real data within 2 minutes
 - Still needs: RESEND_API_KEY on Vercel (emails), Vercel Pro (crons), ZAI_API_KEY (HarchIQ)
+
+
+---
+Task ID: CONNECT-REQUESTS-PROVISIONING
+Agent: VORTEX (Principal Systems & Security Engineer)
+
+PROBLEM
+- When the boss converted an access request to a client, he had to
+  double-enter: name, email, company, phone, competitors, use case.
+  The request already held all this info.
+
+FIX (single file: src/app/atelier/admin/AdminDashboard.tsx)
+- New `ProvisioningSeed` interface + helpers:
+  - `parseCompetitorsFromMessage()` — recognises
+    "Concurrents: X, Y" / "Compétiteurs: ..." / "Competitors: ..." in
+    a free-text message.
+  - `stripCompetitorsFromMessage()` — removes that line so the use
+    case field doesn't duplicate it.
+  - `buildProvisioningSeedFromRequest(r)` — maps an AccessRequest to
+    a ProvisioningSeed (contactName, contactEmail, companyName,
+    contactPhone, useCase, competitors, notes, requestId).
+- New `provisioning` tab wired into the sidebar (icon CalendarPlus,
+  `highlight` when a seed is pending) and into the main tab switch.
+- New `provisioningSeed` state in AdminDashboard, set by
+  `onConvertToClient` callbacks on RequestsTab.
+- "Convertir en client" button added in two places:
+  1. RequestCard (kanban) — full-width sage button below the quick
+     action, hidden in bulk mode.
+  2. RequestDetailDrawer — pill button next to the existing
+     "Convertir" / "Créer compte" actions.
+- Callback threading:
+  AdminDashboard → RequestsTab → PipelineView → RequestCard
+  AdminDashboard → RequestsTab → RequestDetailDrawer
+- ProvisioningTab now accepts `seed`, `onSeedConsumed`,
+  `onProvisioned` and forwards them to ProvisioningForm.
+- ProvisioningForm:
+  - Accepts `seed`, `onSeedConsumed`, `onProvisioned`.
+  - Holds a `requestId` state (the originating AccessRequest id).
+  - `useEffect` keyed on `seed?.requestId` applies the seed by
+    starting from a fresh `makeInitialForm()` (no stale plan/price
+    bleed-over) and overlaying the request data, then calls
+    `onSeedConsumed()` so the parent clears its seed state.
+  - After a successful POST to `/api/admin/provision-client`, if
+    `requestId` is set, fires `PATCH /api/admin/requests/${requestId}`
+    with `{ status: "converted" }` (fire-and-forget — best-effort,
+    non-blocking) and calls `onProvisioned()`.
+- `onProvisioned` in AdminDashboard clears the seed and calls
+  `fetchCore()` so the kanban updates in real time.
+
+CONSTRAINTS RESPECTED
+- 'use client' preserved (line 1, unchanged).
+- French text, no emojis.
+- Lucide icons only (UserPlus, CalendarPlus, Check, Plus, ArrowRight,
+  Mail — all already imported).
+- TypeScript: `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc
+  --noEmit --pretty false` → EXIT=0, 0 errors.
+- Only one file modified: src/app/atelier/admin/AdminDashboard.tsx
+  (+212 / -5 lines).
+
+NEXT ACTIONS (out of scope, noted for suivi)
+- The competitors parser is intentionally simple (regex on a single
+  line). Could be upgraded to a multi-line / bulleted-list parser if
+  the boss starts writing competitors as a list in the message field.
+- The "Convertir en client" button could also be added to
+  RequestTable (the table view) — currently only on the kanban cards
+  and the drawer, matching the task spec ("on each RequestCard").
+- After provisioning success, the boss stays on the result view
+  (ProvisioningResultView). A "Voir la demande" link back to the
+  Requests tab (with the request id pre-selected in the drawer) could
+  close the loop visually — but the request is already auto-marked
+  "Converti", so this is purely cosmetic.
+- The PATCH on success assumes `/api/admin/requests/[id]` accepts
+  `{ status: "converted" }` (same endpoint the kanban uses for
+  status changes — verified at line 1565 of the original file).
