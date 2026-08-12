@@ -93,6 +93,7 @@
     "reactflow": "^11.11.4",
     "recharts": "^2.15.4",
     "remark-gfm": "^4.0.1",
+    "resend": "^6.19.0",
     "sharp": "^0.34.3",
     "socket.io-client": "^4.8.3",
     "sonner": "^2.0.6",

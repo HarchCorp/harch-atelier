@@ -1,3 +1,4 @@
+import { sendInvitationEmail } from "@/lib/email/send";
 // ═══════════════════════════════════════════════════════════════
 //  /api/admin/provision-client
 //
@@ -671,6 +672,16 @@ export async function POST(req: NextRequest) {
   const baseUrl =
     process.env.NEXTAUTH_URL || "https://atelier.harchcorp.com";
   const accessUrl = `${baseUrl}/atelier/access?token=${token}`;
+
+  // ─── Send invitation email (fire-and-forget) ──────────────────
+  void sendInvitationEmail({
+    email: contactEmail,
+    name: contactName,
+    planLabel: PLAN_LABELS[accountType] ?? accountType,
+    companyName: company.name,
+    activationUrl: accessUrl,
+    bossName: session.user?.name ?? undefined,
+  });
 
   return NextResponse.json(
     {

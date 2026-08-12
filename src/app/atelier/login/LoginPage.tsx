@@ -302,7 +302,7 @@ export function LoginPage() {
                 {/* Forgot password link — subtle, with underline slide */}
                 <div style={forgotWrapperStyle}>
                   <a
-                    href="/atelier/audit"
+                    href="/atelier/forgot-password"
                     className="harch-link-underline"
                     style={forgotLinkStyle}
                   >

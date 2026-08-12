@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { logError } from "@/lib/logger";
+import { sendWelcomeEmail } from "@/lib/email/send";
 
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/access?token=XXX
@@ -130,6 +131,20 @@ export async function POST(req: NextRequest) {
         usedAt: new Date(),
         acceptedById: user.id,
       },
+    });
+
+    // Send welcome email (fire-and-forget, never blocks)
+    const planLabels: Record<string, string> = {
+      essential: "Essentiel",
+      pro: "Pro",
+      enterprise: "Grandes Entreprises",
+      agency: "Agences",
+    };
+    void sendWelcomeEmail({
+      email: user.email,
+      name: user.name ?? "",
+      planLabel: planLabels[user.accountType] ?? user.accountType,
+      loginUrl: `${process.env.NEXTAUTH_URL ?? "https://atelier.harchcorp.com"}/atelier/login`,
     });
 
     return NextResponse.json({
