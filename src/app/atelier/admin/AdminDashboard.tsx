@@ -4909,69 +4909,16 @@ interface KpiSnapshot {
 }
 
 function buildKpiSeed(): KpiSnapshot {
-  const months = ["Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Juil", "Aou", "Sep", "Oct", "Nov", "Dec"];
-  let mrr = 180000;
-  const revenue: KpiRevenuePoint[] = months.map((m, i) => {
-    const growth = 0.04 + (i % 3) * 0.015 - (i === 7 ? 0.05 : 0);
-    const newMrr = Math.round(mrr * growth + 12000);
-    const churnedMrr = Math.round(mrr * (0.018 + (i % 2) * 0.006));
-    mrr = mrr + newMrr - churnedMrr;
-    const churnRate = (churnedMrr / (mrr + churnedMrr)) * 100;
-    return {
-      month: m,
-      mrr,
-      newMrr,
-      churnedMrr,
-      churnRate: Number(churnRate.toFixed(2)),
-      netRetention: Number((((mrr) / Math.max(mrr - newMrr + churnedMrr, 1)) * 100).toFixed(1)),
-      ltv: Math.round(mrr / Math.max(churnRate / 100, 0.005)),
-    };
-  });
-  let total = 14;
-  const clients: KpiClientPoint[] = months.map((m, i) => {
-    const newClients = 2 + (i % 3);
-    const trials = 3 + (i % 4);
-    const trialToPaid = 1 + (i % 3);
-    total = total + newClients - Math.floor(trials * 0.25);
-    return {
-      month: m,
-      total,
-      newClients,
-      trials,
-      trialToPaid,
-      nps: i % 4 === 0 ? null : 48 + (i % 5) * 4,
-      avgTrialDays: 9 + (i % 5),
-      netRetention: 96 + (i % 3),
-    };
-  });
-  const usage: KpiUsagePoint[] = months.map((m, i) => ({
-    month: m,
-    harchiqQuestions: 1240 + i * 95 + (i % 2) * 220,
-    reportsGenerated: 84 + i * 6 + (i % 3) * 4,
-    whatsappAlerts: 312 + i * 18 + (i % 4) * 24,
-    apiCalls: 14820 + i * 920 + (i % 2) * 1500,
-    dau: 38 + i * 2 + (i % 3),
-    avgSessionMin: 14 + (i % 6),
-    byPlan: {
-      essential: 580 + i * 35,
-      pro: 410 + i * 28,
-      enterprise: 180 + i * 14,
-      agency: 70 + i * 5,
-    },
-  }));
-  const topClients = [
-    { name: "Maroc Telecom", revenue: 920000, plan: "Enterprise" },
-    { name: "Attijariwafa", revenue: 780000, plan: "Enterprise" },
-    { name: "OCP Group", revenue: 690000, plan: "Enterprise" },
-    { name: "Bank of Africa", revenue: 540000, plan: "Enterprise" },
-    { name: "Royal Air Maroc", revenue: 410000, plan: "Pro" },
-    { name: "Inwi", revenue: 320000, plan: "Pro" },
-    { name: "Managem", revenue: 260000, plan: "Pro" },
-    { name: "Label'Vie", revenue: 180000, plan: "Pro" },
-    { name: "Marjane", revenue: 150000, plan: "Essentiel" },
-    { name: "Total Maroc", revenue: 120000, plan: "Essentiel" },
-  ];
-  return { revenue, clients, usage, topClients, seededAt: new Date().toISOString() };
+  // ZÉRO MOCK DATA — Capteurs à zéro avant lancement (SpaceX protocol)
+  // Toutes les métriques retournent des tableaux vides + zéros.
+  // Les vraies données apparaîtront quand des clients seront provisionnés.
+  return {
+    revenue: [],
+    clients: [],
+    usage: [],
+    topClients: [],
+    seededAt: "",
+  };
 }
 
 // ─── KPI HELPERS ───────────────────────────────────────────────
@@ -5934,85 +5881,8 @@ function genId(): string {
 }
 
 function buildCommercialSeed(): CommercialFiche[] {
-  const now = Date.now();
-  const mkActivity = (
-    offset: number,
-    type: CommercialActivity["type"],
-    desc: string,
-  ): CommercialActivity => ({
-    id: `act-${offset}-${Math.random().toString(36).slice(2, 6)}`,
-    type,
-    description: desc,
-    timestamp: new Date(now - offset * 3600_000).toISOString(),
-  });
-  return [
-    {
-      id: "cm-seed-001",
-      name: "Salim Bennani",
-      email: "s.bennani@harchcorp.com",
-      phone: "+212 6 11 22 33 44",
-      territory: "Casablanca · Rabat",
-      commissionRate: 8,
-      targetRevenue: 200000,
-      status: "active",
-      createdAt: new Date(now - 180 * 86400_000).toISOString(),
-      lastLoginAt: new Date(now - 2 * 86400_000).toISOString(),
-      password: "DemoPass2024!",
-      assignedClients: [
-        { id: "c1", name: "Maroc Telecom", revenueMAD: 75000, plan: "enterprise", status: "active", lastContactAt: new Date(now - 5 * 86400_000).toISOString() },
-        { id: "c2", name: "Inwi", revenueMAD: 32000, plan: "pro", status: "active", lastContactAt: new Date(now - 12 * 86400_000).toISOString() },
-        { id: "c3", name: "H.S. Assurances", revenueMAD: 15000, plan: "essential", status: "trial", lastContactAt: new Date(now - 3 * 86400_000).toISOString() },
-        { id: "c4", name: "Lydec", revenueMAD: 40000, plan: "pro", status: "active", lastContactAt: new Date(now - 8 * 86400_000).toISOString() },
-      ],
-      activityLog: [
-        mkActivity(4, "contact", "Appel de suivi avec Maroc Telecom — comex OK pour Enterprise."),
-        mkActivity(26, "conversion", "Inwi converti de trial à Pro (32K MAD/mo)."),
-        mkActivity(72, "provision", "H.S. Assurances provisionné en essai Essentiel."),
-        mkActivity(140, "annotation", "Lydec demande extension siège +20K MAD — à valider."),
-      ],
-    },
-    {
-      id: "cm-seed-002",
-      name: "Fatima Zahra El Idrissi",
-      email: "fz.elidrissi@harchcorp.com",
-      phone: "+212 6 22 33 44 55",
-      territory: "Marrakech · Agadir",
-      commissionRate: 7,
-      targetRevenue: 150000,
-      status: "active",
-      createdAt: new Date(now - 120 * 86400_000).toISOString(),
-      lastLoginAt: new Date(now - 1 * 86400_000).toISOString(),
-      password: "DemoPass2024!",
-      assignedClients: [
-        { id: "c5", name: "OCP Group", revenueMAD: 75000, plan: "enterprise", status: "active", lastContactAt: new Date(now - 4 * 86400_000).toISOString() },
-        { id: "c6", name: "Managem", revenueMAD: 26000, plan: "pro", status: "active", lastContactAt: new Date(now - 10 * 86400_000).toISOString() },
-        { id: "c7", name: "Total Maroc", revenueMAD: 12000, plan: "essential", status: "active", lastContactAt: new Date(now - 15 * 86400_000).toISOString() },
-      ],
-      activityLog: [
-        mkActivity(8, "annotation", "OCP demande rapport ESG trimestriel — en cours."),
-        mkActivity(30, "contact", "Managem recontact pour upgrade Enterprise."),
-      ],
-    },
-    {
-      id: "cm-seed-003",
-      name: "Karim Tazi",
-      email: "k.tazi@harchcorp.com",
-      phone: "+212 6 33 44 55 66",
-      territory: "Tanger · Fès",
-      commissionRate: 6,
-      targetRevenue: 120000,
-      status: "suspended",
-      createdAt: new Date(now - 90 * 86400_000).toISOString(),
-      lastLoginAt: new Date(now - 30 * 86400_000).toISOString(),
-      password: "DemoPass2024!",
-      assignedClients: [
-        { id: "c8", name: "Tanger Med", revenueMAD: 28000, plan: "pro", status: "active", lastContactAt: new Date(now - 20 * 86400_000).toISOString() },
-      ],
-      activityLog: [
-        mkActivity(720, "annotation", "Suspendu — en attente validation contrat."),
-      ],
-    },
-  ];
+  // ZÉRO MOCK DATA — Capteurs à zéro avant lancement (SpaceX protocol)
+  return [];
 }
 
 function CommerciauxTab() {
