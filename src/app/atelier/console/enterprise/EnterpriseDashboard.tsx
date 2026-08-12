@@ -90,7 +90,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
   AlertTriangle,
@@ -1008,6 +1008,447 @@ function SparkDot({ color }: { color: string }) {
         backgroundColor: color,
       }}
     />
+  );
+}
+
+// ─── POLISH-ENTERPRISE — Executive micro-interaction primitives ───────
+// AURA · Lead Product & UX Strategist — Bloomberg-grade polish layer.
+// These atoms are reused across KPI cards, charts, empty states and
+// modals so the visual vocabulary stays institutional & consistent.
+
+/**
+ * useCountUp — cubic-eased number animation from 0 → target.
+ * Used on every big-number KPI (Score Réputation, Sentiment %,
+ * Mentions, Critical risks, API quota, etc.). The animation runs
+ * once per mount/target-change; SSR-safe (returns target immediately
+ * when disabled). Honours prefers-reduced-motion via the `enabled`
+ * flag (callers can opt-out).
+ */
+function useCountUp(target: number, duration = 900, enabled = true): number {
+  const [val, setVal] = useState<number>(enabled ? 0 : target);
+  useEffect(() => {
+    if (!enabled || !Number.isFinite(target)) {
+      setVal(target);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const from = 0;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic — board-paced
+      setVal(from + (target - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, enabled]);
+  return val;
+}
+
+/**
+ * AnimatedNumber — renders a numeric value that animates from 0 → value
+ * on mount. Keeps the existing font styling (mono, charcoal, bold) by
+ * accepting fontSize/color/fontWeight as props. Renders "—" while the
+ * parent signals `loading`. Format function is applied per-frame so the
+ * counter reads naturally at every step (e.g. "47%", "12.4K", "98/100").
+ */
+function AnimatedNumber({
+  value,
+  loading,
+  format,
+  fontSize = 28,
+  fontWeight = 700,
+  color = CHARCOAL,
+  lineHeight = 1,
+  suffix = "",
+  prefix = "",
+  style,
+}: {
+  value: number;
+  loading?: boolean;
+  format?: (n: number) => string;
+  fontSize?: number;
+  fontWeight?: number;
+  color?: string;
+  lineHeight?: number;
+  suffix?: string;
+  prefix?: string;
+  style?: CSSProperties;
+}) {
+  // Disable the animation while loading so the skeleton handles the slot.
+  const animated = useCountUp(value, 900, !loading && value > 0);
+  if (loading) {
+    return <Skeleton className="h-7 w-16" style={style} />;
+  }
+  const display = format ? format(animated) : String(Math.round(animated));
+  return (
+    <span
+      style={{
+        fontFamily: FONT_MONO,
+        fontSize,
+        fontWeight,
+        color,
+        lineHeight,
+        ...style,
+      }}
+    >
+      {prefix}{display}{suffix}
+    </span>
+  );
+}
+
+/**
+ * ShimmerSkeleton — sage-tinted shimmer wrapper around the base Skeleton.
+ * The default Skeleton uses `bg-accent animate-pulse` (Tailwind), which
+ * reads as a flat grey blink. The executive polish layer adds a slow
+ * diagonal sage sweep so loading reads as "scan in progress" rather
+ * than "broken". Drop-in compatible with <Skeleton className="…"/>.
+ */
+function ShimmerSkeleton({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={"relative overflow-hidden rounded-md " + (className ?? "")}
+      style={{
+        backgroundColor: "#F4F4F5",
+        ...style,
+      }}
+      aria-hidden="true"
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(105deg, transparent 0%, rgba(74,123,95,0.10) 45%, rgba(74,123,95,0.18) 50%, rgba(74,123,95,0.10) 55%, transparent 100%)",
+          backgroundSize: "220% 100%",
+          animation: "entShimmer 1.6s ease-in-out infinite",
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * ExecutiveEmptyState — institutional empty-state panel.
+ * Sage-tinted background, dashed border, Lucide icon, single-line
+ * headline + sub-line + optional CTA. Subtle bounce on the icon to
+ * signal "alive but waiting for data" without being playful.
+ * Used by every chart widget when the underlying series is empty.
+ */
+function ExecutiveEmptyState({
+  icon: Icon = Activity,
+  title = "Aucune donnée disponible",
+  description = "Les métriques apparaîtront ici dès réception des premières données.",
+  ctaLabel,
+  onCta,
+  height = 220,
+}: {
+  icon?: typeof Activity;
+  title?: string;
+  description?: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+  height?: number;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{
+        height,
+        border: `1px dashed ${BORDER_STRONG}`,
+        borderRadius: 10,
+        backgroundColor: SAGE_BG,
+        padding: 24,
+      }}
+    >
+      <motion.div
+        initial={{ y: 0 }}
+        animate={{ y: [0, -4, 0] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        className="flex items-center justify-center rounded-full mb-3"
+        style={{
+          width: 40,
+          height: 40,
+          backgroundColor: "#FFFFFF",
+          border: `1px solid ${SAGE_DIM}40`,
+          color: SAGE,
+        }}
+      >
+        <Icon size={18} />
+      </motion.div>
+      <div
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 11,
+          fontWeight: 700,
+          color: SAGE,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          marginBottom: 6,
+        }}
+      >
+        {title}
+      </div>
+      <p
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          color: TEXT_BODY,
+          lineHeight: 1.5,
+          maxWidth: 360,
+          margin: 0,
+        }}
+      >
+        {description}
+      </p>
+      {ctaLabel && onCta && (
+        <button
+          type="button"
+          onClick={onCta}
+          className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors hover:bg-[#FFFFFF]"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: SAGE,
+            border: `1px solid ${SAGE_DIM}60`,
+            backgroundColor: "#FFFFFF",
+          }}
+        >
+          {ctaLabel}
+          <ArrowRight size={11} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * ChartTooltipContent — custom recharts tooltip content renderer.
+ * Monospace data, sage 1px border, white bg, charcoal values. This is
+ * the canonical "executive tooltip" shared by every chart in the
+ * dashboard (ComposedChart, LineChart, BarChart, AreaChart). Pass to
+ * <RTooltip content={<ChartTooltipContent labelFormatter={...} />} />.
+ */
+function ChartTooltipContent({
+  active,
+  payload,
+  label,
+  labelFormatter,
+  valueFormatter,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number | string; color?: string; dataKey?: string }>;
+  label?: string | number;
+  labelFormatter?: (l: string | number) => string;
+  valueFormatter?: (v: number | string, name?: string) => string;
+}) {
+  if (!active || !payload || !payload.length) return null;
+  const lbl = label != null && label !== "" ? (labelFormatter ? labelFormatter(label) : String(label)) : null;
+  return (
+    <div
+      style={{
+        borderRadius: 8,
+        border: `1px solid ${SAGE}55`,
+        backgroundColor: "#FFFFFF",
+        padding: "8px 10px",
+        boxShadow: "0 6px 18px rgba(10,10,10,0.10)",
+        fontFamily: FONT_SANS,
+        fontSize: 11,
+        minWidth: 120,
+      }}
+    >
+      {lbl && (
+        <div
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 9,
+            fontWeight: 700,
+            color: SAGE,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            marginBottom: 4,
+            paddingBottom: 4,
+            borderBottom: `1px solid ${BORDER}`,
+          }}
+        >
+          {lbl}
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {payload.map((p, i) => {
+          const v = p.value;
+          const vstr = valueFormatter && v != null ? valueFormatter(v, p.name) : v != null ? String(v) : "—";
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: 2,
+                  backgroundColor: p.color ?? SAGE,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontFamily: FONT_SANS, fontSize: 10, color: TEXT_BODY, flex: 1 }}>
+                {p.name ?? p.dataKey}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
+                {vstr}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * DashboardLoadingBanner — staggered shimmer banner shown at the top
+ * of <main> during the initial COMEX metrics boot. Renders only when
+ * every primary endpoint is loading simultaneously. Auto-hides as
+ * soon as any one of them resolves. "Chargement des métriques COMEX…"
+ * is the executive signal — no spinner, just a slow sage sweep.
+ */
+function DashboardLoadingBanner({ visible }: { visible: boolean }) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-4 rounded-lg overflow-hidden"
+          style={{ border: `1px solid ${SAGE}33`, backgroundColor: SAGE_BG }}
+        >
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+              style={{ color: SAGE, flexShrink: 0 }}
+            >
+              <RefreshCw size={14} />
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  color: SAGE,
+                  textTransform: "uppercase",
+                }}
+              >
+                CHARGEMENT DES MÉTRIQUES COMEX…
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 11,
+                  color: TEXT_BODY,
+                  marginTop: 2,
+                }}
+              >
+                Synchronisation des flux temps réel — réputation, sentiment, visibilité IA, alertes crise.
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <motion.span
+                  key={i}
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
+                  style={{
+                    display: "inline-block",
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    backgroundColor: SAGE,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          <div style={{ height: 2, backgroundColor: SAGE_BG_STRONG, position: "relative", overflow: "hidden" }}>
+            <motion.div
+              animate={{ x: ["-100%", "100%"] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "40%",
+                background: `linear-gradient(90deg, transparent, ${SAGE}, transparent)`,
+              }}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/**
+ * DetailsLink — board-styled "DÉTAILS →" micro-link used at the bottom
+ * of every Executive Summary KPI card. Hover lifts the link to charcoal
+ * (sage → charcoal = signal "actionable") and slides the arrow 2px to
+ * the right (executive-grade micro-interaction — visible but not playful).
+ */
+function DetailsLink({
+  onClick,
+  label = "DÉTAILS",
+  ariaLabel,
+}: {
+  onClick: () => void;
+  label?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel ?? label}
+      whileHover="hover"
+      initial="rest"
+      animate="rest"
+      className="self-start inline-flex items-center gap-1"
+      style={{
+        fontFamily: FONT_MONO,
+        fontSize: 9,
+        color: SAGE,
+        letterSpacing: "0.08em",
+        background: "transparent",
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+      }}
+    >
+      <motion.span
+        variants={{ rest: { color: SAGE }, hover: { color: CHARCOAL } }}
+        transition={{ duration: 0.15 }}
+        style={{ textDecoration: "none" }}
+      >
+        {label}
+      </motion.span>
+      <motion.span
+        variants={{ rest: { x: 0, color: SAGE }, hover: { x: 2, color: CHARCOAL } }}
+        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+        style={{ display: "inline-flex" }}
+      >
+        <ArrowRight size={10} />
+      </motion.span>
+    </motion.button>
   );
 }
 
@@ -2590,19 +3031,14 @@ function ScoreReputationGlobalCard({
                 }}
               >
                 {loading ? (
-                  <Skeleton className="h-10 w-16" />
+                  <ShimmerSkeleton className="h-10 w-16" />
                 ) : (
-                  <span
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 44,
-                      fontWeight: 700,
-                      color: CHARCOAL,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {health ? Math.round(score) : "—"}
-                  </span>
+                  <AnimatedNumber
+                    value={health ? Math.round(score) : 0}
+                    loading={!health}
+                    fontSize={44}
+                    color={CHARCOAL}
+                  />
                 )}
                 <span style={{ ...FONT_HEADER, marginTop: 4 }}>/ 100</span>
               </div>
@@ -2684,8 +3120,10 @@ function ScoreReputationGlobalCard({
             <div
               className="rounded-lg p-4"
               style={{
-                border: `1px solid ${BORDER}`,
-                backgroundColor: "#FAFAFA",
+                border: `1px solid ${defcon.level >= 4 ? defcon.color : BORDER}`,
+                backgroundColor: defcon.level >= 4 ? `${defcon.color}06` : "#FAFAFA",
+                boxShadow: defcon.level >= 4 ? `0 0 0 4px ${defcon.color}14, 0 0 18px ${defcon.color}22` : undefined,
+                transition: "border-color 0.3s, box-shadow 0.3s, background-color 0.3s",
               }}
             >
               <div className="flex items-center justify-between mb-3">
@@ -2699,7 +3137,8 @@ function ScoreReputationGlobalCard({
                     fontWeight: 700,
                     backgroundColor: defcon.color,
                     color: "#FFFFFF",
-                    animation: defcon.level <= 2 ? "pulse 2s infinite" : undefined,
+                    animation: defcon.level >= 4 ? "entDefconPulse 1.4s infinite" : undefined,
+                    boxShadow: defcon.level >= 4 ? `0 0 0 0 ${defcon.color}` : undefined,
                   }}
                 >
                   NIVEAU {defcon.level}
@@ -2782,11 +3221,15 @@ function SentimentMarketKpi({ health, trend, loading }: { health: BrandHealth | 
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {health ? `${value}%` : "—"}
-              </span>
+              <AnimatedNumber
+                value={health ? value : 0}
+                loading={!health}
+                fontSize={28}
+                color={CHARCOAL}
+                suffix="%"
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -2850,11 +3293,15 @@ function VisibiliteIaKpi({ ai, loading }: { ai: AiVisibilityResp | null; loading
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {ai ? `${cited}/${total}` : "—"}
-              </span>
+              <AnimatedNumber
+                value={ai ? cited : 0}
+                loading={!ai}
+                fontSize={28}
+                color={CHARCOAL}
+                suffix={`/${total}`}
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -2925,11 +3372,15 @@ function PartsDeVoixKpi({ sov, loading }: { sov: ShareOfVoiceResp | null; loadin
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {sov ? `${pct}%` : "—"}
-              </span>
+              <AnimatedNumber
+                value={sov ? pct : 0}
+                loading={!sov}
+                fontSize={28}
+                color={CHARCOAL}
+                suffix="%"
+              />
             )}
             <Delta value={trendVal} suffix=" pts" />
           </div>
@@ -2990,6 +3441,7 @@ function AlertesCrisisKpi({ alerts, health, loading }: { alerts: CrisisAlertsRes
                 fontWeight: 700,
                 backgroundColor: defcon.color,
                 color: "#FFFFFF",
+                animation: defcon.level >= 4 ? "entDefconPulse 1.4s infinite" : undefined,
               }}
             >
               DEFCON {defcon.level}
@@ -3000,11 +3452,14 @@ function AlertesCrisisKpi({ alerts, health, loading }: { alerts: CrisisAlertsRes
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: count > 0 ? NEGATIVE : POSITIVE }}>
-                {count}
-              </span>
+              <AnimatedNumber
+                value={alerts ? count : 0}
+                loading={!alerts}
+                fontSize={28}
+                color={count > 0 ? NEGATIVE : POSITIVE}
+              />
             )}
             {count > 0 && <Delta value={delta} />}
           </div>
@@ -3058,11 +3513,15 @@ function Articles30JKpi({ sources, loading }: { sources: SourceDistResp | null; 
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {fmtNumber(total)}
-              </span>
+              <AnimatedNumber
+                value={sources ? total : 0}
+                loading={!sources}
+                fontSize={28}
+                color={CHARCOAL}
+                format={(n) => fmtNumber(Math.round(n))}
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -3113,11 +3572,14 @@ function InfluenceursKpi({ influencers, loading }: { influencers: InfluencersRes
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {count}
-              </span>
+              <AnimatedNumber
+                value={influencers ? count : 0}
+                loading={!influencers}
+                fontSize={28}
+                color={CHARCOAL}
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -3172,11 +3634,14 @@ function AppelsApiKpi({ teamActivity, loading }: { teamActivity: TeamActivityRes
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {fmtNumber(used)}
-              </span>
+              <AnimatedNumber
+                value={used}
+                fontSize={28}
+                color={CHARCOAL}
+                format={(n) => fmtNumber(Math.round(n))}
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -3233,11 +3698,15 @@ function EngagementTotalKpi({ health, alerts, loading }: { health: BrandHealth |
         <div className="flex items-end justify-between mb-2">
           <div className="flex items-baseline gap-2">
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <ShimmerSkeleton className="h-7 w-16" />
             ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: CHARCOAL }}>
-                {fmtNumber(engagement)}
-              </span>
+              <AnimatedNumber
+                value={health ? engagement : 0}
+                loading={!health}
+                fontSize={28}
+                color={CHARCOAL}
+                format={(n) => fmtNumber(Math.round(n))}
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -3367,15 +3836,25 @@ function TendanceSentimentCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-64 w-full" />
+          <ShimmerSkeleton className="h-64 w-full" />
         ) : series.length === 0 ? (
-          <EmptyDash label="Aucune donnée de sentiment sur la période." />
+          <ExecutiveEmptyState
+            icon={TrendingUp}
+            title="Aucune donnée de sentiment sur la période"
+            description="Les séries quotidiennes de sentiment apparaîtront ici dès la première collecte. En attendant, le DEFCON reste votre signal temps réel."
+            ctaLabel="Rafraîchir les sources"
+            onCta={() => onRangeChange(range)}
+            height={260}
+          />
         ) : (
           <>
             <div className="flex items-baseline gap-3 mb-3">
-              <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>
-                {series[series.length - 1]?.avg ?? "—"}/100
-              </span>
+              <AnimatedNumber
+                value={series[series.length - 1]?.avg ?? 0}
+                fontSize={22}
+                color={CHARCOAL}
+                suffix="/100"
+              />
               <Delta value={overallDelta} suffix=" pts" />
               <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
                 · {series.length} jours · {anomalies.length} anomalie(s)
@@ -3394,13 +3873,18 @@ function TendanceSentimentCard({
                   <XAxis dataKey="date" tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} axisLine={{ stroke: BORDER }} tickLine={false} />
                   <YAxis domain={[0, 100]} tick={{ fontFamily: FONT_MONO, fontSize: 10, fill: TEXT_MUTED }} axisLine={false} tickLine={false} />
                   <RTooltip
-                    contentStyle={{
-                      fontFamily: FONT_SANS,
-                      fontSize: 11,
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      backgroundColor: "#FFFFFF",
-                    }}
+                    cursor={{ strokeDasharray: "3 3", stroke: SAGE_DIM, strokeOpacity: 0.5 }}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(l) => `JOUR · ${l}`}
+                        valueFormatter={(v, name) => {
+                          const n = typeof v === "number" ? v : Number(v);
+                          if (!Number.isFinite(n)) return String(v);
+                          if (name?.includes("%")) return `${Math.round(n)}%`;
+                          return String(Math.round(n));
+                        }}
+                      />
+                    }
                   />
                   <Area type="monotone" dataKey="avg" name="Sentiment moyen" stroke={SAGE} strokeWidth={2} fill="url(#sentAvg)" isAnimationActive />
                   <Line type="monotone" dataKey="positive" name="Positif %" stroke={POSITIVE} strokeWidth={1.5} dot={false} isAnimationActive />
@@ -4862,7 +5346,8 @@ function DefconCrisisCard({
                 fontWeight: 700,
                 backgroundColor: defcon.color,
                 color: "#FFFFFF",
-                animation: defcon.level <= 2 ? "pulse 2s infinite" : undefined,
+                animation: defcon.level >= 4 ? "entDefconPulse 1.4s infinite" : undefined,
+                boxShadow: defcon.level >= 4 ? `0 0 0 0 ${defcon.color}` : undefined,
               }}
             >
               DEFCON {defcon.level}
@@ -4871,17 +5356,27 @@ function DefconCrisisCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <Skeleton className="h-48 w-full" />
+          <ShimmerSkeleton className="h-48 w-full" />
         ) : (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
               {/* DEFCON gauge */}
-              <div className="rounded-lg p-4" style={{ border: `1px solid ${defcon.color}`, backgroundColor: `${defcon.color}10` }}>
+              <div
+                className="rounded-lg p-4"
+                style={{
+                  border: `1px solid ${defcon.color}`,
+                  backgroundColor: `${defcon.color}10`,
+                  boxShadow: defcon.level >= 4 ? `0 0 0 4px ${defcon.color}14, 0 0 18px ${defcon.color}22` : undefined,
+                  transition: "box-shadow 0.3s, border-color 0.3s",
+                }}
+              >
                 <div style={FONT_HEADER}>Niveau actuel</div>
                 <div className="flex items-end gap-2 mt-2">
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 40, fontWeight: 700, color: defcon.color, lineHeight: 1 }}>
-                    {defcon.level}
-                  </span>
+                  <AnimatedNumber
+                    value={defcon.level}
+                    fontSize={40}
+                    color={defcon.color}
+                  />
                   <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>/ 5</span>
                 </div>
                 <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL, marginTop: 4 }}>
@@ -7228,26 +7723,64 @@ function ComplianceCockpitCard({
                       <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>{p.law}</div>
                     </div>
                   </div>
-                  <button
+                  <motion.button
                     type="button"
                     onClick={() => cycleStatus(p.regulator)}
-                    className="rounded-md px-1.5 py-0.5"
+                    className="rounded-md px-1.5 py-0.5 relative overflow-hidden"
+                    initial={false}
+                    animate={{
+                      backgroundColor: color,
+                      boxShadow: [
+                        `0 0 0 0 ${color}00`,
+                        `0 0 0 4px ${color}40`,
+                        `0 0 0 0 ${color}00`,
+                      ],
+                    }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
+                    key={`${p.regulator}-${p.status}`}
                     style={{
                       fontFamily: FONT_MONO,
                       fontSize: 9,
                       fontWeight: 700,
                       color: "#FFFFFF",
-                      backgroundColor: color,
+                      cursor: "pointer",
+                      border: "none",
                     }}
-                    aria-label={`Changer statut ${p.regulator}`}
+                    aria-label={`Changer statut ${p.regulator} — actuel ${COMPLIANCE_STATUS_LABEL[p.status]}`}
+                    title="Cliquer pour faire évoluer le statut : Conforme → Surveillance → Non-conforme"
                   >
-                    {COMPLIANCE_STATUS_LABEL[p.status].toUpperCase()}
-                  </button>
+                    <motion.span
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.18 }}
+                      style={{ display: "inline-block", position: "relative", zIndex: 2 }}
+                    >
+                      {COMPLIANCE_STATUS_LABEL[p.status].toUpperCase()}
+                    </motion.span>
+                    <motion.span
+                      aria-hidden="true"
+                      initial={{ x: "-120%" }}
+                      animate={{ x: "120%" }}
+                      transition={{ duration: 0.9, ease: "easeInOut", repeat: Infinity, repeatDelay: 2.4 }}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        height: "100%",
+                        width: "40%",
+                        background:
+                          "linear-gradient(90deg, transparent, rgba(255,255,255,0.30), transparent)",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  </motion.button>
                 </div>
                 <div className="flex items-baseline gap-1 mb-1.5">
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color }}>
-                    {p.riskScore}
-                  </span>
+                  <AnimatedNumber
+                    value={p.riskScore}
+                    fontSize={22}
+                    color={color}
+                  />
                   <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>/100</span>
                 </div>
                 <div style={{ width: "100%", height: 3, backgroundColor: BORDER_STRONG, borderRadius: 2, marginBottom: 8 }}>
@@ -9329,48 +9862,118 @@ function RiskHeatmapMatrixCard({
                       const color = riskLevelColor(score);
                       const cellRisks = risks.filter((r) => r.probability === probA && r.impact === impA);
                       return (
-                        <div
-                          key={`cell-${imp}-${prob}`}
-                          style={{
-                            position: "relative",
-                            height: 64,
-                            borderRadius: 6,
-                            backgroundColor: color.bg,
-                            opacity: cellRisks.length > 0 ? 1 : 0.78,
-                            border: cellRisks.length > 0 ? `1.5px solid ${CHARCOAL}` : "1px solid rgba(255,255,255,0.35)",
-                            padding: 4,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <span style={{ position: "absolute", top: 3, right: 4, fontFamily: FONT_MONO, fontSize: 8, color: color.text, opacity: 0.55 }}>
-                            {score}
-                          </span>
-                          {cellRisks.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, height: "100%", alignItems: "center", justifyContent: "center" }}>
-                              {cellRisks.map((r) => {
-                                const catColor = RISK_CATEGORY_COLOR[r.category];
-                                const isSelected = selectedRiskId === r.id;
-                                return (
-                                  <button
-                                    key={r.id}
-                                    type="button"
-                                    onClick={() => setSelectedRiskId(isSelected ? null : r.id)}
-                                    title={r.name}
-                                    aria-label={`Risque ${r.name}`}
-                                    style={{
-                                      width: 16, height: 16, borderRadius: "50%",
-                                      backgroundColor: catColor,
-                                      border: isSelected ? `2px solid ${CHARCOAL}` : `1.5px solid #FFFFFF`,
-                                      cursor: "pointer",
-                                      boxShadow: isSelected ? `0 0 0 2px ${CHARCOAL}` : "none",
-                                      padding: 0,
-                                    }}
-                                  />
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
+                        <TooltipProvider key={`cell-${imp}-${prob}`} delayDuration={120}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                style={{
+                                  position: "relative",
+                                  height: 64,
+                                  borderRadius: 6,
+                                  backgroundColor: color.bg,
+                                  opacity: cellRisks.length > 0 ? 1 : 0.78,
+                                  border: cellRisks.length > 0 ? `1.5px solid ${CHARCOAL}` : "1px solid rgba(255,255,255,0.35)",
+                                  padding: 4,
+                                  overflow: "hidden",
+                                  cursor: cellRisks.length > 0 ? "pointer" : "default",
+                                  transition: "transform 0.15s, box-shadow 0.15s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = "scale(1.04)";
+                                  e.currentTarget.style.zIndex = "5";
+                                  e.currentTarget.style.boxShadow = "0 6px 14px rgba(10,10,10,0.12)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = "scale(1)";
+                                  e.currentTarget.style.zIndex = "";
+                                  e.currentTarget.style.boxShadow = "none";
+                                }}
+                              >
+                                <span style={{ position: "absolute", top: 3, right: 4, fontFamily: FONT_MONO, fontSize: 8, color: color.text, opacity: 0.55 }}>
+                                  {score}
+                                </span>
+                                {cellRisks.length > 0 && (
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 3, height: "100%", alignItems: "center", justifyContent: "center" }}>
+                                    {cellRisks.map((r) => {
+                                      const catColor = RISK_CATEGORY_COLOR[r.category];
+                                      const isSelected = selectedRiskId === r.id;
+                                      return (
+                                        <button
+                                          key={r.id}
+                                          type="button"
+                                          onClick={() => setSelectedRiskId(isSelected ? null : r.id)}
+                                          title={r.name}
+                                          aria-label={`Risque ${r.name}`}
+                                          style={{
+                                            width: 16, height: 16, borderRadius: "50%",
+                                            backgroundColor: catColor,
+                                            border: isSelected ? `2px solid ${CHARCOAL}` : `1.5px solid #FFFFFF`,
+                                            cursor: "pointer",
+                                            boxShadow: isSelected ? `0 0 0 2px ${CHARCOAL}` : "none",
+                                            padding: 0,
+                                          }}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[280px]">
+                              <div style={{ minWidth: 200 }}>
+                                <div
+                                  style={{
+                                    fontFamily: FONT_MONO,
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    color: SAGE,
+                                    letterSpacing: "0.08em",
+                                    textTransform: "uppercase",
+                                    marginBottom: 4,
+                                    paddingBottom: 4,
+                                    borderBottom: `1px solid ${BORDER}`,
+                                  }}
+                                >
+                                  CELLULE · SCORE {score}/25
+                                </div>
+                                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginBottom: 6 }}>
+                                  Probabilité {prob} · Impact {imp}
+                                </div>
+                                {cellRisks.length === 0 ? (
+                                  <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
+                                    Aucun risque cartographié sur cette cellule.
+                                  </div>
+                                ) : (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    {cellRisks.map((r) => (
+                                      <div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                                        <span
+                                          style={{
+                                            display: "inline-block",
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: "50%",
+                                            backgroundColor: RISK_CATEGORY_COLOR[r.category],
+                                            marginTop: 4,
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ fontFamily: FONT_SANS, fontSize: 11, fontWeight: 700, color: CHARCOAL, lineHeight: 1.3 }}>
+                                            {r.name}
+                                          </div>
+                                          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 1 }}>
+                                            {RISK_CATEGORY_LABEL[r.category]} · {r.owner}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       );
                     })}
                   </Fragment>
@@ -9716,9 +10319,12 @@ function KpiExecutiveSummaryRow({
           </div>
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-1">
-              <span style={{ fontFamily: FONT_MONO, fontSize: 34, fontWeight: 700, color: scoreColor, lineHeight: 1 }}>
-                {health ? score : "—"}
-              </span>
+              <AnimatedNumber
+                value={health ? score : 0}
+                loading={!health}
+                fontSize={34}
+                color={scoreColor}
+              />
               <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/100</span>
             </div>
             {scoreSpark.length > 0 && (
@@ -9731,9 +10337,7 @@ function KpiExecutiveSummaryRow({
               </div>
             )}
           </div>
-          <button type="button" onClick={() => onNavigate("score")} className="self-start inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
-            DÉTAILS <ArrowRight size={10} />
-          </button>
+          <DetailsLink onClick={() => onNavigate("score")} ariaLabel="Voir le détail du score de réputation" />
         </div>
       </motion.div>
 
@@ -9746,9 +10350,12 @@ function KpiExecutiveSummaryRow({
           </div>
           <div>
             <div className="flex items-baseline gap-1">
-              <span style={{ fontFamily: FONT_MONO, fontSize: 32, fontWeight: 700, color: CHARCOAL, lineHeight: 1 }}>
-                {fmtNumber(mentionCount)}
-              </span>
+              <AnimatedNumber
+                value={mentionCount}
+                fontSize={32}
+                color={CHARCOAL}
+                format={(n) => fmtNumber(Math.round(n))}
+              />
               <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>mentions</span>
             </div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
@@ -9767,9 +10374,7 @@ function KpiExecutiveSummaryRow({
                 ))
               )}
             </div>
-            <button type="button" onClick={() => onNavigate("sentiment")} className="shrink-0 inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
-              DÉTAILS <ArrowRight size={10} />
-            </button>
+            <DetailsLink onClick={() => onNavigate("sentiment")} ariaLabel="Voir le détail de la coverage médiatique" />
           </div>
         </div>
       </motion.div>
@@ -9805,9 +10410,7 @@ function KpiExecutiveSummaryRow({
               })}
             </div>
           </div>
-          <button type="button" onClick={() => onNavigate("compliance-cockpit")} className="self-start inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
-            DÉTAILS <ArrowRight size={10} />
-          </button>
+          <DetailsLink onClick={() => onNavigate("compliance-cockpit")} ariaLabel="Voir le détail de la conformité" />
         </div>
       </motion.div>
 
@@ -9825,16 +10428,21 @@ function KpiExecutiveSummaryRow({
             </span>
           </div>
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span style={{ fontFamily: FONT_MONO, fontSize: 34, fontWeight: 700, color: riskColor, lineHeight: 1 }}>
-              {criticalCount}
-            </span>
+            <AnimatedNumber
+              value={criticalCount}
+              fontSize={34}
+              color={riskColor}
+            />
             <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>critiques</span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: NEUTRAL_AMBER, marginLeft: 4 }}>{eleveCount}</span>
+            <AnimatedNumber
+              value={eleveCount}
+              fontSize={16}
+              color={NEUTRAL_AMBER}
+              style={{ marginLeft: 4 }}
+            />
             <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>élevés</span>
           </div>
-          <button type="button" onClick={() => onNavigate("risk-matrix")} className="self-start inline-flex items-center gap-1" style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, letterSpacing: "0.08em" }}>
-            DÉTAILS <ArrowRight size={10} />
-          </button>
+          <DetailsLink onClick={() => onNavigate("risk-matrix")} ariaLabel="Voir le détail du risk index" />
         </div>
       </motion.div>
     </motion.div>
@@ -11562,8 +12170,12 @@ function CrisisWarRoomOverlay({
     s === "critical" ? "Critique" : s === "warning" ? "Alerte" : "Veille";
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[200]"
+      initial={{ opacity: 0, x: "100%" }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: "100%" }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       style={{
         backgroundColor: "#0A0A0A",
         color: "#FFFFFF",
@@ -11571,6 +12183,8 @@ function CrisisWarRoomOverlay({
         display: "flex",
         flexDirection: "column",
         fontFamily: FONT_SANS,
+        boxShadow: "0 0 0 6px rgba(239,68,68,0.18), 0 0 90px rgba(239,68,68,0.40), inset 0 0 80px rgba(239,68,68,0.06)",
+        animation: "entWarRoomGlow 2.4s ease-in-out infinite",
       }}
       role="dialog"
       aria-modal="true"
@@ -11875,7 +12489,7 @@ function CrisisWarRoomOverlay({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -12421,21 +13035,58 @@ function StakeholderMappingCard({
                     />
                     <ZAxis type="number" dataKey="engagement" domain={[0, 100]} range={[60, 600]} />
                     <RTooltip
-                      cursor={{ strokeDasharray: "3 3", stroke: BORDER_STRONG }}
+                      cursor={{ strokeDasharray: "3 3", stroke: SAGE_DIM, strokeOpacity: 0.5 }}
                       content={({ active, payload }) => {
                         if (!active || !payload || !payload.length) return null;
                         const p = payload[0].payload as { name: string; sentiment: StakeholderSentiment; engagement: number; influence: number };
                         return (
-                          <div className="rounded-md p-2" style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF", fontFamily: FONT_SANS, fontSize: 11 }}>
-                            <div style={{ fontWeight: 700, color: CHARCOAL, marginBottom: 2 }}>{p.name}</div>
-                            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-                              Influence {p.influence}/5 · {STAKEHOLDER_SENTIMENT_LABEL[p.sentiment]} · Eng. {p.engagement}%
+                          <div
+                            className="rounded-md"
+                            style={{
+                              border: `1px solid ${SAGE}55`,
+                              backgroundColor: "#FFFFFF",
+                              padding: "8px 10px",
+                              boxShadow: "0 6px 18px rgba(10,10,10,0.10)",
+                              minWidth: 160,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: SAGE,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                marginBottom: 4,
+                                paddingBottom: 4,
+                                borderBottom: `1px solid ${BORDER}`,
+                              }}
+                            >
+                              PARTIE PRENANTE
+                            </div>
+                            <div style={{ fontFamily: FONT_SANS, fontSize: 12, fontWeight: 700, color: CHARCOAL, marginBottom: 4 }}>
+                              {p.name}
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, fontFamily: FONT_MONO, fontSize: 10, color: TEXT_BODY }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                <span style={{ color: TEXT_MUTED }}>INFLUENCE</span>
+                                <span style={{ color: CHARCOAL, fontWeight: 700 }}>{p.influence}/5</span>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                <span style={{ color: TEXT_MUTED }}>SENTIMENT</span>
+                                <span style={{ color: STAKEHOLDER_SENTIMENT_COLOR[p.sentiment], fontWeight: 700 }}>{STAKEHOLDER_SENTIMENT_LABEL[p.sentiment]}</span>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                <span style={{ color: TEXT_MUTED }}>ENGAGEMENT</span>
+                                <span style={{ color: CHARCOAL, fontWeight: 700 }}>{p.engagement}%</span>
+                              </div>
                             </div>
                           </div>
                         );
                       }}
                     />
-                    <Scatter data={scatterData}>
+                    <Scatter data={scatterData} isAnimationActive>
                       {scatterData.map((entry) => (
                         <Cell key={entry.id} fill={entry.fill} fillOpacity={0.7} stroke={entry.fill} strokeWidth={1} />
                       ))}
@@ -14244,40 +14895,50 @@ export function EnterpriseDashboard({
       </aside>
 
       {/* Mobile sidebar overlay */}
-      {mobileNavOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
-            onClick={() => setMobileNavOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute left-0 top-0 h-full bg-white shadow-xl"
-            style={{ width: 280, maxWidth: "85vw" }}
-          >
-            <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${BORDER}` }}>
-              <span style={FONT_HEADER}>Navigation</span>
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen(false)}
-                className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
-                style={{ width: 28, height: 28 }}
-                aria-label="Fermer le menu"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <SidebarContent
-              activeSection={activeSection}
-              alertCount={alertCount}
-              userName={effectiveName}
-              userEmail={effectiveEmail}
-              onNavigate={() => setMobileNavOpen(false)}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <motion.div
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
+              onClick={() => setMobileNavOpen(false)}
+              aria-hidden="true"
             />
+            <motion.div
+              className="absolute left-0 top-0 h-full bg-white shadow-xl"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+              style={{ width: 280, maxWidth: "85vw" }}
+            >
+              <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <span style={FONT_HEADER}>Navigation</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                  style={{ width: 28, height: 28 }}
+                  aria-label="Fermer le menu"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <SidebarContent
+                activeSection={activeSection}
+                alertCount={alertCount}
+                userName={effectiveName}
+                userEmail={effectiveEmail}
+                onNavigate={() => setMobileNavOpen(false)}
+              />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0" style={crisisActive ? { borderTop: `3px solid ${NEGATIVE}` } : undefined}>
@@ -14302,6 +14963,13 @@ export function EnterpriseDashboard({
         />
 
         <main className="flex-1 px-4 lg:px-6 py-6">
+          {/* POLISH-ENTERPRISE — initial boot loading banner ("Chargement des métriques COMEX…").
+              Visible only while every primary endpoint is loading simultaneously;
+              auto-hides the moment any one of them resolves. */}
+          <DashboardLoadingBanner
+            visible={healthLoading && alertsLoading && trendLoading && aiVisLoading}
+          />
+
           {/* SECTION 0 — KPI Executive Summary Row (R2-ENTERPRISE-A) — board-ready aggregates */}
           <KpiExecutiveSummaryRow
             health={health}
@@ -14535,22 +15203,60 @@ export function EnterpriseDashboard({
         </footer>
       </div>
 
-      {/* Global keyframes for pulsing DEFCON */}
+      {/* Global keyframes — POLISH-ENTERPRISE executive animation vocabulary */}
       <style jsx global>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.55; }
         }
+        /* Sage shimmer for loading skeletons — slow diagonal sweep. */
+        @keyframes entShimmer {
+          0% { background-position: 220% 0; }
+          100% { background-position: -120% 0; }
+        }
+        /* DEFCON red pulse — fires only when DEFCON ≥ 4 (crisis level).
+           Combines opacity flicker + scale breathing so the badge reads
+           as "ALIVE — pay attention" without being visually noisy. */
+        @keyframes entDefconPulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(239,68,68,0.55);
+          }
+          50% {
+            opacity: 0.85;
+            transform: scale(1.06);
+            box-shadow: 0 0 0 6px rgba(239,68,68,0);
+          }
+        }
+        /* War Room border glow — breathing red halo around the full-screen
+           overlay. Slow period (2.4s) keeps it institutional, not panicked. */
+        @keyframes entWarRoomGlow {
+          0%, 100% {
+            box-shadow:
+              0 0 0 6px rgba(239,68,68,0.18),
+              0 0 60px rgba(239,68,68,0.30),
+              inset 0 0 80px rgba(239,68,68,0.06);
+          }
+          50% {
+            box-shadow:
+              0 0 0 8px rgba(239,68,68,0.28),
+              0 0 110px rgba(239,68,68,0.50),
+              inset 0 0 100px rgba(239,68,68,0.10);
+          }
+        }
       `}</style>
 
       {/* SECTION 36 — Crisis War Room overlay (R3-ENTERPRISE-A) — full-screen, DEFCON ≥ 4 trigger */}
-      {warRoomOpen && (
-        <CrisisWarRoomOverlay
-          persisted={warRoomState}
-          onPersistedChange={setWarRoomState}
-          onClose={() => setWarRoomOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {warRoomOpen && (
+          <CrisisWarRoomOverlay
+            persisted={warRoomState}
+            onPersistedChange={setWarRoomState}
+            onClose={() => setWarRoomOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

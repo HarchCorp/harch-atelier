@@ -98,7 +98,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
   AlertTriangle,
@@ -1419,6 +1419,231 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
 };
 
+// ─── POLISH HELPERS (Task ID: POLISH-AGENCY) ──────────────────────────
+// AURA commercial polish: count-up numbers, shimmer skeletons, empty
+// states, tier-glow keyframes. Used by Commission Calculator, Revenue
+// Forecasting, Client Health, Tier Badge, Workload Balancer.
+
+/** useCountUp — animates a number from 0 → target over `duration` ms.
+ *  Re-runs whenever `target` changes (slider, client switch, tier upgrade).
+ *  Uses requestAnimationFrame + easeOutCubic for a smooth commercial feel. */
+function useCountUp(target: number, duration = 700): number {
+  const [value, setValue] = useState(0);
+  const fromRef = useRef(0);
+  const startRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    fromRef.current = value;
+    startRef.current = null;
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+    const tick = (ts: number) => {
+      if (startRef.current === null) startRef.current = ts;
+      const elapsed = ts - startRef.current;
+      const progress = Math.min(1, elapsed / duration);
+      const next = fromRef.current + (target - fromRef.current) * ease(progress);
+      setValue(target === 0 ? 0 : next);
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        setValue(target);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, duration]);
+  return value;
+}
+
+/** AnimatedNumber — wraps useCountUp + formats with provided formatter.
+ *  Replaces static spans like {fmtMAD(agencyShare)} for revenue/commission. */
+function AnimatedNumber({
+  value,
+  format = (n: number) => String(Math.round(n)),
+  duration = 700,
+  style,
+}: {
+  value: number;
+  format?: (n: number) => string;
+  duration?: number;
+  style?: CSSProperties;
+}) {
+  const v = useCountUp(value, duration);
+  return <span style={style}>{format(v)}</span>;
+}
+
+/** LiveSkeleton — wraps shadcn Skeleton with role="status" + aria-live.
+ *  Used for "Chargement du portefeuille…" announcements. */
+function LiveSkeleton({
+  className,
+  label = "Chargement du portefeuille…",
+}: {
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <Skeleton
+      className={className}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    />
+  );
+}
+
+/** StaggeredSkeletons — renders N shimmer rows with a staggered fade-in
+ *  (framer-motion delay = i * 0.04s). Visually communicates "loading in
+ *  progress" with a Bloomberg-clean rhythm. */
+function StaggeredSkeletons({
+  count = 3,
+  className = "h-12 w-full rounded-md",
+  label = "Chargement du portefeuille…",
+}: {
+  count?: number;
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <div className="space-y-2" aria-busy="true" role="status" aria-label={label}>
+      {Array.from({ length: count }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05, duration: 0.35 }}
+        >
+          <LiveSkeleton className={className} label={label} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/** EmptyState — reusable, CSS-only sage illustration with CTA + bounce.
+ *  Mirrors the Essential pattern. Used by empty widgets (no clients,
+ *  no reports, no team members). */
+function EmptyState({
+  title,
+  description,
+  ctaLabel,
+  onCta,
+  Icon = Sparkles,
+}: {
+  title: string;
+  description: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+  Icon?: typeof Sparkles;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center rounded-md"
+      style={{ padding: "32px 20px", minHeight: 200 }}
+    >
+      <motion.div
+        initial={{ y: 0 }}
+        animate={{ y: [0, -4, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        className="flex items-center justify-center rounded-full mb-4"
+        style={{
+          width: 56,
+          height: 56,
+          backgroundColor: SAGE_BG,
+          border: `1.5px dashed ${SAGE_DIM}`,
+        }}
+      >
+        <Icon size={22} style={{ color: SAGE }} />
+      </motion.div>
+      <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 700, color: CHARCOAL }}>
+        {title}
+      </div>
+      <p
+        className="mt-1.5 max-w-[360px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_BODY, lineHeight: 1.55 }}
+      >
+        {description}
+      </p>
+      {ctaLabel && onCta && (
+        <Button
+          size="sm"
+          className="mt-3 h-8 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          style={{ fontFamily: FONT_MONO, fontSize: 11, backgroundColor: SAGE, color: "#FFFFFF" }}
+          onClick={onCta}
+        >
+          {ctaLabel}
+          <ArrowRight size={12} className="ml-1.5" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** DashboardStyle — injects once at the dashboard root. Houses keyframes
+ *  for shimmer (loading), tier-glow (upgrade moment), sage-bounce (empty
+ *  states), and bar-grow (workload bars on mount). */
+function DashboardStyle() {
+  return (
+    <style
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes agency-shimmer {
+          0% { background-position: -468px 0; }
+          100% { background-position: 468px 0; }
+        }
+        @keyframes agency-tier-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74,123,95,0.0); }
+          50% { box-shadow: 0 0 0 6px rgba(74,123,95,0.18); }
+        }
+        @keyframes agency-bounce-soft {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        @keyframes agency-pulse-sage {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.55; }
+        }
+        .agency-shimmer {
+          background: linear-gradient(90deg, #F4F4F5 0px, #FAFAFA 40px, #F4F4F5 80px);
+          background-size: 936px 100%;
+          animation: agency-shimmer 1.6s linear infinite;
+        }
+        .agency-tier-glow {
+          animation: agency-tier-glow 2.2s ease-in-out infinite;
+        }
+        .agency-bounce-soft {
+          animation: agency-bounce-soft 2s ease-in-out infinite;
+        }
+        .agency-pulse-sage {
+          animation: agency-pulse-sage 1.8s ease-in-out infinite;
+        }
+        .agency-link-underline {
+          background-image: linear-gradient(currentColor, currentColor);
+          background-size: 0% 1px;
+          background-position: 0 100%;
+          background-repeat: no-repeat;
+          transition: background-size 0.25s ease;
+        }
+        .agency-link-underline:hover {
+          background-size: 100% 1px;
+        }
+        .agency-drop-zone-active {
+          border-color: ${SAGE} !important;
+          background-color: ${SAGE_BG} !important;
+          box-shadow: inset 0 0 0 1px ${SAGE_DIM};
+          transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .agency-color-transition {
+          transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+        }
+        `,
+      }}
+    />
+  );
+}
+
 // ─── AI COMMENTARY (reusable insight strip) ────────────────────────────
 // Sage-tinted block with Sparkles icon — used across all 25 sections to
 // deliver 10x AI-driven commentary. Mirrors the Enterprise pattern.
@@ -2144,70 +2369,83 @@ function ClientSwitcherSplit({
         </div>
         {loading ? (
           <div className="space-y-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        ) : activeClient ? (
-          <div className="flex items-center gap-2.5">
-            <ClientAvatarBadge client={activeClient} size={36} />
-            <div className="min-w-0 flex-1">
-              <div
-                className="truncate"
-                style={{
-                  fontFamily: FONT_SANS,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: CHARCOAL,
-                }}
-              >
-                {activeClient.displayName}
-              </div>
-              <div
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 10,
-                  color: SAGE_DEEP,
-                }}
-              >
-                {activeClient.company.sector || "Secteur —"} · Score {derivedClientScore(activeClient)}/100
-              </div>
-            </div>
+            <LiveSkeleton className="h-4 w-3/4" label="Chargement du portefeuille…" />
+            <LiveSkeleton className="h-3 w-1/2" label="Chargement du portefeuille…" />
           </div>
         ) : (
-          <div className="flex items-center gap-2.5">
-            <div
-              className="inline-flex items-center justify-center rounded-md shrink-0"
-              style={{
-                width: 36,
-                height: 36,
-                backgroundColor: SAGE_BG,
-                color: SAGE_DEEP,
-              }}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeClient ? activeClient.id : "aggregate"}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] as const }}
+              className="flex items-center gap-2.5"
             >
-              <Layers size={16} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div
-                style={{
-                  fontFamily: FONT_SANS,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: CHARCOAL,
-                }}
-              >
-                Vue agrégée
-              </div>
-              <div
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 10,
-                  color: SAGE_DEEP,
-                }}
-              >
-                Tous les clients · {clients.length} espaces
-              </div>
-            </div>
-          </div>
+              {activeClient ? (
+                <>
+                  <ClientAvatarBadge client={activeClient} size={36} />
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: CHARCOAL,
+                      }}
+                    >
+                      {activeClient.displayName}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: SAGE_DEEP,
+                      }}
+                    >
+                      {activeClient.company.sector || "Secteur —"} · Score {derivedClientScore(activeClient)}/100
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    className="inline-flex items-center justify-center rounded-md shrink-0"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      backgroundColor: SAGE_BG,
+                      color: SAGE_DEEP,
+                    }}
+                  >
+                    <Layers size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: CHARCOAL,
+                      }}
+                    >
+                      Vue agrégée
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: SAGE_DEEP,
+                      }}
+                    >
+                      Tous les clients · {clients.length} espaces
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
         )}
       </div>
 
@@ -2248,9 +2486,12 @@ function ClientSwitcherSplit({
         style={{ maxHeight: 320, minHeight: 160 }}
       >
         {/* Aggregate option */}
-        <button
+        <motion.button
           type="button"
           onClick={() => onSwitch(null)}
+          initial={false}
+          animate={{ backgroundColor: activeClientId === null ? SAGE_BG : "rgba(0,0,0,0)" }}
+          transition={{ duration: 0.2 }}
           className="w-full flex items-center gap-2 px-2 py-2 text-left rounded-md transition-colors hover:bg-[#FAFAFA]"
           style={{
             backgroundColor: activeClientId === null ? SAGE_BG : "transparent",
@@ -2291,9 +2532,15 @@ function ClientSwitcherSplit({
             </div>
           </div>
           {activeClientId === null && (
-            <CheckCircle2 size={14} style={{ color: SAGE }} />
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 18 }}
+            >
+              <CheckCircle2 size={14} style={{ color: SAGE }} />
+            </motion.span>
           )}
-        </button>
+        </motion.button>
 
         {filtered.length === 0 ? (
           <div
@@ -2303,65 +2550,83 @@ function ClientSwitcherSplit({
             Aucun client ne correspond à « {query} »
           </div>
         ) : (
-          filtered.map((c) => {
-            const score = derivedClientScore(c);
-            const isActive = c.id === activeClientId;
-            const alertCount = c.usage.whatsappAlerts ?? 0;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onSwitch(c.id)}
-                className="w-full flex items-center gap-2 px-2 py-2 text-left rounded-md transition-colors hover:bg-[#FAFAFA]"
-                style={{
-                  backgroundColor: isActive ? SAGE_BG : "transparent",
-                  marginBottom: 2,
-                }}
-              >
-                <ClientAvatarBadge client={c} size={28} />
-                <div className="min-w-0 flex-1">
-                  <div
-                    className="truncate"
-                    style={{
-                      fontFamily: FONT_SANS,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: CHARCOAL,
-                    }}
-                  >
-                    {c.displayName}
+          <AnimatePresence initial={false}>
+            {filtered.map((c, idx) => {
+              const score = derivedClientScore(c);
+              const isActive = c.id === activeClientId;
+              const alertCount = c.usage.whatsappAlerts ?? 0;
+              return (
+                <motion.button
+                  key={c.id}
+                  layout
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, delay: Math.min(0.15, idx * 0.02) }}
+                  type="button"
+                  onClick={() => onSwitch(c.id)}
+                  className="w-full flex items-center gap-2 px-2 py-2 text-left rounded-md transition-colors hover:bg-[#FAFAFA]"
+                  style={{
+                    backgroundColor: isActive ? SAGE_BG : "transparent",
+                    marginBottom: 2,
+                  }}
+                >
+                  <ClientAvatarBadge client={c} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: FONT_SANS,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: CHARCOAL,
+                      }}
+                    >
+                      {c.displayName}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        color: TEXT_MUTED,
+                      }}
+                    >
+                      {c.company.sector || "—"} · Score {score}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 9,
-                      color: TEXT_MUTED,
-                    }}
-                  >
-                    {c.company.sector || "—"} · Score {score}
-                  </div>
-                </div>
-                {alertCount > 0 && (
-                  <span
-                    className="inline-flex items-center justify-center rounded-full"
-                    style={{
-                      minWidth: 16,
-                      height: 16,
-                      padding: "0 4px",
-                      backgroundColor: alertCount >= 5 ? NEGATIVE : NEUTRAL_AMBER,
-                      color: "#FFFFFF",
-                      fontFamily: FONT_MONO,
-                      fontSize: 9,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {alertCount}
-                  </span>
-                )}
-                {isActive && <CheckCircle2 size={14} style={{ color: SAGE }} />}
-              </button>
-            );
-          })
+                  {alertCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 18 }}
+                      className="inline-flex items-center justify-center rounded-full"
+                      style={{
+                        minWidth: 16,
+                        height: 16,
+                        padding: "0 4px",
+                        backgroundColor: alertCount >= 5 ? NEGATIVE : NEUTRAL_AMBER,
+                        color: "#FFFFFF",
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {alertCount}
+                    </motion.span>
+                  )}
+                  {isActive && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 320, damping: 18 }}
+                    >
+                      <CheckCircle2 size={14} style={{ color: SAGE }} />
+                    </motion.span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
 
@@ -3528,7 +3793,7 @@ function KpiClientsActifs({
             color: CHARCOAL,
           }}
         >
-          {loading ? "—" : fmtNumber(active)}
+          {loading ? "—" : <AnimatedNumber value={active} format={fmtNumber} duration={750} />}
         </span>
         <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
           / {clients.length} total
@@ -3574,7 +3839,7 @@ function KpiAlertesCrisis({
               color: count > 0 ? (critical > 0 ? NEGATIVE : NEUTRAL_AMBER) : POSITIVE,
             }}
           >
-            {loading ? "—" : fmtNumber(count)}
+            {loading ? "—" : <AnimatedNumber value={count} format={fmtNumber} duration={750} />}
           </span>
           {critical > 0 && (
             <Badge
@@ -8149,6 +8414,19 @@ function AgencyTierBadgeCard({
   const nextInfo = info.nextTier ? getTierInfo(info.nextTier) : null;
   const progress = tierProgress(clientCount, info);
   const usingOverride = tierOverride !== null && tierOverride !== autoTier;
+  // POLISH-AGENCY: glow pulse on the badge whenever the active tier changes
+  // (auto-upgrade from new clients or manual override). Uses AnimatePresence
+  // + key on the activeLevel so the pulse re-fires on each transition.
+  const prevLevelRef = useRef<AgencyTierLevel>(activeLevel);
+  const [pulseKey, setPulseKey] = useState(0);
+  useEffect(() => {
+    if (prevLevelRef.current !== activeLevel) {
+      prevLevelRef.current = activeLevel;
+      setPulseKey((k) => k + 1);
+    }
+  }, [activeLevel]);
+  const commissionPct = info.commissionPct;
+  const animatedCommissionPct = useCountUp(commissionPct, 600);
 
   return (
     <CardShell className="lg:col-span-12">
@@ -8171,20 +8449,28 @@ function AgencyTierBadgeCard({
                 <RefreshCw size={10} /> Auto
               </button>
             )}
-            <span
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full"
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                backgroundColor: info.accentBg,
-                color: info.accentColor,
-                fontWeight: 700,
-                textTransform: "uppercase",
-              }}
-            >
-              <Crown size={11} /> {info.label}
-            </span>
+            <AnimatePresence mode="popLayout">
+              <motion.span
+                key={`tier-badge-${pulseKey}-${activeLevel}`}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0, position: "absolute" as const }}
+                transition={{ type: "spring", stiffness: 320, damping: 22 }}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${usingOverride ? "agency-tier-glow" : ""}`}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  backgroundColor: info.accentBg,
+                  color: info.accentColor,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  border: `1px solid ${info.accentColor}`,
+                }}
+              >
+                <Crown size={11} /> {info.label}
+              </motion.span>
+            </AnimatePresence>
           </div>
         }
       />
@@ -8213,7 +8499,7 @@ function AgencyTierBadgeCard({
                   key={lvl}
                   type="button"
                   onClick={() => onTierOverride(lvl)}
-                  className="inline-flex px-2 py-1 rounded-md transition-colors hover:bg-[#F0F0F0]"
+                  className="inline-flex px-2 py-1 rounded-md transition-all hover:scale-[1.04] active:scale-[0.98] hover:bg-[#F0F0F0]"
                   style={{
                     fontFamily: FONT_MONO,
                     fontSize: 9,
@@ -8295,7 +8581,7 @@ function AgencyTierBadgeCard({
           <div style={FONT_HEADER}>Commission & avantages</div>
           <div className="flex items-baseline gap-2 mt-1">
             <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: SAGE_DEEP }}>
-              {info.commissionPct}%
+              {Math.round(animatedCommissionPct)}%
             </span>
             <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
               {agencyCommissionPct !== info.commissionPct ? `(config agence: ${agencyCommissionPct}%)` : "commission appliquée"}
@@ -8677,11 +8963,15 @@ function WhatsAppImportModal({
   );
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Import WhatsApp et auto-création client"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
     >
       <div
         className="absolute inset-0"
@@ -8691,6 +8981,7 @@ function WhatsAppImportModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 6 }}
         transition={{ type: "spring", stiffness: 280, damping: 28 }}
         className="relative w-full max-w-2xl rounded-xl overflow-hidden"
         style={{
@@ -9209,7 +9500,7 @@ function WhatsAppImportModal({
           )}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -9278,11 +9569,15 @@ function ClientOnboardingWizard({
   };
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Assistant d'onboarding client"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
     >
       <div
         className="absolute inset-0"
@@ -9292,6 +9587,7 @@ function ClientOnboardingWizard({
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 6 }}
         transition={{ type: "spring", stiffness: 280, damping: 28 }}
         className="relative w-full max-w-2xl rounded-xl overflow-hidden"
         style={{
@@ -9696,7 +9992,7 @@ function ClientOnboardingWizard({
           </div>
         )}
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -9835,7 +10131,11 @@ function CommissionCalculatorCard({
           >
             <div style={FONT_HEADER}>Commission mensuelle (agence)</div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: SAGE_DEEP, marginTop: 4 }}>
-              {fmtMAD(showUpgrade && nextTier ? upgradedAgencyShare : agencyShare)}
+              <AnimatedNumber
+                value={showUpgrade && nextTier ? upgradedAgencyShare : agencyShare}
+                format={(n) => fmtMAD(Math.round(n))}
+                duration={500}
+              />
             </div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
               Part Harch: {fmtMAD(harchShare)} · Total facturé: {fmtMAD(totalRevenue)}
@@ -9847,7 +10147,11 @@ function CommissionCalculatorCard({
           >
             <div style={FONT_HEADER}>Projection annuelle</div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL, marginTop: 4 }}>
-              {fmtMAD((showUpgrade && nextTier ? upgradedAgencyShare : agencyShare) * 12)}
+              <AnimatedNumber
+                value={(showUpgrade && nextTier ? upgradedAgencyShare : agencyShare) * 12}
+                format={(n) => fmtMAD(Math.round(n))}
+                duration={600}
+              />
             </div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
               Basé sur le MRR actuel · 12 mois
@@ -9863,10 +10167,10 @@ function CommissionCalculatorCard({
             >
               <div style={FONT_HEADER}>Impact passage au tier {nextTier.label}</div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: SAGE_DEEP, marginTop: 4 }}>
-                +{fmtMAD(uplift)}/mois
+                +<AnimatedNumber value={uplift} format={(n) => fmtMAD(Math.round(n))} duration={500} />/mois
               </div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE_DEEP, marginTop: 2 }}>
-                +{fmtMAD(uplift * 12)}/an · +{nextTier.commissionPct - tier.commissionPct} pts de commission
+                +<AnimatedNumber value={uplift * 12} format={(n) => fmtMAD(Math.round(n))} duration={500} />/an · +{nextTier.commissionPct - tier.commissionPct} pts de commission
               </div>
             </div>
           )}
@@ -9899,10 +10203,11 @@ function CommissionCalculatorCard({
                     fontFamily: FONT_MONO,
                     fontSize: 11,
                   }}
+                  cursor={{ fill: SAGE_BG }}
                   formatter={(v: number, n) => [fmtMAD(v), n === "agency" ? "Agence" : "Harch"]}
                 />
-                <Bar dataKey="agency" stackId="a" fill={SAGE} radius={[0, 0, 0, 0]} barSize={22} isAnimationActive />
-                <Bar dataKey="harch" stackId="a" fill={NEUTRAL_GRAY} radius={[4, 4, 0, 0]} barSize={22} isAnimationActive />
+                <Bar dataKey="agency" stackId="a" fill={SAGE} radius={[0, 0, 0, 0]} barSize={22} isAnimationActive animationDuration={650} />
+                <Bar dataKey="harch" stackId="a" fill={NEUTRAL_GRAY} radius={[4, 4, 0, 0]} barSize={22} isAnimationActive animationDuration={650} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -10398,12 +10703,13 @@ function PitchPipelineCard({
         {stages.map((stage) => {
           const stageItems = items.filter((i) => i.stage === stage.key);
           const stageValue = stageItems.reduce((s, i) => s + i.estimatedValue, 0);
+          const isDropTarget = dragId !== null;
           return (
             <div
               key={stage.key}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(stage.key)}
-              className="rounded-md p-2"
+              className={`rounded-md p-2 transition-colors ${isDropTarget ? "agency-drop-zone-active" : ""}`}
               style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC", minHeight: 180 }}
             >
               <div className="flex items-center justify-between mb-2 px-1">
@@ -10432,28 +10738,31 @@ function PitchPipelineCard({
               <div className="space-y-2">
                 {stageItems.length === 0 ? (
                   <div
-                    className="text-center py-6 rounded-md"
+                    className={`text-center py-6 rounded-md transition-colors ${isDropTarget ? "" : ""}`}
                     style={{
-                      border: `1px dashed ${BORDER_STRONG}`,
+                      border: `1px dashed ${isDropTarget ? SAGE_DIM : BORDER_STRONG}`,
+                      backgroundColor: isDropTarget ? SAGE_BG : "transparent",
                       fontFamily: FONT_SANS,
                       fontSize: 10,
-                      color: TEXT_MUTED,
+                      color: isDropTarget ? SAGE_DEEP : TEXT_MUTED,
                     }}
                   >
-                    Glissez une carte ici
+                    {isDropTarget ? "Déposer ici" : "Glissez une carte ici"}
                   </div>
                 ) : (
                   stageItems.map((item) => (
-                    <div
+                    <motion.div
                       key={item.id}
+                      layout
                       draggable
                       onDragStart={() => setDragId(item.id)}
                       onDragEnd={() => setDragId(null)}
-                      className="p-2.5 rounded-md cursor-grab active:cursor-grabbing transition-shadow hover:shadow-sm"
+                      className="p-2.5 rounded-md cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5"
                       style={{
                         backgroundColor: "#FFFFFF",
-                        border: `1px solid ${BORDER_STRONG}`,
-                        opacity: dragId === item.id ? 0.5 : 1,
+                        border: `1px solid ${dragId === item.id ? SAGE : BORDER_STRONG}`,
+                        opacity: dragId === item.id ? 0.55 : 1,
+                        boxShadow: dragId === item.id ? "0 8px 20px rgba(74,123,95,0.18)" : "none",
                       }}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -10468,7 +10777,7 @@ function PitchPipelineCard({
                             {item.sector}
                           </div>
                         </div>
-                        <GripVertical size={11} style={{ color: TEXT_MUTED, flexShrink: 0 }} />
+                        <GripVertical size={11} style={{ color: dragId === item.id ? SAGE : TEXT_MUTED, flexShrink: 0, transition: "color 0.18s" }} />
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: SAGE_DEEP }}>
@@ -10495,7 +10804,7 @@ function PitchPipelineCard({
                           {fmtDayShort(item.nextActionDate)}
                         </span>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -10714,17 +11023,17 @@ function TeamWorkloadBalancerCard({
         <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
           <div style={FONT_HEADER}>Charge moyenne</div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
-            {avgWorkload}%
+            <AnimatedNumber value={avgWorkload} duration={700} />%
           </div>
         </div>
         <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
           <div style={FONT_HEADER}>Clients assignés</div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
-            {members.reduce((s, m) => s + m.assignedClientIds.length, 0)} / {clients.length}
+            <AnimatedNumber value={members.reduce((s, m) => s + m.assignedClientIds.length, 0)} duration={600} /> / {clients.length}
           </div>
         </div>
         <div
-          className="p-2.5 rounded-md"
+          className="p-2.5 rounded-md agency-color-transition"
           style={{
             border: `1px solid ${BORDER}`,
             backgroundColor: overloadedCount > 0 ? "rgba(239,68,68,0.06)" : "#FCFCFC",
@@ -10740,20 +11049,20 @@ function TeamWorkloadBalancerCard({
               marginTop: 2,
             }}
           >
-            {overloadedCount}
+            <AnimatedNumber value={overloadedCount} duration={600} />
           </div>
         </div>
       </div>
       {loading && members.length === 0 ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+        <StaggeredSkeletons count={4} className="h-14 w-full rounded-md" label="Chargement du portefeuille d'équipe…" />
       ) : members.length === 0 ? (
-        <div className="py-8 text-center" style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
-          Aucun membre. Cliquez sur « Membre » pour ajouter.
-        </div>
+        <EmptyState
+          title="Aucun membre d'équipe configuré"
+          description="Ajoutez votre premier account manager pour visualiser la charge, rééquilibrer les assignations et suivre la performance."
+          ctaLabel="Ajouter un membre"
+          onCta={() => setAdding(true)}
+          Icon={Users}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {members.map((m) => {
@@ -10828,7 +11137,7 @@ function TeamWorkloadBalancerCard({
                   </div>
                   <div className="text-right shrink-0">
                     <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: tone.color }}>
-                      {pct}%
+                      <AnimatedNumber value={pct} duration={600} />%
                     </div>
                     <div
                       style={{
@@ -10848,12 +11157,13 @@ function TeamWorkloadBalancerCard({
                   className="mt-2 rounded-full overflow-hidden"
                   style={{ height: 4, backgroundColor: BORDER }}
                 >
-                  <div
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, pct)}%` }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
                     style={{
-                      width: `${Math.min(100, pct)}%`,
                       height: "100%",
                       backgroundColor: tone.color,
-                      transition: "width 0.4s ease",
                     }}
                   />
                 </div>
@@ -12727,6 +13037,7 @@ function WhiteLabelThemeEditorCard({
   // Live preview mini-dashboard mockup.
   const PreviewPanel = ({ scale = 1 }: { scale?: number }) => (
     <div
+      className="agency-color-transition"
       style={{
         fontFamily: fontStack,
         borderRadius: theme.borderRadius,
@@ -12747,7 +13058,7 @@ function WhiteLabelThemeEditorCard({
           <img src={theme.logoDataUrl} alt="Logo" className="h-5 w-auto" style={{ objectFit: "contain" }} />
         ) : (
           <div
-            className="inline-flex items-center justify-center px-2 py-1"
+            className="inline-flex items-center justify-center px-2 py-1 agency-color-transition"
             style={{ backgroundColor: primary, color: "#FFFFFF", borderRadius: Math.max(2, theme.borderRadius - 4) }}
           >
             <span style={{ fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}>
@@ -12788,6 +13099,7 @@ function WhiteLabelThemeEditorCard({
           ].map((kpi) => (
             <div
               key={kpi.label}
+              className="agency-color-transition"
               style={{
                 padding: 8,
                 border: `1px solid ${BORDER}`,
@@ -12807,6 +13119,7 @@ function WhiteLabelThemeEditorCard({
         {/* Primary button preview */}
         <button
           type="button"
+          className="agency-color-transition"
           style={{
             width: "100%",
             padding: "8px 12px",
@@ -12827,11 +13140,14 @@ function WhiteLabelThemeEditorCard({
           {Array.from({ length: 14 }).map((_, i) => {
             const h = 12 + Math.abs(Math.sin(i * 0.6)) * 18;
             return (
-              <div
+              <motion.div
                 key={i}
+                initial={{ height: 0 }}
+                animate={{ height: h }}
+                transition={{ delay: i * 0.025, duration: 0.4, ease: "easeOut" }}
+                className="agency-color-transition"
                 style={{
                   flex: 1,
-                  height: h,
                   backgroundColor: primary,
                   opacity: 0.4 + (i / 14) * 0.6,
                   borderRadius: 2,
@@ -12843,7 +13159,7 @@ function WhiteLabelThemeEditorCard({
       </div>
       {/* Favicon preview */}
       <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderTop: `1px solid ${BORDER}`, backgroundColor: "#FAFAFA" }}>
-        <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, backgroundColor: theme.faviconColor }} />
+        <span className="agency-color-transition" style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, backgroundColor: theme.faviconColor }} />
         <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
           favicon · {theme.faviconColor}
         </span>
@@ -12867,15 +13183,11 @@ function WhiteLabelThemeEditorCard({
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
 
       {clients.length === 0 ? (
-        <div
-          className="text-center py-8 rounded-md"
-          style={{ border: `1px dashed ${BORDER_STRONG}` }}
-        >
-          <Palette size={24} style={{ color: TEXT_MUTED, margin: "0 auto 6px" }} />
-          <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
-            Aucun client dans le portefeuille — ajoutez un client pour activer l'éditeur de thème.
-          </p>
-        </div>
+        <EmptyState
+          title="Éditeur de thème inactif"
+          description="Aucun client dans le portefeuille. Ajoutez un client pour activer l'éditeur de thème white-label et personnaliser l'expérience client."
+          Icon={Palette}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left: editor controls */}
@@ -12927,7 +13239,7 @@ function WhiteLabelThemeEditorCard({
                       key={preset.value}
                       type="button"
                       onClick={() => updateTheme({ primaryColor: preset.value })}
-                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-all"
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-all hover:scale-[1.04] active:scale-[0.97] agency-color-transition"
                       style={{
                         border: `1px solid ${active ? preset.value : BORDER}`,
                         backgroundColor: active ? preset.value + "14" : "#FFFFFF",
@@ -12937,7 +13249,7 @@ function WhiteLabelThemeEditorCard({
                         fontWeight: 700,
                       }}
                     >
-                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: preset.value }} />
+                      <span className="agency-color-transition" style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, backgroundColor: preset.value }} />
                       {preset.label}
                     </button>
                   );
@@ -13453,10 +13765,10 @@ function ClientHealthScoringCard({
             >
               <div style={FONT_HEADER}>Santé moyenne</div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
-                {avgScore}<span style={{ fontSize: 11, color: TEXT_MUTED }}> /100</span>
+                <AnimatedNumber value={avgScore} duration={750} />{""}<span style={{ fontSize: 11, color: TEXT_MUTED }}> /100</span>
               </div>
             </div>
-            {(["excellent", "bon", "surveiller", "risque"] as HealthBand[]).map((band) => {
+            {(["excellent", "bon", "surveiller", "risque"] as HealthBand[]).map((band, idx) => {
               const style = healthBandStyle(band);
               return (
                 <div
@@ -13466,7 +13778,7 @@ function ClientHealthScoringCard({
                 >
                   <div style={{ ...FONT_HEADER, color: style.color }}>{style.label}</div>
                   <div style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: style.color, marginTop: 2 }}>
-                    {bandCounts[band]}
+                    <AnimatedNumber value={bandCounts[band]} duration={600 + idx * 80} />
                   </div>
                 </div>
               );
@@ -13493,7 +13805,7 @@ function ClientHealthScoringCard({
                     className="w-full flex items-center gap-3 px-3 py-2 text-left"
                   >
                     <div
-                      className="flex items-center justify-center shrink-0 rounded-md"
+                      className="flex items-center justify-center shrink-0 rounded-md agency-color-transition"
                       style={{
                         width: 44,
                         height: 44,
@@ -13502,7 +13814,7 @@ function ClientHealthScoringCard({
                       }}
                     >
                       <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: style.color }}>
-                        {row.score}
+                        <AnimatedNumber value={row.score} duration={600} />
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
@@ -13531,7 +13843,9 @@ function ClientHealthScoringCard({
                             stroke={style.color}
                             strokeWidth={1.5}
                             fill={`url(#hs-${row.clientId})`}
-                            isAnimationActive={false}
+                            isAnimationActive
+                            animationDuration={700}
+                            animationEasing="ease-out"
                           />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -13546,11 +13860,15 @@ function ClientHealthScoringCard({
                       }}
                     />
                   </button>
+                  <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
+                      key="health-expanded"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
-                      className="px-3 pb-3 pt-1 border-t"
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] as const }}
+                      className="px-3 pb-3 pt-1 border-t overflow-hidden"
                       style={{ borderColor: BORDER }}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
@@ -13562,11 +13880,16 @@ function ClientHealthScoringCard({
                                 <div className="flex items-center justify-between">
                                   <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>{f.label}</span>
                                   <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: f.impact > 50 ? NEGATIVE : f.impact > 30 ? "#B45309" : SAGE_DEEP, fontWeight: 700 }}>
-                                    {f.impact}%
+                                    <AnimatedNumber value={f.impact} duration={500} />%
                                   </span>
                                 </div>
                                 <div style={{ width: "100%", height: 4, backgroundColor: BORDER, borderRadius: 2, marginTop: 3 }}>
-                                  <div style={{ width: `${f.impact}%`, height: "100%", backgroundColor: f.impact > 50 ? NEGATIVE : f.impact > 30 ? NEUTRAL_AMBER : SAGE, borderRadius: 2 }} />
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${f.impact}%` }}
+                                    transition={{ duration: 0.7, ease: "easeOut" }}
+                                    style={{ height: "100%", backgroundColor: f.impact > 50 ? NEGATIVE : f.impact > 30 ? NEUTRAL_AMBER : SAGE, borderRadius: 2 }}
+                                  />
                                 </div>
                               </div>
                             ))}
@@ -13621,6 +13944,7 @@ function ClientHealthScoringCard({
                       </div>
                     </motion.div>
                   )}
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -14307,6 +14631,7 @@ function RevenueForecastingCard({
                     fontFamily: FONT_MONO,
                     fontSize: 11,
                   }}
+                  cursor={{ stroke: SAGE, strokeDasharray: "3 3", strokeWidth: 1 }}
                   formatter={(v: number, n) => [fmtMAD(v), n === "conservateur" ? "Conservateur" : n === "realiste" ? "Réaliste" : "Optimiste"]}
                   labelStyle={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
                 />
@@ -14324,9 +14649,9 @@ function RevenueForecastingCard({
                     }}
                   />
                 )}
-                <Line type="monotone" dataKey="conservateur" stroke={NEUTRAL_GRAY} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
-                <Line type="monotone" dataKey="realiste" stroke={SAGE} strokeWidth={2.5} dot={{ r: 2, fill: SAGE }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="optimiste" stroke={SAGE_DIM} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="conservateur" stroke={NEUTRAL_GRAY} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive animationDuration={1100} animationEasing="ease-out" />
+                <Line type="monotone" dataKey="realiste" stroke={SAGE} strokeWidth={2.5} dot={{ r: 2, fill: SAGE }} isAnimationActive animationDuration={1300} animationEasing="ease-out" />
+                <Line type="monotone" dataKey="optimiste" stroke={SAGE_DIM} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive animationDuration={1500} animationEasing="ease-out" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -14336,19 +14661,19 @@ function RevenueForecastingCard({
             <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
               <div style={FONT_HEADER}>MRR M+12 · Réaliste</div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DEEP, marginTop: 2 }}>
-                {fmtMAD(forecast.finalRealiste)}
+                <AnimatedNumber value={forecast.finalRealiste} format={(n) => fmtMAD(Math.round(n))} duration={700} />
               </div>
             </div>
             <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
               <div style={FONT_HEADER}>ARR projeté · Réaliste</div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL, marginTop: 2 }}>
-                {fmtMAD(arrRealiste)}
+                <AnimatedNumber value={arrRealiste} format={(n) => fmtMAD(Math.round(n))} duration={800} />
               </div>
             </div>
             <div className="p-2.5 rounded-md" style={{ border: `1px solid ${BORDER}`, backgroundColor: "#FCFCFC" }}>
               <div style={FONT_HEADER}>ARR Optimiste</div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: SAGE_DIM, marginTop: 2 }}>
-                {fmtMAD(arrOptimiste)}
+                <AnimatedNumber value={arrOptimiste} format={(n) => fmtMAD(Math.round(n))} duration={900} />
               </div>
             </div>
             <div
@@ -17280,6 +17605,7 @@ export default function AgencyDashboard({
         color: CHARCOAL,
       }}
     >
+      <DashboardStyle />
       {/* ─── Desktop sidebar (sticky, 240px) ─────────────────────────── */}
       <aside
         className="hidden lg:block shrink-0"
@@ -17913,21 +18239,25 @@ export default function AgencyDashboard({
       </div>
 
       {/* ENV-AGENCY · FEATURE 2 — Client Onboarding Wizard (portal-level overlay) */}
-      {wizardOpen && (
-        <ClientOnboardingWizard
-          onClose={handleWizardClose}
-          onComplete={handleWizardComplete}
-          teamMembers={users}
-        />
-      )}
+      <AnimatePresence>
+        {wizardOpen && (
+          <ClientOnboardingWizard
+            onClose={handleWizardClose}
+            onComplete={handleWizardComplete}
+            teamMembers={users}
+          />
+        )}
+      </AnimatePresence>
 
       {/* WhatsApp Import — GLM-4 auto-create sub-client (portal-level overlay) */}
-      {whatsAppImportOpen && (
-        <WhatsAppImportModal
-          onClose={handleWhatsAppImportClose}
-          onCreated={handleWhatsAppImportCreated}
-        />
-      )}
+      <AnimatePresence>
+        {whatsAppImportOpen && (
+          <WhatsAppImportModal
+            onClose={handleWhatsAppImportClose}
+            onCreated={handleWhatsAppImportCreated}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

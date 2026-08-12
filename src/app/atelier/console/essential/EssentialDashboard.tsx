@@ -1078,10 +1078,12 @@ function CardShell({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  // POLISH-ESSENTIAL — card-hover-lift adds box-shadow 0 4px 12px → 0 8px 24px
+  // + 1px translateY on hover (defined in the global <style> block).
   return (
     <Card
       className={
-        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden " + (className ?? "")
+        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden card-hover-lift " + (className ?? "")
       }
       style={{ padding: 20, ...style }}
     >
@@ -1098,17 +1100,67 @@ function CardShell({
 function LiveSkeleton({
   className,
   label = "Chargement en cours",
+  shimmer = true,
 }: {
   className?: string;
   label?: string;
+  /** When true (default), renders the sliding shimmer sweep instead of a flat gray block. */
+  shimmer?: boolean;
 }) {
+  // POLISH-ESSENTIAL — shimmer + fade-in entrance + a11y label.
+  // The shimmer-skeleton class layers a sliding highlight on top of the
+  // shadcn Skeleton base; fade-in-skeleton softens the mount.
   return (
     <Skeleton
-      className={className}
+      className={`${className ?? ""} ${shimmer ? "shimmer-skeleton fade-in-skeleton" : ""}`}
       role="status"
       aria-live="polite"
       aria-label={label}
     />
+  );
+}
+
+/** LoadingBlock — full-card loading placeholder with shimmer + centered
+ *  French loading text. Replaces the empty LiveSkeleton stretches inside
+ *  chart cards with a more informative state. */
+function LoadingBlock({
+  height = 200,
+  label = "Chargement de votre score…",
+}: {
+  height?: number | string;
+  label?: string;
+}) {
+  const h = typeof height === "number" ? `${height}px` : height;
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-3 rounded-md"
+      style={{ height: h, padding: 16 }}
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className="shimmer-skeleton fade-in-skeleton rounded-md"
+        style={{ width: "70%", height: 14 }}
+        aria-hidden="true"
+      />
+      <div
+        className="shimmer-skeleton fade-in-skeleton rounded-md"
+        style={{ width: "50%", height: 10, animationDelay: "80ms" }}
+        aria-hidden="true"
+      />
+      <span
+        className="mt-1 fade-in-skeleton"
+        style={{
+          fontFamily: FONT_MONO,
+          fontSize: 11,
+          color: TEXT_MUTED,
+          letterSpacing: "0.04em",
+          animationDelay: "120ms",
+        }}
+      >
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -1227,6 +1279,7 @@ function MiniStat({
 }) {
   return (
     <div
+      className="card-hover-lift"
       style={{
         padding: 12,
         border: `1px solid ${BORDER}`,
@@ -1239,6 +1292,7 @@ function MiniStat({
         <span style={FONT_HEADER}>{label}</span>
       </div>
       <div
+        className="fade-up-kpi"
         style={{
           fontFamily: FONT_MONO,
           fontSize: 16,
@@ -1266,6 +1320,91 @@ const containerStagger = {
     transition: { staggerChildren: 0.04 },
   },
 };
+
+// ─── POLISH-ESSENTIAL — Shared chart tooltip + count-up helpers ────────
+// Centralises the recharts Tooltip contentStyle so every chart shares the
+// same sage-bordered, monospace, shadowed tooltip — one source of truth.
+
+const CHART_TOOLTIP_STYLE: React.CSSProperties = {
+  borderRadius: 8,
+  border: `1px solid ${SAGE_DIM}`,
+  fontFamily: FONT_MONO,
+  fontSize: 11,
+  backgroundColor: "#FFFFFF",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+  padding: "8px 10px",
+  color: CHARCOAL,
+  lineHeight: 1.5,
+};
+
+const CHART_TOOLTIP_CURSOR = { fill: SAGE_BG } as const;
+
+/** AnimatedNumber — counts up from 0 (or previous value) to the target on
+ *  mount and whenever the value changes. Uses requestAnimationFrame with an
+ *  ease-out-cubic curve for a buttery 800ms reveal. Wrapped in a motion.span
+ *  so it also fades up on first paint (initial opacity 0, y 10 → 1, 0). */
+function AnimatedNumber({
+  value,
+  format,
+  duration = 800,
+  className,
+  style,
+  prefix = "",
+  suffix = "",
+}: {
+  value: number;
+  format?: (n: number) => string;
+  duration?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  prefix?: string;
+  suffix?: string;
+}) {
+  const fmt = format ?? ((n: number) => Math.round(n).toString());
+  const [display, setDisplay] = useState(0);
+  const fromRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = value;
+    if (from === to) {
+      setDisplay(to);
+      return;
+    }
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      // ease-out-cubic — fast start, gentle settle
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = from + (to - from) * eased;
+      setDisplay(current);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = to;
+        setDisplay(to);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      fromRef.current = to;
+    };
+  }, [value, duration]);
+
+  return (
+    <motion.span
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }}
+      className={className}
+      style={style}
+    >
+      {prefix}{fmt(display)}{suffix}
+    </motion.span>
+  );
+}
 
 // ─── SIDEBAR NAV (plan-aware — Essentiel only) ───────────────────────
 
@@ -1553,11 +1692,12 @@ function Header({
         <button
           type="button"
           onClick={onMenuClick}
-          className="lg:hidden inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+          className="no-scale lg:hidden inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
           style={{ width: 32, height: 32 }}
           aria-label="Ouvrir le menu"
+          title="Ouvrir le menu de navigation"
         >
-          <Menu size={18} />
+          <Menu size={18} className="icon-hover" />
         </button>
         <div className="flex items-baseline gap-2">
           <span
@@ -1609,10 +1749,11 @@ function Header({
               <button
                 type="button"
                 onClick={onOpenCmd}
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+                className="no-scale hidden sm:inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
                 aria-label="Ouvrir la palette de commandes (Cmd+K)"
+                title="Palette de commandes (Cmd+K)"
               >
-                <Command size={14} style={{ color: TEXT_BODY }} />
+                <Command size={14} className="icon-hover" style={{ color: TEXT_BODY }} />
                 <kbd
                   className="hidden md:inline-flex items-center"
                   style={{
@@ -2509,15 +2650,16 @@ function ScoreReputationCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-2"
+                className="h-7 px-2 no-scale"
                 style={{ fontFamily: FONT_MONO, fontSize: 10 }}
                 onClick={() => {
                   setRefreshing(true);
                   setTimeout(() => setRefreshing(false), 800);
                 }}
                 aria-label="Rafraîchir"
+                title="Rafraîchir le score de réputation"
               >
-                <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+                <RefreshCw size={12} className={`icon-hover ${refreshing ? "animate-spin" : ""}`} />
               </Button>
             </>
           }
@@ -2541,6 +2683,7 @@ function ScoreReputationCard({
                     dataKey="value"
                     cornerRadius={8}
                     isAnimationActive
+                    animationDuration={900}
                   />
                 </RadialBarChart>
               </ResponsiveContainer>
@@ -2557,6 +2700,18 @@ function ScoreReputationCard({
               >
                 {loading ? (
                   <LiveSkeleton className="h-10 w-16" />
+                ) : health ? (
+                  <AnimatedNumber
+                    value={score}
+                    duration={900}
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 44,
+                      fontWeight: 700,
+                      color: CHARCOAL,
+                      lineHeight: 1,
+                    }}
+                  />
                 ) : (
                   <span
                     style={{
@@ -2567,7 +2722,7 @@ function ScoreReputationCard({
                       lineHeight: 1,
                     }}
                   >
-                    {health ? Math.round(score) : "—"}
+                    —
                   </span>
                 )}
                 <span style={{ ...FONT_HEADER, marginTop: 4 }}>/ 100</span>
@@ -2659,6 +2814,17 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
           <div className="flex items-baseline gap-2">
             {loading ? (
               <LiveSkeleton className="h-7 w-16" />
+            ) : health ? (
+              <AnimatedNumber
+                value={value}
+                suffix="%"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              />
             ) : (
               <span
                 style={{
@@ -2668,7 +2834,7 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
                   color: CHARCOAL,
                 }}
               >
-                {health ? `${value}%` : "—"}
+                —
               </span>
             )}
             <Delta value={delta} />
@@ -2676,9 +2842,24 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
           {spark.length > 0 && (
             <div style={{ width: 80, height: 28 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                  <Line type="monotone" dataKey="v" stroke={SAGE} strokeWidth={1.5} dot={false} isAnimationActive />
-                </LineChart>
+                <AreaChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="sentSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={SAGE} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={SAGE} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="v"
+                    stroke={SAGE}
+                    strokeWidth={1.5}
+                    fill="url(#sentSparkGrad)"
+                    dot={false}
+                    isAnimationActive
+                    animationDuration={800}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
@@ -2719,6 +2900,17 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
           <div className="flex items-baseline gap-2">
             {loading ? (
               <LiveSkeleton className="h-7 w-16" />
+            ) : health ? (
+              <AnimatedNumber
+                value={value}
+                format={fmtNumber}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              />
             ) : (
               <span
                 style={{
@@ -2728,7 +2920,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
                   color: CHARCOAL,
                 }}
               >
-                {health ? fmtNumber(value) : "—"}
+                —
               </span>
             )}
             <Delta value={delta} />
@@ -2737,7 +2929,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
             <div style={{ width: 80, height: 28 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={bars} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                  <Bar dataKey="v" fill={SAGE} radius={[2, 2, 0, 0]} isAnimationActive />
+                  <Bar dataKey="v" fill={SAGE} radius={[2, 2, 0, 0]} isAnimationActive animationDuration={800} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -2903,16 +3095,26 @@ function AlertesActivesKpi({
           <div className="flex items-baseline gap-2">
             {loading ? (
               <LiveSkeleton className="h-7 w-16" />
-            ) : (
-              <span
+            ) : alerts ? (
+              <AnimatedNumber
+                value={count}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 28,
                   fontWeight: 700,
                   color: count > 0 ? (critical > 0 ? NEGATIVE : NEUTRAL_AMBER) : POSITIVE,
                 }}
+              />
+            ) : (
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: POSITIVE,
+                }}
               >
-                {alerts ? count : "—"}
+                —
               </span>
             )}
             {critical > 0 && (
@@ -2926,7 +3128,7 @@ function AlertesActivesKpi({
         <Link
           href="#alertes"
           onClick={(e) => { e.preventDefault(); scrollToSection("alertes"); }}
-          className="inline-flex items-center gap-1 text-[11px]"
+          className="link-underline inline-flex items-center gap-1 text-[11px]"
           style={{ fontFamily: FONT_MONO, color: SAGE }}
         >
           Voir toutes <ChevronRight size={11} />
@@ -3008,16 +3210,24 @@ function TendanceSentimentCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[260px] w-full" />
+          <LoadingBlock height={260} label="Chargement des graphiques…" />
         ) : data.length === 0 ? (
           <div className="h-[260px] flex items-center justify-center">
             <EmptyDash label="Aucune donnée" />
           </div>
         ) : (
           <>
-            <div style={{ width: "100%", height: 220 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={range}
+                style={{ width: "100%", height: 220 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                   <defs>
                     <linearGradient id="posGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={POSITIVE} stopOpacity={0.45} />
@@ -3040,12 +3250,7 @@ function TendanceSentimentCard({
                     width={36}
                   />
                   <RTooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                     labelFormatter={(l) => fmtDayShort(String(l))}
                   />
                   <Legend
@@ -3060,9 +3265,10 @@ function TendanceSentimentCard({
                     strokeWidth={1.5}
                     fill="url(#posGrad)"
                     isAnimationActive
+                    animationDuration={800}
                   />
-                  <Line type="monotone" dataKey="Neutre" stroke={NEUTRAL_GRAY} strokeWidth={1.5} dot={false} isAnimationActive />
-                  <Line type="monotone" dataKey="Négatif" stroke={NEGATIVE} strokeWidth={1.5} dot={false} isAnimationActive />
+                  <Line type="monotone" dataKey="Neutre" stroke={NEUTRAL_GRAY} strokeWidth={1.5} dot={false} isAnimationActive animationDuration={800} />
+                  <Line type="monotone" dataKey="Négatif" stroke={NEGATIVE} strokeWidth={1.5} dot={false} isAnimationActive animationDuration={800} />
                   {/* Anomaly dots */}
                   {anomalies.map((a, i) => (
                     <ReferenceDot
@@ -3078,7 +3284,8 @@ function TendanceSentimentCard({
                   ))}
                 </ComposedChart>
               </ResponsiveContainer>
-            </div>
+              </motion.div>
+            </AnimatePresence>
             <AiCommentary text={aiCommentary} />
 
             {/* R2-ESSENTIEL-B — Progressive Disclosure on daily sentiment breakdown */}
@@ -3209,7 +3416,7 @@ function DiversiteSourcesCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[260px] w-full" />
+          <LoadingBlock height={260} label="Chargement des graphiques…" />
         ) : data.length === 0 ? (
           <div className="h-[260px] flex items-center justify-center">
             <EmptyDash label="Aucune source" />
@@ -3239,12 +3446,7 @@ function DiversiteSourcesCard({
                 />
                 <RTooltip
                   cursor={{ fill: SAGE_BG }}
-                  contentStyle={{
-                    borderRadius: 8,
-                    border: `1px solid ${BORDER_STRONG}`,
-                    fontFamily: FONT_MONO,
-                    fontSize: 11,
-                  }}
+                  contentStyle={CHART_TOOLTIP_STYLE}
                 />
                 <Bar
                   dataKey="count"
@@ -3296,10 +3498,11 @@ function DiversiteSourcesCard({
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="rounded p-0.5 hover:bg-[#F0F0F0] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+              className="no-scale rounded p-0.5 hover:bg-[#F0F0F0] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
               aria-label="Fermer la sélection de source"
+              title="Fermer la sélection de source"
             >
-              <X size={12} />
+              <X size={12} className="icon-hover" />
             </button>
           </div>
         )}
@@ -3874,7 +4077,7 @@ function TopSujetsCard({ topics, loading }: { topics: TopicsResp | null; loading
         <SectionHeader title="12 · Top 5 Sujets" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[200px] w-full" />
+          <LoadingBlock height={200} label="Chargement des sujets…" />
         ) : data.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center">
             <EmptyDash label="Aucun sujet" />
@@ -3906,12 +4109,7 @@ function TopSujetsCard({ topics, loading }: { topics: TopicsResp | null; loading
                   />
                   <RTooltip
                     cursor={{ fill: SAGE_BG }}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                   <Bar
                     dataKey="Positif"
@@ -4094,7 +4292,7 @@ function IndicateurCriseCard({ health, alerts, loading }: { health: BrandHealth 
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[120px] w-full" />
+          <LoadingBlock height={120} label="Chargement de la carte…" />
         ) : (
           <>
             {/* DEFCON bar */}
@@ -4265,7 +4463,7 @@ function CarteChaleurGeoCard({
         <SectionHeader title="14 · Carte de Chaleur Géo" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[240px] w-full" />
+          <LoadingBlock height={240} label="Chargement de l'indicateur…" />
         ) : error ? (
           <div
             role="alert"
@@ -4323,12 +4521,7 @@ function CarteChaleurGeoCard({
                   <ZAxis type="number" dataKey="count" range={[60, 600]} name="Mentions" />
                   <RTooltip
                     cursor={{ stroke: SAGE, strokeDasharray: "3 3" }}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload as (typeof chartData)[number];
@@ -4439,12 +4632,14 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[180px] w-full" />
+          <LoadingBlock height={180} label="Chargement des données…" />
         ) : (
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col justify-center">
               <div className="flex items-baseline gap-2">
-                <span
+                <AnimatedNumber
+                  value={currentRank}
+                  prefix="#"
                   style={{
                     fontFamily: FONT_MONO,
                     fontSize: 48,
@@ -4452,9 +4647,7 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
                     color: CHARCOAL,
                     lineHeight: 1,
                   }}
-                >
-                  #{currentRank}
-                </span>
+                />
               </div>
               <div className="mt-1 flex items-center gap-1">
                 {trend > 0 ? (
@@ -4508,12 +4701,7 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
                     width={24}
                   />
                   <RTooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                   <Line
                     type="monotone"
@@ -4522,6 +4710,7 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
                     strokeWidth={2}
                     dot={{ r: 3, fill: SAGE }}
                     isAnimationActive
+                    animationDuration={800}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -4531,7 +4720,7 @@ function PositionHarch100Card({ harch100, loading }: { harch100: Harch100Resp | 
         <div className="mt-3 text-right">
           <Link
             href="/atelier/harch-100"
-            className="inline-flex items-center gap-1 text-[11px]"
+            className="link-underline inline-flex items-center gap-1 text-[11px]"
             style={{ fontFamily: FONT_MONO, color: SAGE }}
           >
             Voir le classement complet <ChevronRight size={11} />
@@ -4622,7 +4811,7 @@ function ActiviteReseauSocialCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[220px] w-full" />
+          <LoadingBlock height={220} label="Chargement des graphiques…" />
         ) : error ? (
           <div
             role="alert"
@@ -4697,12 +4886,7 @@ function ActiviteReseauSocialCard({
                     width={32}
                   />
                   <RTooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                     labelFormatter={(l) => fmtDayShort(String(l))}
                   />
                   <Legend
@@ -4805,7 +4989,7 @@ function MeteoSentimentsLangueCard({
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[220px] w-full" />
+          <LoadingBlock height={220} label="Chargement des graphiques…" />
         ) : error ? (
           <div
             role="alert"
@@ -4860,12 +5044,7 @@ function MeteoSentimentsLangueCard({
                   />
                   <RTooltip
                     cursor={{ fill: SAGE_BG }}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                   <Legend
                     wrapperStyle={{ fontFamily: FONT_MONO, fontSize: 10, paddingTop: 8 }}
@@ -4928,7 +5107,7 @@ function EvolutionScoreCard({ health, loading }: { health: BrandHealth | null; l
         <SectionHeader title="18 · Évolution du Score 30j" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[220px] w-full" />
+          <LoadingBlock height={220} label="Chargement des graphiques…" />
         ) : (
           <>
             <div style={{ width: "100%", height: 200 }}>
@@ -4951,12 +5130,7 @@ function EvolutionScoreCard({ health, loading }: { health: BrandHealth | null; l
                     width={32}
                   />
                   <RTooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                     labelFormatter={(l) => fmtDayShort(String(l))}
                   />
                   <ReferenceLine
@@ -5057,7 +5231,7 @@ function VolumeMentionsCard({ trend, loading }: { trend: SentimentTrendResp | nu
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         {loading ? (
-          <LiveSkeleton className="h-[220px] w-full" />
+          <LoadingBlock height={220} label="Chargement des graphiques…" />
         ) : data.length === 0 ? (
           <div className="h-[220px] flex items-center justify-center">
             <EmptyDash label="Aucune donnée" />
@@ -5085,12 +5259,7 @@ function VolumeMentionsCard({ trend, loading }: { trend: SentimentTrendResp | nu
                   />
                   <RTooltip
                     cursor={{ fill: SAGE_BG }}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: `1px solid ${BORDER_STRONG}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 11,
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                     labelFormatter={(l) => fmtDayShort(String(l))}
                     formatter={(value: number, _name, props) => {
                       const p = props?.payload;
@@ -5799,9 +5968,10 @@ function EmptyState({
       className="flex flex-col items-center justify-center text-center rounded-md"
       style={{ padding: "32px 20px", minHeight: 200 }}
     >
-      {/* CSS-only illustration area — sage circle with icon */}
+      {/* CSS-only illustration area — sage circle with icon.
+          POLISH-ESSENTIAL — sage-bounce animation on mount for a playful entrance. */}
       <div
-        className="flex items-center justify-center rounded-full mb-4"
+        className="flex items-center justify-center rounded-full mb-4 sage-bounce"
         style={{
           width: 56,
           height: 56,
@@ -10268,7 +10438,7 @@ function SentimentTimelineCard({
 
         {/* Timeline bars */}
         {loading ? (
-          <LiveSkeleton className="h-[180px] w-full" />
+          <LoadingBlock height={180} label="Chargement des données…" />
         ) : buckets.length === 0 ? (
           <div className="h-[180px] flex items-center justify-center">
             <EmptyDash label="Aucune donnée" />
@@ -10982,12 +11152,95 @@ export default function EssentialDashboard() {
       <SkipLink />
 
       {/* ENV-ESSENTIAL — sage pulse keyframe + scoped global helper */}
+      {/* POLISH-ESSENTIAL — added shimmer / bounce / card-lift / link-underline / btn-scale */}
       <style>{`
         @keyframes sage-pulse-kf {
           0%, 100% { box-shadow: 0 0 0 0 rgba(74,123,95,0.4); }
           50% { box-shadow: 0 0 0 6px rgba(74,123,95,0); }
         }
         .sage-pulse { animation: sage-pulse-kf 1.6s ease-out 2; border-radius: 10px; }
+
+        /* Shimmer skeleton — replaces flat gray with a sliding highlight sweep. */
+        @keyframes shimmerSlide {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .shimmer-skeleton {
+          background: linear-gradient(90deg, #F4F4F5 0%, #FAFAFA 25%, #FFFFFF 50%, #FAFAFA 75%, #F4F4F5 100%);
+          background-size: 200% 100%;
+          animation: shimmerSlide 1.6s ease-in-out infinite;
+        }
+
+        /* Fade-in for skeleton mount — pairs with shimmer for a softer entrance. */
+        @keyframes fadeInSkeleton {
+          0% { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-skeleton { animation: fadeInSkeleton 0.3s ease-out both; }
+
+        /* Sage bounce — used on empty-state illustrations for a playful entrance. */
+        @keyframes sageBounce {
+          0% { transform: scale(0.7) rotate(-6deg); opacity: 0; }
+          55% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+          80% { transform: scale(0.96) rotate(-1deg); }
+          100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        .sage-bounce { animation: sageBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+        /* Card hover lift — subtle shadow + 1px translate on every CardShell. */
+        .card-hover-lift {
+          transition: box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 220ms ease;
+          will-change: box-shadow, transform;
+        }
+        .card-hover-lift:hover {
+          box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+          transform: translateY(-1px);
+          border-color: ${SAGE_DIM} !important;
+        }
+
+        /* Button micro-interaction — scale 1.02 on hover, 0.98 on active.
+           Scoped to .min-h-screen so it never leaks outside this dashboard.
+           Excludes aria-hidden buttons (silent refresh trigger) and
+           .no-scale buttons (icon-only toolbar buttons where scale feels off). */
+        .min-h-screen button:not([aria-hidden="true"]):not(.no-scale) {
+          transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+                      background-color 160ms ease,
+                      color 160ms ease,
+                      border-color 160ms ease,
+                      box-shadow 160ms ease;
+          will-change: transform;
+        }
+        .min-h-screen button:not([aria-hidden="true"]):not(.no-scale):hover {
+          transform: scale(1.02);
+        }
+        .min-h-screen button:not([aria-hidden="true"]):not(.no-scale):active {
+          transform: scale(0.98);
+        }
+
+        /* Link underline animation — background-size slide for a refined reveal. */
+        .link-underline {
+          background-image: linear-gradient(currentColor, currentColor);
+          background-size: 0% 1px;
+          background-position: 0 100%;
+          background-repeat: no-repeat;
+          transition: background-size 220ms cubic-bezier(0.16, 1, 0.3, 1);
+          padding-bottom: 1px;
+        }
+        .link-underline:hover { background-size: 100% 1px; }
+
+        /* Icon hover color shift — gray to sage on icon-bearing elements. */
+        .icon-hover { transition: color 160ms ease; }
+        .icon-hover:hover { color: ${SAGE}; }
+
+        /* Staggered fade-up for KPI numbers / mini-stats. */
+        @keyframes fadeUpKpi {
+          0% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up-kpi { animation: fadeUpKpi 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
         /* R2-ESSENTIEL-B — global focus-visible outline (WCAG 2.1 AA).
            Sage outline on every interactive element via :focus-visible so
            mouse users don't see it but keyboard users do. */
@@ -11025,27 +11278,39 @@ export default function EssentialDashboard() {
         />
       </aside>
 
-      {/* Mobile sidebar overlay */}
-      {mobileNavOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
-            onClick={() => setMobileNavOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute left-0 top-0 h-full bg-white shadow-xl"
-            style={{ width: 280, maxWidth: "85vw" }}
+      {/* Mobile sidebar overlay — POLISH-ESSENTIAL: AnimatePresence + slide-in from left */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <SidebarContent
-              activeSection={activeSection}
-              alertCount={alertCount}
-              onNavigate={() => setMobileNavOpen(false)}
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
+              onClick={() => setMobileNavOpen(false)}
+              aria-hidden="true"
             />
-          </div>
-        </div>
-      )}
+            <motion.div
+              className="absolute left-0 top-0 h-full bg-white shadow-xl"
+              style={{ width: 280, maxWidth: "85vw" }}
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            >
+              <SidebarContent
+                activeSection={activeSection}
+                alertCount={alertCount}
+                onNavigate={() => setMobileNavOpen(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">

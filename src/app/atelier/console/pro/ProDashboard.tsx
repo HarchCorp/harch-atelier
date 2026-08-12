@@ -87,7 +87,7 @@ import {
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
   AlertTriangle,
@@ -2175,7 +2175,7 @@ function CardShell({
   return (
     <Card
       className={
-        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden " + (className ?? "")
+        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden transition-shadow duration-200 ease-out hover:shadow-md " + (className ?? "")
       }
       style={{ padding: 20, ...style }}
     >
@@ -2284,7 +2284,9 @@ function MiniStat({
         border: `1px solid ${BORDER}`,
         borderRadius: 10,
         backgroundColor: "#FAFAFA",
+        transition: "border-color 0.2s ease-out, transform 0.2s ease-out",
       }}
+      className="hover:border-[#E5E5E5]"
     >
       <div className="flex items-center gap-1.5">
         {dotColor && <SparkDot color={dotColor} />}
@@ -2304,6 +2306,240 @@ function MiniStat({
     </div>
   );
 }
+
+// ─── POLISH-PRO · Shared micro-interaction atoms ──────────────────────
+// AnimatedNumber — counts 0 → value on mount (rAF + easeOutCubic).
+// Skips animation on prefers-reduced-motion.
+function AnimatedNumber({
+  value,
+  duration = 0.9,
+  format = (n: number) => Math.round(n).toString(),
+  className,
+  style,
+}: {
+  value: number;
+  duration?: number;
+  format?: (n: number) => string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const [display, setDisplay] = useState(0);
+  const fromRef = useRef(0);
+  const targetRef = useRef(value);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setDisplay(value);
+      fromRef.current = value;
+      targetRef.current = value;
+      return;
+    }
+    const start = performance.now();
+    const from = fromRef.current;
+    const to = value;
+    targetRef.current = to;
+    const dur = duration * 1000;
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(1, dur > 0 ? elapsed / dur : 1);
+      const v = from + (to - from) * ease(t);
+      setDisplay(v);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = to;
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      fromRef.current = targetRef.current;
+    };
+  }, [value, duration]);
+
+  return (
+    <span className={className} style={style}>
+      {format(display)}
+    </span>
+  );
+}
+
+// ShimmerBlock — single shimmering placeholder bar.
+function ShimmerBlock({
+  width,
+  height,
+  delay = 0,
+  radius = 6,
+}: {
+  width: string | number;
+  height: string | number;
+  delay?: number;
+  radius?: number;
+}) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        width,
+        height,
+        borderRadius: radius,
+        backgroundColor: "#F4F4F5",
+        overflow: "hidden",
+      }}
+    >
+      <motion.div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.85) 50%, transparent 100%)",
+        }}
+        initial={{ x: "-100%" }}
+        animate={{ x: "100%" }}
+        transition={{
+          duration: 1.4,
+          ease: "easeInOut",
+          repeat: Infinity,
+          delay,
+        }}
+      />
+    </div>
+  );
+}
+
+// ShimmerSkeleton — staggered shimmer rows + sage "Chargement…" label.
+function ShimmerSkeleton({
+  label = "Chargement…",
+  rows = 3,
+  height = 14,
+  className,
+}: {
+  label?: string;
+  rows?: number;
+  height?: number | string;
+  className?: string;
+}) {
+  return (
+    <div className={"space-y-2 " + (className ?? "")}>
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 14,
+            height: 14,
+            borderRadius: "50%",
+            backgroundColor: SAGE_BG,
+          }}
+        >
+          <motion.span
+            style={{
+              display: "block",
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              backgroundColor: SAGE,
+            }}
+            animate={{ opacity: [0.25, 1, 0.25] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </span>
+        <span style={{ ...FONT_HEADER, color: SAGE }}>{label}</span>
+      </div>
+      {Array.from({ length: rows }).map((_, i) => (
+        <ShimmerBlock
+          key={i}
+          width="100%"
+          height={height}
+          delay={i * 0.12}
+        />
+      ))}
+    </div>
+  );
+}
+
+// EmptyState — sage illustration (Lucide icon in a sage-tinted circle) +
+// bouncing motion + optional CTA. Replaces EmptyDash for high-impact
+// empty zones (watchlist, reports list, etc.).
+function EmptyState({
+  Icon = Lightbulb,
+  title,
+  description,
+  cta,
+  onCta,
+  size = 26,
+}: {
+  Icon?: typeof Lightbulb;
+  title: string;
+  description?: string;
+  cta?: string;
+  onCta?: () => void;
+  size?: number;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "32px 16px" }}
+    >
+      <motion.div
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          backgroundColor: SAGE_BG,
+          border: `1px solid ${SAGE_DIM}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 12,
+        }}
+      >
+        <Icon size={size} style={{ color: SAGE }} />
+      </motion.div>
+      <div style={{ ...FONT_HEADER, color: CHARCOAL, marginBottom: 4 }}>
+        {title}
+      </div>
+      {description && (
+        <p
+          style={{
+            fontFamily: FONT_SANS,
+            fontSize: 12,
+            color: TEXT_MUTED,
+            maxWidth: 320,
+            lineHeight: 1.5,
+            margin: "0 0 12px 0",
+          }}
+        >
+          {description}
+        </p>
+      )}
+      {cta && onCta && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            color: SAGE,
+            borderColor: SAGE,
+          }}
+          onClick={onCta}
+        >
+          {cta}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// Micro-interaction utility class names (Tailwind). Applied to buttons
+// for consistent scale hover (1.02) + active (0.98) feedback.
+const BTN_MICRO = "transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]";
 
 // ─── MOTION PRESETS ───────────────────────────────────────────────────
 
@@ -4824,7 +5060,7 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-2"
+                className="h-7 px-2 transition-all duration-150 hover:scale-[1.05] active:scale-[0.95] hover:border-[#4A7B5F] hover:text-[#4A7B5F]"
                 style={{ fontFamily: FONT_MONO, fontSize: 10 }}
                 onClick={() => {
                   setRefreshing(true);
@@ -4873,7 +5109,10 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
                 {loading ? (
                   <Skeleton className="h-10 w-16" />
                 ) : (
-                  <span
+                  <AnimatedNumber
+                    value={health ? score : 0}
+                    duration={1.1}
+                    format={(n) => (health ? Math.round(n).toString() : "—")}
                     style={{
                       fontFamily: FONT_MONO,
                       fontSize: 44,
@@ -4881,9 +5120,7 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
                       color: CHARCOAL,
                       lineHeight: 1,
                     }}
-                  >
-                    {health ? Math.round(score) : "—"}
-                  </span>
+                  />
                 )}
                 <span style={{ ...FONT_HEADER, marginTop: 4 }}>/ 100</span>
               </div>
@@ -4932,18 +5169,18 @@ function ScoreReputationCard({ health, loading }: { health: BrandHealth | null; 
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7"
+                className="h-7 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
                 style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
                 onClick={() => scrollToSection("concurrents")}
               >
                 <Users size={12} className="mr-1.5" />
                 Comparer vs concurrents
-                <ChevronRight size={11} className="ml-1" />
+                <ChevronRight size={11} className="ml-1 transition-transform group-hover:translate-x-0.5" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7"
+                className="h-7 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] hover:text-[#4A7B5F]"
                 style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
                 onClick={() => scrollToSection("sentiment")}
               >
@@ -4998,16 +5235,17 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              <span
+              <AnimatedNumber
+                value={health ? value : 0}
+                duration={0.9}
+                format={(n) => (health ? `${Math.round(n)}%` : "—")}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 28,
                   fontWeight: 700,
                   color: CHARCOAL,
                 }}
-              >
-                {health ? `${value}%` : "—"}
-              </span>
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -5061,16 +5299,17 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              <span
+              <AnimatedNumber
+                value={health ? value : 0}
+                duration={0.9}
+                format={(n) => (health ? fmtNumber(Math.round(n)) : "—")}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 28,
                   fontWeight: 700,
                   color: CHARCOAL,
                 }}
-              >
-                {health ? fmtNumber(value) : "—"}
-              </span>
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -5152,7 +5391,12 @@ function CitationsIaKpi({ ai, loading }: { ai: AiVisibilityResp | null; loading:
                   color: CHARCOAL,
                 }}
               >
-                {ai ? `${cited}/${total || "—"}` : "—"}
+                {ai ? (
+                  <>
+                    <AnimatedNumber value={cited} duration={0.8} format={(n) => Math.round(n).toString()} />
+                    <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>/{total || "—"}</span>
+                  </>
+                ) : "—"}
               </span>
             )}
             <Delta value={delta} />
@@ -5235,16 +5479,17 @@ function PartsDeVoixKpi({ sov, loading }: { sov: ShareOfVoiceResp | null; loadin
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              <span
+              <AnimatedNumber
+                value={sov ? pct : 0}
+                duration={0.9}
+                format={(n) => (sov ? `${Math.round(n)}%` : "—")}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 28,
                   fontWeight: 700,
                   color: CHARCOAL,
                 }}
-              >
-                {sov ? `${pct}%` : "—"}
-              </span>
+              />
             )}
             <Delta value={trendVal} suffix=" pts" />
           </div>
@@ -5305,16 +5550,17 @@ function SourcesDiversifieesKpi({ sources, loading }: { sources: SourceDistResp 
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              <span
+              <AnimatedNumber
+                value={sources ? count : 0}
+                duration={0.9}
+                format={(n) => (sources ? Math.round(n).toString() : "—")}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 28,
                   fontWeight: 700,
                   color: CHARCOAL,
                 }}
-              >
-                {sources ? `${count}` : "—"}
-              </span>
+              />
             )}
             <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>
               sources
@@ -5375,16 +5621,17 @@ function EngagementTotalKpi({ health, alerts, loading }: { health: BrandHealth |
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              <span
+              <AnimatedNumber
+                value={health ? total : 0}
+                duration={1.0}
+                format={(n) => (health ? fmtNumber(Math.round(n)) : "—")}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 28,
                   fontWeight: 700,
                   color: CHARCOAL,
                 }}
-              >
-                {health ? fmtNumber(total) : "—"}
-              </span>
+              />
             )}
             <Delta value={delta} />
           </div>
@@ -5534,7 +5781,7 @@ function TendanceSentimentCard({
               <button
                 type="button"
                 onClick={() => setCompareMode((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 10,
@@ -5558,8 +5805,18 @@ function TendanceSentimentCard({
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
+        {/* POLISH-PRO: smooth chart transition between single/dual line —
+            key change forces remount with fade+slide entrance. */}
+        <motion.div
+          key={loading ? "ts-loading" : periodCompare ? "ts-compare" : data.length === 0 ? "ts-empty" : "ts-composed"}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        >
         {loading ? (
-          <Skeleton className="h-[260px] w-full" />
+          <div className="rounded-md" style={{ padding: 16, border: `1px solid ${BORDER}` }}>
+            <ShimmerSkeleton label="Chargement de la tendance…" rows={5} height={16} />
+          </div>
         ) : periodCompare ? (
           <>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -5751,6 +6008,7 @@ function TendanceSentimentCard({
             <AiCommentary text={aiCommentary} />
           </>
         )}
+        </motion.div>
       </CardShell>
     </motion.div>
   );
@@ -9870,7 +10128,7 @@ function PeriodCompareToggle({
           <button
             type="button"
             onClick={() => onToggle(!active)}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
             style={{
               fontFamily: FONT_MONO,
               fontSize: 10,
@@ -9882,7 +10140,18 @@ function PeriodCompareToggle({
             aria-label="Comparer vs période précédente"
           >
             <ArrowLeftRight size={11} />
-            {active ? "vs période précédente" : "30 jours"}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={active ? "vs-previous" : "30j"}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                style={{ display: "inline-block", whiteSpace: "nowrap" }}
+              >
+                {active ? "vs période précédente" : "30 jours"}
+              </motion.span>
+            </AnimatePresence>
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
@@ -9941,10 +10210,14 @@ function DeltaBadge({ value, label }: { value: number; label: string }) {
 function SortableWidget({
   id,
   editMode,
+  activeId,
+  overId,
   children,
 }: {
   id: string;
   editMode: boolean;
+  activeId: string | null;
+  overId: string | null;
   children: React.ReactNode;
 }) {
   const {
@@ -9956,27 +10229,60 @@ function SortableWidget({
     isDragging,
   } = useSortable({ id });
 
+  const [handleHovered, setHandleHovered] = useState(false);
+  const isDropTarget = editMode && isDragging === false && activeId !== null && overId === id && activeId !== id;
+
   const style: CSSProperties = {
     transform: DndCSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0.55 : 1,
     position: "relative",
     zIndex: isDragging ? 50 : "auto",
   };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
+      {/* Drop indicator line — sage bar at top when this widget is the
+          current drop target during a drag. */}
+      <AnimatePresence>
+        {isDropTarget && (
+          <motion.div
+            initial={{ opacity: 0, scaleY: 0.4 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0.4 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            style={{
+              position: "absolute",
+              top: -3,
+              left: 8,
+              right: 8,
+              height: 3,
+              borderRadius: 2,
+              backgroundColor: SAGE,
+              zIndex: 30,
+              boxShadow: `0 0 0 1px ${SAGE_DIM}, 0 2px 6px rgba(74,123,95,0.35)`,
+              transformOrigin: "center",
+            }}
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
+
       {editMode && (
         <div
           {...listeners}
-          className="absolute -top-2 left-3 z-20 inline-flex items-center justify-center rounded-md"
+          onMouseEnter={() => setHandleHovered(true)}
+          onMouseLeave={() => setHandleHovered(false)}
+          className="absolute -top-2 left-3 z-20 inline-flex items-center justify-center rounded-md cursor-grab active:cursor-grabbing"
           style={{
             width: 24,
             height: 24,
             backgroundColor: SAGE,
             color: "#FFFFFF",
-            cursor: "grab",
             boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+            transform: handleHovered ? "scale(1.12)" : "scale(1)",
+            opacity: handleHovered ? 1 : 0.85,
+            transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
           }}
           aria-label="Glisser pour réorganiser"
         >
@@ -9986,11 +10292,15 @@ function SortableWidget({
       {editMode ? (
         <div
           style={{
-            border: `2px dashed ${SAGE}`,
+            border: `2px dashed ${isDragging ? SAGE : handleHovered ? SAGE_DIM : SAGE_DIM}`,
             borderRadius: 12,
             padding: 4,
-            transition: "all 0.2s",
-            backgroundColor: isDragging ? SAGE_BG : "transparent",
+            transition: "border-color 0.2s ease-out, background-color 0.2s ease-out",
+            backgroundColor: isDragging
+              ? SAGE_BG_STRONG
+              : handleHovered
+                ? SAGE_BG
+                : "transparent",
           }}
         >
           {children}
@@ -10104,7 +10414,7 @@ function InfluencerTrackerWidget() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-2"
+                className="h-7 px-2 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
                 style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
                 onClick={() => setShowAddForm((v) => !v)}
               >
@@ -10114,7 +10424,7 @@ function InfluencerTrackerWidget() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7"
+                className="h-7 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
                 style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
                 onClick={() => setShowAll((v) => !v)}
               >
@@ -10148,7 +10458,7 @@ function InfluencerTrackerWidget() {
                 key={key}
                 type="button"
                 onClick={() => setSortKey(key)}
-                className="rounded-md px-2 py-0.5 transition-colors"
+                className="rounded-md px-2 py-0.5 transition-all duration-150 hover:scale-[1.04] active:scale-[0.96]"
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 10,
@@ -10351,30 +10661,48 @@ function InfluencerTrackerWidget() {
                   </div>
                   {/* Star + remove */}
                   <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => toggleStar(inf.id)}
-                      className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
-                      style={{ width: 24, height: 24 }}
-                      aria-label={inf.starred ? "Retirer des favoris" : "Ajouter aux favoris"}
-                    >
-                      <Star
-                        size={13}
-                        style={{
-                          color: inf.starred ? NEUTRAL_AMBER : TEXT_MUTED,
-                          fill: inf.starred ? NEUTRAL_AMBER : "transparent",
-                        }}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeInfluencer(inf.id)}
-                      className="inline-flex items-center justify-center rounded-md hover:bg-[#FEE2E2]"
-                      style={{ width: 24, height: 24 }}
-                      aria-label="Retirer"
-                    >
-                      <X size={13} style={{ color: NEGATIVE }} />
-                    </button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => toggleStar(inf.id)}
+                            className="inline-flex items-center justify-center rounded-md transition-all duration-150 hover:scale-[1.12] active:scale-[0.92] hover:bg-[#FAFAFA]"
+                            style={{ width: 24, height: 24 }}
+                            aria-label={inf.starred ? "Retirer des favoris" : "Ajouter aux favoris"}
+                          >
+                            <Star
+                              size={13}
+                              style={{
+                                color: inf.starred ? NEUTRAL_AMBER : TEXT_MUTED,
+                                fill: inf.starred ? NEUTRAL_AMBER : "transparent",
+                              }}
+                            />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>{inf.starred ? "Retirer des favoris" : "Ajouter aux favoris"}</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => removeInfluencer(inf.id)}
+                            className="inline-flex items-center justify-center rounded-md transition-all duration-150 hover:scale-[1.12] active:scale-[0.92] hover:bg-[#FEE2E2]"
+                            style={{ width: 24, height: 24 }}
+                            aria-label="Retirer"
+                          >
+                            <X size={13} style={{ color: NEGATIVE }} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>Retirer de la liste</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               );
@@ -11899,13 +12227,32 @@ function CompetitorWatchlist({
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-[240px] w-full rounded-lg" />
+              <div
+                key={i}
+                className="rounded-lg"
+                style={{
+                  border: `1px solid ${BORDER}`,
+                  backgroundColor: "#FFFFFF",
+                  padding: 12,
+                  minHeight: 290,
+                }}
+              >
+                <ShimmerSkeleton
+                  label={i === 0 ? "Chargement de la watchlist…" : "Chargement…"}
+                  rows={4}
+                  height={14}
+                />
+              </div>
             ))}
           </div>
         ) : allCompetitors.length === 0 ? (
-          <div className="h-[160px] flex items-center justify-center">
-            <EmptyDash label="Configurez vos concurrents via le wizard pour activer la watchlist" />
-          </div>
+          <EmptyState
+            Icon={Users}
+            title="Aucun concurrent suivi"
+            description="Configurez vos concurrents via le wizard pour activer la watchlist et suivre en temps réel leur score, leur sentiment et leur part de voix."
+            cta="Configurer les concurrents"
+            onCta={() => scrollToSection("concurrents")}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {pinned.map((c) => (
@@ -11920,15 +12267,15 @@ function CompetitorWatchlist({
               <button
                 type="button"
                 onClick={() => scrollToSection("concurrents")}
-                className="flex flex-col items-center justify-center rounded-lg transition-colors hover:bg-[#FAFAFA]"
+                className="group flex flex-col items-center justify-center rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 style={{
-                  minHeight: 240,
+                  minHeight: 290,
                   border: `1px dashed ${BORDER_STRONG}`,
                   color: TEXT_MUTED,
                 }}
               >
-                <Plus size={20} />
-                <span style={{ fontFamily: FONT_MONO, fontSize: 10, marginTop: 6, letterSpacing: "0.06em" }}>
+                <Plus size={20} className="transition-colors group-hover:text-[#4A7B5F]" />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, marginTop: 6, letterSpacing: "0.06em", transition: "color 0.2s" }} className="group-hover:text-[#4A7B5F]">
                   ÉPINGLER UN CONCURRENT
                 </span>
                 <span style={{ fontFamily: FONT_SANS, fontSize: 11, marginTop: 4 }}>
@@ -11960,6 +12307,7 @@ function WatchlistCompetitorCard({
   onStar: (id: string, name: string) => void;
   onCompare: (name: string) => void;
 }) {
+  const [flipped, setFlipped] = useState(false);
   const sovData = [
     { name: "VOIX", value: c.sovPct, color: SAGE },
     { name: "Autres", value: Math.max(0, 100 - c.sovPct), color: "#F0F0F0" },
@@ -11979,167 +12327,375 @@ function WatchlistCompetitorCard({
     .join("")
     .toUpperCase() || "?";
 
+  // POLISH-PRO: back-side details (deterministic, derived from name)
+  const backKeywords = useMemo(
+    () => pickKeywords(hashStrContent(c.name) + 7, 4),
+    [c.name],
+  );
+  const backArticle = useMemo(
+    () => synthesizeRecentArticles(c.name, c.sentimentSplit.positive, 1)[0],
+    [c.name, c.sentimentSplit.positive],
+  );
+  const postingFreqPerWeek = useMemo(
+    () => Math.max(0.5, Math.round((c.mentions / 30) * 10) / 10),
+    [c.mentions],
+  );
+  const trendUp = c.trend > 0;
+  const trendNeutral = c.trend === 0;
+
   return (
     <div
-      className="rounded-lg p-3"
-      style={{ border: `1px solid ${BORDER_STRONG}`, backgroundColor: "#FFFFFF" }}
+      className="rounded-lg"
+      style={{
+        border: `1px solid ${flipped ? SAGE_DIM : BORDER_STRONG}`,
+        backgroundColor: "#FFFFFF",
+        perspective: "1200px",
+        minHeight: 290,
+        transition: "border-color 0.2s ease-out",
+      }}
+      onMouseEnter={() => setFlipped(true)}
+      onMouseLeave={() => setFlipped(false)}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 24,
-              height: 24,
-              borderRadius: 4,
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#FFFFFF",
-              backgroundColor: SAGE,
-            }}
-          >
-            {initials}
-          </span>
-          <span
-            style={{
-              fontFamily: FONT_SANS,
-              fontSize: 13,
-              fontWeight: 600,
-              color: CHARCOAL,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {c.name}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onStar(c.id, c.name)}
-          className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] shrink-0"
-          style={{ width: 24, height: 24, color: SAGE }}
-          aria-label="Retirer des favoris"
-        >
-          <Star size={14} fill={SAGE} />
-        </button>
-      </div>
-
-      <div className="flex items-baseline gap-2 mb-2">
-        <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: CHARCOAL }}>
-          {c.score}
-        </span>
-        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase" }}>
-          /100 score
-        </span>
-        <span
-          className="inline-flex items-center gap-0.5"
+      <motion.div
+        className="relative"
+        style={{
+          transformStyle: "preserve-3d",
+          minHeight: 290,
+        }}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {/* ───── FRONT — summary view ───── */}
+        <div
+          className="rounded-lg p-3"
           style={{
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            fontWeight: 700,
-            color: deltaNeutral ? TEXT_MUTED : deltaUp ? POSITIVE : NEGATIVE,
-            marginLeft: "auto",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            MozBackfaceVisibility: "hidden",
           }}
         >
-          {deltaNeutral ? <Minus size={10} /> : deltaUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-          {!deltaNeutral && (deltaUp ? "+" : "")}{c.scoreDelta.toFixed(1)}
-        </span>
-      </div>
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#FFFFFF",
+                  backgroundColor: SAGE,
+                }}
+              >
+                {initials}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: CHARCOAL,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {c.name}
+              </span>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onStar(c.id, c.name)}
+                    className="inline-flex items-center justify-center rounded-md shrink-0 transition-all duration-150 hover:scale-[1.12] active:scale-[0.92]"
+                    style={{ width: 24, height: 24, color: SAGE }}
+                    aria-label="Retirer des favoris"
+                  >
+                    <Star size={14} fill={SAGE} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <span style={{ fontFamily: FONT_SANS, fontSize: 12 }}>Retirer des favoris</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-2">
-        <div className="text-center">
-          <span style={FONT_HEADER} className="block mb-1">SOV</span>
-          <div style={{ width: "100%", height: 56 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={sovData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={14}
-                  outerRadius={22}
-                  paddingAngle={1}
-                  startAngle={90}
-                  endAngle={-270}
-                  isAnimationActive={false}
+          <div className="flex items-baseline gap-2 mb-2">
+            <AnimatedNumber
+              value={c.score}
+              duration={0.8}
+              format={(n) => Math.round(n).toString()}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 22,
+                fontWeight: 700,
+                color: CHARCOAL,
+              }}
+            />
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, textTransform: "uppercase" }}>
+              /100 score
+            </span>
+            <span
+              className="inline-flex items-center gap-0.5"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                fontWeight: 700,
+                color: deltaNeutral ? TEXT_MUTED : deltaUp ? POSITIVE : NEGATIVE,
+                marginLeft: "auto",
+              }}
+            >
+              {deltaNeutral ? <Minus size={10} /> : deltaUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+              {!deltaNeutral && (deltaUp ? "+" : "")}{c.scoreDelta.toFixed(1)}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <div className="text-center">
+              <span style={FONT_HEADER} className="block mb-1">SOV</span>
+              <div style={{ width: "100%", height: 56 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sovData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={14}
+                      outerRadius={22}
+                      paddingAngle={1}
+                      startAngle={90}
+                      endAngle={-270}
+                      isAnimationActive
+                      animationDuration={700}
+                    >
+                      {sovData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
+                {c.sovPct.toFixed(1)}%
+              </span>
+            </div>
+
+            <div className="text-center" style={{ gridColumn: "span 2" }}>
+              <span style={FONT_HEADER} className="block mb-1">Sentiment</span>
+              <div style={{ width: "100%", height: 56 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sentimentData} layout="vertical" barCategoryGap={2}>
+                    <XAxis type="number" hide domain={[0, 100]} />
+                    <YAxis type="category" dataKey="name" hide />
+                    <Bar dataKey="value" radius={2} isAnimationActive animationDuration={700}>
+                      {sentimentData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex justify-between" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
+                <span style={{ color: POSITIVE }}>+{c.sentimentSplit.positive}</span>
+                <span style={{ color: NEUTRAL_GRAY }}>{c.sentimentSplit.neutral}</span>
+                <span style={{ color: NEGATIVE }}>-{c.sentimentSplit.negative}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span style={FONT_HEADER}>Mentions 7j</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700 }}>
+                {fmtNumber(c.mentions)}
+              </span>
+            </div>
+            <div style={{ width: "100%", height: 36 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={velocityData}>
+                  <Line
+                    type="monotone"
+                    dataKey="v"
+                    stroke={SAGE}
+                    strokeWidth={1.5}
+                    dot={false}
+                    isAnimationActive
+                    animationDuration={800}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onCompare(c.name)}
+            className="w-full inline-flex items-center justify-center gap-1 rounded-md h-7 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] hover:bg-[rgba(74,123,95,0.14)]"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: SAGE,
+              border: `1px solid ${SAGE_DIM}`,
+              backgroundColor: SAGE_BG,
+            }}
+          >
+            <ArrowLeftRight size={11} />
+            Comparer
+          </button>
+        </div>
+
+        {/* ───── BACK — details view (visible on hover via 3D flip) ───── */}
+        <div
+          className="rounded-lg p-3"
+          style={{
+            position: "absolute",
+            inset: 0,
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            MozBackfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
+            backgroundColor: "#FAFAFA",
+            border: `1px solid ${SAGE_DIM}`,
+          }}
+        >
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#FFFFFF",
+                  backgroundColor: SAGE,
+                }}
+              >
+                {initials}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: CHARCOAL,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {c.name}
+              </span>
+            </div>
+            <span
+              style={{
+                ...FONT_HEADER,
+                color: SAGE,
+                backgroundColor: SAGE_BG,
+                padding: "2px 6px",
+                borderRadius: 4,
+              }}
+            >
+              Détails
+            </span>
+          </div>
+
+          <div className="mb-2">
+            <span style={FONT_HEADER} className="block mb-1">Top mots-clés</span>
+            <div className="flex flex-wrap gap-1">
+              {backKeywords.map((k) => (
+                <span
+                  key={k}
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    color: SAGE,
+                    border: `1px solid ${SAGE_DIM}`,
+                    borderRadius: 4,
+                    padding: "2px 6px",
+                    backgroundColor: SAGE_BG,
+                  }}
                 >
-                  {sovData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+                  {k}
+                </span>
+              ))}
+            </div>
           </div>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>
-            {c.sovPct.toFixed(1)}%
-          </span>
-        </div>
 
-        <div className="text-center" style={{ gridColumn: "span 2" }}>
-          <span style={FONT_HEADER} className="block mb-1">Sentiment</span>
-          <div style={{ width: "100%", height: 56 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sentimentData} layout="vertical" barCategoryGap={2}>
-                <XAxis type="number" hide domain={[0, 100]} />
-                <YAxis type="category" dataKey="name" hide />
-                <Bar dataKey="value" radius={2} isAnimationActive={false}>
-                  {sentimentData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="mb-2">
+            <span style={FONT_HEADER} className="block mb-1">Article récent</span>
+            <div
+              style={{
+                fontFamily: FONT_SANS,
+                fontSize: 11,
+                color: CHARCOAL,
+                padding: 8,
+                borderRadius: 6,
+                border: `1px solid ${BORDER}`,
+                backgroundColor: "#FFFFFF",
+                lineHeight: 1.4,
+              }}
+            >
+              &laquo;&nbsp;{backArticle?.headline ?? "—"}&nbsp;&raquo;
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                {backArticle?.source ?? "—"} · {backArticle?.date ?? "—"}
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between" style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-            <span style={{ color: POSITIVE }}>+{c.sentimentSplit.positive}</span>
-            <span style={{ color: NEUTRAL_GRAY }}>{c.sentimentSplit.neutral}</span>
-            <span style={{ color: NEGATIVE }}>-{c.sentimentSplit.negative}</span>
+
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <span style={FONT_HEADER} className="block mb-1">Fréquence</span>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 700, color: CHARCOAL }}>
+                {postingFreqPerWeek}
+                <span style={{ fontSize: 10, color: TEXT_MUTED, fontWeight: 400 }}> /sem</span>
+              </div>
+            </div>
+            <div>
+              <span style={FONT_HEADER} className="block mb-1">Tendance 30j</span>
+              <div
+                className="inline-flex items-center gap-1"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: trendNeutral ? TEXT_MUTED : trendUp ? POSITIVE : NEGATIVE,
+                }}
+              >
+                {trendNeutral ? <Minus size={12} /> : trendUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                {trendUp ? "+" : ""}{c.trend}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="mb-2">
-        <div className="flex items-center justify-between mb-1">
-          <span style={FONT_HEADER}>Mentions 7j</span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: CHARCOAL, fontWeight: 700 }}>
-            {fmtNumber(c.mentions)}
-          </span>
+          <button
+            type="button"
+            onClick={() => onCompare(c.name)}
+            className="w-full inline-flex items-center justify-center gap-1 rounded-md h-7 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] hover:bg-[rgba(74,123,95,0.14)]"
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              color: SAGE,
+              border: `1px solid ${SAGE_DIM}`,
+              backgroundColor: SAGE_BG,
+            }}
+          >
+            <ArrowLeftRight size={11} />
+            Comparer
+          </button>
         </div>
-        <div style={{ width: "100%", height: 36 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={velocityData}>
-              <Line
-                type="monotone"
-                dataKey="v"
-                stroke={SAGE}
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => onCompare(c.name)}
-        className="w-full inline-flex items-center justify-center gap-1 rounded-md h-7 transition-colors hover:bg-[#FAFAFA]"
-        style={{
-          fontFamily: FONT_MONO,
-          fontSize: 10,
-          color: SAGE,
-          border: `1px solid ${SAGE_DIM}`,
-          backgroundColor: SAGE_BG,
-        }}
-      >
-        <ArrowLeftRight size={11} />
-        Comparer
-      </button>
+      </motion.div>
     </div>
   );
 }
@@ -13970,8 +14526,14 @@ export default function ProDashboard({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
+  // POLISH-PRO: track active + over ids during drag for drop indicator line
+  const [dragActiveId, setDragActiveId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
+    setDragActiveId(null);
+    setDragOverId(null);
     if (!over || active.id === over.id) return;
     setWidgetOrder((prev) => {
       const oldIndex = prev.indexOf(String(active.id));
@@ -14130,24 +14692,33 @@ export default function ProDashboard({
       </aside>
 
       {/* Mobile sidebar overlay */}
+      <AnimatePresence>
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
+          <motion.div
             className="absolute inset-0"
             style={{ backgroundColor: "rgba(10,10,10,0.4)" }}
             onClick={() => setMobileNavOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             aria-hidden="true"
           />
-          <div
+          <motion.div
             className="absolute left-0 top-0 h-full bg-white shadow-xl"
             style={{ width: 280, maxWidth: "85vw" }}
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${BORDER}` }}>
               <span style={FONT_HEADER}>Navigation</span>
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(false)}
-                className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]"
+                className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] transition-all duration-150 hover:scale-[1.05] active:scale-[0.95]"
                 style={{ width: 28, height: 28 }}
                 aria-label="Fermer le menu"
               >
@@ -14161,9 +14732,10 @@ export default function ProDashboard({
               userEmail={effectiveEmail}
               onNavigate={() => setMobileNavOpen(false)}
             />
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -14187,8 +14759,9 @@ export default function ProDashboard({
         />
 
         {/* PRO ENV — Edit mode banner */}
+        <AnimatePresence initial={false}>
         {editMode && (
-          <div
+          <motion.div
             className="px-4 lg:px-6 py-1.5"
             style={{
               backgroundColor: SAGE_BG,
@@ -14196,20 +14769,39 @@ export default function ProDashboard({
               display: "flex",
               alignItems: "center",
               gap: 8,
+              overflow: "hidden",
             }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
           >
-            <GripVertical size={12} style={{ color: SAGE }} />
+            <motion.span
+              animate={{ rotate: [0, 8, -8, 0] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+              style={{ display: "inline-flex", color: SAGE }}
+            >
+              <GripVertical size={12} />
+            </motion.span>
             <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Mode édition actif
             </span>
             <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>
               Glissez les widgets pour réorganiser. Cliquez sur le crayon pour quitter.
             </span>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         <main className="flex-1 px-4 lg:px-6 py-6">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={(e) => setDragActiveId(String(e.active.id))}
+            onDragOver={(e) => setDragOverId(e.over ? String(e.over.id) : null)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => { setDragActiveId(null); setDragOverId(null); }}
+          >
             <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
               <motion.div
                 className="grid grid-cols-12 gap-4 lg:gap-6"
@@ -14218,7 +14810,13 @@ export default function ProDashboard({
                 animate="animate"
               >
                 {orderedWidgets.map(({ id, node }) => (
-                  <SortableWidget key={id} id={id} editMode={editMode}>
+                  <SortableWidget
+                    key={id}
+                    id={id}
+                    editMode={editMode}
+                    activeId={dragActiveId}
+                    overId={dragOverId}
+                  >
                     {/* FIX-PRO-RENDER: per-widget ErrorBoundary isolates
                         crashes (empty recharts data, undefined .toFixed,
                         null .find) so a single failing card cannot take
