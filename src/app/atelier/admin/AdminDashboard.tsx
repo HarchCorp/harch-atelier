@@ -91,6 +91,7 @@ import {
   YAxis,
 } from "recharts";
 import { getAdminPermissions } from "@/lib/auth/rbac";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ═══════════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD — Ultra-complete founder control center
@@ -274,6 +275,58 @@ const monoInputStyle: React.CSSProperties = {
   fontSize: "12px",
 };
 
+// ─── COUNT-UP HOOK (KPI strip animation 0 → value) ───────────────
+// Task POLISH-ADMIN #2. rAF-driven easeOutCubic. Re-runs when `target`
+// changes (refresh / re-fetch) — Bloomberg-grade "data ticked" feel.
+
+function useCountUp(target: number, duration = 900): number {
+  const [val, setVal] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    const start = performance.now();
+    const from = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      setVal(from + (target - from) * eased);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, duration]);
+  return val;
+}
+
+// ─── SCOPED CSS (sidebar hover, request-card hover, primary-btn) ──
+// Task POLISH-ADMIN #1, #3, #5. Injected once at root. !important on
+// hover rules to override inline `style` (inline wins by default).
+
+const ADMIN_POLISH_CSS = `
+.admin-sidebar-item { transition: background 0.15s ease, color 0.15s ease; }
+.admin-sidebar-item:not(.is-active):hover {
+  background: rgba(74,123,95,0.06) !important;
+  color: #4A7B5F !important;
+}
+.admin-sidebar-item:not(.is-active):hover::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  background: rgba(74,123,95,0.55);
+  border-radius: 0 2px 2px 0;
+}
+.admin-request-card { transition: box-shadow 0.18s ease, border-color 0.18s ease; }
+.admin-request-card:not(.is-bulk-selected):not(.is-dragging):hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04) !important;
+  border-color: rgba(74,123,95,0.40) !important;
+}
+.admin-primary-btn { transition: transform 0.15s ease; }
+.admin-primary-btn:hover:not(:disabled) { transform: scale(1.02); }
+.admin-primary-btn:active:not(:disabled) { transform: scale(0.98); }
+`;
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────
 
 export function AdminDashboard() {
@@ -365,6 +418,8 @@ export function AdminDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bgSubtle, fontFamily: C.fontSans, display: "flex" }}>
+      {/* ═══ POLISH-ADMIN SCOPED STYLES (#1, #3, #5) ═══ */}
+      <style dangerouslySetInnerHTML={{ __html: ADMIN_POLISH_CSS }} />
       {/* ═══ LIGHT SIDEBAR ═══ */}
       <aside
         style={{
@@ -588,6 +643,7 @@ export function AdminDashboard() {
             </button>
             <button
               onClick={() => openCreateModal()}
+              className="admin-primary-btn"
               style={{
                 padding: "8px 14px",
                 background: C.cta,
@@ -630,43 +686,53 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {/* Tab content */}
+        {/* Tab content — POLISH-ADMIN #4: AnimatePresence fade between tabs */}
         <main style={{ flex: 1, padding: "28px 32px 64px", maxWidth: "1440px", width: "100%" }}>
-          {loading && tab !== "audit" && tab !== "logs" && tab !== "whatsapp" && tab !== "permissions" && tab !== "security" && tab !== "kpis" && tab !== "commerciaux" && tab !== "employees" ? (
-            <LoadingState />
-          ) : tab === "requests" ? (
-            <RequestsTab
-              requests={requests}
-              invitations={invitations}
-              onStatusChanged={fetchCore}
-              onAcceptRequest={(r) => openCreateModal({
-                company_name: r.company,
-                contact_name: r.name,
-                email: r.email,
-                phone: r.phone,
-                use_case: r.useCase,
-                notes: r.message,
-              })}
-            />
-          ) : tab === "accounts" ? (
-            <AccountsTab users={users} loading={loading} onCreate={() => openCreateModal()} />
-          ) : tab === "permissions" ? (
-            <PermissionsTab users={users} loading={loading} onRefresh={fetchUsers} />
-          ) : tab === "security" ? (
-            <SecurityTab users={users} loading={loading} onRefresh={fetchUsers} />
-          ) : tab === "kpis" ? (
-            <KpisTab requests={requests} users={users} />
-          ) : tab === "commerciaux" ? (
-            <CommerciauxTab />
-          ) : tab === "employees" ? (
-            <EmployeesTab />
-          ) : tab === "logs" ? (
-            <LogsTab />
-          ) : tab === "audit" ? (
-            <AuditLogViewer />
-          ) : (
-            <WhatsAppTab onCreateFromExtraction={(ext) => openCreateModal(ext)} />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              {loading && tab !== "audit" && tab !== "logs" && tab !== "whatsapp" && tab !== "permissions" && tab !== "security" && tab !== "kpis" && tab !== "commerciaux" && tab !== "employees" ? (
+                <LoadingState />
+              ) : tab === "requests" ? (
+                <RequestsTab
+                  requests={requests}
+                  invitations={invitations}
+                  onStatusChanged={fetchCore}
+                  onAcceptRequest={(r) => openCreateModal({
+                    company_name: r.company,
+                    contact_name: r.name,
+                    email: r.email,
+                    phone: r.phone,
+                    use_case: r.useCase,
+                    notes: r.message,
+                  })}
+                />
+              ) : tab === "accounts" ? (
+                <AccountsTab users={users} loading={loading} onCreate={() => openCreateModal()} />
+              ) : tab === "permissions" ? (
+                <PermissionsTab users={users} loading={loading} onRefresh={fetchUsers} />
+              ) : tab === "security" ? (
+                <SecurityTab users={users} loading={loading} onRefresh={fetchUsers} />
+              ) : tab === "kpis" ? (
+                <KpisTab requests={requests} users={users} />
+              ) : tab === "commerciaux" ? (
+                <CommerciauxTab />
+              ) : tab === "employees" ? (
+                <EmployeesTab />
+              ) : tab === "logs" ? (
+                <LogsTab />
+              ) : tab === "audit" ? (
+                <AuditLogViewer />
+              ) : (
+                <WhatsAppTab onCreateFromExtraction={(ext) => openCreateModal(ext)} />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
@@ -710,6 +776,7 @@ function SidebarItem({
   return (
     <button
       onClick={onClick}
+      className={`admin-sidebar-item${active ? " is-active" : ""}`}
       style={{
         width: "100%",
         padding: "9px 12px",
@@ -728,12 +795,6 @@ function SidebarItem({
         transition: "all 0.15s",
         textAlign: "left",
         position: "relative",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) (e.currentTarget as HTMLElement).style.background = "#F5F5F5";
-      }}
-      onMouseLeave={(e) => {
-        if (!active) (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
       {active && (
@@ -792,6 +853,12 @@ function KpiCell({
   sub?: string;
   color?: string;
 }) {
+  // POLISH-ADMIN #2 — count-up only for numeric values. String values
+  // (e.g. "12.3%", "5/12", "—", "1500 MAD") render as-is to preserve
+  // existing formatting.
+  const isNumeric = typeof value === "number";
+  const animated = useCountUp(isNumeric ? (value as number) : 0, 900);
+  const display = isNumeric ? Math.round(animated) : value;
   return (
     <div style={{ background: C.bg, padding: "16px 20px" }}>
       <div
@@ -804,7 +871,7 @@ function KpiCell({
           letterSpacing: "-0.02em",
         }}
       >
-        {value}
+        {display}
       </div>
       <div
         style={{
@@ -2063,6 +2130,7 @@ function RequestCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={bulkMode ? onToggleSelect : onClick}
+      className={`admin-request-card${dragging ? " is-dragging" : ""}${isSelected && bulkMode ? " is-bulk-selected" : ""}`}
       style={{
         background: C.bg,
         border: `1px solid ${isSelected && bulkMode ? C.accent : C.border}`,
@@ -3944,6 +4012,7 @@ function ExtractionReview({
 
       <button
         onClick={onCreate}
+        className="admin-primary-btn"
         style={{
           width: "100%",
           padding: "12px 16px",
@@ -4372,6 +4441,7 @@ function CreateAccountModal({
                 <button
                   onClick={handleCreate}
                   disabled={creating}
+                  className="admin-primary-btn"
                   style={{
                     padding: "9px 18px",
                     background: creating ? C.border : C.cta,
@@ -5539,6 +5609,7 @@ function KpisTab({
           <button
             onClick={exportCsv}
             disabled={exporting}
+            className="admin-primary-btn"
             style={{
               padding: "8px 14px",
               background: "transparent",
@@ -6229,6 +6300,7 @@ function CommerciauxTab() {
           <button
             onClick={exportCommercialsCsv}
             disabled={exportingCsv}
+            className="admin-primary-btn"
             style={{
               padding: "8px 14px",
               background: "transparent",
@@ -6984,7 +7056,7 @@ function CommercialCreateModal({
             <button onClick={onClose} style={cancelBtnStyle}>
               Annuler
             </button>
-            <button onClick={handleCreate} style={{ ...primaryBtnStyle, background: SAGE }}>
+            <button onClick={handleCreate} className="admin-primary-btn" style={{ ...primaryBtnStyle, background: SAGE }}>
               <UserPlus size={14} strokeWidth={2.5} />
               Créer le compte commercial
             </button>
@@ -7954,6 +8026,7 @@ function ProvisioningForm({
         </span>
         <button
           onClick={() => setShowConfirm(true)}
+          className="admin-primary-btn"
           style={{
             padding: "11px 20px",
             background: SAGE,
@@ -8253,7 +8326,7 @@ function ClientsTable({
           <option value="expired">Expiré</option>
           <option value="suspended">Suspendu</option>
         </select>
-        <button onClick={exportCsv} style={{ padding: "8px 12px", background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, borderRadius: "5px", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+        <button onClick={exportCsv} className="admin-primary-btn" style={{ padding: "8px 12px", background: "transparent", border: `1px solid ${C.border}`, color: C.textBody, borderRadius: "5px", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
           <Download size={13} />
           Export CSV
         </button>
@@ -9545,7 +9618,7 @@ function EmployeesTab() {
               Fiches employés ({fiches.length})
             </div>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              <button onClick={() => setShowAddEmployee(true)} style={{
+              <button onClick={() => setShowAddEmployee(true)} className="admin-primary-btn" style={{
                 padding: "8px 12px", background: SAGE, color: "#fff",
                 border: "none", borderRadius: "5px", fontSize: "12px",
                 fontWeight: 600, cursor: "pointer", display: "flex",
@@ -9562,7 +9635,7 @@ function EmployeesTab() {
               }}>
                 <Upload size={13} /> Importer CSV
               </button>
-              <button onClick={handleExportFichesCSV} disabled={fiches.length === 0} style={{
+              <button onClick={handleExportFichesCSV} disabled={fiches.length === 0} className="admin-primary-btn" style={{
                 padding: "8px 12px", background: "transparent",
                 border: `1px solid ${C.border}`, color: fiches.length === 0 ? C.textMuted : C.textBody,
                 borderRadius: "5px", fontSize: "12px", fontWeight: 600,
@@ -9911,7 +9984,7 @@ function ChefLinkPanel({
           </div>
         </div>
       ) : (
-        <button onClick={onGenerate} disabled={busy} style={{
+        <button onClick={onGenerate} disabled={busy} className="admin-primary-btn" style={{
           padding: "10px 16px", background: busy ? C.border : SAGE,
           color: "#fff", border: "none", borderRadius: "5px",
           fontSize: "13px", fontWeight: 600, cursor: busy ? "not-allowed" : "pointer",
@@ -9981,7 +10054,7 @@ function BulkLinksPanel({
             onChange={(e) => setBulkExpDays(Math.min(365, Math.max(1, Number(e.target.value) || 7)))}
             style={{ ...inputStyle, fontFamily: C.fontMono, width: "120px" }} />
         </div>
-        <button onClick={onGenerate} disabled={busy} style={{
+        <button onClick={onGenerate} disabled={busy} className="admin-primary-btn" style={{
           padding: "9px 16px", background: busy ? C.border : SAGE,
           color: "#fff", border: "none", borderRadius: "5px",
           fontSize: "13px", fontWeight: 600, cursor: busy ? "not-allowed" : "pointer",
@@ -9991,7 +10064,7 @@ function BulkLinksPanel({
           {busy ? "Génération..." : `Générer ${bulkCount} lien(s)`}
         </button>
         {links.length > 0 && (
-          <button onClick={onExportCSV} style={{
+          <button onClick={onExportCSV} className="admin-primary-btn" style={{
             padding: "9px 12px", background: "transparent",
             border: `1px solid ${C.border}`, color: C.textBody,
             borderRadius: "5px", fontSize: "12px", fontWeight: 600,

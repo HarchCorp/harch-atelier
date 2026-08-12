@@ -6653,3 +6653,109 @@ VERIFICATION:
 - AnimatedStat handles edge cases (non-numeric prefixes like "<" render as-is, no broken animation)
 
 Next action (out of scope): apply the same motion helpers + scroll animations to the remaining public pages (login, request-access, console marketing sub-pages). The 4 helper components (useCountUp, AnimatedStat, Reveal, StaggerContainer/Item) are self-contained and copy-pasteable across any client component. Consider extracting them to `src/app/atelier/components/motion.tsx` to share across the Atelier surface.
+
+═══════════════════════════════════════════════════════════════════════
+ADMIN DASHBOARD POLISH (Task POLISH-ADMIN)
+File: src/app/atelier/admin/AdminDashboard.tsx (+73 lines, 11062 → 11135)
+Agent: AURA — surgical 5-point polish, Bloomberg-terminal quality
+═══════════════════════════════════════════════════════════════════════
+
+5 IMPROVEMENTS DELIVERED:
+
+1. Sidebar item hover (POLISH-ADMIN #1):
+   - SidebarItem component: removed inline onMouseEnter/onMouseLeave handlers
+     (was setting bg=#F5F5F5 neutral on hover).
+   - Added className=`admin-sidebar-item${active ? " is-active" : ""}`.
+   - CSS rule `.admin-sidebar-item:not(.is-active):hover` (in ADMIN_POLISH_CSS
+     string injected via <style> at root): bg rgba(74,123,95,0.06) + color
+     #4A7B5F + ::before 3px left border (rgba(74,123,95,0.55), top/bottom 8px,
+     radius 0 2px 2px 0). Matches the existing active-state left-border span.
+   - !important on hover rules to override inline `style` (inline wins by
+     default).
+   - Active state preserved (3px left border via existing <span> + sage bg).
+
+2. KPI cell count-up animation (POLISH-ADMIN #2):
+   - Added `useCountUp(target, duration=900)` hook (rAF-driven, easeOutCubic).
+     Re-runs when target changes — gives a "data ticked" feel on refresh.
+   - KpiCell: `isNumeric = typeof value === "number"`. Numeric → animate 0 →
+     value (Math.round(animated)). String values (e.g. "12.3%", "5/12", "—",
+     "1500 MAD", `${kpi.avgConvDays}j`) render as-is to preserve formatting.
+   - Applied to ALL KpiCell instances across all tabs (Requests KPI strip,
+     KPIs tab, Logs tab, Commerciaux tab, Provisioning/Revenus tab, Employees
+     tab) — single component edit, automatic propagation.
+
+3. Request card hover (POLISH-ADMIN #3):
+   - RequestCard component: added
+     className=`admin-request-card${dragging ? " is-dragging" : ""}${isSelected
+     && bulkMode ? " is-bulk-selected" : ""}`.
+   - CSS rule `.admin-request-card:not(.is-bulk-selected):not(.is-dragging):hover`:
+     box-shadow 0 4px 12px rgba(0,0,0,0.07) + 0 1px 3px rgba(0,0,0,0.04) +
+     border-color rgba(74,123,95,0.40). !important to override inline border.
+   - Hover suppressed during drag (opacity 0.4 already applied) and during
+     bulk-selected state (accent ring preserved).
+
+4. Tab transitions (POLISH-ADMIN #4):
+   - Imported `motion, AnimatePresence` from "framer-motion".
+   - Wrapped tab content conditional in
+     <AnimatePresence mode="wait"><motion.div key={tab} initial={{opacity:0}}
+     animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.18,
+     ease:"easeOut"}}>.
+   - Key on `tab` triggers exit/enter fade when switching Requests→Accounts→
+     KPIs→etc. mode="wait" prevents overlap (clean swap).
+   - LoadingState conditional preserved inside the motion.div — no fade when
+     loading toggles within the same tab, only on tab change.
+
+5. Button micro-interactions (POLISH-ADMIN #5):
+   - CSS rule `.admin-primary-btn` with transition transform 0.15s ease +
+     `:hover:not(:disabled) { transform: scale(1.02) }` +
+     `:active:not(:disabled) { transform: scale(0.98) }`. :disabled guard
+     means no scale on disabled/submitting buttons.
+   - Applied className="admin-primary-btn" to 13 primary action buttons:
+     · Top header "New Account" (C.cta)
+     · WhatsApp review "Review & Create Account" (C.cta, full-width)
+     · Create Account modal "Create account" (C.cta, disabled when creating)
+     · Commerciaux "Créer le compte commercial" (primaryBtnStyle + SAGE)
+     · Provisioning "Créer le compte client" (SAGE)
+     · Employees "Ajouter un employé" (SAGE)
+     · Employees "Exporter fiches" (transparent + border, disabled when empty)
+     · Bulk links "Générer le lien chef" (SAGE, disabled when busy)
+     · Bulk links "Générer ${bulkCount} lien(s)" (SAGE, disabled when busy)
+     · Bulk links "Export CSV" (transparent + border)
+     · KPIs tab "Exporter rapport complet" (transparent + border, disabled)
+     · Commerciaux tab "Exporter CSV" (transparent + border, disabled)
+     · Provisioning clients tab "Export CSV" (transparent + border)
+   - Secondary/tertiary buttons (Refresh, Cancel, Importer CSV, bulk-action
+     pills, drawerActionBtnStyle) intentionally NOT touched — mission says
+     "primary action buttons" only.
+
+CONSTRAINTS VERIFIED:
+- 'use client' preserved (line 1, untouched)
+- framer-motion v12 import added (already a dep — used in 5 other Atelier pages)
+- No functionality removed — SidebarItem hover handler replaced by CSS class
+  (sage tint instead of neutral #F5F5F5); all button onClick/disabled/state
+  logic intact; KpiCell still renders strings as-is
+- French preserved — no copy changes; NO emojis added
+- TypeScript: `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit
+  --pretty false` → EXIT=0, 0 errors (verified after all 5 edits)
+- Did NOT touch any other file — only AdminDashboard.tsx modified
+- MINIMAL — exactly 5 polish items, no scope creep
+
+IMPLEMENTATION NOTES:
+- Single ADMIN_POLISH_CSS string (8 CSS rules) injected once at root via
+  <style dangerouslySetInnerHTML>. !important used on hover rules because
+  React inline `style` would otherwise win over external CSS.
+- useCountUp uses rAF + easeOutCubic (1 - (1-t)^3). Cleanup via
+  cancelAnimationFrame in useEffect return. rafRef typed as
+  `useRef<number | null>(null)` to satisfy strict mode.
+- AnimatePresence mode="wait" ensures tab fade is sequential (exit completes
+  before enter starts), avoiding layout overlap.
+- All hover/active scale on primary buttons gated by `:not(:disabled)` —
+  disabled buttons (creating=true, busy=true, exporting=true, fiches=0)
+  don't lift on hover.
+
+Next action (out of scope): the ADMIN_POLISH_CSS pattern (single string +
+<style> at root) is portable to other admin sub-pages if more polish is
+needed there. The useCountUp hook could be extracted to a shared
+`src/app/atelier/components/motion.tsx` alongside the existing
+AnimatedStat/Reveal/StaggerContainer helpers used by AtelierHome/Pricing/
+Audit pages.
