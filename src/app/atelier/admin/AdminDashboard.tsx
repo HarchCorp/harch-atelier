@@ -325,6 +325,44 @@ const ADMIN_POLISH_CSS = `
 .admin-primary-btn { transition: transform 0.15s ease; }
 .admin-primary-btn:hover:not(:disabled) { transform: scale(1.02); }
 .admin-primary-btn:active:not(:disabled) { transform: scale(0.98); }
+
+/* ═══ MOBILE RESPONSIVE — Task FIX-MOBILE-CRITICAL ═══ */
+.admin-sidebar { transition: transform 0.25s ease; }
+.admin-sidebar-toggle { display: none; }
+.admin-sidebar-backdrop { display: none; }
+
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 50 !important;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.12) !important;
+  }
+  .admin-sidebar.is-open { transform: translateX(0); }
+  .admin-sidebar-toggle { display: inline-flex !important; }
+  .admin-sidebar-backdrop.is-visible { display: block !important; }
+}
+
+@media (max-width: 768px) {
+  .admin-header { padding: 12px 16px !important; }
+  .admin-main { padding: 20px 16px 48px !important; }
+  .admin-header-title { font-size: 16px !important; }
+  .admin-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .admin-table-wrap > div { min-width: 640px; }
+}
+
+@media (max-width: 640px) {
+  .admin-header { padding: 10px 14px !important; gap: 8px !important; }
+  .admin-main { padding: 16px 14px 32px !important; }
+  .admin-header-title { font-size: 15px !important; }
+  .admin-header-sub { font-size: 10px !important; }
+  .admin-grid-2 { grid-template-columns: 1fr !important; }
+  .admin-grid-3 { grid-template-columns: 1fr !important; }
+  .admin-grid-4 { grid-template-columns: 1fr !important; }
+}
 `;
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────
@@ -341,6 +379,9 @@ export function AdminDashboard() {
   // Modal state — Create Account
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createModalSeed, setCreateModalSeed] = useState<Partial<WhatsAppExtraction> | null>(null);
+
+  // Mobile sidebar drawer — Task FIX-MOBILE-CRITICAL
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const fetchCore = useCallback(async () => {
     setLoading(true);
@@ -407,6 +448,9 @@ export function AdminDashboard() {
     }
   }, [tab, currentRole, canSeeKPIs, canSeeCommercials]);
 
+  // Close mobile sidebar drawer on tab change — Task FIX-MOBILE-CRITICAL
+  useEffect(() => { setMobileNavOpen(false); }, [tab]);
+
   const pendingRequests = requests.filter((r) => r.status === "pending");
   const interestedRequests = requests.filter((r) => r.status === "interested");
   const convertedRequests = requests.filter((r) => r.status === "converted");
@@ -422,6 +466,7 @@ export function AdminDashboard() {
       <style dangerouslySetInnerHTML={{ __html: ADMIN_POLISH_CSS }} />
       {/* ═══ LIGHT SIDEBAR ═══ */}
       <aside
+        className={`admin-sidebar${mobileNavOpen ? " is-open" : ""}`}
         style={{
           width: "248px",
           flexShrink: 0,
@@ -585,10 +630,18 @@ export function AdminDashboard() {
         </div>
       </aside>
 
+      {/* Mobile sidebar backdrop — Task FIX-MOBILE-CRITICAL */}
+      <div
+        className={`admin-sidebar-backdrop${mobileNavOpen ? " is-visible" : ""}`}
+        onClick={() => setMobileNavOpen(false)}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 40 }}
+      />
+
       {/* ═══ MAIN CONTENT ═══ */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {/* Top bar */}
         <header
+          className="admin-header"
           style={{
             background: C.bg,
             borderBottom: `1px solid ${C.border}`,
@@ -602,20 +655,45 @@ export function AdminDashboard() {
             zIndex: 20,
           }}
         >
-          <div>
-            <h1 style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.01em" }}>
-              {tabTitle(tab)}
-            </h1>
-            <div
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+            <button
+              type="button"
+              className="admin-sidebar-toggle"
+              onClick={() => setMobileNavOpen((v) => !v)}
+              aria-label="Ouvrir le menu de navigation"
               style={{
-                fontSize: "11px",
-                color: C.textMuted,
-                fontFamily: C.fontMono,
-                marginTop: "3px",
-                letterSpacing: "0.04em",
+                flexShrink: 0,
+                width: 36,
+                height: 36,
+                alignItems: "center",
+                justifyContent: "center",
+                background: "transparent",
+                border: `1px solid ${C.border}`,
+                borderRadius: "6px",
+                cursor: "pointer",
+                color: C.text,
               }}
             >
-              {tabSubtitle(tab)}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M2 4h12M2 8h12M2 12h12" />
+              </svg>
+            </button>
+            <div style={{ minWidth: 0 }}>
+              <h1 className="admin-header-title" style={{ fontSize: "20px", fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.01em" }}>
+                {tabTitle(tab)}
+              </h1>
+              <div
+                className="admin-header-sub"
+                style={{
+                  fontSize: "11px",
+                  color: C.textMuted,
+                  fontFamily: C.fontMono,
+                  marginTop: "3px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {tabSubtitle(tab)}
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -687,7 +765,7 @@ export function AdminDashboard() {
         )}
 
         {/* Tab content — POLISH-ADMIN #4: AnimatePresence fade between tabs */}
-        <main style={{ flex: 1, padding: "28px 32px 64px", maxWidth: "1440px", width: "100%" }}>
+        <main className="admin-main" style={{ flex: 1, padding: "28px 32px 64px", maxWidth: "1440px", width: "100%" }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
@@ -2296,7 +2374,7 @@ function RequestTable({
     : "minmax(180px,2fr) minmax(140px,1.4fr) minmax(110px,1fr) 110px 110px 130px 150px 50px 40px";
   const allSelected = requests.length > 0 && selected.size === requests.length;
   return (
-    <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
+    <div className="admin-table-wrap" style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
       <div style={{
         display: "grid", gridTemplateColumns: cols, gap: "1px",
         background: C.border, fontFamily: C.fontMono, fontSize: "9px",
@@ -3303,7 +3381,7 @@ function AccountsTab({
       {filtered.length === 0 ? (
         <EmptyState text={users.length === 0 ? "No users yet. Create the first one!" : "No users match your filter."} />
       ) : (
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
+        <div className="admin-table-wrap" style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
           <div
             style={{
               display: "grid",
@@ -3558,7 +3636,7 @@ function LogsTab() {
       ) : logs.length === 0 ? (
         <EmptyState text="No system logs match your filter." />
       ) : (
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
+        <div className="admin-table-wrap" style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
           {logs.map((log) => (
             <LogRow
               key={log.id}
@@ -3967,15 +4045,15 @@ function ExtractionReview({
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
         <ReviewField label="Company name" value={extraction.company_name} />
         <ReviewField label="Contact name" value={extraction.contact_name} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
         <ReviewField label="Email" value={extraction.email} mono />
         <ReviewField label="Phone" value={extraction.phone} mono />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
         <ReviewField label="Plan tier" value={extraction.plan_tier ? planTierLabel[extraction.plan_tier] || extraction.plan_tier : null} />
         <ReviewField
           label="Pricing (MAD/mo)"
@@ -4859,7 +4937,7 @@ function PermissionsTab({ users, loading, onRefresh }: {
       </div>
 
       {/* Users table */}
-      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: C.shadowSm }}>
+      <div className="admin-table-wrap" style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: C.shadowSm }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 160px", gap: "12px", padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           <span>User</span>
           <span>Current Role</span>
@@ -4982,7 +5060,7 @@ function SecurityTab({ users, loading, onRefresh }: {
       {error && <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", color: "#991b1b", marginBottom: "16px" }}>✕ {error}</div>}
 
       {/* Sessions table */}
-      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: C.shadowSm }}>
+      <div className="admin-table-wrap" style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: C.shadowSm }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 100px", gap: "12px", padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", fontWeight: 700, color: "#71717A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           <span>User</span>
           <span>Role</span>
@@ -5987,7 +6065,7 @@ function KpisTab({
       </div>
 
       {/* Bottom row: countries + usage by plan */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+      <div className="admin-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
         <ChartCard title="Top 5 Pays" subtitle="Requetes par pays" height={180}>
           <BarChart data={countryData} layout="vertical" margin={{ top: 5, right: 10, left: 60, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
@@ -6739,7 +6817,7 @@ function CommercialDetailModal({
             Aucun client assigné.
           </div>
         ) : (
-          <div style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "20px" }}>
+          <div className="admin-table-wrap" style={{ border: `1px solid ${C.border}`, borderRadius: "6px", overflow: "hidden", marginBottom: "20px" }}>
             <div
               style={{
                 display: "grid",
@@ -8335,7 +8413,7 @@ function ClientsTable({
       {filtered.length === 0 ? (
         <EmptyState text={clients.length === 0 ? "Aucun client provisionné. Utilisez le formulaire pour en créer un." : "Aucun client ne correspond au filtre."} />
       ) : (
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
+        <div className="admin-table-wrap" style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
           <div
             style={{
               display: "grid",
@@ -9925,7 +10003,7 @@ function ChefLinkPanel({
         J'envoie 1 lien au chef d'entreprise. Il se connecte, voit le nombre d'employés que j'ai défini ({maxUsers}), et invite lui-même son équipe. Il ne peut pas dépasser ce nombre.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "14px" }}>
+      <div className="admin-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "14px" }}>
         <div style={{ padding: "10px 12px", background: C.bgSubtle, borderRadius: "5px" }}>
           <div style={{ ...labelStyle, marginBottom: "4px" }}>Cap maxUsers</div>
           <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, fontFamily: C.fontMono }}>{maxUsers}</div>
@@ -10085,7 +10163,7 @@ function BulkLinksPanel({
           Aucun lien généré. Utilisez le formulaire ci-dessus.
         </div>
       ) : (
-        <div style={{
+        <div className="admin-table-wrap" style={{
           border: `1px solid ${C.border}`, borderRadius: "6px",
           overflow: "hidden", maxHeight: "360px", overflowY: "auto",
         }}>

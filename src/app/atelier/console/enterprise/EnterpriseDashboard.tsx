@@ -8944,8 +8944,9 @@ function SsoSamlConfigCard({
           </div>
 
           {/* Header row */}
+          <div className="overflow-x-auto">
           <div
-            className="grid grid-cols-12 gap-2 rounded-t-md px-3 py-2"
+            className="grid grid-cols-12 gap-2 rounded-t-md px-3 py-2 min-w-[640px]"
             style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}
           >
             <div className="col-span-4" style={FONT_HEADER}>UTILISATEUR</div>
@@ -8957,7 +8958,7 @@ function SsoSamlConfigCard({
           </div>
 
           {/* Body rows */}
-          <div style={{ borderTop: "none", border: `1px solid ${BORDER}`, borderTopWidth: 0 }}>
+          <div className="min-w-[640px]" style={{ borderTop: "none", border: `1px solid ${BORDER}`, borderTopWidth: 0 }}>
             {state.sessions.map((s, idx) => {
               const ProvIcon = SSO_PROVIDER_ICON[s.provider];
               return (
@@ -9041,6 +9042,7 @@ function SsoSamlConfigCard({
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
 

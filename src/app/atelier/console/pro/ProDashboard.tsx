@@ -7191,8 +7191,8 @@ function HistoriqueRapportsCard({ reports, loading }: { reports: ReportsListResp
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-6 px-1.5"
-                      style={{ fontFamily: FONT_MONO, fontSize: 9 }}
+                      className="h-8 px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 10 }}
                       onClick={() => {
                         if (r.pdfUrl) {
                           toast.success("Téléchargement du PDF lancé.");
@@ -7208,8 +7208,8 @@ function HistoriqueRapportsCard({ reports, loading }: { reports: ReportsListResp
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-1.5"
-                      style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE }}
+                      className="h-8 px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE }}
                       onClick={() => toast.success("Lien de partage copié.")}
                     >
                       <Share2 size={10} className="mr-1" />
@@ -7218,8 +7218,8 @@ function HistoriqueRapportsCard({ reports, loading }: { reports: ReportsListResp
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-1.5"
-                      style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}
+                      className="h-8 px-2"
+                      style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
                       onClick={() => toast.info("Rapport dupliqué — brouillon créé.")}
                     >
                       <Copy size={10} className="mr-1" />
@@ -7297,8 +7297,8 @@ function RecherchesAlertesCard({ alertConfig, loading }: { alertConfig: AlertCon
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-6 px-1.5"
-                  style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, borderColor: SAGE }}
+                  className="h-8 px-2"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
                   onClick={() => toast.info("Constructeur de requête — Boolean, filtres, sources.")}
                 >
                   <Search size={10} className="mr-1" />
@@ -7338,8 +7338,8 @@ function RecherchesAlertesCard({ alertConfig, loading }: { alertConfig: AlertCon
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-6 px-1.5"
-                  style={{ fontFamily: FONT_MONO, fontSize: 9, color: SAGE, borderColor: SAGE }}
+                  className="h-8 px-2"
+                  style={{ fontFamily: FONT_MONO, fontSize: 10, color: SAGE, borderColor: SAGE }}
                   onClick={() => toast.info("Configuration d'alerte — type, seuil, canaux.")}
                 >
                   <Plus size={10} className="mr-1" />
@@ -8176,10 +8176,10 @@ function SujetsEmergentsCard({ topics, loading }: { topics: TopicsResp | null; l
                       <Button
                         variant={isWatched ? "default" : "outline"}
                         size="sm"
-                        className="h-6 px-2"
+                        className="h-8 px-2"
                         style={{
                           fontFamily: FONT_MONO,
-                          fontSize: 9,
+                          fontSize: 10,
                           backgroundColor: isWatched ? SAGE : "transparent",
                           color: isWatched ? "#FFFFFF" : SAGE,
                           borderColor: SAGE,
