@@ -1316,7 +1316,7 @@ function CardShell({
   return (
     <Card
       className={
-        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden " + (className ?? "")
+        "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md " + (className ?? "")
       }
       style={{ padding: 20, ...style }}
     >
@@ -1637,6 +1637,21 @@ function DashboardStyle() {
         }
         .agency-color-transition {
           transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+        }
+        /* POLISH-AGENCY-LIGHT: button micro-interactions — hover lift + active press */
+        .agency-dashboard-root button {
+          transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .agency-dashboard-root button:not(:disabled):hover {
+          transform: scale(1.02);
+        }
+        .agency-dashboard-root button:not(:disabled):active {
+          transform: scale(0.98);
+        }
+        /* POLISH-AGENCY-LIGHT: sage-tinted loading shimmer — on-brand Skeleton */
+        .agency-dashboard-root [data-slot="skeleton"] {
+          background-color: ${SAGE_BG} !important;
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         `,
       }}
@@ -1965,7 +1980,11 @@ function ClientSwitcherBar({
                   color: TEXT_BODY,
                 }}
               >
-                {clients.length} client{clients.length > 1 ? "s" : ""}
+                <AnimatedNumber
+                  value={clients.length}
+                  duration={800}
+                  format={(n) => `${Math.round(n)} client${Math.round(n) > 1 ? "s" : ""}`}
+                />
               </span>
             </div>
             <span
@@ -4835,7 +4854,7 @@ function RevenueTrackerCard({
               marginTop: 4,
             }}
           >
-            {loading ? "—" : fmtMAD(totalMonthly)}
+            {loading ? "—" : <AnimatedNumber value={totalMonthly} format={(n) => fmtMAD(Math.round(n))} duration={800} />}
           </div>
           <div
             style={{
@@ -4862,7 +4881,7 @@ function RevenueTrackerCard({
               marginTop: 4,
             }}
           >
-            {loading ? "—" : fmtMAD(totalMonthly * 12)}
+            {loading ? "—" : <AnimatedNumber value={totalMonthly * 12} format={(n) => fmtMAD(Math.round(n))} duration={800} />}
           </div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
             Basé sur le MRR actuel
@@ -5691,6 +5710,8 @@ function MultiClientComparisonCard({
                           fill={COMPARISON_PALETTE[i]}
                           fillOpacity={0.10}
                           strokeWidth={1.5}
+                          isAnimationActive
+                          animationDuration={800}
                         />
                       ))}
                       <RTooltip
@@ -11632,7 +11653,7 @@ function TeamPerformanceDashboardCard({
               formatter={(value: number) => [`${value} / 100`, "Score"]}
               labelFormatter={(_label: number, payload: Array<{ payload?: { fullName?: string } }>) => payload?.[0]?.payload?.fullName ?? ""}
             />
-            <Bar dataKey="score" radius={[0, 4, 4, 0]} maxBarSize={28}>
+            <Bar dataKey="score" radius={[0, 4, 4, 0]} maxBarSize={28} isAnimationActive animationDuration={800}>
               {barData.map((entry, i) => (
                 <Cell
                   key={i}
@@ -12174,6 +12195,8 @@ function PitchDeckAnalyticsCard() {
                   innerRadius={42}
                   outerRadius={70}
                   paddingAngle={2}
+                  isAnimationActive
+                  animationDuration={800}
                 >
                   {cache.sources.filter((s) => s.count > 0).map((s) => (
                     <Cell key={s.source} fill={s.color} />
@@ -12220,6 +12243,8 @@ function PitchDeckAnalyticsCard() {
               strokeWidth={2}
               dot={{ r: 4, fill: SAGE, stroke: "#FFFFFF", strokeWidth: 2 }}
               activeDot={{ r: 6, fill: SAGE_DEEP }}
+              isAnimationActive
+              animationDuration={800}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -14989,7 +15014,7 @@ function ClientRevenueTrackerCard({
                       contentStyle={{ fontFamily: FONT_SANS, fontSize: 11, border: `1px solid ${BORDER_STRONG}`, borderRadius: 8 }}
                       formatter={(v: number) => [fmtMAD(v), "Revenu YTD"]}
                     />
-                    <Bar dataKey="value" fill={SAGE} radius={[0, 4, 4, 0]} barSize={14} />
+                    <Bar dataKey="value" fill={SAGE} radius={[0, 4, 4, 0]} barSize={14} isAnimationActive animationDuration={800} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -15009,6 +15034,8 @@ function ClientRevenueTrackerCard({
                       outerRadius={92}
                       innerRadius={48}
                       paddingAngle={2}
+                      isAnimationActive
+                      animationDuration={800}
                     >
                       {tierDistribution.map((d) => (
                         <Cell key={d.name} fill={d.color} />
@@ -17598,7 +17625,7 @@ export default function AgencyDashboard({
 
   return (
     <div
-      className="flex min-h-screen"
+      className="agency-dashboard-root flex min-h-screen"
       style={{
         backgroundColor: "#FFFFFF",
         fontFamily: FONT_SANS,

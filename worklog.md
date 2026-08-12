@@ -6413,3 +6413,75 @@ Stage Summary:
 - 1 file touched: AgencyDashboard.tsx. 0 TS errors. 0 functionality removed. HTTP 200 on dev server smoke test.
 - Every commercial surface (commission, revenue, health, workload, KPIs, kanban pipeline, white-label preview, client switcher, tier badge) now has deliberate motion design. The dashboard reads as institutional + commercial — Bloomberg-grade rhythm, sage-tinted affordances, no emojis, French throughout.
 - Next action (out of scope): apply the same polish helpers (useCountUp, AnimatedNumber, LiveSkeleton, StaggeredSkeletons, EmptyState, DashboardStyle) to the Essential/Pro/Enterprise dashboards for cross-dashboard consistency. The 5 helpers are self-contained (no external deps beyond framer-motion + shadcn Skeleton + lucide-react, all already imported) and can be copy-pasted as-is into the other 3 dashboards. AURA recommends starting with Pro (next-largest dashboard, 14,284 lines) — same revenue/commission surface area would benefit from the same count-up + line-draw animations.
+
+═══════════════════════════════════════════════════════════════════════
+POLISH-AGENCY-LIGHT — AgencyDashboard.tsx (AURA, Lead Product & UX Strategist)
+═══════════════════════════════════════════════════════════════════════
+
+MISSION: Add the TOP 5 most impactful polish improvements. Surgical — no rewrite, only enhancements. White #FFFFFF, sage #4A7B5F, charcoal #0A0A0A, Space Mono headers, Inter body, Lucide icons, NO emojis, French.
+
+TARGET FILE (only file touched): src/app/atelier/console/agency/AgencyDashboard.tsx
+
+PRE-EXISTING CONTEXT (from prior POLISH-AGENCY batches, already in place):
+- useCountUp(target, duration) helper + AnimatedNumber(value, format, duration, style) wrapper — both pre-existed at lines ~1430 / ~1462.
+- DashboardStyle component injecting keyframes + utility classes at the dashboard root.
+- Tier badge commission rate already animated via `useCountUp(commissionPct, 600)` (line ~8429) → renders `{Math.round(animatedCommissionPct)}%` in the Commission & avantages tile.
+
+POLISH-AGENCY-LIGHT — 5 IMPROVEMENTS DELIVERED:
+
+1. AnimatedNumber count-up applications (800ms, easeOutCubic via existing useCountUp helper):
+   - Header client-count badge (top sticky bar) — `{clients.length} client{...}` → `<AnimatedNumber value={clients.length} duration={800} format={(n) => \`${Math.round(n)} client${Math.round(n) > 1 ? "s" : ""}\`}/>`. The visible count now counts 0 → N on first paint, with proper French pluralization preserved.
+   - Revenue Tracker "Revenu mensuel" tile — `{loading ? "—" : fmtMAD(totalMonthly)}` → `<AnimatedNumber value={totalMonthly} format={(n) => fmtMAD(Math.round(n))} duration={800}/>` (loading guard preserved).
+   - Revenue Tracker "Revenu annuel (proj.)" tile — same treatment for `totalMonthly * 12`. Both revenue numbers now count up 0 → value in MAD on mount + on client switch + on tier override.
+   - Tier badge commission rate: PRE-EXISTING (useCountUp at 600ms). Left untouched to honor "don't rewrite" constraint — animation already present.
+
+2. Card hover lift:
+   - CardShell component (wraps ALL dashboard cards) className extended: `"border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md " + (className ?? "")`. Every card now lifts subtly on hover with a 200ms transition. Existing className merge pattern preserved (caller classes still appended after).
+
+3. Button micro-interactions (hover:scale-[1.02] active:scale-[0.98]):
+   - Implemented via scoped CSS in DashboardStyle (single surgical addition vs. editing 70+ button className strings). Two new rules:
+     • `.agency-dashboard-root button { transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }` — uniform transition baseline covering shadcn Button + native <button> elements.
+     • `.agency-dashboard-root button:not(:disabled):hover { transform: scale(1.02); }` — hover lift.
+     • `.agency-dashboard-root button:not(:disabled):active { transform: scale(0.98); }` — active press.
+   - Scope enforced by adding `agency-dashboard-root` class to the dashboard root `<div>` (line ~17620). Styles only apply within the agency dashboard — no leakage to Essential/Pro/Enterprise.
+   - :not(:disabled) guard preserves accessibility — disabled buttons don't lift/press.
+
+4. Loading shimmer (sage tint):
+   - Scoped CSS in DashboardStyle: `.agency-dashboard-root [data-slot="skeleton"] { background-color: ${SAGE_BG} !important; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }`.
+   - Targets shadcn Skeleton's `data-slot="skeleton"` attribute — covers ALL 9 `<Skeleton>` instances in the file (portfolio table, alert list, team table, health scoring rows, revenue tracker, plan distribution, etc.) plus LiveSkeleton + StaggeredSkeletons wrappers.
+   - `animate-pulse` keyframe (Tailwind's pulse) + sage-tinted background (#EAF0EC approx) — on-brand loading shimmer, replaces default gray.
+
+5. Chart animations (isAnimationActive + animationDuration={800}):
+   - 6 recharts series components that were missing `isAnimationActive` upgraded:
+     • ClientComparisonCard `<Radar>` (line ~5705) — radar polygons now sweep in.
+     • TeamPerformanceCard `<Bar dataKey="score">` (line ~11656) — score bars grow on mount.
+     • PitchPipelineCard `<Pie>` (pipeline par source, line ~12191) — donut slices sweep in.
+     • PitchPipelineCard `<Line dataKey="wins">` (line ~12239) — wins trend line draws.
+     • ClientRevenueTrackerCard `<Bar dataKey="value">` (top 10 by revenue, line ~15017) — revenue bars grow.
+     • ClientRevenueTrackerCard `<Pie>` (distribution par plan, line ~15028) — plan donut sweeps in.
+   - All 6 use `isAnimationActive` (shorthand, equivalent to `={true}`) + `animationDuration={800}` (matches the brief's 800ms spec).
+   - Series that already had isAnimationActive (RadialBar gauge, Revenue Tracker Line + Bar, Sentiment ComposedChart Areas + Lines, Social AreaChart, Commission Bars @650ms, Health sparkline Area @700ms, Forecast Lines @1100/1300/1500ms staggered, Benchmark Radars @false intentionally) — left untouched per "don't already have it" criterion.
+
+CONSTRAINTS VERIFIED:
+- 'use client' preserved (line 1, untouched).
+- No functionality removed — every original button, input, fetch, persist, table, chart, modal, action handler preserved. Polish layer is additive (CSS rules + AnimatedNumber swaps + 2 className tokens + 6 recharts props).
+- French throughout — no new copy added (AnimatedNumber formats reuse existing fmtMAD + French pluralization rules). All existing French copy untouched.
+- NO emojis — no new icons introduced.
+- TypeScript: `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → EXIT=0, 0 errors (verified). Filtered output for "AgencyDashboard" → 0 matches.
+- Did NOT touch any other file (only src/app/atelier/console/agency/AgencyDashboard.tsx modified).
+- MINIMAL — exactly 5 improvements, no scope creep.
+
+DIFF SUMMARY:
+- 1 file touched: src/app/atelier/console/agency/AgencyDashboard.tsx (+~30 lines net).
+- AnimatedNumber new usages: 3 (client count header, monthly revenue, annual revenue).
+- CardShell: +2 className tokens (transition-all duration-200 hover:shadow-md).
+- DashboardStyle: +2 CSS rule blocks (button micro-interactions + skeleton sage tint).
+- Root div: +1 className token (agency-dashboard-root).
+- Recharts series upgraded: 6 (isAnimationActive + animationDuration={800}).
+
+VERIFICATION:
+- tsc EXIT=0, 0 errors (verified with 4GB heap as specified in the brief).
+- 'use client' directive preserved.
+- No emojis, French preserved, no functionality removed.
+
+Next action (out of scope): apply the same 5 polish improvements to Essential/Pro/Enterprise dashboards. The CSS rules in DashboardStyle can be lifted as-is (the `.agency-dashboard-root` scope class can be added to each dashboard's root div). The AnimatedNumber pattern is reusable.
