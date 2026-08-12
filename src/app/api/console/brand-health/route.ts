@@ -23,13 +23,42 @@ export async function GET() {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
     const oneDayAgo = new Date(now.getTime() - 86400000);
 
-    const [reputationScore, articles24h, articles7d, aiVis, competitors] = await Promise.all([
+    const [reputationScore, articles24h, articles7d, aiVis, competitors, companyInfo, totalCompanyArticles] = await Promise.all([
       prisma.reputationScore.findFirst({ where: { companyId }, orderBy: { calculatedAt: "desc" } }),
       prisma.article.count({ where: { companyId, publishedAt: { gte: oneDayAgo } } }),
       prisma.article.findMany({ where: { companyId, publishedAt: { gte: sevenDaysAgo } }, select: { sentimentLabel: true, sentimentScore: true }, take: 500 }),
       prisma.aIVisibility.findMany({ where: { companyId }, orderBy: { checkedAt: "desc" }, take: 4, select: { platform: true, confidence: true, cited: true, mentions: true, rank: true, shareOfVoice: true } }),
       prisma.company.findMany({ where: { id: { not: companyId } }, take: 5, select: { id: true, name: true } }),
+      prisma.company.findUnique({ where: { id: companyId }, select: { name: true } }),
+      prisma.article.count({ where: { companyId } }),
     ]);
+
+    // HONEST EMPTY STATES — no fake score 50 when there's no data
+    if (totalCompanyArticles === 0) {
+      return NextResponse.json({
+        score: null,
+        status: "no_data",
+        message: `Nous collectons des articles sur ${companyInfo?.name ?? "votre entreprise"}. Premiers résultats sous 24-48h.`,
+        companyName: companyInfo?.name ?? "",
+        trend: 0,
+        sentiment: { positive: 0, neutral: 0, negative: 0 },
+        shareOfVoice: 0,
+        competitiveRank: 0,
+        totalCompetitors: competitors.length,
+        mentionCount24h: 0,
+        mentionVelocity: 0,
+        crisisLevel: "safe",
+        crisisScore: 0,
+        topNarrative: null,
+        aiVisibility: [],
+        recommendation: "Collecte en cours.",
+        lastUpdated: new Date().toISOString(),
+      status: totalCompanyArticles < 10 ? "limited" : undefined,
+      warning: totalCompanyArticles < 10 ? `Données limitées (${totalCompanyArticles} articles). Collecte en cours.` : undefined,
+      companyName: companyInfo?.name ?? "",
+        source: "neon",
+      });
+    }
 
     const positive = articles7d.filter(a => a.sentimentLabel === "positive").length;
     const negative = articles7d.filter(a => a.sentimentLabel === "negative").length;
@@ -58,6 +87,9 @@ export async function GET() {
       aiVisibility: aiVis.length > 0 ? aiVis.map(a => ({ engine: a.platform, score: Math.round((a.confidence ?? 0) * 100) })) : [{engine:"ChatGPT",score:0},{engine:"Claude",score:0},{engine:"Gemini",score:0},{engine:"Perplexity",score:0}],
       recommendation: crisisScore >= 75 ? "CRITICAL — Activate crisis workflow." : crisisScore >= 50 ? "WARNING — Prepare Dircom brief." : "Nominal.",
       lastUpdated: new Date().toISOString(),
+      status: totalCompanyArticles < 10 ? "limited" : undefined,
+      warning: totalCompanyArticles < 10 ? `Données limitées (${totalCompanyArticles} articles). Collecte en cours.` : undefined,
+      companyName: companyInfo?.name ?? "",
       source: "neon",
     });
   } catch (err) {
