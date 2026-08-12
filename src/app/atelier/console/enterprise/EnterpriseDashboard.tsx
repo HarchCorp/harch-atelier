@@ -316,7 +316,14 @@ function downloadBoardPdf(
 // ─── TYPES ────────────────────────────────────────────────────────────
 
 interface BrandHealth {
-  score: number;
+  // HONEST-EMPTY-STATES — score peut être null quand la collecte n'a pas
+  // encore commencé. status="no_data" → 0 article, status="limited" →
+  // < 10 articles (score renvoyé mais à prendre avec prudence).
+  score: number | null;
+  status?: "no_data" | "limited";
+  message?: string;
+  warning?: string;
+  companyName?: string;
   trend: number;
   sentiment: { positive: number; neutral: number; negative: number };
   shareOfVoice: number;
@@ -994,6 +1001,172 @@ function EmptyDash({ label = "—" }: { label?: string }) {
     >
       {label}
     </span>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HONEST-EMPTY-STATES — Composants « Collecte en cours »
+// Affichés quand /api/console/brand-health renvoie status="no_data"
+// (0 article) ou quand une route de graphique renvoie un tableau vide.
+// Animations radar/pulse 100 % framer-motion — pas de keyframes globaux.
+// ════════════════════════════════════════════════════════════════════
+
+/** CollecteEnCours — pleine largeur, utilisé dans le hero (ScoreReputationGlobalCard). */
+function CollecteEnCours({ companyName }: { companyName?: string }) {
+  const name = companyName ?? "votre marque";
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "28px 20px", minHeight: 240 }}
+    >
+      <div style={{ position: "relative", width: 104, height: 104, marginBottom: 20 }}>
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `1.5px solid ${SAGE_DIM}`,
+            }}
+            initial={{ scale: 0.35, opacity: 0 }}
+            animate={{ scale: 1, opacity: [0, 0.7, 0] }}
+            transition={{
+              duration: 2.4,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: i * 0.8,
+            }}
+          />
+        ))}
+        <motion.span
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 14,
+            height: 14,
+            marginLeft: -7,
+            marginTop: -7,
+            borderRadius: "50%",
+            backgroundColor: SAGE,
+          }}
+          animate={{ scale: [1, 1.18, 1], opacity: [0.75, 1, 0.75] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 15,
+          fontWeight: 700,
+          color: CHARCOAL,
+        }}
+      >
+        Collecte en cours
+      </div>
+      <p
+        className="mt-1.5 max-w-[440px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 13, color: TEXT_BODY, lineHeight: 1.55 }}
+      >
+        Nous collectons des articles sur {name}. Premiers résultats sous 24-48h.
+      </p>
+      <p
+        className="mt-2"
+        style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}
+      >
+        Vous recevrez une alerte WhatsApp dès que votre score sera disponible.
+      </p>
+    </div>
+  );
+}
+
+/** CollecteEnCoursMini — version compacte pour les cartes de graphiques. */
+function CollecteEnCoursMini({ minHeight = 180 }: { minHeight?: number }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "20px 16px", minHeight }}
+    >
+      <div style={{ position: "relative", width: 56, height: 56, marginBottom: 12 }}>
+        {[0, 1].map((i) => (
+          <motion.span
+            key={i}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `1.5px solid ${SAGE_DIM}`,
+            }}
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: [0, 0.7, 0] }}
+            transition={{
+              duration: 2.2,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: i * 0.7,
+            }}
+          />
+        ))}
+        <motion.span
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 10,
+            height: 10,
+            marginLeft: -5,
+            marginTop: -5,
+            borderRadius: "50%",
+            backgroundColor: SAGE,
+          }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.75, 1, 0.75] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          fontWeight: 700,
+          color: CHARCOAL,
+        }}
+      >
+        Collecte en cours
+      </div>
+      <p
+        className="mt-1 max-w-[320px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}
+      >
+        Premiers résultats sous 24-48h.
+      </p>
+    </div>
+  );
+}
+
+/** LimitedDataBanner — bannière ambre au-dessus du gauge quand status="limited". */
+function LimitedDataBanner({ text }: { text?: string }) {
+  return (
+    <div
+      className="mb-3 flex items-center gap-2 rounded-md"
+      style={{
+        backgroundColor: "rgba(245,158,11,0.10)",
+        border: `1px solid ${NEUTRAL_AMBER}`,
+        padding: "8px 12px",
+      }}
+    >
+      <AlertTriangle size={14} style={{ color: NEUTRAL_AMBER, flexShrink: 0 }} />
+      <span
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          color: "#92400E",
+          fontWeight: 600,
+        }}
+      >
+        {text ?? "Données limitées — collecte en cours"}
+      </span>
+    </div>
   );
 }
 
@@ -2929,6 +3102,9 @@ function ScoreReputationGlobalCard({
   alerts: CrisisAlertsResp | null;
   loading: boolean;
 }) {
+  // HONEST-EMPTY-STATES — détection des trois états (no_data / limited / nominal).
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
+  const isLimited = !!health && health.status === "limited" && health.score !== null;
   const score = health?.score ?? 0;
   const trend = health?.trend ?? 0;
   const lastUpdated = health?.lastUpdated ? fmtRelative(health.lastUpdated) : "—";
@@ -2945,6 +3121,7 @@ function ScoreReputationGlobalCard({
   // AI commentary — board-ready, specific, actionable
   const aiCommentary = useMemo(() => {
     if (!health) return "En attente des données de réputation…";
+    if (isNoData) return "Aucun article collecté pour le moment — la veille démarre à présent.";
     const dir = trend > 0 ? "amélioré" : trend < 0 ? "dégradé" : "stabilisé";
     const parts: string[] = [`Votre score s'est ${dir} de ${Math.abs(trend)} points cette semaine`];
     if (health.sentiment.positive >= 50) {
@@ -2960,7 +3137,7 @@ function ScoreReputationGlobalCard({
       parts.push(` Visibilité IA : ${citedCount}/${health.aiVisibility.length} moteurs vous citent.`);
     }
     return parts.join("");
-  }, [health, trend, defcon]);
+  }, [health, trend, defcon, isNoData]);
 
   return (
     <motion.div id="score" {...cardMotion}>
@@ -2998,7 +3175,30 @@ function ScoreReputationGlobalCard({
           }
         />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        {loading ? (
+          // HONEST-EMPTY-STATES — pendant le chargement on garde l'existant
+          // (grille de skeletons) pour ne pas introduire de flash visuel.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="lg:col-span-3 flex justify-center">
+              <ShimmerSkeleton className="h-[200px] w-[200px] rounded-full" />
+            </div>
+            <div className="lg:col-span-5 space-y-3">
+              <ShimmerSkeleton className="h-5 w-3/4" />
+              <ShimmerSkeleton className="h-4 w-1/2" />
+              <ShimmerSkeleton className="h-12 w-full" />
+            </div>
+            <div className="lg:col-span-4">
+              <ShimmerSkeleton className="h-40 w-full" />
+            </div>
+          </div>
+        ) : isNoData ? (
+          // HONEST-EMPTY-STATES — état no_data : on remplace le gauge par
+          // l'illustration radar + message « Collecte en cours ».
+          <CollecteEnCours companyName={health?.companyName} />
+        ) : (
+          <>
+            {isLimited && <LimitedDataBanner text={health?.warning} />}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           <div className="lg:col-span-3 flex justify-center">
             <div style={{ position: "relative", width: 200, height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -3187,6 +3387,8 @@ function ScoreReputationGlobalCard({
             </div>
           </div>
         </div>
+          </>
+        )}
       </CardShell>
     </motion.div>
   );
@@ -3197,6 +3399,8 @@ function ScoreReputationGlobalCard({
 // ════════════════════════════════════════════════════════════════════
 
 function SentimentMarketKpi({ health, trend, loading }: { health: BrandHealth | null; trend: SentimentTrendResp | null; loading: boolean }) {
+  // HONEST-EMPTY-STATES — en mode no_data on affiche « — » plutôt que « 0% ».
+  const isNoData = !!health && (health.score === null || health.status === "no_data");
   const value = health?.sentiment?.positive ?? 0;
   const delta = health?.trend ?? 0;
 
@@ -3205,13 +3409,15 @@ function SentimentMarketKpi({ health, trend, loading }: { health: BrandHealth | 
     return trend.data.slice(-7).map((d) => ({ d: d.date, v: (d.positive / Math.max(1, d.count)) * 100 }));
   }, [trend]);
 
-  const insight = health
-    ? value >= 50
-      ? `Le sentiment positif domine (${value}%) — bonne dynamique. Surveillez les sources négatives pour maintenir le cap.`
-      : value >= 35
-        ? `Sentiment mitigé (${value}% positif) — renforcez la communication positive.`
-        : `Sentiment négatif en hausse (${health.sentiment.negative}%) — intervention Dircom recommandée.`
-    : "En attente des données…";
+  const insight = !health
+    ? "En attente des données…"
+    : isNoData
+      ? "Collecte en cours — premiers résultats sous 24-48h."
+      : value >= 50
+        ? `Le sentiment positif domine (${value}%) — bonne dynamique. Surveillez les sources négatives pour maintenir le cap.`
+        : value >= 35
+          ? `Sentiment mitigé (${value}% positif) — renforcez la communication positive.`
+          : `Sentiment négatif en hausse (${health.sentiment.negative}%) — intervention Dircom recommandée.`;
 
   return (
     <motion.div {...cardMotion}>
@@ -3222,16 +3428,26 @@ function SentimentMarketKpi({ health, trend, loading }: { health: BrandHealth | 
           <div className="flex items-baseline gap-2">
             {loading ? (
               <ShimmerSkeleton className="h-7 w-16" />
-            ) : (
+            ) : health && !isNoData ? (
               <AnimatedNumber
-                value={health ? value : 0}
-                loading={!health}
+                value={value}
                 fontSize={28}
                 color={CHARCOAL}
                 suffix="%"
               />
+            ) : (
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: CHARCOAL,
+                }}
+              >
+                —
+              </span>
             )}
-            <Delta value={delta} />
+            {!isNoData && <Delta value={delta} />}
           </div>
           {spark.length > 0 && (
             <div style={{ width: 80, height: 28 }}>
@@ -3244,7 +3460,7 @@ function SentimentMarketKpi({ health, trend, loading }: { health: BrandHealth | 
           )}
         </div>
         <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED }}>
-          Part des mentions positives (7j)
+          {isNoData ? "Collecte des mentions en cours" : "Part des mentions positives (7j)"}
         </p>
         <AiCommentary text={insight} />
       </CardShell>
@@ -4128,7 +4344,8 @@ function BenchmarkConcurrentielTable({
         {loading ? (
           <Skeleton className="h-48 w-full" />
         ) : rows.length === 0 ? (
-          <EmptyDash label="Aucune donnée de benchmark disponible." />
+          // HONEST-EMPTY-STATES — benchmark vide : collecte en cours.
+          <CollecteEnCoursMini minHeight={192} />
         ) : (
           <>
             <div className="overflow-x-auto rounded-lg" style={{ border: `1px solid ${BORDER}` }}>
@@ -4266,7 +4483,8 @@ function RadarReputationCard({ radar, loading }: { radar: CompetitorRadarResp | 
         {loading ? (
           <Skeleton className="h-72 w-full" />
         ) : radarData.length === 0 ? (
-          <EmptyDash label="Aucune donnée radar disponible." />
+          // HONEST-EMPTY-STATES — radar vide : collecte en cours.
+          <CollecteEnCoursMini minHeight={288} />
         ) : (
           <>
             <div style={{ width: "100%", height: 320 }}>
@@ -4360,7 +4578,8 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
         {loading ? (
           <Skeleton className="h-56 w-full" />
         ) : donutData.length === 0 ? (
-          <EmptyDash label="Aucune donnée de part de voix." />
+          // HONEST-EMPTY-STATES — part de voix vide : collecte en cours.
+          <CollecteEnCoursMini minHeight={224} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
             <div style={{ position: "relative", width: "100%", height: 240 }}>
@@ -5220,7 +5439,8 @@ function MarketingInfluenceCard({ influencers, loading }: { influencers: Influen
                   {list.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-3 py-6 text-center">
-                        <EmptyDash label="Aucun influenceur identifié sur la période." />
+                        {/* HONEST-EMPTY-STATES — aucun influenceur : collecte en cours. */}
+                        <CollecteEnCoursMini minHeight={120} />
                       </td>
                     </tr>
                   ) : (
@@ -6244,7 +6464,8 @@ function VeilleReglementaireCard({
             {view === "liste" && (
               <>
                 {listeItems.length === 0 ? (
-                  <EmptyDash label="Aucune réglementation récente." />
+                  // HONEST-EMPTY-STATES — réglementation vide : collecte en cours.
+                  <CollecteEnCoursMini minHeight={120} />
                 ) : (
                   <div className="space-y-2">
                     {listeItems.map((item) => (
@@ -10263,6 +10484,8 @@ function KpiExecutiveSummaryRow({
   onNavigate: (id: string) => void;
 }) {
   // Card 1 — Score de réputation global
+  // HONEST-EMPTY-STATES — score peut être null (état no_data).
+  const isScoreNoData = !!health && (health.score === null || health.status === "no_data");
   const score = health?.score ?? 0;
   const scoreTrend = health?.trend ?? 0;
   const scoreColor = score >= 70 ? SAGE : score >= 50 ? NEUTRAL_AMBER : NEGATIVE;
@@ -10322,8 +10545,8 @@ function KpiExecutiveSummaryRow({
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-1">
               <AnimatedNumber
-                value={health ? score : 0}
-                loading={!health}
+                value={health && !isScoreNoData ? score : 0}
+                loading={!health || isScoreNoData}
                 fontSize={34}
                 color={scoreColor}
               />

@@ -356,7 +356,14 @@ interface ClientsResponse {
 }
 
 interface BrandHealth {
-  score: number;
+  // HONEST-EMPTY-STATES — score peut être null quand la collecte n'a pas
+  // encore commencé. status="no_data" → 0 article, status="limited" →
+  // < 10 articles (score renvoyé mais à prendre avec prudence).
+  score: number | null;
+  status?: "no_data" | "limited";
+  message?: string;
+  warning?: string;
+  companyName?: string;
   trend: number;
   sentiment: { positive: number; neutral: number; negative: number };
   shareOfVoice: number;
@@ -640,14 +647,14 @@ type HealthBand = "excellent" | "bon" | "surveiller" | "risque";
 interface ChurnRiskEntry {
   clientId: string;
   displayName: string;
-  riskPct: number;          // 0-100
-  contractEndDate: string;  // ISO date
+  riskPct: number;          // 0-100, or -1 for "inconnu" (insufficient data)
+  contractEndDate: string;  // ISO date — "" when no real contract end date in DB
   recommendedAction: string;
   monthlyRevenueMAD: number;
   factors: { label: string; pct: number }[];
 }
 
-type ChurnBand = "fidele" | "stable" | "volatile" | "imminent";
+type ChurnBand = "fidele" | "stable" | "volatile" | "imminent" | "inconnu";
 
 interface ChurnRiskState {
   campaignLaunchedAt: number | null;
@@ -656,6 +663,7 @@ interface ChurnRiskState {
 
 interface RevenueForecastInput {
   currentMRR: number;
+  mrrOverridden: boolean;     // true = user manually adjusted MRR (don't auto-sync from real clients)
   pipelineValue: number;
   churnRatePct: number;
   winRatePct: number;
@@ -815,9 +823,9 @@ interface RevenueTrackerRow {
   clientId: string;
   displayName: string;
   planTier: RevenuePlanTier;
-  mrr: number;                      // = override.mrr ?? quota.monthlyPriceMAD
-  setupFee: number;                 // = override.setupFee ?? deterministicFromHash
-  overageCharges: number;           // deterministic from quota usage bars
+  mrr: number;                      // = override.mrr ?? quota.monthlyPriceMAD ?? 0
+  setupFee: number;                 // = override.setupFee ?? 0 (no fabricated setup fee)
+  overageCharges: number;           // computed from real usage bars (no random noise)
   commissionPct: number;            // = override.commissionPct ?? agency.commissionPct
   commissionEarned: number;         // (mrr * monthsElapsed + setupFee + overage) * pct / 100
   totalRevenueYTD: number;          // mrr * monthsElapsed + setupFee + overage
@@ -1357,6 +1365,172 @@ function Delta({ value, suffix = "" }: { value: number; suffix?: string }) {
 function EmptyDash({ label = "—" }: { label?: string }) {
   return (
     <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: TEXT_MUTED }}>{label}</span>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HONEST-EMPTY-STATES — Composants « Collecte en cours »
+// Affichés quand /api/console/brand-health renvoie status="no_data"
+// (0 article) ou quand une route de graphique renvoie un tableau vide.
+// Animations radar/pulse 100 % framer-motion — pas de keyframes globaux.
+// ════════════════════════════════════════════════════════════════════
+
+/** CollecteEnCours — pleine largeur, utilisé dans le hero (ScoreReputationHero). */
+function CollecteEnCours({ companyName }: { companyName?: string }) {
+  const name = companyName ?? "votre marque";
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "28px 20px", minHeight: 240 }}
+    >
+      <div style={{ position: "relative", width: 104, height: 104, marginBottom: 20 }}>
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `1.5px solid ${SAGE_DIM}`,
+            }}
+            initial={{ scale: 0.35, opacity: 0 }}
+            animate={{ scale: 1, opacity: [0, 0.7, 0] }}
+            transition={{
+              duration: 2.4,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: i * 0.8,
+            }}
+          />
+        ))}
+        <motion.span
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 14,
+            height: 14,
+            marginLeft: -7,
+            marginTop: -7,
+            borderRadius: "50%",
+            backgroundColor: SAGE,
+          }}
+          animate={{ scale: [1, 1.18, 1], opacity: [0.75, 1, 0.75] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 15,
+          fontWeight: 700,
+          color: CHARCOAL,
+        }}
+      >
+        Collecte en cours
+      </div>
+      <p
+        className="mt-1.5 max-w-[440px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 13, color: TEXT_BODY, lineHeight: 1.55 }}
+      >
+        Nous collectons des articles sur {name}. Premiers résultats sous 24-48h.
+      </p>
+      <p
+        className="mt-2"
+        style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}
+      >
+        Vous recevrez une alerte WhatsApp dès que le score sera disponible.
+      </p>
+    </div>
+  );
+}
+
+/** CollecteEnCoursMini — version compacte pour les cartes de graphiques. */
+function CollecteEnCoursMini({ minHeight = 180 }: { minHeight?: number }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "20px 16px", minHeight }}
+    >
+      <div style={{ position: "relative", width: 56, height: 56, marginBottom: 12 }}>
+        {[0, 1].map((i) => (
+          <motion.span
+            key={i}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `1.5px solid ${SAGE_DIM}`,
+            }}
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: [0, 0.7, 0] }}
+            transition={{
+              duration: 2.2,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: i * 0.7,
+            }}
+          />
+        ))}
+        <motion.span
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 10,
+            height: 10,
+            marginLeft: -5,
+            marginTop: -5,
+            borderRadius: "50%",
+            backgroundColor: SAGE,
+          }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.75, 1, 0.75] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          fontWeight: 700,
+          color: CHARCOAL,
+        }}
+      >
+        Collecte en cours
+      </div>
+      <p
+        className="mt-1 max-w-[320px]"
+        style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}
+      >
+        Premiers résultats sous 24-48h.
+      </p>
+    </div>
+  );
+}
+
+/** LimitedDataBanner — bannière ambre au-dessus du gauge quand status="limited". */
+function LimitedDataBanner({ text }: { text?: string }) {
+  return (
+    <div
+      className="mb-3 flex items-center gap-2 rounded-md"
+      style={{
+        backgroundColor: "rgba(245,158,11,0.10)",
+        border: `1px solid ${NEUTRAL_AMBER}`,
+        padding: "8px 12px",
+      }}
+    >
+      <AlertTriangle size={14} style={{ color: NEUTRAL_AMBER, flexShrink: 0 }} />
+      <span
+        style={{
+          fontFamily: FONT_SANS,
+          fontSize: 12,
+          color: "#92400E",
+          fontWeight: 600,
+        }}
+      >
+        {text ?? "Données limitées — collecte en cours"}
+      </span>
+    </div>
   );
 }
 
@@ -3525,6 +3699,10 @@ function ScoreReputationHero({
   onRefresh: () => void;
 }) {
   const isAggregate = !activeClient;
+  // HONEST-EMPTY-STATES — état no_data/limited ne s'applique qu'en mode
+  // client individuel (en mode agrégé on affiche un proxy portefeuille).
+  const isNoData = !isAggregate && !!health && (health.score === null || health.status === "no_data");
+  const isLimited = !isAggregate && !!health && health.status === "limited" && health.score !== null;
   const [refreshing, setRefreshing] = useState(false);
 
   // Aggregate: average derived scores across all clients
@@ -3620,7 +3798,15 @@ function ScoreReputationHero({
         }
       />
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+      {isNoData ? (
+        // HONEST-EMPTY-STATES — état no_data sur le client sélectionné :
+        // on remplace le gauge par l'illustration radar + message
+        // « Collecte en cours ». Aucun proxy/50 affiché.
+        <CollecteEnCours companyName={activeClient?.displayName ?? health?.companyName} />
+      ) : (
+        <>
+          {isLimited && <LimitedDataBanner text={health?.warning} />}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
         {/* Gauge */}
         <div className="lg:col-span-3 flex justify-center">
           <div style={{ position: "relative", width: 200, height: 200 }}>
@@ -3760,6 +3946,8 @@ function ScoreReputationHero({
           />
         </div>
       </div>
+        </>
+      )}
       <div
         className="mt-3 flex items-center justify-between"
         style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}
@@ -3891,8 +4079,13 @@ function KpiScoreMoyen({
   activeClient: AgencyClient | null;
   loading: boolean;
 }) {
+  // HONEST-EMPTY-STATES — si un client est sélectionné ET que l'API a
+  // renvoyé status="no_data" (score null), on n'affiche PAS le proxy
+  // dérivé (qui serait un 50/55/60/75/90 factice basé sur l'utilisation
+  // quota). On affiche « — » à la place.
+  const isClientNoData = !!activeClient && !!health && (health.score === null || health.status === "no_data");
   const value = activeClient
-    ? health?.score ?? derivedClientScore(activeClient)
+    ? (health?.score !== null && health?.score !== undefined ? health.score : derivedClientScore(activeClient))
     : clients.length === 0
       ? 0
       : Math.round(
@@ -3912,15 +4105,15 @@ function KpiScoreMoyen({
             color: value >= 75 ? SAGE : value >= 60 ? NEUTRAL_AMBER : NEGATIVE,
           }}
         >
-          {loading ? "—" : value}
+          {loading ? "—" : isClientNoData ? "—" : value}
         </span>
         <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_MUTED }}>/ 100</span>
-        <Delta value={delta ?? 0} />
+        {!isClientNoData && <Delta value={delta ?? 0} />}
       </div>
       <p style={{ fontFamily: FONT_SANS, fontSize: 12, color: TEXT_MUTED, marginTop: 6 }}>
-        {activeClient ? "Client sélectionné" : "Moyenne du portefeuille"}
+        {isClientNoData ? "Collecte en cours" : activeClient ? "Client sélectionné" : "Moyenne du portefeuille"}
       </p>
-      <AiCommentary text={value >= 75 ? "Réputation solide. Maintenez le cap." : value >= 60 ? "Réputation moyenne. Audit recommandé." : "Réputation à risque. Action immédiate requise."} />
+      <AiCommentary text={isClientNoData ? "Collecte en cours — premiers résultats sous 24-48h." : value >= 75 ? "Réputation solide. Maintenez le cap." : value >= 60 ? "Réputation moyenne. Audit recommandé." : "Réputation à risque. Action immédiate requise."} />
     </CardShell>
   );
 }
@@ -7550,9 +7743,8 @@ function TendanceSentimentCard({
       />
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
       {data.length === 0 ? (
-        <div className="h-[260px] flex items-center justify-center">
-          <EmptyDash label={isAggregate ? "Aucune donnée agrégée" : "Aucune donnée"} />
-        </div>
+        // HONEST-EMPTY-STATES — tableau vide côté API → Collecte en cours.
+        <CollecteEnCoursMini minHeight={260} />
       ) : (
         <div style={{ width: "100%", height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -7687,9 +7879,8 @@ function DiversiteSourcesCard({
       />
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
       {data.length === 0 ? (
-        <div className="h-[260px] flex items-center justify-center">
-          <EmptyDash label="Aucune source" />
-        </div>
+        // HONEST-EMPTY-STATES — aucune source : collecte en cours.
+        <CollecteEnCoursMini minHeight={260} />
       ) : (
         <div style={{ width: "100%", height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -7937,9 +8128,8 @@ function TopSujetsCard({
       />
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
       {data.length === 0 ? (
-        <div className="h-[200px] flex items-center justify-center">
-          <EmptyDash label="Aucun sujet" />
-        </div>
+        // HONEST-EMPTY-STATES — aucun sujet : collecte en cours.
+        <CollecteEnCoursMini minHeight={200} />
       ) : (
         <div className="space-y-3">
           {data.map((d) => (
@@ -8056,9 +8246,8 @@ function VisibiliteIaCard({
       />
       <Separator className="my-3" style={{ backgroundColor: BORDER }} />
       {featured.length === 0 ? (
-        <div className="h-[160px] flex items-center justify-center">
-          <EmptyDash label="Aucune donnée IA" />
-        </div>
+        // HONEST-EMPTY-STATES — aucune donnée IA : collecte en cours.
+        <CollecteEnCoursMini minHeight={160} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {featured.map((p, i) => {
@@ -13623,14 +13812,10 @@ function computeClientHealth(client: AgencyClient): ClientHealth {
 
   const score = Math.round(factors.reduce((s, f) => s + f.value * f.weight, 0));
 
-  // 6-month trend: deterministic from clientId hash. Lower score → slight downtrend.
-  const seed = hashStr(client.id);
+  // Trend: NO historical data available — we only have current usage snapshot.
+  // Return empty array so the sparkline shows "N/A" instead of a fabricated
+  // 6-month trend. Youssef must not see fake historical curves.
   const trend: number[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const wobble = ((seed >> (i * 2)) & 0x0f) - 8;
-    const drift = score < 60 ? -i * 2 : score > 80 ? i * 1 : 0;
-    trend.push(Math.max(0, Math.min(100, score + wobble + drift)));
-  }
 
   return {
     clientId: client.id,
@@ -13853,27 +14038,50 @@ function ClientHealthScoringCard({
                         {row.retentionMonths} mois · {style.label}
                       </div>
                     </div>
-                    <div style={{ width: 80, height: 32, flexShrink: 0 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={sparkData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id={`hs-${row.clientId}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={style.color} stopOpacity={0.4} />
-                              <stop offset="100%" stopColor={style.color} stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <Area
-                            type="monotone"
-                            dataKey="v"
-                            stroke={style.color}
-                            strokeWidth={1.5}
-                            fill={`url(#hs-${row.clientId})`}
-                            isAnimationActive
-                            animationDuration={700}
-                            animationEasing="ease-out"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                    <div
+                      style={{
+                        width: 80,
+                        height: 32,
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {row.trend.length === 0 ? (
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 9,
+                            color: TEXT_MUTED,
+                            letterSpacing: "0.04em",
+                          }}
+                          title="Données historiques non disponibles"
+                        >
+                          N/A
+                        </span>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={sparkData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id={`hs-${row.clientId}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={style.color} stopOpacity={0.4} />
+                                <stop offset="100%" stopColor={style.color} stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <Area
+                              type="monotone"
+                              dataKey="v"
+                              stroke={style.color}
+                              strokeWidth={1.5}
+                              fill={`url(#hs-${row.clientId})`}
+                              isAnimationActive
+                              animationDuration={700}
+                              animationEasing="ease-out"
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                     <ChevronRight
                       size={14}
@@ -14001,6 +14209,7 @@ function ClientHealthScoringCard({
 // ════════════════════════════════════════════════════════════════════
 
 function churnBandFor(risk: number): ChurnBand {
+  if (risk < 0) return "inconnu";
   if (risk <= 25) return "fidele";
   if (risk <= 50) return "stable";
   if (risk <= 75) return "volatile";
@@ -14017,28 +14226,53 @@ function churnBandStyle(band: ChurnBand): { label: string; color: string; bg: st
       return { label: "Volatile", color: "#B45309", bg: "rgba(245,158,11,0.10)", pulse: false };
     case "imminent":
       return { label: "Churn imminent", color: NEGATIVE, bg: "rgba(239,68,68,0.08)", pulse: true };
+    case "inconnu":
+      return { label: "Données insuffisantes", color: TEXT_MUTED, bg: "#FAFAFA", pulse: false };
   }
 }
 
 function computeChurnRisk(client: AgencyClient): ChurnRiskEntry {
-  const sentiment = derivedClientSentiment(client);
   const apiPct = client.bars?.apiRequests?.pct ?? 0;
   const alerts = client.usage.whatsappAlerts ?? 0;
+  const apiReq = client.usage.apiRequests ?? 0;
+  const keywordsUsed = client.usage.keywordsUsed ?? 0;
+  const sourcesUsed = client.usage.sourcesUsed ?? 0;
   const retention = monthsSince(client.createdAt);
-  const monthlyRevenue = client.quota?.monthlyPriceMAD ?? 6500;
+  const monthlyRevenue = client.quota?.monthlyPriceMAD ?? 0;
 
+  // If the client has NO real usage data (all metrics at 0), we cannot
+  // compute a meaningful churn risk. Return "inconnu" (riskPct = -1) so
+  // Youssef sees "Données insuffisantes" instead of a fabricated percentage.
+  const hasUsageData = apiReq > 0 || alerts > 0 || keywordsUsed > 0 || sourcesUsed > 0;
+  if (!hasUsageData) {
+    return {
+      clientId: client.id,
+      displayName: client.displayName,
+      riskPct: -1,
+      contractEndDate: "",
+      recommendedAction: "Données d'usage insuffisantes — audit client requis",
+      monthlyRevenueMAD: monthlyRevenue,
+      factors: [],
+    };
+  }
+
+  const sentiment = derivedClientSentiment(client);
+
+  // All factors below are derived from REAL data (usage bars, alerts, retention).
+  // No hashStr, no random, no fabricated contract dates.
   const declineRisk = Math.max(0, Math.min(100, 100 - apiPct));
   const dropRisk = Math.min(100, sentiment.negative * 2);
   const ticketRisk = Math.min(100, alerts * 20);
-  const cycleMonth = retention % 12;
-  const proxRisk = Math.round((cycleMonth / 11) * 100);
+  // Retention-based risk: newer clients (< 24 months) have higher churn risk.
+  // Uses real createdAt via monthsSince(). No fabricated contract end date.
+  const retentionRisk = Math.max(0, 100 - Math.min(100, Math.round((retention / 24) * 100)));
 
-  const riskPct = Math.round(declineRisk * 0.3 + dropRisk * 0.3 + ticketRisk * 0.2 + proxRisk * 0.2);
+  const riskPct = Math.round(
+    declineRisk * 0.3 + dropRisk * 0.25 + ticketRisk * 0.2 + retentionRisk * 0.25,
+  );
 
-  const created = new Date(client.createdAt);
-  const contractEnd = new Date(created);
-  contractEnd.setMonth(contractEnd.getMonth() + 12 + Math.floor(retention / 12) * 12);
-
+  // contractEndDate: there is NO real contract end date in the database.
+  // Leave empty ("") so the UI shows "—" honestly. Do NOT fabricate.
   const band = churnBandFor(riskPct);
   let action: string;
   switch (band) {
@@ -14054,20 +14288,23 @@ function computeChurnRisk(client: AgencyClient): ChurnRiskEntry {
     case "fidele":
       action = "Cross-sell · case study à publier";
       break;
+    case "inconnu":
+      action = "Données d'usage insuffisantes — audit client requis";
+      break;
   }
 
   return {
     clientId: client.id,
     displayName: client.displayName,
     riskPct,
-    contractEndDate: contractEnd.toISOString(),
+    contractEndDate: "",
     recommendedAction: action,
     monthlyRevenueMAD: monthlyRevenue,
     factors: [
       { label: "Baisse d'usage", pct: Math.round(declineRisk) },
       { label: "Chute sentiment", pct: Math.round(dropRisk) },
       { label: "Tickets support", pct: Math.round(ticketRisk) },
-      { label: "Proximité échéance", pct: Math.round(proxRisk) },
+      { label: "Rétention courte", pct: Math.round(retentionRisk) },
     ],
   };
 }
@@ -14092,14 +14329,23 @@ function ChurnRiskIndicatorCard({
       .sort((a, b) => b.riskPct - a.riskPct);
   }, [clients]);
 
-  const topRisk = entries.filter((e) => churnBandFor(e.riskPct) !== "fidele").slice(0, 3);
+  // Exclude "inconnu" (riskPct < 0) from the top-risk list — these clients
+  // have no usage data and should not appear in the retention campaign.
+  const topRisk = entries
+    .filter((e) => {
+      const b = churnBandFor(e.riskPct);
+      return b !== "fidele" && b !== "inconnu";
+    })
+    .slice(0, 3);
   const monthlyForecast = entries.filter((e) => e.riskPct >= 76).length;
   const revenueAtRisk = entries
     .filter((e) => e.riskPct >= 51)
     .reduce((s, e) => s + e.monthlyRevenueMAD, 0);
 
   const bandCounts = useMemo(() => {
-    const counts: Record<ChurnBand, number> = { fidele: 0, stable: 0, volatile: 0, imminent: 0 };
+    const counts: Record<ChurnBand, number> = {
+      fidele: 0, stable: 0, volatile: 0, imminent: 0, inconnu: 0,
+    };
     entries.forEach((e) => {
       counts[churnBandFor(e.riskPct)]++;
     });
@@ -14357,7 +14603,7 @@ function ChurnRiskIndicatorCard({
         text={
           entries.length === 0
             ? "L'indicateur de churn s'active dès le premier client du portefeuille."
-            : `Portefeuille: ${bandCounts.fidele} fidèle(s), ${bandCounts.stable} stable(s), ${bandCounts.volatile} volatile(s), ${bandCounts.imminent} churn imminent. ${monthlyForecast > 0 ? `${monthlyForecast} client(s) en zone critique ce mois — renégociation prioritaire.` : "Aucun churn imminent — portefeuille sain."} ${revenueAtRisk > 0 ? `${fmtMAD(revenueAtRisk)}/mois menacés.` : ""}`
+            : `Portefeuille: ${bandCounts.fidele} fidèle(s), ${bandCounts.stable} stable(s), ${bandCounts.volatile} volatile(s), ${bandCounts.imminent} churn imminent${bandCounts.inconnu > 0 ? `, ${bandCounts.inconnu} données insuffisantes` : ""}. ${monthlyForecast > 0 ? `${monthlyForecast} client(s) en zone critique ce mois — renégociation prioritaire.` : "Aucun churn imminent — portefeuille sain."} ${revenueAtRisk > 0 ? `${fmtMAD(revenueAtRisk)}/mois menacés.` : ""}${bandCounts.inconnu > 0 ? ` ${bandCounts.inconnu} client(s) sans données d'usage — audit requis avant toute décision.` : ""}`
         }
       />
     </CardShell>
@@ -14423,40 +14669,41 @@ function RevenueForecastingCard({
   tier: AgencyTierInfo;
   clients: AgencyClient[];
 }) {
+  // REAL MRR: sum of quota.monthlyPriceMAD across all clients.
+  // No fabricated 6500 fallback — if quota is missing, contribution is 0.
   const derivedMRR = useMemo(() => {
-    const sum = clients.reduce((s, c) => s + (c.quota?.monthlyPriceMAD ?? 6500), 0);
-    return sum > 0 ? sum : 52000;
+    return clients.reduce((s, c) => s + (c.quota?.monthlyPriceMAD ?? 0), 0);
   }, [clients]);
 
   const [inputs, setInputs] = usePersistentState<RevenueForecastInput>(
     "agency:revenue-forecast",
-    { currentMRR: 52000, pipelineValue: 47000, churnRatePct: 5, winRatePct: 30, upsellPct: 15 },
+    { currentMRR: 0, mrrOverridden: false, pipelineValue: 0, churnRatePct: 5, winRatePct: 30, upsellPct: 15 },
   );
 
-  const [syncedFromClients, setSyncedFromClients] = useState(false);
-
-  // One-shot sync of derivedMRR into inputs.currentMRR after clients load
-  // (only if the user hasn't manually adjusted MRR since mount).
+  // Auto-sync currentMRR from REAL client data unless the user has manually
+  // overridden it. This ensures Youssef always sees real MRR by default,
+  // even when clients are added/removed after the initial load.
+  // Legacy safeguard: also sync if currentMRR is 52000 (old fabricated default).
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    if (syncedFromClients) return;
-    if (derivedMRR !== 52000 && inputs.currentMRR === 52000) {
+    if (inputs.mrrOverridden) return;
+    if (derivedMRR !== inputs.currentMRR) {
       setInputs((prev) => ({ ...prev, currentMRR: derivedMRR }));
-      setSyncedFromClients(true);
     }
-  }, [derivedMRR, inputs.currentMRR, syncedFromClients, setInputs]);
+  }, [derivedMRR, inputs.currentMRR, inputs.mrrOverridden, setInputs]);
 
   const forecast = useMemo(() => simulateForecast(inputs), [inputs]);
 
   const arrRealiste = forecast.finalRealiste * 12;
   const arrOptimiste = forecast.finalOptimiste * 12;
 
+  // avgRetainer: 0 when no clients or no MRR (was fabricated 6500).
   const avgRetainer = inputs.currentMRR > 0 && clients.length > 0
     ? inputs.currentMRR / clients.length
-    : 6500;
+    : 0;
 
   const nextTier = tier.nextTier ? getTierInfo(tier.nextTier) : null;
-  const thresholdMRR = nextTier ? nextTier.minClients * avgRetainer : null;
+  const thresholdMRR = nextTier && avgRetainer > 0 ? nextTier.minClients * avgRetainer : null;
 
   const monthsToUpgrade = useMemo(() => {
     if (!thresholdMRR) return null;
@@ -14465,7 +14712,17 @@ function RevenueForecastingCard({
   }, [forecast, thresholdMRR]);
 
   const updateInput = <K extends keyof RevenueForecastInput>(key: K, value: RevenueForecastInput[K]) => {
-    setInputs((prev) => ({ ...prev, [key]: value }));
+    setInputs((prev) => ({
+      ...prev,
+      [key]: value,
+      // Mark MRR as manually overridden so auto-sync stops
+      ...(key === "currentMRR" ? { mrrOverridden: true } : {}),
+    }));
+  };
+
+  // Reset MRR to the real derived value (clears manual override).
+  const resetMrrToReal = () => {
+    setInputs((prev) => ({ ...prev, currentMRR: derivedMRR, mrrOverridden: false }));
   };
 
   const sliderStyle: CSSProperties = {
@@ -14523,7 +14780,9 @@ function RevenueForecastingCard({
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>MRR actuel (MAD)</label>
+              <label style={{ fontFamily: FONT_SANS, fontSize: 11, color: TEXT_BODY }}>
+                MRR actuel (MAD){inputs.mrrOverridden ? " (manuel)" : " (réel)"}
+              </label>
               <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: CHARCOAL }}>{fmtMAD(inputs.currentMRR)}</span>
             </div>
             <input
@@ -14535,6 +14794,29 @@ function RevenueForecastingCard({
               onChange={(e) => updateInput("currentMRR", Number(e.target.value))}
               style={sliderStyle}
             />
+            {inputs.mrrOverridden && (
+              <button
+                type="button"
+                onClick={resetMrrToReal}
+                className="mt-1 inline-flex items-center gap-1"
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 9,
+                  color: SAGE_DEEP,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                <RotateCcw size={10} /> Réinitialiser au MRR réel ({fmtMAD(derivedMRR)})
+              </button>
+            )}
+            {derivedMRR === 0 && clients.length > 0 && (
+              <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
+                Aucun client n'a de tarifs configurés (quota.monthlyPriceMAD manquant).
+              </p>
+            )}
           </div>
 
           <div>
@@ -14607,7 +14889,7 @@ function RevenueForecastingCard({
           >
             <SlidersHorizontal size={12} style={{ color: TEXT_MUTED }} />
             <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED }}>
-              {clients.length} clients actifs · retainer moyen {fmtMAD(Math.round(avgRetainer))}
+              {clients.length} client(s) actif(s) · retainer moyen {avgRetainer > 0 ? fmtMAD(Math.round(avgRetainer)) : "— (tarifs non configurés)"}
             </span>
           </div>
         </div>
@@ -14744,11 +15026,9 @@ const REVENUE_PLAN_PRICE: Record<RevenuePlanTier, number> = {
   Enterprise: 15000,
 };
 
-const REVENUE_PLAN_DEFAULT_SETUP: Record<RevenuePlanTier, number> = {
-  Essentiel: 2000,
-  Pro: 5000,
-  Enterprise: 12000,
-};
+// Note: setup fees are NOT stored in the database. We do NOT fabricate them
+// from hashStr anymore — setupFee defaults to 0 ("Non configurée") unless
+// the agency manually overrides it via the Adjust dialog.
 
 const REVENUE_PLAN_COLOR: Record<RevenuePlanTier, string> = {
   Essentiel: SAGE_DIM,
@@ -14763,21 +15043,17 @@ function revenueTrackerTier(client: AgencyClient): RevenuePlanTier {
   return "Essentiel";
 }
 
-function setupFeeFromHash(clientId: string, tier: RevenuePlanTier): number {
-  const base = REVENUE_PLAN_DEFAULT_SETUP[tier];
-  const h = hashStr(clientId + ":setup");
-  const variance = (h % 60) - 30; // ±30% variance
-  return Math.max(500, Math.round((base * (100 + variance)) / 100));
-}
-
-function overageChargesFromHash(client: AgencyClient): number {
+// Compute overage charges from REAL usage bars (client.bars.apiRequests.pct)
+// and REAL monthlyPriceMAD. No hashStr, no random noise.
+// Returns 0 when usage is within quota (pct <= 80) or when MRR is not configured.
+function computeOverageFromUsage(client: AgencyClient): number {
   const pct = client.bars?.apiRequests?.pct ?? 0;
   if (pct <= 80) return 0;
-  // 0-2000 MAD overage, scaled by excess usage above 80%
-  const excess = Math.min(100, pct - 80);
-  const base = (client.quota?.monthlyPriceMAD ?? 6500) * 0.1;
-  const h = hashStr(client.id + ":overage");
-  return Math.round((base * excess) / 20) + (h % 200);
+  const mrr = client.quota?.monthlyPriceMAD ?? 0;
+  if (mrr === 0) return 0; // cannot compute without real pricing
+  const excess = Math.min(100, pct - 80); // 0-20 range above the 80% threshold
+  const base = mrr * 0.1; // heuristic: 10% of MRR as overage base rate
+  return Math.round((base * excess) / 20);
 }
 
 function computeRevenueRow(
@@ -14786,10 +15062,13 @@ function computeRevenueRow(
   agencyCommissionPct: number,
 ): RevenueTrackerRow {
   const tier = revenueTrackerTier(client);
-  const baseMrr = client.quota?.monthlyPriceMAD ?? REVENUE_PLAN_PRICE[tier];
+  // REAL MRR from quota.monthlyPriceMAD. No fabricated fallback — 0 if not configured.
+  const baseMrr = client.quota?.monthlyPriceMAD ?? 0;
   const mrr = override?.mrr ?? baseMrr;
-  const setupFee = override?.setupFee ?? setupFeeFromHash(client.id, tier);
-  const overage = overageChargesFromHash(client);
+  // Setup fee: 0 unless manually overridden (was fabricated via hashStr).
+  const setupFee = override?.setupFee ?? 0;
+  // Overage: computed from real usage bars (no random noise).
+  const overage = computeOverageFromUsage(client);
   const commissionPct = override?.commissionPct ?? agencyCommissionPct;
   const monthsElapsed = Math.max(1, Math.min(12, monthsSince(client.createdAt)));
   const totalRevenueYTD = mrr * monthsElapsed + setupFee + overage;
@@ -15105,11 +15384,11 @@ function ClientRevenueTrackerCard({
                         {r.planTier}
                       </span>
                     </td>
-                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }}>
-                      {fmtMAD(r.mrr)}
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: CHARCOAL, borderBottom: `1px solid ${BORDER}` }} title={r.mrr === 0 ? "Tarifs non configurés (quota.monthlyPriceMAD manquant)" : undefined}>
+                      {r.mrr === 0 ? <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>—</span> : fmtMAD(r.mrr)}
                     </td>
-                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, borderBottom: `1px solid ${BORDER}` }}>
-                      {fmtMAD(r.setupFee)}
+                    <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, borderBottom: `1px solid ${BORDER}` }} title={r.setupFee === 0 ? "Setup fee non configuré — utilisez Ajuster pour saisir une valeur" : undefined}>
+                      {r.setupFee === 0 ? <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>—</span> : fmtMAD(r.setupFee)}
                     </td>
                     <td className="py-2.5 px-2" style={{ fontFamily: FONT_MONO, fontSize: 11, color: TEXT_BODY, borderBottom: `1px solid ${BORDER}` }}>
                       {r.commissionPct}%
@@ -15204,7 +15483,7 @@ function ClientRevenueTrackerCard({
                 className="mt-1.5"
               />
               <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
-                Valeur calculée: {fmtMAD(adjustTargetRow ? clients.find((c) => c.id === adjustTargetRow.clientId)?.quota?.monthlyPriceMAD ?? REVENUE_PLAN_PRICE[adjustTargetRow.planTier] : 0)}
+                Valeur réelle: {adjustTargetRow ? (clients.find((c) => c.id === adjustTargetRow.clientId)?.quota?.monthlyPriceMAD ?? "— (non configuré)") : "—"}
               </p>
             </div>
             <div>
@@ -15219,7 +15498,7 @@ function ClientRevenueTrackerCard({
                 className="mt-1.5"
               />
               <p style={{ fontFamily: FONT_MONO, fontSize: 9, color: TEXT_MUTED, marginTop: 4 }}>
-                Valeur calculée: {fmtMAD(adjustTargetRow ? setupFeeFromHash(adjustTargetRow.clientId, adjustTargetRow.planTier) : 0)}
+                Valeur par défaut: — (non configurée en base)
               </p>
             </div>
             <div>

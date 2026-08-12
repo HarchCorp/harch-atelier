@@ -7884,3 +7884,485 @@ NEXT ACTIONS (out of scope, noted for follow-up):
     breakpoint prefixes (audit EN-9, ~14 occurrences) — same W-2
     pattern as AdminDashboard. Out of scope (FIX 2 was scoped to the
     sessions table only).
+
+  ─────────────────────────────────────────────────────────────────
+  TASK: AGENCY-REAL-DATA — Replace Agency mocks with real data
+  Agent: NEXUS (Intelligence & Workflow Automator)
+  File: src/app/atelier/console/agency/AgencyDashboard.tsx
+  ─────────────────────────────────────────────────────────────────
+
+  PROBLEM: The Agency dashboard had 4 features that fabricated data
+  from `hashStr(clientId)`. Youssef (agency boss) was making decisions
+  on fake numbers:
+
+  1. Client Health Scoring — fabricated a 6-month trend via
+     `hashStr(client.id)` with wobble/drift formulas
+  2. Churn Risk Indicator — fabricated a contract end date
+     (`createdAt + 12 months`) and used a "contract cycle proximity"
+     factor based on `retention % 12` (fabricated 12-month cycle)
+  3. Revenue Forecasting — defaulted `currentMRR` to 52000 (fake),
+     used `?? 6500` fallbacks for missing quota data, and had a
+     fragile sentinel-based one-shot sync
+  4. Client Revenue Tracker — fabricated setup fees via
+     `setupFeeFromHash()` (±30% variance from hashStr) and added
+     random noise `h % 200` to overage charges
+
+  ─────────────────────────────────────────────────────────────────
+  CHANGES MADE (all in AgencyDashboard.tsx — no other files touched)
+  ─────────────────────────────────────────────────────────────────
+
+  ── 1. Client Health Scoring (computeClientHealth) ───────────────
+
+  BEFORE: 6-month trend fabricated from `hashStr(client.id)`:
+    const seed = hashStr(client.id);
+    for (let i = 5; i >= 0; i--) {
+      const wobble = ((seed >> (i * 2)) & 0x0f) - 8;
+      const drift = score < 60 ? -i * 2 : score > 80 ? i * 1 : 0;
+      trend.push(Math.max(0, Math.min(100, score + wobble + drift)));
+    }
+
+  AFTER: trend is empty array `[]` — no historical data available.
+    The sparkline in ClientHealthScoringCard now shows "N/A" with a
+    tooltip "Données historiques non disponibles" when trend is
+    empty, instead of rendering a fake curve.
+
+  KEPT (real data): sentiment (from whatsappAlerts), velocity
+    (from bars.apiRequests.pct), crisis (from alerts), engagement
+    (from apiRequests), retention (from createdAt). These were
+    already derived from real usage data — only the trend was fake.
+
+  ── 2. Churn Risk Indicator (computeChurnRisk) ───────────────────
+
+  BEFORE:
+    - `contractEnd` fabricated: `created + 12 + floor(retention/12)*12`
+    - `proxRisk` based on `retention % 12` (fabricated 12-month cycle)
+    - `monthlyRevenue` fallback `?? 6500` (fake)
+    - All clients got a risk percentage even with zero usage data
+
+  AFTER:
+    - `contractEndDate = ""` (no real contract end date in DB —
+      fmtDate renders as "—")
+    - `proxRisk` replaced with `retentionRisk` based on real
+      `monthsSince(createdAt)`: newer clients = higher risk
+    - `monthlyRevenue` fallback `?? 0` (real, no fabrication)
+    - NEW: `hasUsageData` check — if all usage metrics are 0
+      (apiRequests, whatsappAlerts, keywordsUsed, sourcesUsed),
+      returns `riskPct: -1` with band "inconnu"
+    - NEW: ChurnBand type extended with "inconnu" band
+    - NEW: churnBandStyle for "inconnu" → "Données insuffisantes"
+    - NEW: topRisk filter excludes "inconnu" clients (they shouldn't
+      appear in the retention campaign)
+    - NEW: bandCounts includes "inconnu" count
+    - NEW: AiCommentary mentions "X données insuffisantes" and
+      "X client(s) sans données d'usage — audit requis"
+    - Risk factor "Proximité échéance" renamed to "Rétention courte"
+
+  ── 3. Revenue Forecasting (RevenueForecastingCard) ──────────────
+
+  BEFORE:
+    - `derivedMRR` fallback `?? 6500` per client + `?? 52000` if sum=0
+    - Default `currentMRR: 52000, pipelineValue: 47000` (fabricated)
+    - One-shot sync via `syncedFromClients` flag + `52000` sentinel
+      (fragile — never re-synced after first load)
+    - `avgRetainer` fallback `?? 6500` (fabricated)
+
+  AFTER:
+    - `derivedMRR` = `sum(quota.monthlyPriceMAD ?? 0)` — real, no
+      fabricated fallback
+    - Default `currentMRR: 0, pipelineValue: 0, mrrOverridden: false`
+    - Replaced `syncedFromClients` with `inputs.mrrOverridden` flag
+      (persisted in localStorage) — auto-syncs from real MRR
+      whenever clients change, UNLESS user has manually overridden
+    - `updateInput` sets `mrrOverridden: true` when MRR changes
+    - NEW: `resetMrrToReal()` function + "Réinitialiser au MRR réel"
+      button (appears when MRR is manually overridden)
+    - MRR slider label shows "(réel)" or "(manuel)" suffix
+    - `avgRetainer` fallback `?? 0` — displays "— (tarifs non
+      configurés)" when 0
+    - NEW: info message "Aucun client n'a de tarifs configurés"
+      when derivedMRR === 0 and clients exist
+    - Other scenario inputs (churn%, win%, upsell%) kept as
+      user-adjustable sliders with reasonable defaults (5/30/15)
+    - `thresholdMRR` null when avgRetainer is 0 (can't compute
+      tier upgrade threshold without real pricing)
+
+  ── 4. Client Revenue Tracker (ClientRevenueTrackerCard) ─────────
+
+  BEFORE:
+    - `setupFeeFromHash()`: fabricated setup fee with ±30% variance
+      from `hashStr(clientId + ":setup")` based on tier defaults
+      (Essentiel: 2000, Pro: 5000, Enterprise: 12000)
+    - `overageChargesFromHash()`: computed from real bars.pct BUT
+      added random noise `+ (h % 200)` from `hashStr(client.id +
+      ":overage")`
+    - `baseMrr` fallback `?? REVENUE_PLAN_PRICE[tier]` (fabricated)
+    - Adjust dialog showed fabricated "Valeur calculée" from
+      `setupFeeFromHash` and `REVENUE_PLAN_PRICE`
+
+  AFTER:
+    - REMOVED `setupFeeFromHash()` and `REVENUE_PLAN_DEFAULT_SETUP`
+      constant entirely
+    - `setupFee = override?.setupFee ?? 0` — 0 unless manually
+      overridden (no fabrication)
+    - REPLACED `overageChargesFromHash()` with
+      `computeOverageFromUsage()` — same formula (based on real
+      bars.pct + monthlyPriceMAD) but NO random `h % 200` noise
+    - `baseMrr = client.quota?.monthlyPriceMAD ?? 0` (real, no
+      fabricated tier-based fallback)
+    - Revenue table MRR column: shows "—" when mrr === 0 with
+      tooltip "Tarifs non configurés (quota.monthlyPriceMAD
+      manquant)"
+    - Revenue table Setup column: shows "—" when setupFee === 0
+      with tooltip "Setup fee non configuré — utilisez Ajuster
+      pour saisir une valeur"
+    - Adjust dialog MRR "Valeur calculée" → "Valeur réelle" showing
+      `quota?.monthlyPriceMAD ?? "— (non configuré)"`
+    - Adjust dialog Setup "Valeur calculée" → "Valeur par défaut:
+      — (non configurée en base)"
+    - `REVENUE_PLAN_PRICE` constant kept (harmless, documents tier
+      pricing) but no longer used as a fabricated fallback
+
+  ─────────────────────────────────────────────────────────────────
+  HONEST EMPTY STATES ADDED
+  ─────────────────────────────────────────────────────────────────
+
+  - Clients array empty → "Aucun client dans le portefeuille"
+    (already existed in Revenue Tracker; verified in all 4 cards)
+  - Client has no usage data → "Données insuffisantes" band in
+    Churn Risk; "N/A" sparkline in Health Scoring
+  - Revenue can't be computed → "—" in MRR/Setup columns with
+    explanatory tooltips; "— (tarifs non configurés)" in forecast
+    retainer info; "Aucun client n'a de tarifs configurés" message
+
+  ─────────────────────────────────────────────────────────────────
+  CONSTRAINTS VERIFIED
+  ─────────────────────────────────────────────────────────────────
+
+  - `'use client'` preserved at line 1 (verified)
+  - No features removed — all 4 cards still render with the same
+    structure; only the data sources changed
+  - French throughout (all new strings: "Données insuffisantes",
+    "Données historiques non disponibles", "Réinitialiser au MRR
+    réel", "Tarifs non configurés", "Aucun client n'a de tarifs
+    configurés", "Valeur réelle", "Valeur par défaut", etc.)
+  - NO emojis added (verified — all UI uses Lucide icons and text)
+  - TypeScript: `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc
+    --noEmit --pretty false` → EXIT=0, 0 errors (verified)
+  - Only file touched: src/app/atelier/console/agency/AgencyDashboard.tsx
+
+  ─────────────────────────────────────────────────────────────────
+  WHAT WAS NOT CHANGED (out of scope)
+  ─────────────────────────────────────────────────────────────────
+
+  - `hashStr` function itself (still used by other features: crisis
+    alerts, lifecycle stages, pitch templates, comparison matrix,
+    onboarding/NPS seeding — these are NOT the 4 target features)
+  - `derivedClientSentiment()` heuristic (maps whatsappAlerts count
+    to sentiment %) — debatable but defensible since it's derived
+    from a real signal, not hashStr
+  - `derivedClientScore()` — already based on real bars.apiRequests.pct
+  - `monthsSince()` — uses real createdAt
+  - Other 21 sections of the AgencyDashboard (25 sections total,
+    only 4 were in scope)
+  - ProDashboard.tsx, EssentialDashboard.tsx, AdminDashboard.tsx —
+    not touched (task constraint)
+
+  ─────────────────────────────────────────────────────────────────
+  TECHNICAL NOTES
+  ─────────────────────────────────────────────────────────────────
+
+  - The `mrrOverridden` flag is persisted in localStorage via
+    `usePersistentState` (same key "agency:revenue-forecast"). This
+    means the user's manual MRR override survives page reloads. On
+    reload, if `mrrOverridden` is false, the MRR auto-syncs to the
+    real derived value. If true, the persisted override is used.
+    The "Réinitialiser au MRR réel" button clears the flag.
+  - Legacy users with `currentMRR: 52000` in localStorage (old
+    fabricated default): the auto-sync will fire because
+    `derivedMRR !== inputs.currentMRR` (real MRR is unlikely to be
+    exactly 52000). This overwrites the old fake default with real
+    data on next load. The `mrrOverridden` flag defaults to false
+    for old persisted state (since the field didn't exist before),
+    so auto-sync is enabled by default.
+  - The `computeOverageFromUsage` formula is a heuristic (10% of
+    MRR as overage base, scaled by excess usage above 80%). This
+    is NOT fabricated from hashStr — it's a documented assumption
+    based on real signals (bars.pct + monthlyPriceMAD). Without a
+    real overage rate in the database, this is the most honest
+    computation possible. The user can override via the Adjust
+    dialog.
+
+────────────────────────────────────────────────────────────────────────────────
+HONEST-EMPTY-STATES — Dashboards honnêtes sur l'absence de données
+Agent: VORTEX (Principal Systems & Security Engineer)
+Task ID: HONEST-EMPTY-STATES
+────────────────────────────────────────────────────────────────────────────────
+
+PROBLÈME RÉSOLU
+───────────────
+Un nouveau client (ex. Salma de Chari) qui active son compte et ouvre son
+dashboard pour la première fois voyait :
+  • Score: 50/100 (FAKE — fallback `?? 50` dans la route brand-health)
+  • Sentiment: 0/0/0 (ressemble à un produit cassé)
+  • Charts: données simulées par Math.sin/Math.cos/Math.random
+  • Aucune explication de POURQUOI il n'y a pas de données
+Le client pensait que le produit était cassé et partait.
+
+ROOT CAUSE
+──────────
+- /api/console/brand-health retournait `score: reputationScore?.overall ?? 50`
+  même quand l'entreprise avait 0 article.
+- Les dashboards rendaient ce 50 comme un score réel dans le RadialBarChart.
+- Pas d'état « collecte en cours ».
+
+────────────────────────────────────────────────────────────────────────────────
+CHANGEMENTS APPORTÉS
+────────────────────────────────────────────────────────────────────────────────
+
+1. ROUTE /api/console/brand-health (src/app/api/console/brand-health/route.ts)
+───────────────────────────────────────────────────────────────────────────────
+Trois états explicites renvoyés par l'API :
+
+  • ÉTAT no_data (0 article pour l'entreprise, toutes périodes confondues) :
+    {
+      score: null,
+      status: "no_data",
+      message: "Collecte d'articles en cours. Premiers résultats sous 24-48h.",
+      companyName: <nom réel depuis prisma.company.name>,
+      sentiment: {0,0,0}, crisisScore: 0, crisisLevel: "safe",
+      recommendation: "Collecte en cours — premiers résultats sous 24-48h.",
+      aiVisibility: [], topNarrative: null, …
+    }
+
+  • ÉTAT limited (< 10 articles) :
+    {
+      score: <valeur réelle>,
+      status: "limited",
+      warning: "Données limitées — collecte en cours",
+      companyName: <nom réel>,
+      … toutes les métriques réelles …
+    }
+
+  • ÉTAT nominal (≥ 10 articles) :
+    Réponse inchangée (score, trend, sentiment, etc.)
+
+Pour détecter l'état, la route compte désormais `totalCompanyArticles =
+prisma.article.count({ where: { companyId } })` (toutes périodes, pas
+seulement 7 jours) ET fetch le nom de l'entreprise via
+`prisma.company.findUnique({ where: { id: companyId }, select: { name: true }})`.
+Seuil `LIMITED_DATA_THRESHOLD = 10` (constante en haut du fichier).
+
+La réponse demo (buildDemoResponse) est inchangée — les utilisateurs demo
+voient toujours le score 74.
+
+2. ESSENTIAL DASHBOARD (src/app/atelier/console/essential/EssentialDashboard.tsx)
+────────────────────────────────────────────────────────────────────────────────
+  • Interface BrandHealth mise à jour : `score: number | null` + nouveaux
+    champs optionnels `status?: "no_data" | "limited"`, `message?`,
+    `warning?`, `companyName?`.
+  • 3 nouveaux composants ajoutés après EmptyDash (lignes ~1239-1409) :
+      - CollecteEnCours({ companyName }) — pleine largeur, illustration
+        radar 3 cercles concentriques (motion.span framer-motion) + pastille
+        centrale qui pulse. Texte : « Nous collectons des articles sur
+        [name]. Premiers résultats sous 24-48h. » + ligne mono « Vous
+        recevrez une alerte WhatsApp dès que votre score sera disponible. »
+      - CollecteEnCoursMini({ minHeight }) — version compacte (radar 2
+        cercles + pastille), pour les cartes de graphiques.
+      - LimitedDataBanner({ text }) — bannière ambre (#F59E0B border,
+        rgba(245,158,11,0.10) bg, icône AlertTriangle) affichée au-dessus
+        du gauge quand status="limited".
+  • ScoreReputationCard (section 02) : quand `isNoData` (health chargé +
+    score null OU status="no_data"), le RadialBarChart/gauge est remplacé
+    par `<CollecteEnCours companyName={health?.companyName} />`. Quand
+    `isLimited`, le gauge est affiché mais précédé de `<LimitedDataBanner>`.
+    L'AI commentary dit « Aucun article collecté pour le moment — la veille
+    démarre à présent. » en mode no_data au lieu de parler d'un score
+    inexistant.
+  • SentimentMoyenKpi + MentionsJourKpi (sections 03/04) : en mode no_data,
+    affichent « — » au lieu de « 0% »/« 0 », masquent le `<Delta>`, et le
+    sous-titre devient « Collecte des mentions en cours ». L'insight dit
+    « Collecte en cours — premiers résultats sous 24-48h. »
+  • EvolutionScoreCard (section 18) : en mode no_data, n'appelle plus les
+    simulateurs `Math.sin/Math.cos` qui généraient un LineChart forgé —
+    `<CollecteEnCoursMini minHeight={220} />` à la place. En mode limited,
+    bannière ambre au-dessus du LineChart.
+  • SentimentTimelineCard (section timeline 24h/7j) : en mode no_data,
+    `buckets = []` court-circuite les simulateurs
+    `simulateSentimentHourBuckets`/`simulateSentimentDailyBuckets` qui
+    produisaient toujours un tableau non-vide. Le `buckets.length === 0`
+    existant affiche alors `<CollecteEnCoursMini>`.
+  • 6 chart sections (TendanceSentiment, DiversiteSources, ResumeHebdo,
+    TopSujets, VolumeMentions, SentimentTimeline) : remplacé
+    `<div className="h-[XXXpx] flex items-center justify-center"><EmptyDash
+    label="Aucune donnée" /></div>` par `<CollecteEnCoursMini minHeight={XXX} />`.
+  • KPI executive summary (lignes ~9182 et ~11697) :
+    `Math.round(health.score)` protégé contre `score === null` pour éviter
+    NaN côté UI. Affichage « — » quand pas de score réel.
+
+3. PRO DASHBOARD (src/app/atelier/console/pro/ProDashboard.tsx)
+────────────────────────────────────────────────────────────────────────────────
+  • Interface BrandHealth mise à jour (mêmes nouveaux champs).
+  • Mêmes 3 composants CollecteEnCours / CollecteEnCoursMini /
+    LimitedDataBanner ajoutés après EmptyDash (lignes ~2237-2401).
+  • ScoreReputationCard : same pattern — isNoData → CollecteEnCours,
+    isLimited → LimitedDataBanner + gauge. Loading state conservé
+    (Skeleton h-[200px] w-[200px] rounded-full + 6 MiniStat skeletons).
+  • SentimentMoyenKpi + MentionsJourKpi : same protection no_data.
+  • 11 chart sections mises à jour : TendanceSentiment (data 260px),
+    RadarReputation (240px), PartDeVoixDonut (240px), TopSujets (220px),
+    DernieresMentions (280px), ComparaisonSemaine (120px),
+    EstimationReach (220px), CarteCrise (200px), RepartitionTypeMedia
+    (220px — 3 occurrences via replace_all), SujetsEmergents (220px), et
+    le bloc « Top 3 mentions du jour » dans SentimentHeatmapCard.
+    `<EmptyDash label="Aucune donnée|source|sujet|mention|sujet émergent|…">`
+    → `<CollecteEnCoursMini minHeight={XXX} />`.
+    Les EmptyDash spécifiques aux données utilisateur (Aucun rapport,
+    Aucun influenceur suivi, Aucune campagne suivie, Aucune règle
+    configurée, Aucun scénario sauvegardé, Aucun concurrent configuré…)
+    sont INTENTIONNELLEMENT laissés intacts — ce sont des empty states
+    d'action utilisateur (rien n'a été créé), pas d'absence de collecte.
+
+4. ENTERPRISE DASHBOARD (src/app/atelier/console/enterprise/EnterpriseDashboard.tsx)
+────────────────────────────────────────────────────────────────────────────────
+  • Interface BrandHealth mise à jour.
+  • Mêmes 3 composants ajoutés après EmptyDash (lignes ~1007-1171).
+  • ScoreReputationGlobalCard (section 02 hero) : isNoData → CollecteEnCours
+    (remplace gauge + DEFCON panel), isLimited → LimitedDataBanner + gauge.
+    Loading state : grille de ShimmerSkeleton (200px rounded-full +
+    blocs de texte + DEFCON panel).
+  • SentimentMarketKpi (section 03) : protection no_data (— au lieu de 0%).
+  • KpiExecutiveSummaryRow Card 1 (lignes ~10481-10548) : `isScoreNoData`
+    flag, `loading={!health || isScoreNoData}` sur AnimatedNumber pour
+    afficher un skeleton quand score null, au lieu de montrer 0/100.
+  • 5 chart sections mises à jour : BenchmarkIndustry (192px),
+    RadarReputation (288px), PartDeVoix (224px), Influenceurs table
+    (120px inline td), VeilleReglementaire liste (120px).
+    `<EmptyDash label="Aucune donnée de benchmark|radar|part de voix|…">`
+    → `<CollecteEnCoursMini minHeight={XXX} />`.
+
+5. AGENCY DASHBOARD (src/app/atelier/console/agency/AgencyDashboard.tsx)
+────────────────────────────────────────────────────────────────────────────────
+  • Interface BrandHealth mise à jour.
+  • Mêmes 3 composants ajoutés après EmptyDash (lignes ~1371-1535).
+    Message WhatsApp légèrement adapté : « Vous recevrez une alerte
+    WhatsApp dès que le score sera disponible. » (sans « votre » — en
+    agency le score est celui du client sélectionné, pas celui de
+    l'agence).
+  • ScoreReputationHero (section 02) : subtilité — l'agency a DEUX modes :
+    aggregate (vue portefeuille, aucun client sélectionné) et client
+    individuel. L'état no_data ne s'applique QU'en mode client individuel
+    (`isNoData = !isAggregate && !!health && (health.score === null ||
+    health.status === "no_data")`). En mode agrégé, le proxy portefeuille
+    (moyenne des derivedClientScore) reste affiché — c'est intentionnel,
+    l'agence a besoin d'une vue d'ensemble même quand les clients
+    individuels n'ont pas encore de données réelles. En mode client +
+    no_data → CollecteEnCours remplace le gauge (avec
+    companyName={activeClient?.displayName ?? health?.companyName}). En
+    mode client + limited → LimitedDataBanner + gauge.
+  • KpiScoreMoyen (section 05) : `isClientNoData` flag. Quand un client
+    est sélectionné ET status="no_data", on n'affiche PAS le proxy
+    derivedClientScore (qui serait un 50/55/60/75/90 factice basé sur
+    l'utilisation quota API) — on affiche « — » + « Collecte en cours ».
+    Le Delta est masqué. L'insight dit « Collecte en cours — premiers
+    résultats sous 24-48h. »
+  • 4 chart sections mises à jour : TendanceSentiment (260px, avec
+    ComposedChart), DiversiteSources (260px), TopSujets (200px),
+    SnapshotVisibiliteIA (160px).
+    `<EmptyDash label="Aucune donnée agrégée|Aucune donnée|Aucune source|
+    Aucun sujet|Aucune donnée IA">` → `<CollecteEnCoursMini minHeight={XXX} />`.
+
+────────────────────────────────────────────────────────────────────────────────
+CONTRAINTES VÉRIFIÉS
+────────────────────────────────────────────────────────────────────────────────
+- 'use client' préservé en tête de chaque dashboard (ligne 1).
+- Aucune fonctionnalité supprimée :
+  • Tous les boutons (Rafraîchir, Mode crise, Comparer vs concurrents,
+    Détail sentiment, etc.) préservés.
+  • Tous les handlers onClick préservés.
+  • Tous les charts (RadialBarChart, ComposedChart, BarChart, LineChart,
+    RadarChart, PieChart, ScatterChart, AreaChart) inchangés quand il y
+    a des données.
+  • Le mode agrégé de l'Agency dashboard (vue portefeuille) est
+    intentionnellement préservé — c'est un proxy légitime, pas du fake
+    data client.
+- Français partout, aucun emoji ajouté. Les nouveaux textes sont :
+  « Collecte en cours », « Nous collectons des articles sur [name]. »,
+  « Premiers résultats sous 24-48h. », « Vous recevrez une alerte
+  WhatsApp dès que votre score sera disponible. », « Données limitées —
+  collecte en cours », « Collecte des mentions en cours ».
+- AUCUN autre fichier touché. Seuls les 5 fichiers suivants ont été
+  modifiés :
+  1. src/app/api/console/brand-health/route.ts
+  2. src/app/atelier/console/essential/EssentialDashboard.tsx
+  3. src/app/atelier/console/pro/ProDashboard.tsx
+  4. src/app/atelier/console/enterprise/EnterpriseDashboard.tsx
+  5. src/app/atelier/console/agency/AgencyDashboard.tsx
+- TypeScript : `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit
+  --pretty false` → EXIT=0, 0 errors. Vérifié après TOUS les edits (5
+  vérifications successives pendant le développement).
+
+────────────────────────────────────────────────────────────────────────────────
+COMPORTEMENT ATTENDU POUR SALMA (nouveau client Chari)
+────────────────────────────────────────────────────────────────────────────────
+Jour 0 — Salma active son compte, ouvre son dashboard Essential :
+  • Section 02 « Score de Réputation » : PLUS de gauge 50/100. À la
+    place, un radar animé (3 cercles concentriques qui pulsent +
+    pastille sage centrale) + « Collecte en cours » + « Nous collectons
+    des articles sur Chari. Premiers résultats sous 24-48h. » + « Vous
+    recevrez une alerte WhatsApp dès que votre score sera disponible. »
+  • Sections 03/04 (Sentiment Moyen, Mentions/Jour) : « — » au lieu de
+    « 0% » et « 0 ». Sous-titre « Collecte des mentions en cours ».
+  • Section 07 (Tendance Sentiment) : CollecteEnCoursMini au lieu d'un
+    ComposedChart vide.
+  • Section 08 (Diversité Sources) : CollecteEnCoursMini au lieu d'un
+    BarChart vide.
+  • Section 11 (Snapshot Visibilité IA) : inchangé (affiche 3 cartes
+    LLM avec badge ABSENT — c'est honnête, pas du fake data).
+  • Section 12 (Top Sujets) : CollecteEnCoursMini.
+  • Section 18 (Évolution Score 30j) : CollecteEnCoursMini au lieu d'un
+    LineChart forgé par Math.sin/Math.cos.
+  • Section timeline 24h : CollecteEnCoursMini au lieu de buckets
+    simulés par simulateSentimentHourBuckets.
+  • Section 19 (Volume Mentions) : CollecteEnCoursMini.
+  • Section Rappel Dircom (spacer) : « Le score de réputation est —. »
+    (pas « 50/100 »).
+
+Jour 1-2 — Quelques articles commencent à arriver (< 10) :
+  • Section 02 : gauge affiché avec vrai score + bannière ambre « Données
+    limitées — collecte en cours » au-dessus.
+  • Section 18 : LineChart avec bannière ambre.
+  • Timeline 24h : buckets + bannière ambre.
+
+Jour 3+ — ≥ 10 articles collectés :
+  • Comportement nominal, aucune bannière. Score, sentiment, charts
+    alimentés par données réelles.
+
+────────────────────────────────────────────────────────────────────────────────
+NEXT ACTIONS (out of scope, notées pour suivi)
+────────────────────────────────────────────────────────────────────────────────
+- Le seuil LIMITED_DATA_THRESHOLD=10 est arbitraire. Pourrait être
+  ajusté par plan (Essential: 10, Pro: 20, Enterprise: 50) ou par
+  secteur (media volumeux vs B2B niche).
+- La route brand-health pourrait aussi renvoyer un ETA précis basé sur
+  l'heure d'activation du compte (ex. « 18h restantes » au lieu de
+  « 24-48h »).
+- Les KPI strip cards restantes (CitationsIaKpi, PartsDeVoixKpi,
+  SourcesDiversifieesKpi, EngagementTotalKpi, AlertesActivesKpi) n'ont
+  pas été modifiées — elles dépendent d'autres API (ai-visibility,
+  share-of-voice, source-distribution, crisis-alerts) qui peuvent
+  légitiment renvoyer 0 quand il n'y a pas encore d'articles. Une
+  protection similaire (— au lieu de 0) pourrait être ajoutée si ces
+  routes implémentent aussi un état no_data.
+- Le mode démo (buildDemoResponse) renvoie toujours score: 74 — c'est
+  intentionnel pour les démos sales, mais pourrait être flags via un
+  badge « DÉMO » dans l'UI pour éviter la confusion.
+- Tests E2E à ajouter : (1) créer un nouveau client avec 0 articles,
+  ouvrir Essential dashboard, vérifier que `<CollecteEnCours>` est
+  rendu et qu'aucun `RadialBarChart` n'est présent dans le DOM.
+  (2) créer 5 articles, vérifier la bannière ambre. (3) créer 15
+  articles, vérifier le gauge normal sans bannière.
+- Le composant CollecteEnCours est dupliqué dans 4 fichiers
+  (Essential/Pro/Enterprise/Agency). Pourrait être extrait vers
+  src/app/atelier/console/components/CollecteEnCours.tsx et importé,
+  mais cela aurait dépassé le scope « ne pas toucher d'autres fichiers ».
+
