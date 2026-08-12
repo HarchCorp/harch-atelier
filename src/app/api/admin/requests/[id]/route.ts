@@ -18,6 +18,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { logAudit, extractIp, extractUserAgent } from "@/lib/harchiq/audit-log";
+import { logError } from "@/lib/logger";
 import { logInfo, logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -219,6 +220,38 @@ export async function GET(
     logError("admin.requests.get", `GET failed for ${id}: ${msg}`);
     return NextResponse.json(
       { error: "Failed to fetch request", detail: msg },
+      { status: 500 },
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DELETE /api/admin/requests/[id]
+//
+//  Deletes a single AccessRequest. Admin only.
+// ═══════════════════════════════════════════════════════════════
+
+export async function DELETE(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user?.role !== "admin" && session.user?.role !== "super_admin")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await ctx.params;
+  if (!id) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
+  }
+
+  try {
+    await prisma.accessRequest.delete({ where: { id } });
+    return NextResponse.json({ success: true, deleted: id });
+  } catch (err) {
+    logError("admin.requests.delete", `Delete error: ${err}`);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Delete failed" },
       { status: 500 },
     );
   }
