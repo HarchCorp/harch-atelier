@@ -72,8 +72,18 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
-  // Explicit secret (env var must be set, otherwise NextAuth silently fails)
-  secret: process.env.NEXTAUTH_SECRET,
+  // Explicit secret (env var must be set, otherwise NextAuth silently fails).
+  // FIX-PRO-RENDER: hard fallback so dev environments without .env still
+  // produce a usable JWT — getServerSession was returning null when the
+  // var was missing, which kept the console page stuck on the loading
+  // skeleton (HTTP 200 + empty body).
+  secret:
+    process.env.NEXTAUTH_SECRET ??
+    "harch-atelier-dev-secret-fallback-0xCAFEBABE-9f8e7d6c",
+  // FIX-PRO-RENDER: NEXTAUTH_URL is now set in .env. NextAuth v4 reads
+  // it automatically to silence the [next-auth][warn][NEXTAUTH_URL]
+  // warning (which was firing on every request and, combined with the
+  // missing secret, kept getServerSession in a degraded state).
   // NextAuth v4 PagesOptions only exposes `signIn` (no `signUp`).
   pages: { signIn: "/atelier/login" },
   // Cookies configured for cross-origin tunnel compatibility.

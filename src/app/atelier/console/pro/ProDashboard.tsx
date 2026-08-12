@@ -72,6 +72,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import {
+  Component,
   createContext,
   useCallback,
   useContext,
@@ -80,6 +81,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ErrorInfo,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -2052,6 +2055,89 @@ function usePersistentState<T>(
 }
 
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────
+
+// FIX-PRO-RENDER: ErrorBoundary — isolate widget crashes so a single
+// failing card (e.g. recharts on empty data, .toFixed on undefined,
+// .find on null) cannot tear down the entire dashboard tree during
+// SSR or hydration. Renders a minimal fallback instead of propagating
+// the error to the page shell.
+class WidgetErrorBoundary extends Component<
+  { children: ReactNode; label?: string },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode; label?: string }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error: Error): {
+    hasError: boolean;
+    message: string;
+  } {
+    return {
+      hasError: true,
+      message: error?.message ?? "Erreur de rendu",
+    };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[ProDashboard] widget crash:",
+      this.props.label ?? "widget",
+      error?.message,
+      info?.componentStack,
+    );
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div
+          className="rounded-xl border"
+          style={{
+            padding: 20,
+            borderColor: BORDER,
+            backgroundColor: "#FFFFFF",
+          }}
+        >
+          <div
+            style={{
+              ...FONT_HEADER,
+              color: NEGATIVE,
+              marginBottom: 6,
+            }}
+          >
+            Section indisponible
+          </div>
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: TEXT_MUTED,
+              lineHeight: 1.5,
+            }}
+          >
+            Cette section n&apos;a pas pu être affichée avec les données
+            actuelles. Les autres sections restent opérationnelles.
+          </p>
+          <p
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              color: TEXT_HEADER,
+              marginTop: 8,
+              wordBreak: "break-word",
+            }}
+          >
+            {this.props.label ?? "widget"} · {this.state.message}
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const FONT_HEADER: CSSProperties = {
   fontFamily: FONT_MONO,
@@ -6231,7 +6317,7 @@ function PartDeVoixDonutCard({ sov, loading }: { sov: ShareOfVoiceResp | null; l
                 style={{ backgroundColor: "#FAFAFA", border: `1px solid ${BORDER}` }}
               >
                 <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: TEXT_MUTED }}>
-                  {selectedRow.name} · {fmtNumber(selectedRow.value)} mentions · sentiment {selectedRow.sentiment.toFixed(2)}
+                  {selectedRow.name} · {fmtNumber(selectedRow.value)} mentions · sentiment {(selectedRow.sentiment ?? 0).toFixed(2)}
                 </div>
               </div>
             )}
@@ -7175,7 +7261,7 @@ function TopInfluenceursCard({ influencers, loading }: { influencers: Influencer
                           style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: sentColor }}
                         >
                           <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: sentColor }} />
-                          {r.avgSentiment > 0 ? "+" : ""}{r.avgSentiment.toFixed(2)}
+                          {(r.avgSentiment ?? 0) > 0 ? "+" : ""}{(r.avgSentiment ?? 0).toFixed(2)}
                         </span>
                       </td>
                     </tr>
@@ -14133,7 +14219,11 @@ export default function ProDashboard({
               >
                 {orderedWidgets.map(({ id, node }) => (
                   <SortableWidget key={id} id={id} editMode={editMode}>
-                    {node}
+                    {/* FIX-PRO-RENDER: per-widget ErrorBoundary isolates
+                        crashes (empty recharts data, undefined .toFixed,
+                        null .find) so a single failing card cannot take
+                        down the whole dashboard during SSR or hydration. */}
+                    <WidgetErrorBoundary label={id}>{node}</WidgetErrorBoundary>
                   </SortableWidget>
                 ))}
               </motion.div>

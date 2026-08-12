@@ -56,7 +56,16 @@
 //  Task ID: 10X-ESSENTIEL
 // ════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Component,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -848,6 +857,89 @@ function usePersistentState<T>(
 }
 
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────
+
+// FIX-PRO-RENDER: ErrorBoundary — isolate widget crashes so a single
+// failing card (e.g. recharts on empty data, .toFixed on undefined,
+// .find on null) cannot tear down the entire dashboard tree during
+// SSR or hydration. Renders a minimal fallback instead of propagating
+// the error to the page shell.
+class WidgetErrorBoundary extends Component<
+  { children: ReactNode; label?: string },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode; label?: string }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error: Error): {
+    hasError: boolean;
+    message: string;
+  } {
+    return {
+      hasError: true,
+      message: error?.message ?? "Erreur de rendu",
+    };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[EssentialDashboard] widget crash:",
+      this.props.label ?? "widget",
+      error?.message,
+      info?.componentStack,
+    );
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div
+          className="rounded-xl border"
+          style={{
+            padding: 20,
+            borderColor: BORDER,
+            backgroundColor: "#FFFFFF",
+          }}
+        >
+          <div
+            style={{
+              ...FONT_HEADER,
+              color: NEGATIVE,
+              marginBottom: 6,
+            }}
+          >
+            Section indisponible
+          </div>
+          <p
+            style={{
+              fontFamily: FONT_SANS,
+              fontSize: 12,
+              color: TEXT_MUTED,
+              lineHeight: 1.5,
+            }}
+          >
+            Cette section n&apos;a pas pu être affichée avec les données
+            actuelles. Les autres sections restent opérationnelles.
+          </p>
+          <p
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              color: TEXT_HEADER,
+              marginTop: 8,
+              wordBreak: "break-word",
+            }}
+          >
+            {this.props.label ?? "widget"} · {this.state.message}
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const FONT_HEADER: React.CSSProperties = {
   fontFamily: FONT_MONO,
@@ -10985,6 +11077,11 @@ export default function EssentialDashboard() {
             </div>
           )}
 
+          {/* FIX-PRO-RENDER: ErrorBoundary wraps the entire widget grid so a
+              single crashing card cannot tear down the dashboard tree
+              during SSR or hydration. Each widget is also internally
+              defensive (null-safe, ?? [] defaults, length checks). */}
+          <WidgetErrorBoundary label="essential-grid">
           <motion.div
             className="grid grid-cols-12 gap-4 lg:gap-6"
             variants={containerStagger}
@@ -11199,6 +11296,7 @@ export default function EssentialDashboard() {
               recentlyUnlockedKey={recentlyUnlockedKey}
             />
           </motion.div>
+          </WidgetErrorBoundary>
 
           {/* Silent refresh trigger — hidden refetch helpers (no UI) */}
           <button
