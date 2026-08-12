@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { prisma } from "@/lib/db";
 import { isDemoEmail } from "@/lib/demo-session";
+import { isAccountTypeAllowed } from "@/lib/auth/rbac";
 import { demoReportsListResponse } from "@/lib/demo-console-api";
 import { logError } from "@/lib/logger";
 
@@ -30,10 +31,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowedTypes = ["brand-monitor", "market-competitor", "investment-bank"];
-  if (!allowedTypes.includes(session.user?.accountType || "") && !isAdmin) {
+  if (!isAccountTypeAllowed(session, ["essential", "pro", "enterprise", "agency"])) {
     return NextResponse.json(
-      { error: "Forbidden — monthly reports are only available on enterprise plans." },
+      { error: "Forbidden — insufficient account permissions" },
       { status: 403 }
     );
   }
