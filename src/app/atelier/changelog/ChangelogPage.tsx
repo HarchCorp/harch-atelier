@@ -1,8 +1,153 @@
 "use client";
 
+import React, { useState, useEffect, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+
+// ═══════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal + hover lift (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════
+
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const match = value.match(/^(\s*)(\d[\d\s]*(?:[.,]\d+)?)(\D.*)?$/);
+  const rawNum = match ? match[2].replace(/\s/g, "").replace(",", ".") : "";
+  const target = match ? parseFloat(rawNum) : 0;
+  const hasThousandSep = match ? /\s/.test(match[2]) : false;
+  const isDecimal = match ? /[.,]/.test(match[2]) : false;
+  const decimals = isDecimal ? rawNum.split(/[.,]/)[1]?.length ?? 0 : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const formatNum = (n: number): string => {
+    if (isDecimal) return n.toFixed(decimals);
+    const rounded = Math.round(n).toString();
+    if (hasThousandSep) {
+      return rounded.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+    return rounded;
+  };
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {formatNum(animated)}
+      {suffix}
+    </span>
+  );
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerItem({
+  children,
+  style,
+  className,
+  hover = false,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  hover?: boolean;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      whileHover={hover ? { y: -2 } : undefined}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 const C = {
   bg: "#FAFAFA", surface: "#FFFFFF", surfaceAlt: "#F4F4F5",
@@ -243,6 +388,7 @@ export default function ChangelogPage() {
         padding: "48px 16px 40px",
       }}>
         <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 16px" }}>
+          <Reveal>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "10px",
             padding: "6px 14px", background: C.surface,
@@ -254,6 +400,9 @@ export default function ChangelogPage() {
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.sage, animation: "pulse 2s infinite" }} />
             Changelog · Product updates
           </div>
+          </Reveal>
+
+          <Reveal delay={0.05}>
           <h1 style={{
             fontSize: "clamp(32px, 8vw, 48px)", fontWeight: 800,
             letterSpacing: "-0.04em", lineHeight: 1.0, color: C.text,
@@ -261,6 +410,9 @@ export default function ChangelogPage() {
           }}>
             What's new at <span style={{ color: C.sage }}>Harch Atelier.</span>
           </h1>
+          </Reveal>
+
+          <Reveal delay={0.1}>
           <p style={{
             fontSize: "16px", color: C.textSec, lineHeight: 1.55,
             maxWidth: "640px",
@@ -268,19 +420,23 @@ export default function ChangelogPage() {
             Every update to the Harch Atelier platform — new features, improvements, bug fixes, and breaking changes.
             Subscribe to our weekly digest to stay informed.
           </p>
+          </Reveal>
         </div>
       </section>
 
       {/* CHANGELOG ENTRIES */}
       <section style={{ maxWidth: "900px", margin: "0 auto", padding: "48px 16px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "48px" }}>
+        <StaggerContainer style={{ display: "flex", flexDirection: "column", gap: "48px" }} stagger={0.1}>
           {CHANGELOG.map((entry, i) => {
             const typeColor = TYPE_COLORS[entry.type];
             return (
-              <div key={entry.version} style={{
-                position: "relative",
-                paddingBottom: i === CHANGELOG.length - 1 ? 0 : "48px",
-              }}>
+              <StaggerItem
+                key={entry.version}
+                style={{
+                  position: "relative",
+                  paddingBottom: i === CHANGELOG.length - 1 ? 0 : "48px",
+                }}
+              >
                 {/* Timeline line */}
                 {i < CHANGELOG.length - 1 && (
                   <div style={{
@@ -290,17 +446,23 @@ export default function ChangelogPage() {
                 )}
                 
                 <div style={{ display: "grid", gridTemplateColumns: "40px 1fr", gap: "24px" }}>
-                  {/* Timeline dot */}
-                  <div style={{
-                    width: "40px", height: "40px", borderRadius: "50%",
-                    background: typeColor.bg, border: `2px solid ${typeColor.text}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "14px", fontWeight: 800, color: typeColor.text,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    flexShrink: 0, zIndex: 1,
-                  }}>
+                  {/* Timeline dot — pulses when scrolled into view */}
+                  <motion.div
+                    style={{
+                      width: "40px", height: "40px", borderRadius: "50%",
+                      background: typeColor.bg, border: `2px solid ${typeColor.text}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "14px", fontWeight: 800, color: typeColor.text,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      flexShrink: 0, zIndex: 1,
+                    }}
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true, margin: "-60px" }}
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     ●
-                  </div>
+                  </motion.div>
 
                   {/* Entry content */}
                   <div>
@@ -315,15 +477,20 @@ export default function ChangelogPage() {
                       }}>
                         v{entry.version}
                       </span>
-                      <span style={{
-                        fontSize: "10px", fontWeight: 700,
-                        fontFamily: "'JetBrains Mono', monospace",
-                        padding: "3px 10px", borderRadius: "100px",
-                        background: typeColor.bg, color: typeColor.text,
-                        letterSpacing: "0.08em",
-                      }}>
+                      <motion.span
+                        style={{
+                          fontSize: "10px", fontWeight: 700,
+                          fontFamily: "'JetBrains Mono', monospace",
+                          padding: "3px 10px", borderRadius: "100px",
+                          background: typeColor.bg, color: typeColor.text,
+                          letterSpacing: "0.08em",
+                          cursor: "default",
+                        }}
+                        whileHover={{ scale: 1.06 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                      >
                         {typeColor.label}
-                      </span>
+                      </motion.span>
                       <span style={{
                         fontSize: "12px", color: C.textMuted,
                         fontFamily: "'JetBrains Mono', monospace",
@@ -370,10 +537,10 @@ export default function ChangelogPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </section>
 
       {/* CTA */}
@@ -404,13 +571,19 @@ export default function ChangelogPage() {
                 fontSize: "14px", fontFamily: "'Inter', sans-serif", outline: "none",
               }}
             />
-            <button type="submit" style={{
-              padding: "14px 24px", background: C.sage, color: "#FFFFFF",
-              border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600,
-              fontFamily: "'Inter', sans-serif", cursor: "pointer",
-            }}>
+            <motion.button
+              type="submit"
+              style={{
+                padding: "14px 24px", background: C.sage, color: "#FFFFFF",
+                border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600,
+                fontFamily: "'Inter', sans-serif", cursor: "pointer",
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
               Subscribe →
-            </button>
+            </motion.button>
           </form>
         </div>
       </section>

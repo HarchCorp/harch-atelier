@@ -1,9 +1,156 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { C } from "../components/tokens";
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal + hover lift (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════════════
+
+// Sage green used for the icon hover color shift (gray → sage).
+const SAGE = "#4A7B5F";
+
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const match = value.match(/^(\s*)(\d[\d\s]*(?:[.,]\d+)?)(\D.*)?$/);
+  const rawNum = match ? match[2].replace(/\s/g, "").replace(",", ".") : "";
+  const target = match ? parseFloat(rawNum) : 0;
+  const hasThousandSep = match ? /\s/.test(match[2]) : false;
+  const isDecimal = match ? /[.,]/.test(match[2]) : false;
+  const decimals = isDecimal ? rawNum.split(/[.,]/)[1]?.length ?? 0 : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const formatNum = (n: number): string => {
+    if (isDecimal) return n.toFixed(decimals);
+    const rounded = Math.round(n).toString();
+    if (hasThousandSep) {
+      return rounded.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+    return rounded;
+  };
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {formatNum(animated)}
+      {suffix}
+    </span>
+  );
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerItem({
+  children,
+  style,
+  className,
+  hover = false,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  hover?: boolean;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      whileHover={hover ? { y: -2 } : undefined}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  HARCH ATELIER — ABOUT PAGE
@@ -119,6 +266,7 @@ export default function AboutPage() {
             textAlign: "center",
           }}
         >
+          <Reveal>
           <div style={eyebrowStyle}>À propos · Harch Atelier</div>
           <h1
             style={{
@@ -148,6 +296,9 @@ export default function AboutPage() {
             disent de vous. Vous recevez l'analyse, les alertes et les rapports
             pour décider — pas pour réagir.
           </p>
+          </Reveal>
+
+          <Reveal delay={0.1}>
           <div
             style={{
               display: "flex",
@@ -156,7 +307,7 @@ export default function AboutPage() {
               flexWrap: "wrap",
             }}
           >
-            <a
+            <motion.a
               href="/atelier/audit"
               style={{
                 display: "inline-flex",
@@ -172,18 +323,19 @@ export default function AboutPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, transform 0.2s",
               }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.ctaHover;
-                e.currentTarget.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = C.cta;
-                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Demander une démo →
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="/atelier/method"
               style={{
                 display: "inline-flex",
@@ -200,6 +352,9 @@ export default function AboutPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, border-color 0.2s",
               }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.bgHover;
                 e.currentTarget.style.borderColor = C.accent;
@@ -210,8 +365,9 @@ export default function AboutPage() {
               }}
             >
               Voir la méthode
-            </a>
+            </motion.a>
           </div>
+          </Reveal>
         </section>
 
         {/* ─── STATS BAND ────────────────────────────────────────── */}
@@ -222,7 +378,7 @@ export default function AboutPage() {
             borderBottom: `1px solid ${C.border}`,
           }}
         >
-          <div
+          <StaggerContainer
             style={{
               maxWidth: "1200px",
               margin: "0 auto",
@@ -233,7 +389,7 @@ export default function AboutPage() {
             }}
           >
             {STATS.map((s) => (
-              <div
+              <StaggerItem
                 key={s.label}
                 style={{
                   textAlign: "center",
@@ -251,7 +407,7 @@ export default function AboutPage() {
                     marginBottom: "8px",
                   }}
                 >
-                  {s.value}
+                  <AnimatedStat value={s.value} />
                 </div>
                 <div
                   style={{
@@ -274,9 +430,9 @@ export default function AboutPage() {
                 >
                   {s.sub}
                 </div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* ─── MISSION ───────────────────────────────────────────── */}
@@ -403,7 +559,7 @@ export default function AboutPage() {
                 Ils guident chaque ligne de code, chaque alerte, chaque rapport.
               </p>
             </div>
-            <div
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
@@ -411,35 +567,33 @@ export default function AboutPage() {
               }}
             >
               {VALUES.map((v) => (
-                <div
+                <StaggerItem
                   key={v.title}
+                  hover
                   style={{
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "12px",
                     padding: "28px",
-                    transition: "border-color 0.2s, transform 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = C.accent;
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.transform = "translateY(0)";
+                    boxShadow: C.shadowSm,
+                    transition: "border-color 0.2s, box-shadow 0.2s",
                   }}
                 >
-                  <div
+                  <motion.div
                     style={{
                       fontSize: "32px",
                       color: C.accent,
                       marginBottom: "16px",
                       lineHeight: 1,
+                      display: "inline-block",
+                      transition: "color 0.2s ease-out",
                     }}
+                    whileHover={{ scale: 1.15, color: SAGE }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                     aria-hidden
                   >
                     {v.icon}
-                  </div>
+                  </motion.div>
                   <h3
                     style={{
                       fontSize: "20px",
@@ -462,9 +616,9 @@ export default function AboutPage() {
                   >
                     {v.desc}
                   </p>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
@@ -485,16 +639,18 @@ export default function AboutPage() {
               Construction continue, en public, depuis Casablanca.
             </p>
           </div>
-          <div
+          <StaggerContainer
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
               gap: "20px",
             }}
+            stagger={0.1}
           >
             {TIMELINE.map((t, i) => (
-              <div
+              <StaggerItem
                 key={t.period}
+                hover
                 style={{
                   position: "relative",
                   padding: "24px",
@@ -502,6 +658,8 @@ export default function AboutPage() {
                   border: `1px solid ${C.border}`,
                   borderRadius: "12px",
                   borderTop: `3px solid ${C.accent}`,
+                  boxShadow: C.shadowSm,
+                  transition: "box-shadow 0.2s, border-color 0.2s",
                 }}
               >
                 <div
@@ -538,9 +696,9 @@ export default function AboutPage() {
                 >
                   {t.desc}
                 </p>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* ─── TEAM ──────────────────────────────────────────────── */}
@@ -569,7 +727,7 @@ export default function AboutPage() {
                 contactez-nous pour un brief complet.
               </p>
             </div>
-            <div
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
@@ -577,17 +735,20 @@ export default function AboutPage() {
               }}
             >
               {TEAM.map((m) => (
-                <div
+                <StaggerItem
                   key={m.name}
+                  hover
                   style={{
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "12px",
                     padding: "28px",
                     textAlign: "center",
+                    boxShadow: C.shadowSm,
+                    transition: "box-shadow 0.2s, border-color 0.2s",
                   }}
                 >
-                  <div
+                  <motion.div
                     style={{
                       width: "64px",
                       height: "64px",
@@ -603,11 +764,14 @@ export default function AboutPage() {
                       color: C.accent,
                       fontFamily: C.fontMono,
                       letterSpacing: "0.05em",
+                      transition: "color 0.2s ease-out, border-color 0.2s ease-out",
                     }}
+                    whileHover={{ scale: 1.08, color: SAGE, borderColor: SAGE }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                     aria-hidden
                   >
                     {m.initials}
-                  </div>
+                  </motion.div>
                   <h3
                     style={{
                       fontSize: "16px",
@@ -630,9 +794,9 @@ export default function AboutPage() {
                   >
                     {m.role}
                   </div>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
@@ -684,7 +848,7 @@ export default function AboutPage() {
               chaque ajustement de pricing est tracé sur notre page publique Changelog.
               Dernière mise à jour : v3.1.0 — UX hardening (persistance, accessibilité, statut système).
             </p>
-            <div
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
@@ -698,62 +862,74 @@ export default function AboutPage() {
                 { v: "v2.4.0", l: "Mega-menu + 16 pages", d: "19 juil. 2026" },
                 { v: "v2.3.0", l: "Content expansion", d: "18 juil. 2026" },
               ].map((item) => (
-                <a
+                <StaggerItem
                   key={item.v}
-                  href="/atelier/changelog"
+                  hover
                   style={{
-                    display: "block",
-                    padding: "16px",
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "8px",
-                    textDecoration: "none",
-                    transition: "border-color 0.2s, box-shadow 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = C.accent;
-                    e.currentTarget.style.boxShadow = C.shadowSm;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <div
+                  <motion.a
+                    href="/atelier/changelog"
                     style={{
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      fontFamily: C.fontMono,
-                      color: C.accent,
-                      marginBottom: "4px",
+                      display: "block",
+                      padding: "16px",
+                      background: "transparent",
+                      border: "none",
+                      borderRadius: "8px",
+                      textDecoration: "none",
+                      transition: "border-color 0.2s, box-shadow 0.2s",
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = C.accent;
+                      e.currentTarget.style.boxShadow = C.shadowSm;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = C.border;
+                      e.currentTarget.style.boxShadow = "none";
                     }}
                   >
-                    {item.v}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      color: C.text,
-                      fontFamily: C.fontSans,
-                      fontWeight: 600,
-                      marginBottom: "4px",
-                    }}
-                  >
-                    {item.l}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: C.textMuted,
-                      fontFamily: C.fontMono,
-                    }}
-                  >
-                    {item.d}
-                  </div>
-                </a>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        fontFamily: C.fontMono,
+                        color: C.accent,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {item.v}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        color: C.text,
+                        fontFamily: C.fontSans,
+                        fontWeight: 600,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {item.l}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: C.textMuted,
+                        fontFamily: C.fontMono,
+                      }}
+                    >
+                      {item.d}
+                    </div>
+                  </motion.a>
+                </StaggerItem>
               ))}
-            </div>
-            <a
+            </StaggerContainer>
+            <motion.a
               href="/atelier/changelog"
               style={{
                 display: "inline-flex",
@@ -769,6 +945,9 @@ export default function AboutPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, color 0.2s",
               }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.accent;
                 e.currentTarget.style.color = "#FFFFFF";
@@ -780,12 +959,13 @@ export default function AboutPage() {
             >
               Voir le changelog complet
               <span aria-hidden="true">→</span>
-            </a>
+            </motion.a>
           </div>
         </section>
 
         {/* ─── FINAL CTA ─────────────────────────────────────────── */}
         <section style={sectionStyle}>
+          <Reveal>
           <div
             style={{
               background: C.bgDarkest,
@@ -820,7 +1000,7 @@ export default function AboutPage() {
               Cinq minutes pour la demande. Sept jours pour le premier audit.
               Sans engagement.
             </p>
-            <a
+            <motion.a
               href="/atelier/audit"
               style={{
                 display: "inline-flex",
@@ -836,18 +1016,20 @@ export default function AboutPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, transform 0.2s",
               }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.ctaHover;
-                e.currentTarget.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = C.cta;
-                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Demander une démo →
-            </a>
+            </motion.a>
           </div>
+          </Reveal>
         </section>
       </main>
 

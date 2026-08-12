@@ -1,7 +1,20 @@
 import { getServerSession } from "next-auth";
-import { authOptions, getConsolePath } from "@/lib/auth/auth.config";
+import { authOptions } from "@/lib/auth/auth.config";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { OnboardingWizard } from "./OnboardingWizard";
+
+// ═══════════════════════════════════════════════════════════════
+//  /atelier/onboarding — Onboarding wizard (first-run experience)
+//
+//  Server component. Auth-gates the route (redirect to /atelier/login
+//  if no session), then renders the client-side 4-step wizard.
+//
+//  The wizard itself reads the session via useSession() to get the
+//  user's name + accountType + companyId, and persists completion
+//  via POST /api/user/onboard.
+//
+//  Task: ONBOARDING-WIZARD
+// ═══════════════════════════════════════════════════════════════
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +23,5 @@ export default async function OnboardingPage() {
   if (!session?.user) {
     redirect("/atelier/login?callbackUrl=/atelier/onboarding");
   }
-  // Redirect to console — onboarding is handled in the dashboard
-  redirect(getConsolePath(session.user.accountType, session.user.role));
+  return <OnboardingWizard />;
 }

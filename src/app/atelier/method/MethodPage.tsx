@@ -1,9 +1,156 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { C } from "../components/tokens";
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal + hover lift (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════════════
+
+// Sage green used for the icon hover color shift (gray → sage).
+const SAGE = "#4A7B5F";
+
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const match = value.match(/^(\s*)(\d[\d\s]*(?:[.,]\d+)?)(\D.*)?$/);
+  const rawNum = match ? match[2].replace(/\s/g, "").replace(",", ".") : "";
+  const target = match ? parseFloat(rawNum) : 0;
+  const hasThousandSep = match ? /\s/.test(match[2]) : false;
+  const isDecimal = match ? /[.,]/.test(match[2]) : false;
+  const decimals = isDecimal ? rawNum.split(/[.,]/)[1]?.length ?? 0 : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const formatNum = (n: number): string => {
+    if (isDecimal) return n.toFixed(decimals);
+    const rounded = Math.round(n).toString();
+    if (hasThousandSep) {
+      return rounded.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+    return rounded;
+  };
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {formatNum(animated)}
+      {suffix}
+    </span>
+  );
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerItem({
+  children,
+  style,
+  className,
+  hover = false,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  hover?: boolean;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      whileHover={hover ? { y: -2 } : undefined}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  HARCH ATELIER — METHOD PAGE
@@ -146,6 +293,7 @@ export default function MethodPage() {
       <main style={{ flex: 1 }}>
         {/* ─── HERO ──────────────────────────────────────────────── */}
         <section style={{ ...sectionStyle, paddingTop: "96px", paddingBottom: "48px", textAlign: "center" }}>
+          <Reveal>
           <div style={eyebrowStyle}>Méthode · Harch Atelier</div>
           <h1
             style={{
@@ -173,6 +321,9 @@ export default function MethodPage() {
             Cinq étapes, cinq piliers, trois cadres de conformité. Toute
             mention que nous livrons est traçable, datée et vérifiable.
           </p>
+          </Reveal>
+
+          <Reveal delay={0.1}>
           <div
             style={{
               display: "flex",
@@ -181,7 +332,7 @@ export default function MethodPage() {
               flexWrap: "wrap",
             }}
           >
-            <a
+            <motion.a
               href="/atelier/audit"
               style={{
                 display: "inline-flex",
@@ -197,18 +348,19 @@ export default function MethodPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, transform 0.2s",
               }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.ctaHover;
-                e.currentTarget.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = C.cta;
-                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Demander une démo →
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="/atelier/pricing"
               style={{
                 display: "inline-flex",
@@ -225,6 +377,9 @@ export default function MethodPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, border-color 0.2s",
               }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.bgHover;
                 e.currentTarget.style.borderColor = C.accent;
@@ -235,8 +390,9 @@ export default function MethodPage() {
               }}
             >
               Voir les tarifs
-            </a>
+            </motion.a>
           </div>
+          </Reveal>
         </section>
 
         {/* ─── PIPELINE ──────────────────────────────────────────── */}
@@ -249,16 +405,18 @@ export default function MethodPage() {
               Aucune donnée ne sort d'une boîte noire.
             </p>
           </div>
-          <div
+          <StaggerContainer
             style={{
               display: "flex",
               flexDirection: "column",
               gap: "16px",
             }}
+            stagger={0.1}
           >
             {PIPELINE.map((step, i) => (
-              <div
+              <StaggerItem
                 key={step.num}
+                hover
                 style={{
                   display: "grid",
                   gridTemplateColumns: "minmax(80px, 120px) 1fr",
@@ -268,13 +426,8 @@ export default function MethodPage() {
                   border: `1px solid ${C.border}`,
                   borderRadius: "12px",
                   position: "relative",
-                  transition: "border-color 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = C.accent;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = C.border;
+                  boxShadow: C.shadowSm,
+                  transition: "border-color 0.2s, box-shadow 0.2s",
                 }}
               >
                 <div
@@ -286,7 +439,7 @@ export default function MethodPage() {
                     paddingRight: "16px",
                   }}
                 >
-                  <div
+                  <motion.div
                     style={{
                       fontSize: "40px",
                       fontWeight: 700,
@@ -294,10 +447,13 @@ export default function MethodPage() {
                       fontFamily: C.fontMono,
                       letterSpacing: "-0.04em",
                       lineHeight: 1,
+                      transition: "color 0.2s ease-out",
                     }}
+                    whileHover={{ scale: 1.12, color: SAGE }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                   >
                     {step.num}
-                  </div>
+                  </motion.div>
                   {i < PIPELINE.length - 1 && (
                     <div
                       style={{
@@ -360,9 +516,9 @@ export default function MethodPage() {
                     ))}
                   </div>
                 </div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* ─── DATA SOURCES ──────────────────────────────────────── */}
@@ -382,7 +538,7 @@ export default function MethodPage() {
                 Liste non-exhaustive, évolutive.
               </p>
             </div>
-            <div
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
@@ -390,13 +546,16 @@ export default function MethodPage() {
               }}
             >
               {SOURCES.map((s) => (
-                <div
+                <StaggerItem
                   key={s.type}
+                  hover
                   style={{
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "12px",
                     padding: "24px",
+                    boxShadow: C.shadowSm,
+                    transition: "box-shadow 0.2s, border-color 0.2s",
                   }}
                 >
                   <div
@@ -450,9 +609,9 @@ export default function MethodPage() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
             <div
               style={{
                 marginTop: "24px",
@@ -481,16 +640,18 @@ export default function MethodPage() {
               Chaque pilier est calculé en continu, à partir de mentions traçables.
             </p>
           </div>
-          <div
+          <StaggerContainer
             style={{
               display: "flex",
               flexDirection: "column",
               gap: "16px",
             }}
+            stagger={0.1}
           >
             {PILLARS.map((p) => (
-              <div
+              <StaggerItem
                 key={p.name}
+                hover
                 style={{
                   padding: "24px",
                   background: C.bg,
@@ -500,6 +661,8 @@ export default function MethodPage() {
                   gridTemplateColumns: "minmax(140px, 180px) 1fr minmax(80px, 100px)",
                   gap: "24px",
                   alignItems: "center",
+                  boxShadow: C.shadowSm,
+                  transition: "box-shadow 0.2s, border-color 0.2s",
                 }}
               >
                 <div>
@@ -525,7 +688,7 @@ export default function MethodPage() {
                       lineHeight: 1,
                     }}
                   >
-                    {p.weight}%
+                    <AnimatedStat value={`${p.weight}%`} />
                   </div>
                 </div>
                 <p
@@ -557,9 +720,9 @@ export default function MethodPage() {
                     }}
                   />
                 </div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
           <div
             style={{
               marginTop: "24px",
@@ -598,7 +761,7 @@ export default function MethodPage() {
                 traçable, chaque source est horodatée, chaque accès est journalisé.
               </p>
             </div>
-            <div
+            <StaggerContainer
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
@@ -606,13 +769,16 @@ export default function MethodPage() {
               }}
             >
               {COMPLIANCE.map((c) => (
-                <div
+                <StaggerItem
                   key={c.label}
+                  hover
                   style={{
                     background: C.bg,
                     border: `1px solid ${C.border}`,
                     borderRadius: "12px",
                     padding: "28px",
+                    boxShadow: C.shadowSm,
+                    transition: "box-shadow 0.2s, border-color 0.2s",
                   }}
                 >
                   <div
@@ -681,14 +847,15 @@ export default function MethodPage() {
                       </span>
                     ))}
                   </div>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
         {/* ─── CTA ───────────────────────────────────────────────── */}
         <section style={sectionStyle}>
+          <Reveal>
           <div
             style={{
               background: C.bgDarkest,
@@ -723,7 +890,7 @@ export default function MethodPage() {
               30 minutes de démo pour comprendre comment chaque pilier s'applique
               à votre entreprise.
             </p>
-            <a
+            <motion.a
               href="/atelier/audit"
               style={{
                 display: "inline-flex",
@@ -739,18 +906,20 @@ export default function MethodPage() {
                 borderRadius: "8px",
                 transition: "background 0.2s, transform 0.2s",
               }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = C.ctaHover;
-                e.currentTarget.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = C.cta;
-                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Demander une démo →
-            </a>
+            </motion.a>
           </div>
+          </Reveal>
         </section>
       </main>
 

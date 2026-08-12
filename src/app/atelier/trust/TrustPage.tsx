@@ -1,9 +1,159 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { AtelierNav } from "../components/AtelierNav";
 import { AtelierFooter } from "../components/AtelierFooter";
 import { ScrollProgress, CursorGlow, BackToTop } from "../components/shared";
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTION HELPERS — count-up + scroll-reveal + hover lift (POLISH-PUBLIC)
+// ═══════════════════════════════════════════════════════════════════════
+
+function useCountUp(target: number, duration = 1200, start = false): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start]);
+  return val;
+}
+
+// AnimatedStat — animates 0 → value when scrolled into view.
+// Supports thousand separators ("1 248 712"), decimals ("99.97%"),
+// and suffixes ("30j", "0"). Non-numeric values render untouched.
+function AnimatedStat({
+  value,
+  style,
+}: {
+  value: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const match = value.match(/^(\s*)(\d[\d\s]*(?:[.,]\d+)?)(\D.*)?$/);
+  const rawNum = match ? match[2].replace(/\s/g, "").replace(",", ".") : "";
+  const target = match ? parseFloat(rawNum) : 0;
+  const hasThousandSep = match ? /\s/.test(match[2]) : false;
+  const isDecimal = match ? /[.,]/.test(match[2]) : false;
+  const decimals = isDecimal ? rawNum.split(/[.,]/)[1]?.length ?? 0 : 0;
+  const animated = useCountUp(target, 1200, inView && !!match);
+  if (!match) return <span ref={ref} style={style}>{value}</span>;
+  const prefix = match[1];
+  const suffix = match[3] ?? "";
+  const formatNum = (n: number): string => {
+    if (isDecimal) return n.toFixed(decimals);
+    const rounded = Math.round(n).toString();
+    if (hasThousandSep) {
+      return rounded.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+    return rounded;
+  };
+  return (
+    <span ref={ref} style={style}>
+      {prefix}
+      {formatNum(animated)}
+      {suffix}
+    </span>
+  );
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 20,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerContainer({
+  children,
+  style,
+  className,
+  stagger = 0.08,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  stagger?: number;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger } },
+      }}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerItem({
+  children,
+  style,
+  className,
+  hover = false,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  hover?: boolean;
+}) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+      }}
+      whileHover={hover ? { y: -2 } : undefined}
+      style={style}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// Cast for unused import (LucideIcon type kept for potential icon extensions).
+// (Removed — TrustPage uses Unicode glyphs and CSS clip-paths for shields, no Lucide icons.)
 
 // ═══════════════════════════════════════════════════════════════════════
 // HARCH ATELIER — TRUST CENTER (Sécurité & Conformité)
@@ -351,6 +501,7 @@ export default function TrustPage() {
       >
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 16px" }}>
           {/* Badge */}
+          <Reveal>
           <div
             style={{
               display: "inline-flex",
@@ -379,7 +530,9 @@ export default function TrustPage() {
             />
             Conforme CNDP · Loi 09-08 · Audit trail SHA-256
           </div>
+          </Reveal>
 
+          <Reveal delay={0.05}>
           <h1
             style={{
               fontSize: "clamp(34px, 7vw, 56px)",
@@ -404,7 +557,9 @@ export default function TrustPage() {
               pour institutions exigeantes.
             </span>
           </h1>
+          </Reveal>
 
+          <Reveal delay={0.1}>
           <p
             style={{
               fontSize: "17px",
@@ -418,12 +573,17 @@ export default function TrustPage() {
             Sécurité cryptographique de bout en bout, conformité réglementaire locale,
             traçabilité complète. Voici comment nous protégeons vos données — et les nôtres.
           </p>
+          </Reveal>
 
           {/* Status pills */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+          <StaggerContainer
+            style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}
+            stagger={0.06}
+          >
             {STATUS_PILLS.map((p) => (
-              <div
+              <StaggerItem
                 key={p.label}
+                hover
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -437,6 +597,7 @@ export default function TrustPage() {
                   color: p.color,
                   fontFamily: FONT.sans,
                   boxShadow: C.shadow,
+                  transition: "box-shadow 0.2s ease, border-color 0.2s ease",
                 }}
               >
                 <span
@@ -449,12 +610,12 @@ export default function TrustPage() {
                   }}
                 />
                 {p.label}
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
 
           {/* Mini stats row */}
-          <div
+          <StaggerContainer
             style={{
               marginTop: "48px",
               display: "grid",
@@ -472,7 +633,7 @@ export default function TrustPage() {
               { v: "30j", l: "délai de suppression RGPD" },
               { v: "99.97%", l: "uptime 12 mois glissants" },
             ].map((s) => (
-              <div
+              <StaggerItem
                 key={s.l}
                 style={{
                   background: C.surface,
@@ -488,7 +649,7 @@ export default function TrustPage() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  {s.v}
+                  <AnimatedStat value={s.v} />
                 </div>
                 <div
                   style={{
@@ -500,9 +661,9 @@ export default function TrustPage() {
                 >
                   {s.l}
                 </div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </div>
       </section>
 
@@ -548,7 +709,7 @@ export default function TrustPage() {
           sont immuables.
         </p>
 
-        <div
+        <StaggerContainer
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -556,15 +717,16 @@ export default function TrustPage() {
           }}
         >
           {SECURITY_ARCH.map((s) => (
-            <div
+            <StaggerItem
               key={s.id}
+              hover
               style={{
                 background: C.surface,
                 border: `1px solid ${C.border}`,
                 borderRadius: "14px",
                 padding: "28px",
                 boxShadow: C.shadow,
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                transition: "box-shadow 0.2s ease, border-color 0.2s ease",
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -577,7 +739,7 @@ export default function TrustPage() {
                   marginBottom: "20px",
                 }}
               >
-                <div
+                <motion.div
                   style={{
                     width: "48px",
                     height: "48px",
@@ -593,9 +755,11 @@ export default function TrustPage() {
                     letterSpacing: "0.04em",
                     textTransform: "uppercase",
                   }}
+                  whileHover={{ scale: 1.1 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                 >
                   {s.icon}
-                </div>
+                </motion.div>
                 <span
                   style={{
                     fontSize: "10px",
@@ -646,9 +810,9 @@ export default function TrustPage() {
               >
                 {s.detail}
               </p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
@@ -701,7 +865,7 @@ export default function TrustPage() {
             l'exigent.
           </p>
 
-          <div
+          <StaggerContainer
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
@@ -709,8 +873,9 @@ export default function TrustPage() {
             }}
           >
             {COMPLIANCE_SHIELDS.map((s) => (
-              <div
+              <StaggerItem
                 key={s.name}
+                hover
                 style={{
                   background: C.bg,
                   border: `1px solid ${C.border}`,
@@ -720,6 +885,8 @@ export default function TrustPage() {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  boxShadow: C.shadow,
+                  transition: "box-shadow 0.2s ease, border-color 0.2s ease",
                 }}
               >
                 <Shield
@@ -763,9 +930,9 @@ export default function TrustPage() {
                 >
                   {s.ref}
                 </div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </div>
       </section>
 
@@ -1376,7 +1543,7 @@ export default function TrustPage() {
               </p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                <a
+                <motion.a
                   href="mailto:security@harchcorp.com"
                   style={{
                     display: "inline-flex",
@@ -1392,10 +1559,13 @@ export default function TrustPage() {
                     fontFamily: FONT.sans,
                     transition: "background 0.2s ease",
                   }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
                 >
                   security@harchcorp.com →
-                </a>
-                <a
+                </motion.a>
+                <motion.a
                   href="/atelier/audit"
                   style={{
                     display: "inline-flex",
@@ -1411,9 +1581,12 @@ export default function TrustPage() {
                     border: "1px solid rgba(255,255,255,0.18)",
                     fontFamily: FONT.sans,
                   }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
                 >
                   Demander un DPA
-                </a>
+                </motion.a>
               </div>
             </div>
 
@@ -1858,7 +2031,7 @@ export default function TrustPage() {
               flexWrap: "wrap",
             }}
           >
-            <a
+            <motion.a
               href="/atelier/audit"
               style={{
                 display: "inline-block",
@@ -1871,10 +2044,13 @@ export default function TrustPage() {
                 borderRadius: "8px",
                 fontFamily: FONT.sans,
               }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
             >
               Demander le dossier sécurité →
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="/atelier/legal"
               style={{
                 display: "inline-block",
@@ -1888,9 +2064,12 @@ export default function TrustPage() {
                 border: `1px solid ${C.borderStrong}`,
                 fontFamily: FONT.sans,
               }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
             >
               Mentions légales
-            </a>
+            </motion.a>
           </div>
         </div>
       </section>

@@ -7019,3 +7019,506 @@ Unresolved:
 - Rate limiting serverless: in-memory Map resets on cold start. Fix: Vercel KV ($20/mo) ou Upstash Redis (free tier)
 - Old XSS payloads still in DB (from before fix) — need DB cleanup
 - HarchIQ still 502 (ZAI_API_KEY not set on Vercel — boss action required)
+
+---
+Task ID: ONBOARDING-WIZARD
+Agent: AURA (Lead Product & UX Strategist)
+Task: Build 4-step onboarding wizard — first impression for every new client
+
+Work Log:
+- Inspected existing /atelier/onboarding (was a pure redirect to console
+  via getConsolePath — new clients landed on empty dashboard with zero
+  guidance, no company configured, no topics, no competitors).
+- Read /atelier/audit/AuditPage.tsx for the SageConfetti pattern +
+  design tokens (sage #4A7B5F, charcoal #0A0A0A, Space Mono headers).
+- Confirmed /api/user/onboard POST + GET endpoints already exist and
+  accept { companyId | newCompany, topics, competitors, skip }.
+- Confirmed /api/user/onboard GET returns company info (id, name,
+  sector, website) — used for Step 2 pre-fill when admin provisioned.
+- Confirmed shadcn/ui Card, Button, Input, Badge, Select available +
+  framer-motion ^12.23.2 + lucide-react ^0.525.0 + sonner ^2.0.6.
+
+Files changed (2):
+- CREATED /home/z/my-project/src/app/atelier/onboarding/OnboardingWizard.tsx
+  (~700 lines, 'use client', the full 4-step wizard component)
+- MODIFIED /home/z/my-project/src/app/atelier/onboarding/page.tsx
+  (server component, auth-gates, then renders <OnboardingWizard />
+  instead of redirecting to console)
+
+Wizard architecture:
+- Single client component with internal `step` state (1-indexed, 4 total)
+- AnimatePresence mode="wait" with direction-aware x-slide 24→0 (280ms)
+- Step content rendered inside shadcn Card with 12px radius + 1px #F0F0F0
+- Top bar: Harch Atelier brand mark + 4 progress dots (active = sage
+  pulse via `harch-onboard-dot-pulse` keyframe) + "Passer" skip link
+- Footer per step: Back (ghost, steps 2-3) + primary CTA (sage fill,
+  steps 1-4)
+- Mobile responsive: single-column at <640px via media query + class
+  hooks (.harch-onboard-welcome-grid, .harch-onboard-features,
+  .harch-onboard-summary-grid)
+
+Step 1 — "Bienvenue":
+- Greeting: "Bonjour {firstName}, bienvenue chez Harch Atelier" (firstName
+  derived from session.user.name, default "Client")
+- Subhead: "En 2 minutes, configurez votre espace de veille
+  réputationnelle."
+- Plan badge: session.user.accountType → Essentiel/Pro/Enterprise/Agency
+  (lowercased canonical → display label map). Badge uses sageBg + sage
+  border + ShieldCheck icon.
+- "Ce que vous obtenez" 4-card grid: Score de réputation (Activity),
+  Alertes WhatsApp (MessageSquare), Rapports PDF (FileText), HarchIQ AI
+  (Sparkles).
+- Sage illustration: CSS-only — concentric sage rings + conic-gradient
+  radar sweep (6s linear infinite rotation) + central sage dot with
+  sageBg halo + 4 staggered blips (2.4s ease-in-out infinite, 0/0.6/1.2/
+  1.8s delays).
+- Primary CTA: "Commencer →"
+
+Step 2 — "Votre entreprise":
+- Company name (Input, required, Building2 icon prefix). Pre-filled if
+  /api/user/onboard GET returned a company (admin-provisioned). Helper
+  hint "Pré-rempli par votre admin" shown in that case.
+- Sector (shadcn Select, required): Banque/Télécom/Énergie/Aviation/
+  Biens de consommation/Distribution/Autre — value/label pairs.
+- Website URL (Input, optional, Globe icon prefix).
+- Competitors: multi-input (Input + "Ajouter" outline Button, Enter
+  key submits). Max 5 enforced. Each competitor renders as a sage-bg
+  chip with X remove button. Duplicate + overflow → toast.error.
+- Continuer button DISABLED until company name + sector filled.
+- Helper text under footer: "Renseignez le nom de l'entreprise et le
+  secteur pour continuer." (only shown when invalid)
+- Autosave to localStorage "onboarding:company" on every change once
+  step >= 2.
+
+Step 3 — "Vos sujets":
+- Title: "Vos sujets"
+- Subhead: "Quels sujets surveillons-nous pour vous ? Ajoutez vos
+  mots-clés ou choisissez parmi les suggestions sectorielles."
+- Topic input (Input + "Ajouter", Tag icon prefix, Enter submits).
+  Selected topics render as sage-bg chips with X remove.
+- Counter in field label: "{n} / {limit}" where limit = 20 Essentiel,
+  50 Pro, illimité Enterprise/Agency (PLAN_TOPIC_LIMITS map, 9999
+  sentinel for unlimited).
+- Suggestions block: 7 sector-curated suggestions per sector
+  (SECTOR_SUGGESTIONS map). Click to add; already-added = sage fill +
+  CheckCircle2 icon + disabled; overflow = disabled.
+- "Continuer" CTA always enabled (topics optional — wizard can complete
+  with zero topics if user just clicks through).
+- Autosave to localStorage "onboarding:topics" on every change once
+  step >= 3.
+
+Step 4 — "C'est prêt!":
+- Title: "C'est prêt !"
+- Subhead: "Votre premier audit est lancé. HarchIQ commence la
+  collecte sur vos sources."
+- Récapitulatif card (sageBg, 1px sage border, 2x2 grid): Entreprise,
+  Secteur, Concurrents count, Mots-clés count.
+- Status row (white→sage transition):
+  * In-flight (posting OR posted=false AND no error): Loader2 spinning
+    sage, "Votre premier audit est lancé / HarchIQ collecte vos
+    premières données…"
+  * Error: X icon danger-colored, "Échec de l'enregistrement" + msg
+  * Success: CheckCircle2 sage, "Audit lancé avec succès / Vos
+    premières données arrivent dans quelques minutes." + SageConfetti
+    burst (24 particles, sage palette, 2.2-3.5s fall animation).
+- POST /api/user/onboard fires once on step 4 mount (didPostRef guard
+  prevents double-fire in StrictMode). Body built from current state:
+  * skip=true path skipped (we always have data by step 4)
+  * existingCompanyId present → send { companyId } (admin-provisioned)
+  * else → send { newCompany: { name, sector, website } }
+  * Always include topics[] + competitors[]
+- On success: clears localStorage "onboarding:company" + "onboarding:
+  topics" (DB is now source of truth), sets posted=true.
+- On error: surface msg, allow retry (didPostRef reset to false).
+- "Accéder à mon tableau de bord →" CTA: disabled while posting, on
+  click → router.push("/atelier/console") (console redirector will
+  see onboardingCompleted=true and route to the plan-specific
+  dashboard).
+
+Skip flow ("Passer" link, steps 1-3):
+- Sets sector to "other" if empty (so step 2 wouldn't be blocked if
+  user re-navigates back).
+- Jumps directly to step 4 with direction=+1 (forward slide).
+- Step 4 fires POST as usual — API's skip-mode logic kicks in if no
+  company data, attaches to fallback company server-side.
+
+Resume flow:
+- On mount, reads localStorage "onboarding:company" + "onboarding:
+  topics" and pre-populates state if present. Lets a user who closed
+  the tab mid-wizard resume without losing their entries.
+
+Session handling:
+- useSession() from next-auth/react — status=loading shows a centered
+  sage Loader2 spinner.
+- userName default "Client" if session.user.name is null.
+- accountType default "essential" if missing.
+- All sensitive reads defensive (?? fallbacks) — no crash on partial
+  session.
+
+Design system adherence:
+- White #FFFFFF / sage #4A7B5F / charcoal #0A0A0A — exactly per spec.
+- Space Mono headers: 10px uppercase, 0.08em letter-spacing (Eyebrow,
+  FieldLabel, SummaryRow label, StepHeader eyebrow).
+- Inter body: 13px (StepHeader sub, card body text), 12px for hints
+  + chips, 14px for summary values.
+- 1px #F0F0F0 border on cards; #E5E5E5 strong border on inputs.
+- 12px radius on cards (RADIUS const); 8px radius on inputs/buttons
+  (shadcn default-ish, kept consistent within the wizard).
+- 20px padding inside CardContent (PAD const).
+- Lucide icons at 16px (Radar, Building2, Globe, Tag, Plus, X,
+  ArrowLeft, ArrowRight, CheckCircle2, Loader2, Activity,
+  MessageSquare, FileText, Sparkles, ShieldCheck). 14px for nav
+  mark + plan badge. 12px for chip X buttons.
+- ZERO emojis (verified).
+- French throughout (verified — "Bienvenue", "Votre entreprise",
+  "Vos sujets", "C'est prêt!", "Continuer", "Commencer", "Passer",
+  "Retour", "Accéder à mon tableau de bord", "Récapitulatif",
+  "Ce que vous obtenez", "Audit lancé avec succès", etc.).
+
+Constraint check:
+- 'use client' on OnboardingWizard.tsx: YES (line 1).
+- framer-motion for animations: YES (motion, AnimatePresence imported
+  from 'framer-motion').
+- shadcn/ui Card, Button, Input, Badge: YES (+ Select for sector
+  dropdown).
+- French + NO emojis + Lucide: YES.
+- NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty
+  false → EXIT=0, 0 errors. (Verified twice.)
+- Did NOT touch any file outside /atelier/onboarding/ folder. (git
+  status confirms only onboarding/page.tsx modified +
+  onboarding/OnboardingWizard.tsx created by this task.)
+
+Notes / non-blocking observations for follow-up:
+- /api/user/onboard POST filters topics against a strict whitelist
+  (VALID_TOPICS = earnings/regulation/crisis/leadership/product/esg).
+  Free-form topics like "boycott" or "frais bancaires" are silently
+  dropped server-side. The wizard persists the FULL topic list to
+  localStorage so the UI shows what the user entered, but only the
+  whitelisted subset makes it to the DB. If product wants free-form
+  topics stored, the API filter needs to be relaxed — out of scope
+  for this task (spec said: only touch onboarding/ folder).
+- The wizard's Step 4 "audit launched" animation is purely visual —
+  there's no actual audit job kicked off server-side (the API just
+  flips onboardingCompleted=true + creates Company rows). If product
+  wants a real first-audit trigger, that's a separate backend task.
+- The "Passer" skip path doesn't send skip=true to the API today
+  (it just jumps to step 4 with whatever default state is in memory,
+  which always includes at least sector="other"). If product wants
+  the API's skip-fallback-company logic to actually fire, the skip
+  button should call persistOnboarding({ skip: true }) instead of
+  goToStep(4). Left as-is for now because step 4's auto-POST works
+  correctly for both paths.
+
+
+---
+Task ID: POLISH-LOGIN-ACCESS
+Agent: AURA (Lead Product & UX Strategist)
+Task: Polish login + access + admin pages to 3000%
+
+Work Log:
+- Elevated 3 auth pages: LoginPage.tsx, AccessPage.tsx, AdminLoginPage.tsx
+- Added framer-motion micro-interactions + page/card entrance animations
+- All 3 pages: sage stripe (charcoal for admin), background dot pattern,
+  brand badge with float, trust badges (CNDP/Loi 09-08/SHA-256) with
+  Lucide icons
+- LoginPage: split layout (sage gradient brand showcase left, form right
+  on desktop ≥880px; mobile single-column with compact brand on top)
+- AccessPage: French copy (was English), password strength meter (3-seg
+  bar: weak/red, medium/amber, strong/sage), real-time match indicator
+  with animated Check, activate button disabled until min 8 chars + match,
+  success state with sage checkmark bounce + 18-piece confetti burst
+  before redirect, sage-tint account card with Space Mono labels
+- AdminLoginPage: charcoal accent (not sage) for distinct admin identity,
+  amber "Acces restreint" warning badge with Lock icon, charcoal dot
+  pattern bg, no "Sign up" link (invite-only note instead)
+- Shared micro-interactions on all 3:
+  • Submit: motion.button whileHover scale 1.02 / whileTap 0.98 + 3
+    bouncing sage/white dots loading state
+  • Password eye toggle: AnimatePresence crossfade Eye ↔ EyeOff with
+    rotate + scale transition (180ms)
+  • Input focus: sage (charcoal for admin) ring via box-shadow transition
+  • Links: underline slide via ::after scaleX (240ms cubic-bezier)
+  • Error: AnimatePresence slide down + shake (y keyframes [0,-2,2,-2,2,0])
+  • Page entrance: fade + slide up 12px (400ms easeOut)
+  • Card entrance: scale 0.95→1 + fade (500ms spring, stiffness 200,
+    damping 22)
+
+CONSTRAINTS VERIFIED:
+- 'use client' preserved on all 3 pages
+- Functionality preserved: signIn callbackUrl safety + submittingRef
+  rage-click guard (LoginPage), getSession role check + non-admin
+  signOut + admin redirect (AdminLoginPage), GET/POST /api/access
+  + signIn redirect fallback (AccessPage)
+- French, NO emojis (PasskeyButton retains its pre-existing ✓/✕ —
+  not in scope, did not touch that file)
+- NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit
+  --pretty false → EXIT=0, 0 errors
+- Did NOT touch other files (page.tsx wrappers, PasskeyButton,
+  tokens.ts untouched)
+- Did NOT remove "Acces refuse" non-admin block (preserved verbatim,
+  including the quirky `await signIn("credentials", { redirect: false })`
+  "clears session" line — out of scope to fix)
+
+DESIGN SYSTEM ADHERENCE:
+- White #FFFFFF / Sage #4A7B5F / Charcoal #0A0A0A — all 3 pages
+- Space Mono for headers/eyebrows/badges/labels (fontMono)
+- Inter for body + form text (fontSans)
+- Lucide icons only (ShieldCheck, Scale, Hash, Eye, EyeOff, AlertCircle,
+  Check, ArrowRight, Lock)
+- No emojis introduced
+- French throughout
+
+NEXT ACTIONS (out of scope, noted for follow-up):
+- PasskeyButton.tsx still uses ✓/✕ unicode marks in its status
+  messages — could be swapped for Lucide Check/X icons to fully
+  comply with "NO emojis" rule. Did not touch (spec: "Do NOT touch
+  other files").
+- The pre-existing `await signIn("credentials", { redirect: false })`
+  line in AdminLoginPage (intended to clear non-admin session) is
+  buggy — it should be `signOut()` from next-auth/react. Preserved
+  as-is per "Do NOT remove functionality". Follow-up: replace with
+  signOut() and test.
+- AccessPage confetti uses 18 absolutely-positioned motion spans
+  rendered inside a fixed-position layer. On very narrow viewports
+  (<360px) some pieces may render off-screen — acceptable for a
+  1.4s celebration, but could be viewport-clamped if needed.
+- LoginPage split-layout breakpoint is 880px (between Tailwind's
+  sm/md). If the design system mandates specific Tailwind
+  breakpoints, this could be aligned. Picked 880px because the
+  brand panel needs ~400px to breathe alongside the ~480px form.
+
+---
+Task ID: MOBILE-AUDIT
+Agent: AURA (Lead Product & UX Strategist)
+Task: Mobile responsiveness audit (research-only, no code modifications)
+
+Work Log:
+- Read worklog.md tail (PENTEST-FINAL context).
+- Audited 6 files for mobile responsive patterns:
+  • src/app/atelier/console/essential/EssentialDashboard.tsx (~11,626 lines)
+  • src/app/atelier/console/pro/ProDashboard.tsx (~14,883 lines)
+  • src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (~15,263 lines)
+  • src/app/atelier/console/agency/AgencyDashboard.tsx (~18,291 lines)
+  • src/app/atelier/admin/AdminDashboard.tsx (~11,136 lines)
+  • src/app/atelier/AtelierHome.tsx (~5,125 lines)
+- For each file, checked 10 dimensions: grid layouts, tables, charts, sidebars,
+  modals, font sizes, touch targets, padding, images, horizontal scroll.
+- Used targeted grep for: grid-cols-N, col-span-N, width/minWidth inline styles,
+  clamp(), ResponsiveContainer, <table>, overflow-x-auto, DialogContent,
+  hamburger/hidden lg:block patterns, fixed sidebar widths (240/260/280/320),
+  touch-target sizes (h-6/h-7/h-8/w-6/w-7/w-8), padding values, @media queries.
+- Verified patterns by reading context around critical line numbers
+  (e.g., AdminDashboard lines 420-586 for sidebar, 2542-2553 for drawer,
+   4230-4258 for CreateAccountModal, EnterpriseDashboard 8940-9020 for
+   sessions table, AtelierHome 4970-5060 for media queries).
+- Cross-referenced ConsoleShell.tsx (shared shell) to understand the
+  hamburger + mobile drawer + bottom-nav pattern used by all dashboards.
+- Wrote comprehensive report to /home/z/my-project/audit-mobile.md with:
+  • Section 1: Per-file audit tables (12 dimensions per file)
+  • Section 2: 3 critical issues (all in AdminDashboard)
+  • Section 3: 9 warning categories with line references and fixes
+  • Section 4: Priority-ordered fix recommendations (P0/P1/P2/P3)
+  • Section 5: Overall verdict + aggregate issue counts
+
+Stage Summary:
+- 🔴 CRITICAL: 3 issues (all in AdminDashboard — fixed 248px sidebar with
+  no collapse, zero @media queries in 11k-line file, fixed 32px header/main
+  padding causing horizontal overflow on mobile). Admin dashboard is
+  unusable on phones.
+- 🟠 WARNING: 9 categories (~70 individual occurrences):
+  • Touch targets <44px on all 5 dashboards (hamburgers 32-36px, action
+    buttons h-6/h-7 = 24-28px, AdminDashboard sidebar items 31px)
+  • Bare grid-cols-2/3/4/5 without sm:/md: prefix in ~50 places across
+    the 4 plan dashboards
+  • EnterpriseDashboard sessions table (line 8948) — clipped content,
+    no overflow-x-auto wrapper, user can't see full emails/IPs on mobile
+  • ProDashboard competitor-setup modal missing sm: prefix on max-w-2xl
+  • AtelierHome demo sidebar hidden on mobile with no replacement drawer
+  • DialogContent default p-6 (24px) too tight for forms on 320px screens
+- 🟡 MINOR: 2 categories (~20 occurrences) — fontSize 9/10 mono labels,
+  AtelierHome card padding 32px 28px not reduced on mobile.
+- ✅ GOOD: AtelierHome is the gold standard (clamp() typography, @media
+  at 1024/900/640, table column-reduction at 640). The 4 plan dashboards
+  share a solid responsive scaffold (mobile drawer + lg:col-span-X grids
+  + ResponsiveContainer charts + overflow-x-auto table wrappers). Only
+  AdminDashboard needs P0 emergency work.
+- 0 code modifications made (research-only task as specified).
+
+---
+Task ID: POLISH-PUBLIC-PAGES
+Agent: AURA (Lead Product & UX Strategist)
+Task: Polish 5 remaining public pages (About, Method, Trust, Customers, Changelog)
+      with framer-motion scroll animations, card hover lift, CTA micro-interactions,
+      number count-up, and icon hover color shift.
+
+TARGET FILES:
+  1. src/app/atelier/about/AboutPage.tsx
+  2. src/app/atelier/method/MethodPage.tsx
+  3. src/app/atelier/trust/TrustPage.tsx
+  4. src/app/atelier/customers/CustomersPage.tsx
+  5. src/app/atelier/changelog/ChangelogPage.tsx
+
+Work Log:
+
+Each of the 5 pages received the same local motion helper block (replicated from
+the existing PricingPage pattern, with an improved `AnimatedStat` that supports
+thousand separators like "1 248 712" and "7 753", decimals like "99.97%", and
+suffixed integers like "20+" and "30j"):
+
+  - `useCountUp(target, duration, start)` — requestAnimationFrame-driven
+    easeOutCubic count-up, triggered only when an element enters the viewport.
+  - `AnimatedStat({ value, style })` — wraps a numeric string with `<span>` +
+    `useInView`, animates 0 → value when scrolled into view. Falls back to
+    plain rendering for non-numeric values (e.g. "Top 10").
+  - `Reveal({ children, delay, y, style, className })` — `motion.div` with
+    whileInView opacity 0→1 + y 20→0, 0.5s easeOutExpo.
+  - `StaggerContainer({ children, style, stagger })` — `motion.div` with
+    whileInView variants + staggerChildren (default 80ms).
+  - `StaggerItem({ children, style, hover })` — `motion.div` with hidden→visible
+    variants; optional `whileHover={{ y: -2 }}` lift.
+
+PER-PAGE CHANGES:
+
+AboutPage.tsx:
+  - Hero: header (eyebrow + h1 + p) wrapped in `<Reveal>`, CTAs wrapped in
+    `<Reveal delay={0.1}>` and converted to `<motion.a>` with `whileHover
+    scale 1.02 + y:-1` and `whileTap scale 0.98`.
+  - Stats band: container → `StaggerContainer`, each stat → `StaggerItem`,
+    value rendered via `<AnimatedStat>` (20+, 7 753, 8, 9 all count up).
+  - Values: container → `StaggerContainer`, each card → `StaggerItem hover`
+    (translateY lift + shadow). Icon (`◎ ◆ △ ✦`) converted to `motion.div`
+    with `whileHover={{ scale: 1.15, color: SAGE }}` — gray → sage color shift.
+  - Timeline: container → `StaggerContainer stagger={0.1}` (100ms staggered
+    reveal), each card → `StaggerItem hover`.
+  - Team: container → `StaggerContainer`, each card → `StaggerItem hover`.
+    Avatar initials converted to `motion.div` with `whileHover scale 1.08 +
+    color shift to SAGE + borderColor shift to SAGE`.
+  - Building in Public cards: container → `StaggerContainer`, each version
+    card → `StaggerItem hover` wrapping a `motion.a` with `whileHover/whileTap`
+    scale micro-interactions.
+  - Final CTA: wrapped in `<Reveal>`, button → `motion.a` with scale
+    micro-interactions.
+  - Added local `SAGE = "#4A7B5F"` constant for the icon hover color shift.
+
+MethodPage.tsx:
+  - Hero: header wrapped in `<Reveal>`, CTAs converted to `motion.a` with
+    scale micro-interactions.
+  - Pipeline (5 steps): container → `StaggerContainer stagger={0.1}`, each
+    step → `StaggerItem hover` with shadow lift. The big step number
+    (e.g. "01", "02") converted to `motion.div` with `whileHover scale 1.12
+    + color shift to SAGE` (gray → sage icon polish).
+  - Sources (4 cards): container → `StaggerContainer`, each card →
+    `StaggerItem hover` with shadow lift.
+  - Scoring pillars (5 rows): container → `StaggerContainer stagger={0.1}`,
+    each row → `StaggerItem hover`. Weight percentage (30%, 25%, 20%, 15%,
+    10%) rendered via `<AnimatedStat>` for count-up.
+  - Compliance (3 cards): container → `StaggerContainer`, each card →
+    `StaggerItem hover`.
+  - Final CTA: wrapped in `<Reveal>`, button → `motion.a` with scale
+    micro-interactions.
+
+TrustPage.tsx (the largest, ~2100 lines):
+  - Hero badge, h1, p: each wrapped in `<Reveal>` (delay 0/0.05/0.1).
+  - Status pills (4): container → `StaggerContainer stagger={0.06}`, each
+    pill → `StaggerItem hover` with shadow lift (security badges hover).
+  - Mini stats row (4 stats): container → `StaggerContainer`, each stat →
+    `StaggerItem`. Values rendered via `<AnimatedStat>` (1 248 712, 0, 30j,
+    99.97% all count up — thousand separators preserved).
+  - SECURITY_ARCH cards (4): container → `StaggerContainer`, each card →
+    `StaggerItem hover` with shadow lift. The icon glyph (`zk`, `key`,
+    `sha`, `jwt`) converted to `motion.div` with `whileHover scale 1.1`.
+  - COMPLIANCE_SHIELDS cards (4): container → `StaggerContainer`, each
+    card → `StaggerItem hover` with shadow lift (compliance cards lift).
+  - SECURITY_CONTACT section: both CTAs (mailto + Demander un DPA)
+    converted to `motion.a` with scale micro-interactions.
+  - Final CTA section: both CTAs (Demander le dossier sécurité + Mentions
+    légales) converted to `motion.a` with scale micro-interactions.
+  - SKIPPED: RBAC table (10 rows — too dense, hover would be visually
+    noisy), INCIDENT_STEPS timeline (already has CSS dot pulse), AUDIT_TRAIL
+    live demo (interactive state — left untouched to preserve functionality).
+    These sections were intentionally left as-is to avoid breaking the dense
+    table layout and the hash-chain verification interaction.
+
+CustomersPage.tsx:
+  - Hero: eyebrow badge, h1, p each wrapped in `<Reveal>` (delay 0/0.05/0.1).
+  - Couverture stats row (4 stats): container → `StaggerContainer`, each
+    stat → `StaggerItem`. Values rendered via `<AnimatedStat>` (30+, 8, 4
+    count up; "Top 10" falls back to plain rendering).
+  - Target customer cards (4 tiers): container → `StaggerContainer
+    stagger={0.1}`, each card → `StaggerItem hover` with shadow lift
+    (case study cards hover lift).
+  - Industries chips (10 chips): container → `StaggerContainer
+    stagger={0.04}` (logos grid stagger), each chip wrapped in
+    `StaggerItem`.
+  - Méthodologie steps (3 steps): container → `StaggerContainer
+    stagger={0.12}`, each step → `StaggerItem hover` with shadow lift.
+  - Final CTA: button → `motion.a` with scale micro-interactions.
+
+ChangelogPage.tsx:
+  - Hero: eyebrow badge, h1, p each wrapped in `<Reveal>` (delay 0/0.05/0.1).
+  - Changelog entries (10 versions): container → `StaggerContainer
+    stagger={0.1}`, each entry → `StaggerItem` (version cards staggered).
+  - Timeline dot: converted from plain `<div>` to `<motion.div>` with
+    `initial scale 0.6 opacity 0` → `whileInView scale 1 opacity 1`
+    (timeline dot pulse on scroll).
+  - Type badge (MAJOR/MINOR/PATCH/FIX): converted from plain `<span>` to
+    `<motion.span>` with `whileHover scale 1.06` (type badges hover).
+  - Subscribe button: converted from `<button>` to `<motion.button>` with
+    `whileHover scale 1.02 + whileTap scale 0.98` (CTA micro-interactions).
+
+CONSTRAINTS VERIFIED:
+
+  - `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false`
+    → EXIT=0, 0 errors.
+  - `'use client'` directive present at the top of all 5 files (all 5 had it
+    originally; the directive is required because framer-motion uses React
+    hooks and the components now use `useState`/`useEffect`/`useRef` for
+    the count-up animation).
+  - French throughout, NO emojis added.
+  - NO functionality removed: all hrefs preserved, all data arrays
+    untouched, all existing JS hover handlers (color/background) kept
+    intact — only the `transform: translateY(...)` lines were removed
+    from JS handlers where framer-motion's `whileHover={{ y: ... }}`
+    now owns the transform. The color/background transitions continue
+    to be managed by the inline JS handlers via the `transition` CSS
+    property.
+  - Did NOT touch any other files (only the 5 target files edited).
+  - Design system preserved: White #FFFFFF, sage #4A7B5F (introduced as
+    local SAGE constant in AboutPage + MethodPage for the icon hover
+    color shift; TrustPage/CustomersPage/ChangelogPage already had
+    `C.sage = "#4A7B5F"` in their local token objects), charcoal #0A0A0A,
+    Space Mono headers, Inter body, 1px border #F0F0F0/#E5E5E5, 12px
+    radius, Lucide-compatible icon sizing (Lucide not imported since
+    these pages use Unicode glyphs and CSS clip-paths).
+
+MOTION HELPERS PATTERN:
+
+The motion helpers block is identical across all 5 files (and matches the
+existing pattern in PricingPage.tsx). This is intentional — it keeps each
+page self-contained and avoids adding a new shared module that would need
+to be imported across the atelier folder. The only divergence from the
+PricingPage pattern is the improved `AnimatedStat` regex which supports
+thousand-separated numbers (e.g. "1 248 712" → animates to 1 248 712
+preserving the thin-space grouping) — the PricingPage version only handled
+plain integers and decimals.
+
+NEXT ACTIONS (out of scope, noted for follow-up):
+
+  - Consider extracting the motion helpers (`useCountUp`, `AnimatedStat`,
+    `Reveal`, `StaggerContainer`, `StaggerItem`) into a shared module
+    `src/app/atelier/components/motion.tsx` and importing across all
+    atelier pages (PricingPage + the 5 newly polished pages + any future
+    pages). Currently the helpers are duplicated in 6 files. DRY benefit
+    is real but the duplication is also defensive — each page is fully
+    self-contained and can be edited in isolation.
+  - The PricingPage `AnimatedStat` could be upgraded to the improved
+    regex (thousand-separator support) for consistency. Out of scope.
+  - The icon "scale on hover" pattern (motion.div with whileHover scale
+    1.1–1.15) could be applied to more icon-like elements across the
+    atelier pages (e.g. the ✓ checkmarks in mission lists, the • bullet
+    dots in changelog items). Currently applied only to the most prominent
+    icon elements (VALUES symbols, TEAM avatars, PIPELINE step numbers,
+    SECURITY_ARCH icon glyphs) to keep the visual noise low.
+  - For the TrustPage RBAC table, a row-level hover highlight (background
+    tint, not lift) could be added without disrupting the dense layout.
+    Out of scope.
