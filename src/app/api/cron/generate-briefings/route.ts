@@ -221,7 +221,7 @@ async function handle(req: NextRequest) {
       try {
         const company = await getPrimaryCompanyForUser({
           id: user.id,
-          accountType: user.accountType ?? "brand-monitor",
+          accountType: user.accountType ?? "essential",
         });
         if (!company) {
           results.skipped++;

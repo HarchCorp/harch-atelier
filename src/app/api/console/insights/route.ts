@@ -48,15 +48,31 @@ export const runtime = "nodejs";
 // LLM call can take 5-15s on cold start — give it headroom.
 export const maxDuration = 45;
 
-const ALLOWED_ACCOUNT_TYPES: InsightAccountType[] = [
+const ALLOWED_ACCOUNT_TYPES: string[] = [
+  "essential",
+  "pro",
+  "enterprise",
+  "agency",
   "brand-monitor",
   "market-competitor",
   "investment-bank",
   "harch-alpha",
 ];
 
-function isAllowedAccountType(s: string | null | undefined): s is InsightAccountType {
-  return !!s && (ALLOWED_ACCOUNT_TYPES as string[]).includes(s);
+// Map new canonical types to legacy InsightAccountType for the engine
+const NEW_TO_LEGACY: Record<string, InsightAccountType> = {
+  essential: "brand-monitor",
+  pro: "market-competitor",
+  enterprise: "investment-bank",
+  agency: "harch-alpha",
+  "brand-monitor": "brand-monitor",
+  "market-competitor": "market-competitor",
+  "investment-bank": "investment-bank",
+  "harch-alpha": "harch-alpha",
+};
+
+function isAllowedAccountType(s: string | null | undefined): s is string {
+  return !!s && ALLOWED_ACCOUNT_TYPES.includes(s);
 }
 
 export async function GET(req: NextRequest) {
@@ -91,11 +107,11 @@ export async function GET(req: NextRequest) {
   // Resolve the accountType: query → session → default.
   let accountType: InsightAccountType;
   if (isAllowedAccountType(requestedAccountType)) {
-    accountType = requestedAccountType;
+    accountType = NEW_TO_LEGACY[requestedAccountType] ?? "brand-monitor";
   } else if (isAllowedAccountType(session.user.accountType)) {
-    accountType = session.user.accountType as InsightAccountType;
+    accountType = NEW_TO_LEGACY[session.user.accountType ?? "essential"] ?? "brand-monitor";
   } else {
-    accountType = "brand-monitor";
+    accountType = "brand-monitor"; // essential → brand-monitor (engine legacy)
   }
 
   // 3. Generate (cache-aware).

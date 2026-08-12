@@ -52,7 +52,7 @@ import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_TYPES = ["enterprise", "agency", "investment-bank", "harch-alpha"] as const;
+const ALLOWED_TYPES = ["enterprise", "agency"] as const;
 
 const TIMEOUT_MS = 10_000;
 const MIN_TOKEN_LEN = 20;

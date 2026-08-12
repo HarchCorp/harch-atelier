@@ -60,7 +60,7 @@ interface OnboardBody {
 // the new canonical "essential" (formerly "brand-monitor").
 const VALID_ACCOUNT_TYPES = new Set([
   "essential", "pro", "enterprise", "agency",
-  "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
+  "essential", "pro", "enterprise", "agency",
 ]);
 
 const VALID_TOPICS = new Set([

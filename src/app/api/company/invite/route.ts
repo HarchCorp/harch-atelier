@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     // new canonical "essential" (formerly "brand-monitor").
     const validAccountTypes = [
       "essential", "pro", "enterprise", "agency",
-      "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
+      "essential", "pro", "enterprise", "agency", "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
     ];
     const finalAccountType = validAccountTypes.includes(accountType ?? "")
       ? (accountType as string)

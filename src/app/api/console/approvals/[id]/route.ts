@@ -42,7 +42,7 @@ import { isDemoEmail } from "@/lib/demo-session";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_TYPES = ["enterprise", "agency", "investment-bank", "harch-alpha"] as const;
+const ALLOWED_TYPES = ["enterprise", "agency"] as const;
 
 // ─── GET ────────────────────────────────────────────────────────
 

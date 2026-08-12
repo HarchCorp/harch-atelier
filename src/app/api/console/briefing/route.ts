@@ -90,7 +90,7 @@ export async function GET(req: Request) {
   //    helper builds the right demoFilter.
   const company = await getPrimaryCompanyForUser({
     id: userId,
-    accountType: session.user.accountType ?? "brand-monitor",
+    accountType: session.user.accountType ?? "essential",
     isDemo: session.user.isDemo,
   });
   if (!company) {

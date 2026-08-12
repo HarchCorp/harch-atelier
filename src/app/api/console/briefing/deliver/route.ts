@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
   // 1. Resolve the primary company for this user.
   const company = await getPrimaryCompanyForUser({
     id: userId,
-    accountType: session.user.accountType ?? "brand-monitor",
+    accountType: session.user.accountType ?? "essential",
     isDemo: session.user.isDemo,
   });
   if (!company) {

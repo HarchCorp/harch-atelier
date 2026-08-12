@@ -33,7 +33,7 @@ const SetupSchema = z.object({
       "essential", "pro", "enterprise", "agency",
       // Legacy types (kept during migration for back-compat with
       // existing DB rows — /api/console/migrate-account-types normalises them)
-      "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
+      "essential", "pro", "enterprise", "agency", "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
     ])
     .default("essential"),
 });

@@ -149,7 +149,7 @@ export async function PATCH(req: NextRequest) {
     // during the migration window.
     const validAccountTypes = [
       "essential", "pro", "enterprise", "agency",
-      "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
+      "essential", "pro", "enterprise", "agency", "brand-monitor", "market-competitor", "investment-bank", "harch-alpha",
     ];
     const finalAccountType =
       accountType && validAccountTypes.includes(accountType)
