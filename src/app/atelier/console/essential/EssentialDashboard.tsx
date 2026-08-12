@@ -8966,7 +8966,7 @@ function WeeklyDigestEmailPreviewCard({
   const weekNum = useMemo(() => weekNumber(new Date()), []);
 
   // Derive 4 KPI highlights from real API data (health, sources).
-  const scoreKpi = health ? Math.round(health.score) : null;
+  const scoreKpi = health && health.score != null ? Math.round(health.score) : null;
   // Weekly mentions approximation: 7 × daily 24h count.
   const mentionsKpi = health ? Math.round(health.mentionCount24h * 7) : null;
   const sentimentKpi = health ? Math.round(health.sentiment.positive) : null;
@@ -11489,7 +11489,7 @@ export default function EssentialDashboard() {
                           lineHeight: 1.5,
                         }}
                       >
-                        Le score de réputation est {health ? `${Math.round(health.score)}/100` : "—"}.
+                        Le score de réputation est {health && health.score != null ? `${Math.round(health.score)}/100` : "—"}.
                         Surveillez le narrative « {health?.topNarrative?.label ?? "—"} ».
                       </p>
                     </div>
