@@ -6759,3 +6759,234 @@ needed there. The useCountUp hook could be extracted to a shared
 `src/app/atelier/components/motion.tsx` alongside the existing
 AnimatedStat/Reveal/StaggerContainer helpers used by AtelierHome/Pricing/
 Audit pages.
+
+---
+
+## [SECURITY-RATE-LIMIT] — VORTEX (Principal Systems & Security Engineer)
+
+Pentest found 4 critical vulnerabilities on the public attack surface.
+All 4 fixed. TypeScript: `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → EXIT=0, 0 errors.
+
+### FILES TOUCHED (3)
+
+1. **CREATED** `src/lib/security/rate-limit.ts` (145 lines) — in-memory
+   rate limiter (security-focused; distinct from the legacy
+   `src/lib/rate-limit.ts` Map factory and the Redis-backed
+   `src/lib/rate-limiter.ts`).
+2. **MODIFIED** `src/lib/auth/auth.config.ts` — added login brute-force
+   rate limit (VULN 1) + success-reset.
+3. **MODIFIED** `src/app/api/access-request/route.ts` — added IP rate
+   limit (VULN 2), email dedup (VULN 2), XSS sanitization (VULN 3),
+   Origin check (VULN 4).
+
+### VULN 1 — Login brute force (FIXED)
+
+**Was**: 20 failed login attempts → no lockout, no rate limit. An
+attacker could brute force passwords indefinitely from one IP.
+
+**Now**: `src/lib/security/rate-limit.ts::checkRateLimit` is called at
+the top of the `authorize` callback (after IP extraction, before
+`prisma.user.findUnique`):
+```ts
+const ipKey = `login:${ip || "unknown"}`;
+const loginLimit = checkRateLimit(ipKey, 5, 15 * 60 * 1000); // 5 / 15min
+if (!loginLimit.allowed) {
+  const minutesLeft = Math.max(1, Math.ceil((loginLimit.resetAt - Date.now()) / 60_000));
+  await logAudit({ action: "login_failed", resource: `auth:ratelimited:${ip}`,
+                   result: "denied", metadata: { reason: "rate_limited" } });
+  throw new Error(`Trop de tentatives. Reessayez dans ${minutesLeft} minutes.`);
+}
+```
+
+- 5 attempts per IP per 15 minutes (sliding window: each successful
+  reset returns the counter to 0).
+- Counter is bumped on EVERY authorize call — including unknown
+  emails — so an attacker probing many emails from one IP is also
+  blocked (not just repeated passwords for one email).
+- On successful bcrypt compare → `resetRateLimit(ipKey)` forgives
+  earlier failed attempts (a legit user who fat-fingers their
+  password isn't permanently locked out).
+- Audit trail records the rate-limit hit (Loi 09-08 traceability) so
+  the SOC can see brute-force attempts in the audit log.
+- In-memory Map → resets on serverless cold start; acceptable for the
+  Hobby plan (single instance).
+
+### VULN 2 — Access-request DB spam (FIXED)
+
+**Was**: 5 rapid access-request submissions all returned 200. An
+attacker could fill the DB with thousands of fake requests. Email
+dedup existed but the IP was unchecked.
+
+**Now**: in `POST /api/access-request`, after the Origin check:
+```ts
+const ip = getClientIp(req);
+const ipKey = `access-request:${ip}`;
+const ipLimit = checkRateLimit(ipKey, 3, 60 * 60 * 1000); // 3 / hour
+if (!ipLimit.allowed) {
+  return NextResponse.json(
+    { error: `Trop de demandes. Reessayez dans ${minutesLeft} minutes.` },
+    { status: 429, headers: { "Retry-After": String(secondsLeft) } },
+  );
+}
+```
+
+- 3 requests per IP per hour. An attacker is capped at 3 fake rows
+  per hour per IP.
+- HTTP 429 + `Retry-After` header (seconds) so well-behaved clients
+  back off automatically.
+- Email dedup (1 pending request per email) preserved and made
+  French: `"Vous avez deja une demande en cours. Nous vous
+  répondrons rapidement."` (409).
+- Existing-user check also French: `"Un compte existe deja avec cet
+  email. Contactez-nous si vous avez perdu votre acces."` (409).
+
+### VULN 3 — Stored XSS (FIXED)
+
+**Was**: POST /api/access-request accepted
+`<script>alert("XSS")</script>` in the name field; payload was stored
+raw in the DB and returned in the admin API response. If the admin
+dashboard rendered it without escaping, the script executed.
+
+**Now**: ALL string fields in the Zod schema go through a
+`stripTags` transform that removes any HTML tags before validation
+of length:
+```ts
+const stripTags = (s: string) => s.replace(/<[^>]*>/g, "").trim();
+const sanitizedRequired = (max) =>
+  z.string().max(500).transform(stripTags)
+   .refine(s => s.length >= 1 && s.length <= max);
+const sanitizedOptional = (max) =>
+  z.string().max(500).optional()
+   .transform(v => v ? stripTags(v) : undefined)
+   .refine(s => s === undefined || s.length <= max);
+```
+
+- Applied to: `name`, `company`, `role`, `accountType`, `useCase`,
+  `budget`, `phone`, `country` (with "Morocco" fallback if empty
+  after stripping), `referralSource`, `message`, `source`, `website`,
+  `sector`, `competitors`, `goals`, `fonction`, `plan`.
+- `sources[]` array: each element is `sanitizedRequired(100)`.
+- `email` is validated by `z.string().email()` (no tags possible).
+- `companySize` is `z.enum([...])` (constrained values, no tags).
+- Verified with sanity tests:
+  · `<script>alert('XSS')</script>John` → stored as `alert('XSS')John`
+    (plain text, no execution).
+  · `<script>` alone → 400 (empty after strip, fails min(1)).
+  · `"x".repeat(10000)` → 400 (pre-sanitization max(500) rejects the
+    raw payload before regex runs — DoS-safe).
+- Defense-in-depth: combined with React's default HTML escaping on
+  the admin dashboard, even a missed tag would render as text.
+
+### VULN 4 — CSRF (no Origin check) (FIXED)
+
+**Was**: POST /api/access-request accepted requests from any Origin.
+An attacker on evil.com could host a page that auto-submits fake
+requests from a victim's browser (CSRF).
+
+**Now**: Origin check at the very top of the POST handler (before
+any DB or rate-limit work — cheapest possible rejection):
+```ts
+const origin = req.headers.get("origin");
+if (!isAllowedOrigin(origin)) {
+  return NextResponse.json(
+    { error: "Forbidden — invalid origin" },
+    { status: 403 },
+  );
+}
+```
+
+`isAllowedOrigin` uses `new URL(origin)` to parse the hostname:
+- Dev: `hostname === "localhost"` or `hostname === "127.0.0.1"` on
+  any port (next dev :3000, tunnels, etc.).
+- Prod: exact origin match against `https://atelier.harchcorp.com`
+  (no port, https only).
+- Anything else → 403.
+
+**Stricter than spec**: the spec said "starts with" but a naive
+`origin.startsWith("http://localhost")` would also match
+`http://localhost.evil.com` (attacker-controlled subdomain of
+evil.com). Parsing with `new URL()` isolates the hostname so spoofed
+suffixes can't slip through. Verified with 10 origin tests including
+spoofed prod/localhost — all rejected correctly.
+
+### HELPER MODULE — `src/lib/security/rate-limit.ts`
+
+Three exports:
+- `checkRateLimit(key, max, windowMs) → { allowed, remaining, resetAt }`
+  Atomic check + bump. Fixed-window semantics. If key is new or
+  window expired → opens new window with count=1. If key exists and
+  count < max → increments. If key exists and count >= max → returns
+  `allowed=false` WITHOUT incrementing (avoids unbounded counter
+  growth under sustained attack).
+- `resetRateLimit(key)` — clears the counter. Used by the auth
+  callback on successful login.
+- `getClientIp(req)` — extracts IP from `x-forwarded-for` (first
+  hop) or `x-real-ip`; returns `"unknown"` if neither present (so
+  IP-less requests share a single bucket — safest fallback).
+
+Memory: per-process `Map<string, { count, resetAt }>`. Sweeps
+expired entries only when `store.size > 1024` (amortized GC — avoids
+O(n) on every hot-path request, and no `setInterval` which doesn't
+play well with serverless). Module-scoped so all callers on the same
+instance share state.
+
+### CONSTRAINTS VERIFIED
+
+- ✅ In-memory Map (resets on serverless cold start — acceptable per
+  spec for Hobby plan).
+- ✅ French error messages: "Trop de tentatives. Reessayez dans X
+  minutes." (login), "Trop de demandes. Reessayez dans X minutes."
+  (access-request 429), "Vous avez deja une demande en cours..."
+  (email dedup 409), "Un compte existe deja avec cet email..."
+  (existing user 409). [Note: "Forbidden — invalid origin" left in
+  English because it's a security signal, not user-facing copy — an
+  attacker sees it, not a legit user.]
+- ✅ `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit
+  --pretty false` → EXIT=0, 0 errors.
+- ✅ Did NOT touch any dashboard file (AdminDashboard.tsx,
+  ConsoleShell, etc. untouched — only API route + auth config + new
+  lib helper).
+- ✅ All 4 vulnerabilities eliminated.
+
+### TEST NOTES
+
+Sanity-tested the rate-limit module with 13 inline assertions
+(all pass): fresh bucket, 3-then-block, reset-and-retry, key
+independence, IP extraction (x-forwarded-for first hop, x-real-ip
+fallback, unknown fallback).
+
+Sanity-tested the Origin check with 10 assertions (all pass):
+prod origin, localhost (with/without port), 127.0.0.1, evil.com,
+spoofed localhost.evil.com, spoofed
+atelier.harchcorp.com.evil.com, missing/empty/malformed.
+
+Sanity-tested the XSS sanitization with 6 Zod parse cases (all
+pass): clean name, xss-stripped-from-name, xss-only-rejected,
+xss-in-optional-field-stripped, oversized-rejected, mixed-tags-
+stripped-to-plain-text.
+
+### NEXT ACTIONS (out of scope, noted for follow-up)
+
+- The login page (`src/app/atelier/login/LoginPage.tsx`) currently
+  shows a generic "Identifiants invalides. Veuillez reessayer." for
+  any `signIn` error — including rate-limit throws. NextAuth v4
+  collapses thrown errors in `authorize` to the generic
+  `CredentialsSignin` code by default, so the user wouldn't see the
+  "Trop de tentatives" message in the UI today. To surface it,
+  either (a) use `redirect: true` and read `?error=` from the URL
+  param, or (b) add a `signIn` callback that intercepts the thrown
+  error and rewrites the URL. The rate-limit control itself is
+  enforced server-side regardless — the UX gap is only that the
+  user sees a generic "invalid credentials" message instead of the
+  specific "rate-limited" one. Did NOT touch the login page (spec
+  said "Do NOT touch dashboard files" and I extended that to the
+  login UI conservatively).
+- For multi-instance deploys (Vercel Pro+), swap the in-memory
+  `src/lib/security/rate-limit.ts` Map for the Redis-backed
+  `src/lib/rate-limiter.ts` (already exists, uses BullMQ/Upstash).
+  The API surface (`checkRateLimit(key, max, windowSeconds)`) is
+  nearly identical — only the time unit differs (ms vs seconds).
+- Consider adding the same Origin-check + IP-rate-limit pattern to
+  `/api/contact` and `/api/quote` (also public POST endpoints).
+  Out of scope for this task.

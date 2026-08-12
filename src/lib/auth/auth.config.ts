@@ -18,6 +18,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/harchiq/audit-log";
 import { isDemoEmail, getDemoUser, DEMO_PASSWORD } from "@/lib/demo-session";
+import { checkRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
 
 // Augment NextAuth JWT & Session types so role/accountType are visible to
 // callers of `getServerSession(authOptions)` and `getToken()`.
@@ -158,6 +159,49 @@ export const authOptions: NextAuthOptions = {
         if (!ip) ip = headerVal("x-real-ip");
         const userAgent = headerVal("user-agent");
 
+        // ─── SECURITY: brute-force rate limit (Task: SECURITY-RATE-LIMIT) ─
+        // 5 failed attempts per IP per 15 minutes. The counter is
+        // bumped on every authorize call (whether the credentials
+        // are valid or not) — this is intentional: it blocks an
+        // attacker from probing many emails from one IP, not just
+        // repeated passwords for one email. On a successful login
+        // we reset the counter so a legit user who fat-fingers
+        // their password a few times isn't permanently locked out.
+        // In-memory Map → resets on serverless cold start; acceptable
+        // for the Hobby plan (single instance).
+        const ipKey = `login:${ip || "unknown"}`;
+        const LOGIN_MAX = 5;
+        const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+        const loginLimit = checkRateLimit(ipKey, LOGIN_MAX, LOGIN_WINDOW_MS);
+        if (!loginLimit.allowed) {
+          const minutesLeft = Math.max(
+            1,
+            Math.ceil((loginLimit.resetAt - Date.now()) / 60_000),
+          );
+          // Audit the rate-limit hit so the SOC can see brute-force
+          // attempts in the audit trail (Loi 09-08 traceability).
+          await logAudit({
+            userId: null,
+            action: "login_failed",
+            resource: `auth:ratelimited:${ip || "unknown"}`,
+            result: "denied",
+            ipAddress: ip,
+            userAgent,
+            metadata: {
+              reason: "rate_limited",
+              remaining: loginLimit.remaining,
+              resetAt: loginLimit.resetAt,
+            },
+          });
+          // Throwing (vs returning null) lets NextAuth distinguish
+          // a rate-limit hit from a generic credential failure —
+          // the message is surfaced to the client via the
+          // `?error=` query param on the login page.
+          throw new Error(
+            `Trop de tentatives. Reessayez dans ${minutesLeft} minutes.`,
+          );
+        }
+
         const attemptedEmail = credentials.email;
 
         const user = await prisma.user.findUnique({
@@ -232,6 +276,12 @@ export const authOptions: NextAuthOptions = {
             accountType: user.accountType,
           },
         });
+
+        // ─── SECURITY: reset brute-force counter on success ───────
+        // The successful login proves the human at this IP knows the
+        // credentials — forgive any earlier failed attempts so the
+        // next sign-in (after logout) starts from a clean slate.
+        resetRateLimit(ipKey);
 
         return {
           id: user.id,
