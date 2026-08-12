@@ -6,7 +6,7 @@ import {
   requireUserCompany,
   demoFilterFromSession,
 } from "@/lib/harchiq/company-session";
-import ZAI from "z-ai-web-dev-sdk";
+import { createZAI } from "@/lib/zai-wrapper";
 import { logError } from "@/lib/logger";
 import { checkHarchIQQuota, recordHarchIQQuestion } from "@/lib/harchiq/quota";
 
@@ -441,7 +441,7 @@ Answer concisely (max 3 paragraphs). Cite specific alerts/topics/AI engines/comp
     // 6. CALL THE LLM via z-ai-web-dev-sdk (server-side only).
     let answer: string;
     try {
-      const zai = await ZAI.create();
+      const zai = await createZAI();
       const completion = await zai.chat.completions.create({
         messages: [{ role: "user", content: contextPrompt }],
         temperature: 0.3,

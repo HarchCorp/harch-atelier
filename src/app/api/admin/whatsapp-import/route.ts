@@ -1,3 +1,4 @@
+import { createZAI } from "@/lib/zai-wrapper";
 // ═══════════════════════════════════════════════════════════════
 //  POST /api/admin/whatsapp-import
 //
@@ -229,8 +230,7 @@ Remember: return ONLY valid JSON, no markdown, no prose.`;
   let rawText = "";
   const modelName = "glm-4";
   try {
-    const ZAI = (await import("z-ai-web-dev-sdk")).default;
-    const zai = await ZAI.create();
+    const zai = await createZAI();
     const completion = await zai.chat.completions.create({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },

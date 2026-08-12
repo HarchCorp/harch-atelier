@@ -1,3 +1,4 @@
+import { createZAI } from "@/lib/zai-wrapper";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
@@ -148,8 +149,7 @@ export async function POST(req: NextRequest) {
   let extracted: ExtractedData;
 
   try {
-    const ZAI = (await import("z-ai-web-dev-sdk")).default;
-    const zai = await ZAI.create();
+    const zai = await createZAI();
 
     const systemPrompt = `You are an assistant that extracts structured information from WhatsApp conversations between a PR/communications agency and their potential client (a Moroccan company). The agency is selling reputation intelligence services.
 

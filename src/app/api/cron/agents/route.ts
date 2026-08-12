@@ -1,3 +1,4 @@
+import { createZAI } from "@/lib/zai-wrapper";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     let zai: any;
     try {
-      zai = await ZAI.create();
+      zai = await createZAI();
     } catch {
       results.scraper = "skipped (SDK unavailable)";
       store.setStatus({ agentName: "media-scraper", lastRun: new Date().toISOString(), status: "success", itemsProcessed: 0 });
