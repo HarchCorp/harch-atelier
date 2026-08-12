@@ -2009,7 +2009,13 @@ function RequestsTab({
           byStatus={byStatus}
           onCardClick={(id) => setDrawerId(id)}
           onQuickStatus={(id, s) => changeStatus(id, s)}
-          onConvertToClient={(id) => {
+          onDelete={(id) => {
+              if (!id) return;
+              fetch(`/api/admin/requests/${id}`, { method: "DELETE" })
+                .then((r) => { if (r.ok) onStatusChanged(); })
+                .catch(() => {});
+            }}
+            onConvertToClient={(id) => {
             const r = requests.find((x) => x.id === id);
             if (r) onConvertToClient(r);
           }}
@@ -2164,7 +2170,7 @@ function ReviewKpiStrip({ kpi }: {
 }
 
 function PipelineView({
-  stages, byStatus, onCardClick, onQuickStatus, onConvertToClient,
+  stages, byStatus, onCardClick, onQuickStatus, onConvertToClient, onDelete,
   onDragStart, onDragOverCol, onDropCol, onDragEnd,
   dragId, dragOverCol, updatingId,
   bulkMode, selected, toggleSelect,
@@ -2175,6 +2181,7 @@ function PipelineView({
   onCardClick: (id: string) => void;
   onQuickStatus: (id: string, status: RequestStatus) => void;
   onConvertToClient: (id: string) => void;
+  onDelete: (id: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOverCol: (e: React.DragEvent, key: string) => void;
   onDropCol: (e: React.DragEvent, key: string) => void;
@@ -2251,6 +2258,7 @@ function PipelineView({
                   onClick={() => onCardClick(r.id)}
                   onQuickStatus={(s) => onQuickStatus(r.id, s)}
                   onConvertToClient={() => onConvertToClient(r.id)}
+                  onDelete={() => onDelete(r.id)}
                   onDragStart={(e) => onDragStart(e, r.id)}
                   onDragEnd={onDragEnd}
                   dragging={dragId === r.id}
@@ -2271,7 +2279,7 @@ function PipelineView({
 }
 
 function RequestCard({
-  request, stage, onClick, onQuickStatus, onConvertToClient, onDragStart, onDragEnd,
+  request, stage, onClick, onQuickStatus, onConvertToClient, onDelete, onDragStart, onDragEnd,
   dragging, updating, bulkMode, isSelected, onToggleSelect,
   annotCount, lastContact,
 }: {
@@ -2280,6 +2288,7 @@ function RequestCard({
   onClick: () => void;
   onQuickStatus: (s: RequestStatus) => void;
   onConvertToClient: () => void;
+  onDelete?: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   dragging: boolean;
@@ -2476,6 +2485,35 @@ function RequestCard({
           Convertir en client
         </button>
       )}
+      {/* Delete button — small, red, bottom of card */}
+      {!bulkMode && onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm("Supprimer cette demande ?")) onDelete();
+          }}
+          title="Supprimer"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+            width: "100%", marginTop: "4px",
+            padding: "4px 8px",
+            background: "transparent",
+            color: "#EF4444",
+            border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: "4px",
+            fontFamily: C.fontMono, fontSize: "9px", fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.06em",
+            cursor: "pointer",
+            opacity: 0.6,
+            transition: "opacity 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}
+        >
+          <Trash2 size={10} />
+          Supprimer
+        </button>
+      )}
     </div>
   );
 }
@@ -2640,6 +2678,7 @@ function RequestDetailDrawer({
   onStatusChange: (s: RequestStatus) => void;
   onAccept: () => void;
   onConvertToClient: () => void;
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   const isOpen = !!request;
