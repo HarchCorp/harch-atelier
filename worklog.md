@@ -8366,3 +8366,22 @@ NEXT ACTIONS (out of scope, notées pour suivi)
   src/app/atelier/console/components/CollecteEnCours.tsx et importé,
   mais cela aurait dépassé le scope « ne pas toucher d'autres fichiers ».
 
+
+---
+Task ID: SESSION-PI-DIGITS
+Agent: Kaelen Vance (Principal Architect)
+Task: Rendre le produit vivant, honnête, humain — les digits de Pi
+
+Work Log:
+- Email transactionnel (Resend): 4 templates (welcome, invitation, reset-password, invoice). Wired into /api/access (welcome) + /api/admin/provision-client (invitation). Fire-and-forget, never blocks.
+- Reset password flow: /api/auth/reset-password (POST request + PATCH execute). 2 new pages: /atelier/forgot-password + /atelier/reset-password. Login page "Mot de passe oublié?" now points to /forgot-password (was → /atelier/audit).
+- Dashboards honnêtes: brand-health API returns 3 states (no_data/limited/nominal). All 4 dashboards show "Collecte en cours" when no data (sage radar animation + "Premiers résultats sous 24-48h"). No more fake score 50.
+- Agency real data: 4 features replaced hashStr fabrication with real Prisma data (client health, churn risk, revenue forecast, revenue tracker). "Données insuffisantes" instead of fake numbers.
+- Auto-scrape: NEW /api/console/first-scrape route. Scrapes Google News + 10 RSS feeds for company name. Upserts 50 articles. All 4 dashboards auto-call this when status="no_data". Real data within 60-90s of onboarding.
+
+Stage Summary:
+- 7 commits: email system, reset password, honest empty states, agency real data, first-scrape route, auto-scrape trigger, null safety fixes
+- The product is now HONEST: no fake data, no fake scores, no empty charts without explanation
+- The product is now HUMAN: welcome email, password reset, onboarding guidance
+- The product is now ALIVE: auto-scrape gives real data within 2 minutes
+- Still needs: RESEND_API_KEY on Vercel (emails), Vercel Pro (crons), ZAI_API_KEY (HarchIQ)
