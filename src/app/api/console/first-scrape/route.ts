@@ -75,22 +75,25 @@ export async function POST() {
     let inserted = 0;
     for (const article of articles.slice(0, 50)) {
       try {
+        // Generate urlHash if not present
+        const urlHash = (article as { urlHash?: string }).urlHash
+          ?? crypto.randomUUID();
+
         await prisma.article.upsert({
-          where: { urlHash: article.urlHash },
+          where: { urlHash },
           create: {
-            url: article.url,
-            urlHash: article.urlHash,
+            url: article.url.slice(0, 2000),
+            urlHash,
             title: article.title.slice(0, 500),
-            description: article.description?.slice(0, 2000) ?? null,
-            content: article.content?.slice(0, 50000) ?? null,
-            publishedAt: article.publishedAt,
-            sourceName: article.source,
-            sourceUrl: article.sourceUrl ?? null,
-            sourceType: article.sourceType ?? "rss",
+            content: (article.content ?? article.summary ?? "").slice(0, 50000) || null,
+            summary: (article.summary ?? "").slice(0, 2000) || null,
+            publishedAt: article.publishedAt ? new Date(article.publishedAt) : null,
+            source: (article.sourceName ?? "Unknown").slice(0, 200),
+            sourceId: article.sourceId ?? null,
             language: article.language ?? "fr",
             companyId,
-            sentimentLabel: article.sentiment?.label ?? null,
-            sentimentScore: article.sentiment?.score ?? null,
+            sentimentLabel: article.sentiment ?? null,
+            sentimentScore: article.sentimentScore ?? null,
           },
           update: {
             companyId, // re-link if article existed without company
