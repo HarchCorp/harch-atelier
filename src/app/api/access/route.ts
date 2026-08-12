@@ -50,17 +50,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already exists (shouldn't happen, but safety)
+    // Check if user already exists
+    // — If status="invited" (admin pre-created the account), UPDATE password
+    // — If status="active" (already activated), block with 409
     const existingUser = await prisma.user.findUnique({
       where: { email: invitation.email },
     });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "An account already exists with this email." },
-        { status: 409 }
-      );
-    }
 
     // Parse REQUIRED password (user creates their own)
     const body = await req.json().catch(() => ({}));
@@ -75,27 +70,58 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
-    // Create the user
-    const user = await prisma.user.create({
-      data: {
-        email: invitation.email,
-        name: invitation.name,
-        passwordHash,
-        role: invitation.role,
-        accountType: invitation.accountType,
-        // Attach the new user to the company the invitation was scoped to
-        // (null for super-admin-created invitations without a companyId).
-        companyId: invitation.companyId,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        accountType: true,
-        companyId: true,
-      },
-    });
+    let user;
+
+    if (existingUser) {
+      // User already exists — check if it's an invited account (pre-created by admin)
+      if (existingUser.status === "invited") {
+        // Activate the account: set the real password + mark active
+        user = await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            passwordHash,
+            status: "active",
+            onboardingCompleted: false,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            accountType: true,
+            companyId: true,
+          },
+        });
+      } else {
+        // Account is already active — block re-activation
+        return NextResponse.json(
+          { error: "An account already exists with this email. Please sign in directly." },
+          { status: 409 }
+        );
+      }
+    } else {
+      // No existing user — create a new one (normal invitation flow)
+      user = await prisma.user.create({
+        data: {
+          email: invitation.email,
+          name: invitation.name,
+          passwordHash,
+          role: invitation.role,
+          accountType: invitation.accountType,
+          companyId: invitation.companyId,
+          status: "active",
+          onboardingCompleted: false,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          accountType: true,
+          companyId: true,
+        },
+      });
+    }
 
     // Mark invitation as used
     await prisma.invitation.update({
@@ -107,7 +133,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      status: "created",
+      status: "activated",
       user,
       message: "Your account is ready. You can now sign in.",
     });
