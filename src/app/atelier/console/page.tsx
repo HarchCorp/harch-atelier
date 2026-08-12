@@ -8,11 +8,13 @@ import { redirect } from "next/navigation";
 //
 //  Does NOT render anything. Reads the session and redirects:
 //    1. No session                → /atelier/login
-//    2. Admin                     → /atelier/console/brand-monitor
-//    3. Demo user (demo-*@harch.atelier) → their per-offer console
+//    2. Admin/super_admin         → /atelier/admin (Bat Cave)
+//    3. Commercial                → /atelier/admin (restricted tabs)
+//    4. Demo user (demo-*@harch.atelier) → their per-offer console
 //       (auto-onboarded in /api/auth/demo — skips the wizard)
-//    4. onboardingCompleted=false → /atelier/onboarding (wizard)
-//    5. Else                      → their per-offer console
+//    5. onboardingCompleted=false → /atelier/onboarding (wizard)
+//    6. Else                      → their per-offer console
+//       (essential/pro/enterprise/agency)
 //
 //  Task: user-company-onboarding
 // ═══════════════════════════════════════════════════════════════
@@ -26,9 +28,13 @@ export default async function ConsoleRedirect() {
     redirect("/atelier/login?callbackUrl=/atelier/console");
   }
 
-  // Admins go to brand-monitor console (they can navigate to others manually)
-  if (session.user.role === "admin") {
-    redirect("/atelier/console/brand-monitor");
+  // Admins + super_admins + commercials go to the Bat Cave
+  if (
+    session.user.role === "admin" ||
+    session.user.role === "super_admin" ||
+    session.user.role === "commercial"
+  ) {
+    redirect("/atelier/admin");
   }
 
   // Demo accounts are auto-onboarded in /api/auth/demo — skip the wizard.

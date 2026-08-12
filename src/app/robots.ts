@@ -18,7 +18,10 @@ const PRIVATE_PATHS = [
   '/atelier/console',
   // Agency & client portals (auth-gated, branded per-tenant)
   '/atelier/agency',
-  '/atelier/client-dashboard',
+  '/atelier/console/essential',
+  '/atelier/console/pro',
+  '/atelier/console/enterprise',
+  '/atelier/console/agency',
   // Admin surfaces (never index)
   '/atelier/admin',
   '/atelier/admin-x7k2m9',

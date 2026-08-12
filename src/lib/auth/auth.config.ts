@@ -348,10 +348,11 @@ export const authOptions: NextAuthOptions = {
 // panel for inviting teammates + configuring their company).
 // Other users go to /atelier/console/<accountType>.
 export function getConsolePath(accountType?: string, role?: string): string {
-  if (role === "admin") return "/atelier/admin";
+  if (role === "admin" || role === "super_admin") return "/atelier/admin";
   if (role === "company-admin") return "/atelier/console/enterprise-admin";
-  if (role === "agency-admin") return "/atelier/agency";
-  // Regular users land on the client dashboard (simple overview)
-  // before diving into the full console.
-  return "/atelier/client-dashboard";
+  if (role === "agency-admin") return "/atelier/console/agency";
+  if (role === "commercial") return "/atelier/admin";
+  // Regular users land on their plan-specific console.
+  // /atelier/console redirects to the right dashboard based on accountType.
+  return "/atelier/console";
 }

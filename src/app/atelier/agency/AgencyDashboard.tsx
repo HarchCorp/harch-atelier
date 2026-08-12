@@ -153,7 +153,7 @@ export function AgencyDashboard({ agency, userName, activeAgencyClientId }: Prop
       toast.success(`Switched to ${displayName} workspace`);
       // Give the cookie a beat to settle, then redirect to the console
       // (now scoped to that sub-client's companyId via app-level RLS).
-      setTimeout(() => router.push("/atelier/console/brand-monitor"), 400);
+      setTimeout(() => router.push("/atelier/console"), 400);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Switch failed");
       setSwitching(null);

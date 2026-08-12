@@ -31,7 +31,7 @@ export interface StandbyBannerProps {
 const DEFAULT_REASON =
   "This module is on standby while we focus on the core console experience. Trader and investment-bank desks will return in a future release.";
 
-const DEFAULT_CTA_HREF = "/atelier/console/brand-monitor";
+const DEFAULT_CTA_HREF = "/atelier/console";
 const DEFAULT_CTA_LABEL = "Back to Brand Monitor";
 
 export function StandbyBanner({

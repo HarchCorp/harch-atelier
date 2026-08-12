@@ -147,7 +147,7 @@ export function AgencyClientDetail({ clientId, initialClient }: Props) {
       });
       if (!r.ok) throw new Error("Switch failed");
       toast.success("Workspace switched");
-      setTimeout(() => router.push("/atelier/console/brand-monitor"), 400);
+      setTimeout(() => router.push("/atelier/console"), 400);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Switch failed");
       setSwitching(false);
