@@ -5472,3 +5472,139 @@ Stage Summary:
 - Employee Management System operational: 2 invitation modes (Chef single-link with maxUsers cap, Admin bulk-link with per-employee assignment), employee fiches with 10-field completion meter, comprehensive detail modal with 7 sections (fiche/invitation/connexion/annotations/activite/permissions/securite), per-company KPIs (capacity, conversion, active 7d, avg completion, dept/role breakdown), CSV import/export, localStorage persistence with server-side audit logging.
 - API contract established for future DB wiring: /api/admin/employee-fiches (GET/POST/PATCH) and /api/admin/invitations/bulk (POST) are admin-guarded, validated, and audit-logged. UI uses localStorage as source of truth; server routes fire-and-forget for audit trail.
 - Bulk invitation generation creates real Prisma Invitation rows (reuses existing model) — admin can copy-paste individual URLs to employees immediately.
+
+---
+Task ID: BATCAVE-1B-REQUESTS
+Agent: AURA (Lead Product & UX Strategist)
+Task: Enhance existing RequestsTab in AdminDashboard.tsx (10580 → 11055 lines)
+
+Work Log:
+- Read worklog tail (P3-GLM4-WHATSAPP-CONSOLE last entry). Confirmed scope: enhance existing RequestsTab in /home/z/my-project/src/app/atelier/admin/AdminDashboard.tsx (NOT a new tab).
+- Inventoried existing RequestsTab (function @ L1090). Found that BATCAVE-1-REQUESTS agent had already implemented ~95% of the brief:
+  • Status Workflow Pipeline (PIPELINE_STAGES, 5 cols: Nouveau/Contacté/Essai/Converti/Annulé mapped to pending/interested/recontact_later/converted/not_interested). HTML5 drag-drop native. PATCH /api/admin/requests/[id] (verified @ /src/app/api/admin/requests/[id]/route.ts — already created by ADMIN-1 agent).
+  • Annotation System (localStorage "admin:request-annotations", Record<requestId, Annotation[]>, type selector note/reminder/flag, author + timestamp, annotation count badge on cards).
+  • Contact Tracking (method email/phone/whatsapp, history log, "Dernier contact" indicator, "Prochaine action" field with date picker).
+  • KPI Strip (total, new 7j, conversion rate, avg time to conv, pipeline value, plan breakdown).
+  • Filters + Search (status/plan/country/companySize/budget/dateRange, full-text, "Sans annotation" filter).
+  • Enhanced Request Detail drawer (Identité, Entreprise, Plan & budget, Cas d'usage, Source & tracking with UTM parser, Méta-données, Prochaine action, Relances à venir, Annotations, Suivi des contacts).
+  • Pipeline/Table view toggle, bulk select (mark contacted, export CSV, mailto), sort by 6 keys.
+
+- Identified remaining gaps and applied surgical enhancements (no duplicate code created):
+
+  1. USER-AGENT PARSER + LIVE META (gap: brief asks "Device/browser from User-Agent", existing code showed "Non capturé (User-Agent non stocké)"):
+     • Added interface UaInfo + function parseUserAgent(ua: string): UaInfo (browser detection: Edge/Opera/Firefox/Chrome/Safari/IE; OS: Windows/macOS/Android/iOS/Linux; device: Desktop/Mobile/Tablette). Regex-based, no deps.
+     • Added hooks useLiveUa() and useLiveTimezone() (SSR-safe, read navigator.userAgent + Intl.DateTimeFormat().resolvedOptions().timeZone in useEffect).
+     • Added helper timeElapsedSince(fromIso, toIso) — compact French duration "2j 4h" / "5m 30s" for submission→update delta.
+     • Enhanced RequestDetailDrawer Méta-données section: replaced "Non capturé" placeholders with live values for Fuseau horaire (liveTz), Appareil (liveUa.device + liveUa.os with Monitor icon), Navigateur (liveUa.browser), User-Agent (live) raw string. Each FieldRow has insight "Live admin · non capturé à la soumission" — honest about the source. IP row kept as "Non capturée à la soumission" with insight "Capture IP prévue dans une prochaine migration schéma". Mis-à-jour le row now shows time-elapsed insight (relTime + absolute duration).
+     • Added Monitor icon to lucide-react imports.
+
+  2. KPI STRIP ENHANCEMENT (gap: brief asks for "Sans annotation" filter as needs-attention indicator, but KPI strip didn't surface the count):
+     • Extended kpi useMemo with: withAnnotation, withoutAnnotation, avgContactsPerConversion (avg contacts per converted request — sales-effort proxy), stalled (pending > 48h without contact log — needs attention). Added annotations + contacts to useMemo deps.
+     • Extended ReviewKpiStrip signature with the 4 new fields. Added 3 new KpiCells: "Sans annotation" (danger color when > 0, sub "à attention"), "Bloquées (>48h)" (warning color, sub "pending sans contact"), "Contacts/conv." (avg contacts per conversion). Total KPI cells now 12 (was 9).
+
+  3. QUICK-STATUS BUTTON ON REQUEST CARD (gap: brief implies "Marquer comme contacté" should be one click; existing flow required opening the drawer):
+     • Extended PipelineView props with onQuickStatus: (id, status) => void. Wired from RequestsTab via changeStatus.
+     • Extended RequestCard props with onQuickStatus: (s: RequestStatus) => void.
+     • Added quickAction derivation: pending → interested (label "Contacté", Mail icon) | interested → recontact_later (label "Essai", ArrowRight icon) | recontact_later → converted (label "Convertir", Check icon, primary=true → C.cta background).
+     • Added full-width quick-action button at bottom of card (only when !bulkMode && quickAction). Uses e.stopPropagation() to prevent drawer opening. Loader2 spinner when updating. Inherits stage color (or C.cta for primary).
+
+  4. ANNOTATION FILTER COUNTS (gap: brief says "Sans annotation (needs attention)" filter — made the count visible inline):
+     • Updated filter dropdown: "Toutes (N)" / "Avec annotation (N)" / "Sans annotation — à attention (N)" using kpi.withAnnotation / kpi.withoutAnnotation.
+
+- No other tabs touched (Provisioning, Employees, KPIs, Commerciaux, Accounts, Permissions, Security, Logs, Audit, WhatsApp all preserved).
+- TypeScript: NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors (verified 2× — 2nd run with wc -l → 0 lines of output).
+
+Stage Summary:
+- 1 file modified: AdminDashboard.tsx (10580 → 11055 lines, +475 net).
+- 4 surgical enhancement clusters delivered (UA parser + live meta, KPI strip extension, quick-status button, filter counts).
+- 0 new tabs created. 0 existing features removed. 0 other files touched.
+- Existing PATCH route /api/admin/requests/[id] reused (created by ADMIN-1 agent, verified intact).
+- All 5 brief sections covered:
+  1. Status Workflow Pipeline — 5 cols kanban, drag-drop, PATCH — was already there, preserved.
+  2. Annotation System — localStorage Record<requestId, Annotation[]>, type selector, chronological list, count badge — was already there, preserved.
+  3. Contact Tracking — method (email/phone/whatsapp), history log, "Dernier contact", "Prochaine action" — was already there, preserved. NEW: quick-status button advances pipeline + drawer form records detailed contact logs.
+  4. Enhanced Request Detail — all AccessRequest fields shown, Globe icon on country, budget monthly/annual estimate, suggestPlan auto-suggestion, time-elapsed since submission — was already there. NEW: live UA parsing (browser/OS/device), live timezone, timeElapsedSince submission→update, Monitor icon on device.
+  5. KPI Strip — total, new 7j, conversion rate, avg conv time, pipeline value, plan breakdown — was already there. NEW: Sans annotation count, Bloquées >48h count, Contacts/conv. ratio.
+  6. Filters + Search — status/plan/country/companySize/budget/dateRange, full-text, Sans annotation filter — was already there. NEW: filter counts inline.
+- Design system preserved: white/sage/charcoal, Space Mono (C.fontMono), Inter (C.fontSans), Lucide icons only, NO emojis, French throughout, Bloomberg-terminal density.
+- Next actions (out of scope, suggested for future passes):
+  (1) Add UA + IP capture at AccessRequest submission (schema migration + access-request POST route) — would let the drawer show real per-request UA instead of live admin fallback.
+  (2) Wire "Marquer contacté" quick-action to also create a ContactLog entry (currently only advances status; the contact log is created manually in the drawer).
+  (3) Persist annotations + contacts + next-actions server-side (currently localStorage-only — multi-admin edits don't sync). Add AccessRequestAnnotation + AccessRequestContact Prisma models + routes.
+  (4) Add a "Quick add annotation" inline textarea on cards (mini-form, no drawer needed) — would further reduce friction for high-volume triage.
+
+---
+Task ID: BATCAVE-4B-KPI-COMMERCIAL
+Agent: AURA (Lead Product & UX Strategist)
+Task: Verify + enhance KpisTab and CommerciauxTab in AdminDashboard.tsx (Bloomberg terminal tone, white/sage/charcoal, Space Mono/Inter, Lucide icons, French, NO emojis, recharts)
+
+Work Log:
+- Read worklog tail (last entry: BATCAVE-3-EMPLOYEES by NEXUS). File grew from 10580 to 11061 lines during my session (concurrent agents). Re-verified line positions of KpisTab (5059) and CommerciauxTab (5828) after each refresh.
+
+- Étape 1 — Verification of KpisTab (lines 5121-5818 after my edits, was 5059-5776 before):
+  • Already COMPLETE from previous agent — verified presence of:
+    - Revenue KPIs row (6 cards): MRR, ARR, Avg Rev/Client, Churn Rate, LTV, Pipeline Value ✓
+    - Client KPIs row (6 cards): Total Clients, New This Month, Trial→Paid, Avg Trial Duration, NPS, Net Retention ✓
+    - Usage KPIs row (6 cards): HarchIQ Questions, Reports, WhatsApp Alerts, API Calls, DAU, Avg Session ✓
+    - Request KPIs row (6 cards): Total, New This Week, Avg Response, Funnel Converti, Top Plan, Top Country ✓
+    - Charts (6): Revenue Trend (Line), Client Growth (Area), Plan Distribution (Pie), Request Funnel (Bar), Churn Trend (Line), Top 10 Clients (Horizontal Bar) ✓
+    - Export buttons: CSV "Exporter rapport complet" + "Envoyer par email" ✓
+    - Persistence: localStorage "admin:kpi-snapshot" via usePersistentState ✓
+
+- Étape 2 — KpisTab ENHANCEMENTS (added 2 sections):
+  • SaaS Health row (4 Bloomberg-style indicator cards) inserted between header actions and Revenue KPIs row:
+    - Quick Ratio: newMrr / churnedMrr (display "∞" if churned=0 and new>0), green/sage bg if ≥4.0, red bg otherwise
+    - Net Revenue Retention: green if ≥100%, red otherwise
+    - MRR Growth MoM: green if ≥4%, red otherwise, sub-line shows net new MRR (newMrr - churnedMrr)
+    - Churn vs Threshold: green if ≤2.0%, red otherwise, sub-line shows active client growth % MoM
+    - Added variables: newMrr, churnedMrr, quickRatio, activeGrowthPct, mrrGrowthPct, nrrHealth, churnHealth, growthHealth, quickHealth
+  • MRR Flow chart (7th chart in chart grid): stacked BarChart of monthly newMrr (sage) vs churnedMrr (danger/red), 12 months. Subtitle "New MRR vs Churned MRR · 12 mois".
+    - Added variable: mrrFlowData = snapshot.revenue.map(...)
+
+- Étape 3 — Verification of CommerciauxTab (lines 5828-6912, ~1085 lines):
+  • Already COMPLETE from previous agent — verified presence of:
+    - "Ajouter un commercial" button ✓
+    - CommercialCreateModal with name/email/phone/territory/commissionRate/targetRevenue/password (auto-gen + copy + refresh) ✓
+    - CommercialDetailModal with personal info (DetailMini), Performance KPIs (revenue/revenueYTD/convRate/avgDeal), Target progress bar, Assigned clients table, Activity log, Suspend/reactivate toggle, Reassign clients button ✓
+    - CommercialReassignModal (select target commercial, transfer clients) ✓
+    - Commercial aggregate KPIs strip (4 KpiCells: Total, Revenue total, Revenue/commercial, Top performer) ✓
+    - Revenue by commercial BarChart ✓
+    - Commercial list table ✓
+    - Persistence: localStorage "admin:commercials" via usePersistentState ✓
+
+- Étape 4 — CommerciauxTab ENHANCEMENTS (3 changes):
+  • HEADER: replaced single "Ajouter" button with a 3-control cluster: status filter <select> (Tous statuts/Actifs/Suspendus) + "Exporter CSV" button (Download icon, fires exportCommercialsCsv) + "Ajouter un commercial" (unchanged). Header subtitle now shows "{totalCommercials} commerciaux · {filteredCommercials.length} affichés".
+  • TABLE: restructured from 8 columns to 10 columns. New grid: `minmax(180px, 1.6fr) minmax(120px, 1fr) 140px 70px 110px 100px 80px 110px 90px 44px` with `minWidth: 1080px` and `overflowX: auto` on container for horizontal scroll on narrow screens. Added columns:
+    - "Téléphone" (140px, Phone icon + c.phone in fontMono)
+    - "Com. est." (100px, fmtMAD(commission) + small sub-line "{commissionRate}%")
+    Renamed "Conv. rate" → "Conv." (80px, more compact)
+    Empty-state messaging branches: if commercials.length===0 → "Aucun commercial. Cliquez sur 'Ajouter...'"; else if filteredCommercials.length===0 → "Aucun commercial ne correspond au filtre sélectionné."
+    Table now iterates `filteredCommercials` (not `commercials`) so status filter is enforced.
+  • AGGREGATE KPI STRIP: added 5th KpiCell "Commission totale" showing fmtMAD(totalCommission) with sub "{X}% obj." (Math.round((totalRevenue/totalTarget)*100)). Also added totalCommission and totalTarget reducers.
+  • CHART: "Revenue par commercial" enhanced — height 200→220, subtitle updated to "MRR généré (MAD/mois) · Commission estimée en surcouche", data now includes `commission` field, BarChart uses stackId="a" with revenue (sage) + commission (charcoal) stacked bars showing both gross revenue and commission overlay.
+
+- Étape 5 — CSV EXPORT (exportCommercialsCsv function):
+  • Generates CSV blob with 2 sections:
+    - Header roster: Name,Email,Phone,Territory,Commission %,Target MAD,Clients,Revenue MAD,Commission MAD,Conv %,Status,Last Login,Created At (13 columns, all values quoted and escaped)
+    - "## ASSIGNED CLIENTS" section: Commercial,Client,Plan,Revenue MAD,Status,Last Contact
+  • Filename: `harchiq-commercials-YYYY-MM-DD.csv`
+  • exportingCsv state drives button label "Export..." / "Exporter CSV" + cursor:not-allowed
+
+- Étape 6 — RBAC hardening (defense-in-depth):
+  • Existing sidebar already wraps KPIs + Commerciaux SidebarItems in `{canSeeKPIs && (...)}` and `{canSeeCommercials && (...)}` based on getAdminPermissions(currentRole) → viewFinancials / manageCommercials flags.
+  • rbac.ts: super_admin/admin → both true; commercial → both false. Sidebar items correctly hidden for commercial role.
+  • ADDED useEffect guard (after the role fetch useEffect, line 347-352): if currentRole !== null AND (tab==="kpis" && !canSeeKPIs) OR (tab==="commerciaux" && !canSeeCommercials) → setTab("requests"). This bounces any commercial who somehow ends up on a restricted tab (state corruption, race condition on role fetch) back to Requests.
+
+- Étape 7 — Quality checks:
+  • NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false → EXIT_CODE=0, 0 errors (vérifié 4× after each batch of edits: baseline + after CommerciauxTab + after RBAC guard + after performers cleanup).
+  • File grew from 10580 → 11061 lines (+481 lines, all in KpisTab + CommerciauxTab + RBAC guard regions, no other tabs touched).
+  • No emojis, French throughout, Lucide icons only (Download, Phone, Eye, Crown, MapPin, UserPlus, Filter implicit via <select>, Activity, Repeat, TrendingUp, TrendingDown, BarChart3, DollarSign, Users, Clock, Percent, Target, Briefcase, MessageSquare, ScrollText, Inbox, Tag, Globe, Send, X, Copy, Check, RefreshCw, MoveHorizontal, Ban, Power all already imported from prior agent work — no new imports needed).
+  • recharts components reused: BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell (already imported). No new recharts imports.
+
+Stage Summary:
+- 1 file modified (AdminDashboard.tsx). 0 TS errors.
+- KpisTab ENHANCED: + SaaS Health row (4 Bloomberg-style indicator cards with threshold-based green/red coloring) + MRR Flow stacked BarChart (7th chart). All required rows (Revenue/Clients/Usage/Requests, 6 cards each) and all 6 required charts preserved; 1 added = 7 charts total.
+- CommerciauxTab ENHANCED: + Phone column (REQUIRED — was missing per spec) + Commission est. column + status filter select + CSV export button (with roster + assigned clients sections) + Commission totale aggregate KPI + stacked commission overlay on Revenue par commercial chart. All required elements (list table with name/email/phone/clients/revenue/conv rate/last login/status, create form with all 7 fields, detail modal with 5 sections + suspend/reactivate + reassign, aggregate KPIs, revenue BarChart) preserved.
+- Commercial fiches persistence confirmed: localStorage "admin:commercials" (CommercialFiche[]) via usePersistentState.
+- RBAC: both tabs HIDDEN for commercial role via canSeeKPIs/canSeeCommercials sidebar guards + ADDED useEffect defense-in-depth guard that bounces restricted-tab state back to "requests".
+- 0 other tabs touched. 0 new API routes. 0 new files. Surgical, in-place enhancement of existing functions — no duplicates created.

@@ -72,6 +72,7 @@ import {
   KanbanSquare,
   Square,
   Table2,
+  Monitor,
 } from "lucide-react";
 import {
   Area,
@@ -339,6 +340,16 @@ export function AdminDashboard() {
   const adminPerms = getAdminPermissions(currentRole);
   const canSeeKPIs = adminPerms?.viewFinancials === true;
   const canSeeCommercials = adminPerms?.manageCommercials === true;
+
+  // Defense-in-depth: if a commercial user somehow ends up on a restricted
+  // tab (state corruption, race condition on role fetch), bounce them back
+  // to the Requests tab.
+  useEffect(() => {
+    if (currentRole === null) return; // role not yet loaded
+    if ((tab === "kpis" && !canSeeKPIs) || (tab === "commerciaux" && !canSeeCommercials)) {
+      setTab("requests");
+    }
+  }, [tab, currentRole, canSeeKPIs, canSeeCommercials]);
 
   const pendingRequests = requests.filter((r) => r.status === "pending");
   const interestedRequests = requests.filter((r) => r.status === "interested");
@@ -978,6 +989,27 @@ function absDate(iso: string | null | undefined): string {
   });
 }
 
+// Time elapsed between two ISO dates, expressed as a compact French string
+// (e.g. "2j 4h", "5m 30s"). Used in the drawer to show the duration between
+// submission and last update — useful for tracking how long a request sat in
+// each pipeline stage.
+function timeElapsedSince(fromIso: string | null | undefined, toIso: string | null | undefined): string {
+  if (!fromIso || !toIso) return "—";
+  const from = new Date(fromIso).getTime();
+  const to = new Date(toIso).getTime();
+  if (Number.isNaN(from) || Number.isNaN(to)) return "—";
+  let diff = Math.abs(to - from);
+  if (diff < 1000) return "0s";
+  const days = Math.floor(diff / (24 * 3600 * 1000)); diff -= days * 24 * 3600 * 1000;
+  const hours = Math.floor(diff / (3600 * 1000)); diff -= hours * 3600 * 1000;
+  const mins = Math.floor(diff / (60 * 1000)); diff -= mins * 60 * 1000;
+  const secs = Math.floor(diff / 1000);
+  if (days > 0) return `${days}j ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+}
+
 function planLabel(t: string | null | undefined): string {
   if (!t) return "—";
   return PLAN_LABELS_FR[t] || t;
@@ -1046,6 +1078,67 @@ function parseReferral(ref: string | null | undefined): { source: string; utm: R
     if (Object.keys(utm).length > 0) return { source: "UTM direct", utm };
   }
   return { source: ref, utm: {} };
+}
+
+// ─── USER-AGENT PARSER ──────────────────────────────────────────
+// Parses a User-Agent string into { browser, os, device }.
+// Used in the detail drawer: AccessRequest schema does not persist UA
+// at submission time, so we display the live admin's UA as a fallback
+// (clearly labelled "live admin · non capturé à la soumission").
+
+interface UaInfo {
+  browser: string;
+  os: string;
+  device: string;
+  raw: string;
+}
+
+function parseUserAgent(ua: string): UaInfo {
+  if (!ua) return { browser: "Inconnu", os: "Inconnu", device: "Inconnu", raw: "" };
+  // Browser detection (order matters — Edge/Chrome, Opera/Chrome).
+  let browser = "Inconnu";
+  if (/edg\//i.test(ua)) browser = "Microsoft Edge";
+  else if (/opr\/|opera/i.test(ua)) browser = "Opera";
+  else if (/firefox\//i.test(ua)) browser = "Firefox";
+  else if (/chrome\//i.test(ua) && !/chromium/i.test(ua)) browser = "Chrome";
+  else if (/safari\//i.test(ua) && !/chrome/i.test(ua)) browser = "Safari";
+  else if (/msie|trident/i.test(ua)) browser = "Internet Explorer";
+
+  // OS detection.
+  let os = "Inconnu";
+  if (/windows nt 10/i.test(ua)) os = "Windows 10/11";
+  else if (/windows nt/i.test(ua)) os = "Windows";
+  else if (/mac os x|macintosh/i.test(ua)) os = "macOS";
+  else if (/android/i.test(ua)) os = "Android";
+  else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
+  else if (/linux/i.test(ua)) os = "Linux";
+
+  // Device class.
+  let device = "Desktop";
+  if (/iphone|android.*mobile|windows phone/i.test(ua)) device = "Mobile";
+  else if (/ipad|android(?!.*mobile)|tablet/i.test(ua)) device = "Tablette";
+
+  return { browser, os, device, raw: ua };
+}
+
+function useLiveUa(): UaInfo | null {
+  const [info, setInfo] = useState<UaInfo | null>(null);
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    setInfo(parseUserAgent(navigator.userAgent));
+  }, []);
+  return info;
+}
+
+function useLiveTimezone(): string | null {
+  const [tz, setTz] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const t = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (t) setTz(t);
+    } catch { /* ignore */ }
+  }, []);
+  return tz;
 }
 
 function genLocalId(): string {
@@ -1238,8 +1331,39 @@ function RequestsTab({
     requests.forEach((r) => {
       if (r.accountType && planCounts[r.accountType] != null) planCounts[r.accountType]++;
     });
-    return { total: requests.length, newThisWeek, conversionRate, avgConvDays, pipelineValue, planCounts };
-  }, [requests]);
+    // Annotation coverage — "Sans annotation" = needs attention.
+    let withAnnotation = 0;
+    let withoutAnnotation = 0;
+    requests.forEach((r) => {
+      if ((annotations[r.id]?.length ?? 0) > 0) withAnnotation++;
+      else withoutAnnotation++;
+    });
+    // Average contacts per converted request — proxy for sales effort.
+    const convIds = new Set(requests.filter((r) => r.status === "converted").map((r) => r.id));
+    const convContactLogs = Object.entries(contacts)
+      .filter(([id]) => convIds.has(id))
+      .reduce((sum, [, log]) => sum + (log?.length ?? 0), 0);
+    const avgContactsPerConversion = convIds.size > 0 ? convContactLogs / convIds.size : 0;
+    // Stalled requests — pending > 48h without contact log.
+    const stalledThreshold = now - 48 * 3600 * 1000;
+    const stalled = requests.filter((r) =>
+      r.status === "pending"
+      && new Date(r.createdAt).getTime() < stalledThreshold
+      && (contacts[r.id]?.length ?? 0) === 0,
+    ).length;
+    return {
+      total: requests.length,
+      newThisWeek,
+      conversionRate,
+      avgConvDays,
+      pipelineValue,
+      planCounts,
+      withAnnotation,
+      withoutAnnotation,
+      avgContactsPerConversion,
+      stalled,
+    };
+  }, [requests, annotations, contacts]);
 
   // ─── STATUS CHANGE ─────────────────────────────────────────────
   const changeStatus = useCallback(async (id: string, newStatus: RequestStatus) => {
@@ -1548,9 +1672,9 @@ function RequestsTab({
           </FilterField>
           <FilterField label="Annotations">
             <select value={annotFilter} onChange={(e) => setAnnotFilter(e.target.value as AnnotationTypeFilter)} style={monoInputStyle}>
-              <option value="all">Toutes</option>
-              <option value="with">Avec annotation</option>
-              <option value="without">Sans annotation (à attention)</option>
+              <option value="all">Toutes ({requests.length})</option>
+              <option value="with">Avec annotation ({kpi.withAnnotation})</option>
+              <option value="without">Sans annotation — à attention ({kpi.withoutAnnotation})</option>
             </select>
           </FilterField>
           <div style={{ display: "flex", alignItems: "flex-end" }}>
@@ -1598,6 +1722,7 @@ function RequestsTab({
           stages={PIPELINE_STAGES}
           byStatus={byStatus}
           onCardClick={(id) => setDrawerId(id)}
+          onQuickStatus={(id, s) => changeStatus(id, s)}
           onDragStart={onDragStart}
           onDragOverCol={onDragOverCol}
           onDropCol={onDropCol}
@@ -1712,6 +1837,10 @@ function ReviewKpiStrip({ kpi }: {
     avgConvDays: number;
     pipelineValue: number;
     planCounts: Record<string, number>;
+    withAnnotation: number;
+    withoutAnnotation: number;
+    avgContactsPerConversion: number;
+    stalled: number;
   };
 }) {
   return (
@@ -1727,6 +1856,9 @@ function ReviewKpiStrip({ kpi }: {
       <KpiCell label="Taux conv." value={`${kpi.conversionRate.toFixed(1)}%`} color={kpi.conversionRate >= 30 ? C.cta : undefined} />
       <KpiCell label="Temps moyen conv." value={kpi.avgConvDays > 0 ? `${kpi.avgConvDays}j` : "—"} />
       <KpiCell label="Valeur pipeline" value={kpi.pipelineValue > 0 ? `${fmtMoney(kpi.pipelineValue)}/mo` : "—"} color={kpi.pipelineValue > 0 ? C.cta : undefined} />
+      <KpiCell label="Sans annotation" value={kpi.withoutAnnotation} color={kpi.withoutAnnotation > 0 ? C.danger : undefined} sub="à attention" />
+      <KpiCell label="Bloquées (>48h)" value={kpi.stalled} color={kpi.stalled > 0 ? C.warning : undefined} sub="pending sans contact" />
+      <KpiCell label="Contacts/conv." value={kpi.avgContactsPerConversion > 0 ? kpi.avgContactsPerConversion.toFixed(1) : "—"} />
       <KpiCell label="Essentiel" value={kpi.planCounts.essential} />
       <KpiCell label="Pro" value={kpi.planCounts.pro} />
       <KpiCell label="Enterprise" value={kpi.planCounts.enterprise} />
@@ -1736,7 +1868,7 @@ function ReviewKpiStrip({ kpi }: {
 }
 
 function PipelineView({
-  stages, byStatus, onCardClick,
+  stages, byStatus, onCardClick, onQuickStatus,
   onDragStart, onDragOverCol, onDropCol, onDragEnd,
   dragId, dragOverCol, updatingId,
   bulkMode, selected, toggleSelect,
@@ -1745,6 +1877,7 @@ function PipelineView({
   stages: PipelineStage[];
   byStatus: Record<string, AccessRequest[]>;
   onCardClick: (id: string) => void;
+  onQuickStatus: (id: string, status: RequestStatus) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOverCol: (e: React.DragEvent, key: string) => void;
   onDropCol: (e: React.DragEvent, key: string) => void;
@@ -1819,6 +1952,7 @@ function PipelineView({
                   request={r}
                   stage={stage}
                   onClick={() => onCardClick(r.id)}
+                  onQuickStatus={(s) => onQuickStatus(r.id, s)}
                   onDragStart={(e) => onDragStart(e, r.id)}
                   onDragEnd={onDragEnd}
                   dragging={dragId === r.id}
@@ -1839,13 +1973,14 @@ function PipelineView({
 }
 
 function RequestCard({
-  request, stage, onClick, onDragStart, onDragEnd,
+  request, stage, onClick, onQuickStatus, onDragStart, onDragEnd,
   dragging, updating, bulkMode, isSelected, onToggleSelect,
   annotCount, lastContact,
 }: {
   request: AccessRequest;
   stage: PipelineStage;
   onClick: () => void;
+  onQuickStatus: (s: RequestStatus) => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   dragging: boolean;
@@ -1857,6 +1992,16 @@ function RequestCard({
   lastContact: ContactLog | null;
 }) {
   const budget = parseBudget(request.budget);
+  // Quick action — next status in the pipeline.
+  // pending → interested (Contacté) | interested → recontact_later (Essai) | recontact_later → converted (Converti)
+  const quickAction: { label: string; icon: React.ReactNode; next: RequestStatus; primary?: boolean } | null =
+    request.status === "pending"
+      ? { label: "Contacté", icon: <Mail size={10} />, next: "interested" }
+      : request.status === "interested"
+        ? { label: "Essai", icon: <ArrowRight size={10} />, next: "recontact_later" }
+        : request.status === "recontact_later"
+          ? { label: "Convertir", icon: <Check size={10} />, next: "converted", primary: true }
+          : null;
   return (
     <div
       draggable={!bulkMode}
@@ -1954,6 +2099,34 @@ function RequestCard({
             </span>
           )}
         </div>
+      )}
+      {/* Quick action bar — advance pipeline without opening the drawer */}
+      {!bulkMode && quickAction && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onQuickStatus(quickAction.next);
+          }}
+          disabled={updating}
+          title={`Avancer vers: ${STATUS_LABEL_FR[quickAction.next]}`}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+            width: "100%", marginTop: "8px",
+            padding: "5px 8px",
+            background: quickAction.primary ? C.cta : stage.bg,
+            color: quickAction.primary ? "#fff" : stage.color,
+            border: `1px solid ${quickAction.primary ? C.cta : stage.color}`,
+            borderRadius: "4px",
+            fontFamily: C.fontMono, fontSize: "10px", fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.06em",
+            cursor: updating ? "wait" : "pointer",
+            opacity: updating ? 0.5 : 1,
+            transition: "opacity 0.15s",
+          }}
+        >
+          {updating ? <Loader2 size={10} className="animate-spin" /> : quickAction.icon}
+          {quickAction.label}
+        </button>
       )}
     </div>
   );
@@ -2109,6 +2282,12 @@ function RequestDetailDrawer({
   // Next action form
   const [naAction, setNaAction] = useState("");
   const [naDate, setNaDate] = useState("");
+
+  // Live UA / timezone (the AccessRequest schema does not persist UA at
+  // submission time — we surface the admin's live values as a fallback so
+  // the boss can see what device class is hitting the form).
+  const liveUa = useLiveUa();
+  const liveTz = useLiveTimezone();
 
   // Reset forms when request changes
   useEffect(() => {
@@ -2375,11 +2554,39 @@ function RequestDetailDrawer({
               {/* MÉTA-DONNÉES */}
               <Section title="Méta-données" icon={<Clock size={12} />}>
                 <FieldRow label="Créé le" value={absDate(request.createdAt)} insight={`il y a ${relTime(request.createdAt)}`} />
-                <FieldRow label="Mis à jour le" value={absDate(request.updatedAt)} />
+                <FieldRow label="Mis à jour le" value={absDate(request.updatedAt)} insight={`${relTime(request.updatedAt)} · ${timeElapsedSince(request.createdAt, request.updatedAt)}`} />
                 <FieldRow label="Pays (géoloc)" value={request.country} icon={<Globe size={10} />} />
-                <FieldRow label="Fuseau horaire" value="Non capturé" muted />
-                <FieldRow label="Adresse IP" value="Non capturée" muted />
-                <FieldRow label="Appareil / navigateur" value="Non capturé (User-Agent non stocké)" muted />
+                <FieldRow
+                  label="Fuseau horaire"
+                  value={liveTz || "Détection…"}
+                  insight={liveTz ? "Live admin · non capturé à la soumission" : null}
+                  muted={!liveTz}
+                />
+                <FieldRow
+                  label="Adresse IP"
+                  value="Non capturée à la soumission"
+                  muted
+                  insight="Capture IP prévue dans une prochaine migration schéma"
+                />
+                <FieldRow
+                  label="Appareil"
+                  value={liveUa ? `${liveUa.device} · ${liveUa.os}` : "Détection…"}
+                  icon={<Monitor size={10} />}
+                  insight={liveUa ? "Live admin · non capturé à la soumission" : null}
+                  muted={!liveUa}
+                />
+                <FieldRow
+                  label="Navigateur"
+                  value={liveUa?.browser || "Détection…"}
+                  insight={liveUa ? "Live admin · non capturé à la soumission" : null}
+                  muted={!liveUa}
+                />
+                <FieldRow
+                  label="User-Agent (live)"
+                  value={liveUa?.raw || "—"}
+                  mono
+                  muted={!liveUa}
+                />
                 <FieldRow label="ID demande" value={request.id} mono />
               </Section>
 
@@ -5124,6 +5331,26 @@ function KpisTab({
     Agency: "#9333EA",
   };
 
+  // SaaS Health metrics (Bloomberg-style quick ratios)
+  const newMrr = lastRev?.newMrr ?? 0;
+  const churnedMrr = lastRev?.churnedMrr ?? 0;
+  const quickRatio = churnedMrr > 0 ? newMrr / churnedMrr : newMrr > 0 ? Infinity : 0;
+  const activeGrowthPct = prevClient && prevClient.total > 0
+    ? ((activeClients - prevClient.total) / prevClient.total) * 100
+    : 0;
+  const mrrGrowthPct = mrrDeltaPct;
+  const nrrHealth = netRetention >= 100;
+  const churnHealth = churnRate <= 2;
+  const growthHealth = mrrGrowthPct >= 4;
+  const quickHealth = quickRatio >= 4;
+
+  // MRR flow data (monthly new vs churned)
+  const mrrFlowData = snapshot.revenue.map((r) => ({
+    month: r.month,
+    newMrr: r.newMrr,
+    churnedMrr: r.churnedMrr,
+  }));
+
   // CSV export
   const exportCsv = () => {
     setExporting(true);
@@ -5276,6 +5503,105 @@ function KpisTab({
             <Send size={13} />
             {emailSent ? "Envoye" : "Envoyer par email"}
           </button>
+        </div>
+      </div>
+
+      {/* ─── SAAS HEALTH (Bloomberg-style quick ratios) ─── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+          gap: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <div
+          style={{
+            background: quickHealth ? SAGE_BG : C.dangerBg,
+            border: `1px solid ${quickHealth ? `${SAGE}40` : `${C.danger}40`}`,
+            borderRadius: "6px",
+            padding: "14px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "9px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>
+            <Repeat size={11} color={quickHealth ? SAGE : C.danger} />
+            Quick Ratio
+          </div>
+          <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: C.fontMono, color: quickHealth ? SAGE : C.danger, letterSpacing: "-0.02em" }}>
+            {quickRatio === Infinity ? "∞" : quickRatio.toFixed(2)}
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono }}>
+            New {fmtMAD(newMrr)} / Lost {fmtMAD(churnedMrr)} · cible ≥ 4.0
+          </div>
+        </div>
+        <div
+          style={{
+            background: nrrHealth ? SAGE_BG : C.dangerBg,
+            border: `1px solid ${nrrHealth ? `${SAGE}40` : `${C.danger}40`}`,
+            borderRadius: "6px",
+            padding: "14px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "9px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>
+            <TrendingUp size={11} color={nrrHealth ? SAGE : C.danger} />
+            Net Revenue Retention
+          </div>
+          <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: C.fontMono, color: nrrHealth ? SAGE : C.danger, letterSpacing: "-0.02em" }}>
+            {netRetention.toFixed(1)}%
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono }}>
+            {nrrHealth ? "Sain — expansion ≥ churn" : "Sous 100% — churn > expansion"}
+          </div>
+        </div>
+        <div
+          style={{
+            background: growthHealth ? SAGE_BG : C.dangerBg,
+            border: `1px solid ${growthHealth ? `${SAGE}40` : `${C.danger}40`}`,
+            borderRadius: "6px",
+            padding: "14px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "9px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>
+            <BarChart3 size={11} color={growthHealth ? SAGE : C.danger} />
+            MRR Growth MoM
+          </div>
+          <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: C.fontMono, color: growthHealth ? SAGE : C.danger, letterSpacing: "-0.02em" }}>
+            {mrrGrowthPct >= 0 ? "+" : ""}{mrrGrowthPct.toFixed(1)}%
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono }}>
+            Cible ≥ 4% / mois · {fmtMAD(newMrr - churnedMrr)} net
+          </div>
+        </div>
+        <div
+          style={{
+            background: churnHealth ? SAGE_BG : C.dangerBg,
+            border: `1px solid ${churnHealth ? `${SAGE}40` : `${C.danger}40`}`,
+            borderRadius: "6px",
+            padding: "14px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "9px", fontFamily: C.fontMono, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>
+            <TrendingDown size={11} color={churnHealth ? SAGE : C.danger} />
+            Churn vs Threshold
+          </div>
+          <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: C.fontMono, color: churnHealth ? SAGE : C.danger, letterSpacing: "-0.02em" }}>
+            {churnRate.toFixed(2)}%
+          </div>
+          <div style={{ fontSize: "10px", color: C.textMuted, fontFamily: C.fontMono }}>
+            Cible ≤ 2.0% · Clients +{activeGrowthPct.toFixed(1)}% MoM
+          </div>
         </div>
       </div>
 
@@ -5475,6 +5801,16 @@ function KpisTab({
             <YAxis type="category" dataKey="name" tick={{ fontFamily: C.fontMono, fontSize: 9, fill: C.textMuted }} axisLine={false} tickLine={false} width={80} />
             <RTooltip contentStyle={{ fontFamily: C.fontSans, fontSize: 11, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg }} />
             <Bar dataKey="revenue" name="Revenue" fill={SAGE} radius={[0, 3, 3, 0]} isAnimationActive />
+          </BarChart>
+        </ChartCard>
+        <ChartCard title="MRR Flow" subtitle="New MRR vs Churned MRR · 12 mois">
+          <BarChart data={mrrFlowData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+            <XAxis dataKey="month" tick={{ fontFamily: C.fontMono, fontSize: 9, fill: C.textMuted }} axisLine={{ stroke: C.border }} tickLine={false} />
+            <YAxis tick={{ fontFamily: C.fontMono, fontSize: 9, fill: C.textMuted }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}K`} />
+            <RTooltip contentStyle={{ fontFamily: C.fontSans, fontSize: 11, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg }} />
+            <Bar dataKey="newMrr" name="New MRR" stackId="a" fill={SAGE} radius={[0, 0, 0, 0]} isAnimationActive />
+            <Bar dataKey="churnedMrr" name="Churned MRR" stackId="a" fill={C.danger} radius={[3, 3, 0, 0]} isAnimationActive />
           </BarChart>
         </ChartCard>
       </div>
@@ -5685,21 +6021,97 @@ function CommerciauxTab() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [reassignId, setReassignId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+  const [exportingCsv, setExportingCsv] = useState(false);
 
-  // Aggregate KPIs
+  // Aggregate KPIs (computed on full list, not filtered)
   const totalCommercials = commercials.length;
   const totalRevenue = commercials.reduce(
     (s, c) => s + c.assignedClients.reduce((s2, cl) => s2 + cl.revenueMAD, 0),
     0,
   );
+  const totalCommission = commercials.reduce(
+    (s, c) =>
+      s +
+      Math.round(
+        (c.assignedClients.reduce((s2, cl) => s2 + cl.revenueMAD, 0) * c.commissionRate) / 100,
+      ),
+    0,
+  );
+  const totalTarget = commercials.reduce((s, c) => s + c.targetRevenue, 0);
   const avgRevenue = totalCommercials > 0 ? Math.round(totalRevenue / totalCommercials) : 0;
   const performers = commercials
-    .map((c) => ({
-      fiche: c,
-      revenue: c.assignedClients.reduce((s, cl) => s + cl.revenueMAD, 0),
-    }))
+    .map((c) => {
+      const rev = c.assignedClients.reduce((s, cl) => s + cl.revenueMAD, 0);
+      return {
+        fiche: c,
+        revenue: rev,
+        commission: Math.round((rev * c.commissionRate) / 100),
+      };
+    })
     .sort((a, b) => b.revenue - a.revenue);
   const topPerformer = performers[0];
+
+  // Filtered list for the table (status filter only)
+  const filteredCommercials =
+    statusFilter === "all"
+      ? commercials
+      : commercials.filter((c) => c.status === statusFilter);
+
+  const exportCommercialsCsv = () => {
+    setExportingCsv(true);
+    const lines: string[] = [];
+    lines.push(`# HarchIQ Sales Rep Roster — Generated ${new Date().toISOString()}`);
+    lines.push("");
+    lines.push("Name,Email,Phone,Territory,Commission %,Target MAD,Clients,Revenue MAD,Commission MAD,Conv %,Status,Last Login,Created At");
+    for (const c of commercials) {
+      const revenue = c.assignedClients.reduce((s, cl) => s + cl.revenueMAD, 0);
+      const commission = Math.round((revenue * c.commissionRate) / 100);
+      const trials = c.assignedClients.filter((cl) => cl.status === "trial").length;
+      const convRate =
+        c.assignedClients.length > 0
+          ? Math.round(((c.assignedClients.length - trials) / c.assignedClients.length) * 100)
+          : 0;
+      const line = [
+        c.name,
+        c.email,
+        c.phone,
+        c.territory,
+        `${c.commissionRate}`,
+        `${c.targetRevenue}`,
+        `${c.assignedClients.length}`,
+        `${revenue}`,
+        `${commission}`,
+        `${convRate}`,
+        c.status,
+        c.lastLoginAt ?? "",
+        c.createdAt,
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(",");
+      lines.push(line);
+    }
+    lines.push("");
+    lines.push("## ASSIGNED CLIENTS");
+    lines.push("Commercial,Client,Plan,Revenue MAD,Status,Last Contact");
+    for (const c of commercials) {
+      for (const cl of c.assignedClients) {
+        lines.push(
+          [`"${c.name}"`, `"${cl.name}"`, cl.plan, `${cl.revenueMAD}`, cl.status, cl.lastContactAt ?? ""]
+            .map((v) => String(v).includes(",") ? `"${v}"` : v)
+            .join(","),
+        );
+      }
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `harchiq-commercials-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setTimeout(() => setExportingCsv(false), 600);
+  };
 
   const detailFiche = commercials.find((c) => c.id === detailId) ?? null;
   const reassignFiche = commercials.find((c) => c.id === reassignId) ?? null;
@@ -5785,34 +6197,80 @@ function CommerciauxTab() {
               marginBottom: "4px",
             }}
           >
-            Sales Rep Management · {totalCommercials} commerciaux
+            Sales Rep Management · {totalCommercials} commerciaux · {filteredCommercials.length} affichés
           </div>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: CHARCOAL, margin: 0, letterSpacing: "-0.01em" }}>
             Fiches commerciaux · performance vs objectif
           </h2>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          style={{
-            padding: "8px 14px",
-            background: SAGE,
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            fontSize: "12px",
-            fontWeight: 700,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            fontFamily: C.fontMono,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-          }}
-        >
-          <UserPlus size={13} />
-          Ajouter un commercial
-        </button>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "suspended")}
+            style={{
+              padding: "8px 12px",
+              background: C.bg,
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "11px",
+              fontFamily: C.fontMono,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            <option value="all">Tous statuts</option>
+            <option value="active">Actifs</option>
+            <option value="suspended">Suspendus</option>
+          </select>
+          <button
+            onClick={exportCommercialsCsv}
+            disabled={exportingCsv}
+            style={{
+              padding: "8px 14px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: exportingCsv ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontFamily: C.fontMono,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Download size={13} />
+            {exportingCsv ? "Export..." : "Exporter CSV"}
+          </button>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            style={{
+              padding: "8px 14px",
+              background: SAGE,
+              color: "#fff",
+              border: "none",
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontFamily: C.fontMono,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <UserPlus size={13} />
+            Ajouter un commercial
+          </button>
+        </div>
       </div>
 
       {/* Aggregate KPI strip */}
@@ -5832,6 +6290,12 @@ function CommerciauxTab() {
         <KpiCell label="Revenue total généré" value={fmtMAD(totalRevenue)} color={SAGE} />
         <KpiCell label="Revenue / commercial" value={fmtMAD(avgRevenue)} />
         <KpiCell
+          label="Commission totale"
+          value={fmtMAD(totalCommission)}
+          sub={`${totalTarget > 0 ? `${Math.round((totalRevenue / totalTarget) * 100)}% obj.` : "—"}`}
+          color={SAGE}
+        />
+        <KpiCell
           label="Top performer"
           value={topPerformer?.fiche.name.split(" ")[0] ?? "—"}
           sub={topPerformer ? fmtMAD(topPerformer.revenue) : undefined}
@@ -5843,13 +6307,14 @@ function CommerciauxTab() {
       <div style={{ marginBottom: "20px" }}>
         <ChartCard
           title="Revenue par commercial"
-          subtitle="MRR généré (MAD/mois)"
-          height={200}
+          subtitle="MRR généré (MAD/mois) · Commission estimée en surcouche"
+          height={220}
         >
           <BarChart
             data={performers.map((p) => ({
               name: p.fiche.name.split(" ")[0],
               revenue: p.revenue,
+              commission: p.commission,
             }))}
             margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
           >
@@ -5857,17 +6322,18 @@ function CommerciauxTab() {
             <XAxis dataKey="name" tick={{ fontFamily: C.fontMono, fontSize: 9, fill: C.textMuted }} axisLine={{ stroke: C.border }} tickLine={false} />
             <YAxis tick={{ fontFamily: C.fontMono, fontSize: 9, fill: C.textMuted }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}K`} />
             <RTooltip contentStyle={{ fontFamily: C.fontSans, fontSize: 11, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg }} />
-            <Bar dataKey="revenue" name="Revenue" fill={SAGE} radius={[3, 3, 0, 0]} isAnimationActive />
+            <Bar dataKey="revenue" name="Revenue" stackId="a" fill={SAGE} radius={[0, 0, 0, 0]} isAnimationActive />
+            <Bar dataKey="commission" name="Commission" stackId="a" fill={CHARCOAL} radius={[3, 3, 0, 0]} isAnimationActive />
           </BarChart>
         </ChartCard>
       </div>
 
       {/* Commercials table */}
-      <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg }}>
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: "8px", overflow: "hidden", background: C.bg, overflowX: "auto" }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(180px, 1.6fr) minmax(150px, 1.2fr) 100px 130px 100px 120px 110px 50px",
+            gridTemplateColumns: "minmax(180px, 1.6fr) minmax(120px, 1fr) 140px 70px 110px 100px 80px 110px 90px 44px",
             gap: "1px",
             background: C.border,
             fontFamily: C.fontMono,
@@ -5876,24 +6342,30 @@ function CommerciauxTab() {
             textTransform: "uppercase",
             letterSpacing: "0.12em",
             fontWeight: 700,
+            minWidth: "1080px",
           }}
         >
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Commercial</div>
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Territoire</div>
+          <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Téléphone</div>
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Clients</div>
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Revenue généré</div>
-          <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Conv. rate</div>
+          <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Com. est.</div>
+          <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Conv.</div>
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Dernier login</div>
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}>Statut</div>
           <div style={{ background: C.bgSubtle, padding: "10px 14px" }}></div>
         </div>
-        {commercials.length === 0 ? (
+        {filteredCommercials.length === 0 ? (
           <div style={{ padding: "32px", textAlign: "center", color: C.textMuted, fontFamily: C.fontMono, fontSize: "12px" }}>
-            Aucun commercial. Cliquez sur "Ajouter un commercial" pour commencer.
+            {commercials.length === 0
+              ? 'Aucun commercial. Cliquez sur "Ajouter un commercial" pour commencer.'
+              : "Aucun commercial ne correspond au filtre sélectionné."}
           </div>
         ) : (
-          commercials.map((c) => {
+          filteredCommercials.map((c) => {
             const revenue = c.assignedClients.reduce((s, cl) => s + cl.revenueMAD, 0);
+            const commission = Math.round((revenue * c.commissionRate) / 100);
             const trials = c.assignedClients.filter((cl) => cl.status === "trial").length;
             const convRate =
               c.assignedClients.length > 0
@@ -5905,13 +6377,14 @@ function CommerciauxTab() {
                 onClick={() => setDetailId(c.id)}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(180px, 1.6fr) minmax(150px, 1.2fr) 100px 130px 100px 120px 110px 50px",
+                  gridTemplateColumns: "minmax(180px, 1.6fr) minmax(120px, 1fr) 140px 70px 110px 100px 80px 110px 90px 44px",
                   gap: "1px",
                   background: C.border,
                   fontFamily: C.fontSans,
                   fontSize: "13px",
                   cursor: "pointer",
                   transition: "background 0.1s",
+                  minWidth: "1080px",
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.background = C.bgHover;
@@ -5933,11 +6406,19 @@ function CommerciauxTab() {
                   <MapPin size={11} color={C.textMuted} />
                   {c.territory}
                 </div>
+                <div style={{ background: "inherit", padding: "12px 14px", fontSize: "11px", color: C.textBody, display: "flex", alignItems: "center", gap: "5px", fontFamily: C.fontMono }}>
+                  <Phone size={11} color={C.textMuted} />
+                  {c.phone}
+                </div>
                 <div style={{ background: "inherit", padding: "12px 14px", fontFamily: C.fontMono, fontSize: "12px", color: C.text }}>
                   {c.assignedClients.length}
                 </div>
                 <div style={{ background: "inherit", padding: "12px 14px", fontFamily: C.fontMono, fontSize: "12px", color: SAGE, fontWeight: 700 }}>
                   {fmtMAD(revenue)}
+                </div>
+                <div style={{ background: "inherit", padding: "12px 14px", fontFamily: C.fontMono, fontSize: "11px", color: CHARCOAL, fontWeight: 600 }}>
+                  {fmtMAD(commission)}
+                  <div style={{ fontSize: "9px", color: C.textMuted, fontWeight: 500, marginTop: "1px" }}>{c.commissionRate}%</div>
                 </div>
                 <div style={{ background: "inherit", padding: "12px 14px", fontFamily: C.fontMono, fontSize: "12px", color: C.textBody }}>
                   {convRate}%
