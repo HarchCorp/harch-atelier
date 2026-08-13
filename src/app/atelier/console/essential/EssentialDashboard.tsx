@@ -1,4 +1,5 @@
 "use client";
+import { BriefingGenerator } from "../components/BriefingGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -1952,6 +1953,24 @@ function Header({
         {/* ENV-ESSENTIAL — Milestone badge (header, gamification) */}
         <MilestoneBadge
           progress={milestoneProgress}
+        {/* SKILL 1: Briefing Matinal — live document generator */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setBriefingOpen(true)}
+                className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
+                style={{ width: 32, height: 32 }}
+                aria-label="Briefing matinal"
+              >
+                <FileText size={16} style={{ color: "#71717A" }} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Briefing matinal</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
           total={milestoneTotal}
           recentlyUnlocked={milestoneRecentlyUnlocked}
           onClick={onMilestoneClick}
@@ -10937,6 +10956,7 @@ export default function EssentialDashboard() {
   // notification dropdown open state, guided tour active + current step.
   const [hydrated, setHydrated] = useState(false);
   const [notifExpanded, setNotifExpanded] = useState(false);
+  const [briefingOpen, setBriefingOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
@@ -11841,6 +11861,9 @@ export default function EssentialDashboard() {
         recents={cmdRecents}
         onPushRecent={handlePushRecent}
       />
+
+      {/* SKILL 1: Briefing Matinal — live document popup */}
+      {briefingOpen && <BriefingGenerator onClose={() => setBriefingOpen(false)} />}
     </div>
   );
 }
