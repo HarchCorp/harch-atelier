@@ -11701,3 +11701,44 @@ Wire all 22 Pro-plan generators into `src/app/atelier/console/pro/ProDashboard.t
 - All 22 generators verified to export `function XxxGenerator({ onClose }: { onClose: () => void })` — no prop mismatches.
 - Pre-existing modifications to `EnterpriseDashboard.tsx` and `AgencyDashboard.tsx` (made by a prior agent) were NOT touched — out of scope for this task ("Only modify ProDashboard.tsx"). Those files were already clean before this stage began.
 - Next: nothing required. The Pro plan is now feature-parity with Essential for the 22 shared skills. If a future task wants to add the 9 Pro-exclusive skills not in this list (Comex, Stakeholder, RiskHeatmap, RegCalendar, AiVisibility, CrisisPlaybook, Esg, Audit, ApiKeys, PostCrisis — these are Essential-only or Enterprise-only per the prior agent's wiring), the same pattern can be extended by adding to the dropdown list. Currently the Pro dropdown has 12 items; comfortable headroom for more (maxHeight: 400 + overflowY: auto).
+
+---
+
+## TRIM-ESSENTIAL-9 — VORTEX — Trim EssentialDashboard to 9 Essential skills
+
+### Goal
+Reduce `src/app/atelier/console/essential/EssentialDashboard.tsx` from 33 wired generators to exactly 9 Essential-plan skills. Remove the 24 Pro/Enterprise/Agency-only skills and the "More tools" overflow dropdown (since 9 skills all fit as direct icon buttons).
+
+### KEEP (9 Essential-only)
+BriefingGenerator, CrisisBriefingGenerator, HespressDigestGenerator, DocumentWriterGenerator, BoycottAlertGenerator, SentimentTimelineGenerator, SourceCredibilityGenerator, SavedSearchesGenerator, DarijaTranslatorGenerator.
+
+### REMOVE (24 Pro/Enterprise/Agency)
+CompetitorMatrixGenerator, ComexReportGenerator, PitchDeckGenerator, StakeholderMapGenerator, RiskHeatmapGenerator, RegCalendarGenerator, AiVisibilityReportGenerator, CompetitorContentGenerator, MediaReachGenerator, CrisisPlaybookGenerator, EsgScorecardGenerator, AuditTimelineGenerator, TeamPerformanceGenerator, WhatsappPreviewGenerator, InfluencerTrackerGenerator, NarrativeTrackerGenerator, GeoHeatmapGenerator, EmailDigestGenerator, SentimentHeatmapGenerator, CampaignTrackerGenerator, ApiKeyManagerGenerator, PostCrisisReviewGenerator, SovTrendsGenerator, MultiCompareGenerator.
+
+### Edits (single file: EssentialDashboard.tsx)
+1. **Imports** (lines 2-34 → 2-10): removed 24 generator imports; kept 9.
+2. **Lucide icons** (lines 174-190 → 150-152): removed 14 now-unused icons (Grid3x3, FileBarChart, Presentation, Network, ShieldAlert, Calculator, BookMarked, MoreHorizontal, Leaf, History, Megaphone, Key, BarChart3, Layers); kept PenSquare, Activity, ShieldCheck (used by the 9 keep buttons). Icons used elsewhere in the file (CalendarDays, Mail, MapPin, Newspaper, Sparkles, TrendingUp, Users, Search, Languages, FileText, AlertTriangle, MessageSquare, Zap) left untouched.
+3. **Header destructuring + type**: trimmed from 33 onOpen* props + onToggleSkillsMenu + skillsMenuOpen down to 9 onOpen* props.
+4. **Header buttons**: removed 7 direct buttons (Matrix, Comex, Pitch, Stakeholder, RiskHeatmap, RegCalendar, AiVisibility) and the entire "More tools" dropdown div (MoreHorizontal trigger + 20-item panel + `skillsMenuOpen` conditional). Promoted the 3 keep skills that were previously in the dropdown (SourceCredibility/ShieldCheck, SavedSearches/Search, Darija/Languages) to direct compact icon buttons in the same one-line TooltipProvider style as SentimentTimeline. Result: 9 direct icon buttons, no dropdown.
+5. **useState declarations**: trimmed from 33 (`matrixOpen` … `multiCompareOpen` + `skillsMenuOpen`) down to 9 (`hespressOpen, docWriterOpen, boycottOpen, sentimentTimelineOpen, sourceCredOpen, savedSearchesOpen, darijaOpen` + the two above-the-block `briefingOpen, crisisOpen`).
+6. **Header call site** (in main return): trimmed from 33 onOpen* props + onToggleSkillsMenu + skillsMenuOpen down to 9 onOpen* props.
+7. **Popup renders**: trimmed from 33 conditional generators down to 9.
+
+### Mid-flight fix
+The MultiEdit's 8th operation (popup renders) produced line 11973 without the closing `}` for the JSX expression container (`{darijaOpen && <DarijaTranslatorGenerator ... />` missing `}`). Caught immediately via Read, fixed with a targeted Edit adding `}` so the line reads `{darijaOpen && <DarijaTranslatorGenerator onClose={() => setDarijaOpen(false)} />}`. This was the only manual post-edit fix needed.
+
+### Verification
+- `'use client'` directive preserved (line 1, unchanged).
+- 0 emoji-range characters in modified regions (French labels only: Briefing matinal, Briefing de crise, Pulse Hespress, Générateur de documents, Alerte boycott, Timeline sentiment, Crédibilité des sources, Recherches sauvegardées, Traducteur Darija).
+- All 9 keep generators verified present (import + useState + Header prop + direct button + popup render).
+- All 24 remove generators verified absent (grep for component names returns 0 matches; grep for their state vars returns 0 matches).
+- Residual `GeoHeatmap`/`GeoHeatmapResp`/`GeoHeatmapCity` references on lines 382/390/393/4714/11101 are UNRELATED — they belong to the dashboard's own "Carte de Chaleur Géo" section (Section 14) which fetches `/api/console/geo-heatmap`. Legitimately kept.
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → EXIT_CODE=0 (0 errors project-wide).
+
+### Stage Summary
+- 1 file modified: 12219 → 11976 lines (-243 lines net).
+- 24 generators + their state/props/buttons/popups + dropdown menu + skillsMenuOpen state all removed cleanly.
+- 3 former-dropdown skills (SourceCredibility, SavedSearches, Darija) promoted to direct icon buttons — all 9 essential skills now visible directly in the header with no overflow menu.
+- 14 unused Lucide icon imports removed.
+- tsc 0 errors, French only, no emojis.
+- Next: nothing required. Essential plan is now correctly scoped to exactly 9 skills.
