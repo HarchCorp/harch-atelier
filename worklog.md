@@ -11063,3 +11063,174 @@ Stage Summary:
 - EsgScorecardGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: import { EsgScorecardGenerator } from "../components/EsgScorecardGenerator"; render {esgOpen && <EsgScorecardGenerator onClose={() => setEsgOpen(false)} />} alongside the existing BriefingGenerator/CrisisBriefingGenerator slots.
 - Next: hook a "Tableau ESG" button into EnterpriseDashboard / ProDashboard toolbar (same useState pattern as briefingOpen). Consider gating to enterprise/pro plans only since ESG scoring is a strategic-tier feature. Could also wire the recommendation string into the existing ComexReportGenerator as a "Volet RSE" section.
 - Future enhancement: the current keyword lists are FR-only — adding EN/AR variants ("environment", "governance", "حوكمة", "بيئة") would catch more articles for multinational companies. The sector benchmark table is hand-curated from public 2023 RSE reports — could be replaced by a real sector-avg query (mean of ReputationScore.purposeScore across same-sector companies) once enough real customers have populated the table. Radar could also expose a 6-axis variant (12 sub-metrics as axes) for the power-user view.
+
+---
+
+Task: Skill 24 — Narrative Arc Tracker (top 5 récits 30j, cycle de vie émergence→croissance→pic→déclin, sparkline 6 buckets, vélocité, tri Force/Vélocité/Articles, export PDF).
+
+Work Log:
+- Read worklog tail (SKILL-18-ESG entry, 10 lines back) for the BriefingGenerator popup pattern (motion.div overlay + scale 0.96→1 + AnimatePresence SECTIONS stagger + print CSS isolation of #briefing-document). Also audited esg-scorecard/route.ts (requireUserCompany + demoFilter spread, keywordWhere helper, parallel Promise.all batch, fallback blends) and the Article schema (title + content nullable + summary + sentimentScore -1..1 + sentimentLabel + publishedAt nullable).
+- File 1 (API): src/app/api/console/narrative-tracker/route.ts — POST, getServerSession auth (401 if no session), requireUserCompany (403 if no company). 2-query Promise.all batch (company.findUnique + article.findMany take:400 orderBy publishedAt desc) — single round-trip then in-memory keyword filtering. 10 narrative clusters FR (Performance financière / Innovation & techno / RSE / Stratégie & croissance / Gouvernance & conformité / Crise & controverse / Produits & lancements / Social & RH / Concurrence & marché / Réglementation) each with ~12-18 keyword variants (accentuated + non-accentuated). For each cluster: filter articles by keyword match on (title+summary+content).toLowerCase() pre-computed once per article. Compute 6×5d buckets via bucketIndex() (j-30→j-25 = bucket 0 ... j-5→now = bucket 5). firstSeen/lastSeen from min/max publishedAt. Sentiment from avg(sentimentScore) with sentimentLabel fallback (positive>0.15 / negative<-0.15 / neutral). Strength 0-100 = volume×50% (min(1, count/20)×50) + recency×25% (1 - daysSince/30 × 25) + magnitude×25% (|avg|×2 capped 1, fallback 0.25 if no sentiment). Trend classifier aggregates 6 buckets into 3×10d paliers (b1=ancien, b2=médian, b3=recent): total≤1→emerging / b1=b2=0→emerging / b1=0,b2>0,b3≥b2→emerging / b3>b2≥b1→growing / b2>b1,b2≥b3→peak / b3<b2→declining / plateau b1=b2=b3→peak. Velocity = round(last7 - prev7) where last7≈buckets[5]+0.4×buckets[4] and prev7≈0.6×buckets[4]+0.4×buckets[3]. Top 5 by strength desc. Response: { narratives: [{ label, strength, sentiment, articleCount, firstSeen, lastSeen, trend, velocity, timeline }], meta }. Added timeline: number[] (6 buckets) as supplementary field required by the sparkline (spec listed core fields, sparkline data is a natural minimal extension).
+- File 2 (UI): src/app/atelier/console/components/NarrativeTrackerGenerator.tsx — 'use client' popup, BriefingGenerator pattern (fixed overlay 920px wide, scale 0.96→1 entrance, SECTIONS = header/lifecycle/sort/cards/actions with 200-900ms stagger, print CSS isolation of #narrative-document). Sections: (a) en-tête — date longue (fr-FR) + company name + sector + narrative count + total articles + window days; (b) lifecycle diagram — 4 stages inline-flex (Émergence→Croissance→Pic→Déclin) with ArrowRight separators, each stage = circular badge (36×36, count in Space Mono) + Lucide icon (Sprout/TrendingUp/Activity/TrendingDown) + uppercase label, active stage colored per trendConfig (amber/green/sage/red), inactive greyed; total counter on right; (c) sort controls — Filter icon + 3 buttons (Force/Vélocité/Articles) charcoal active state via useState<SortKey>; (d) narrative cards — 16px padding white card with: row1 = #NN badge + Newspaper icon + label (16px bold) on left + trend badge (icon + uppercase label, colored bg/border per trend) on right; row2 = strength bar (6px track, animated width 0→strength%, color tier ≥70 sage / ≥40 amber / <40 red) with "/100" score in Space Mono; row3 = 4-column stats grid (Articles / Sentiment dot+label / Vélocité signed +/sem with color / Période dd/mm→dd/mm with Clock icon); row4 = Sparkline (132×36 inline SVG, 6 points, area fill 10% alpha + 1.5px stroke + last point emphasized r=2.8) + "Pic journalier" max bucket count; (e) actions — Exporter PDF (window.print) + Régénérer.
+- State management: useMemo for sortedNarratives (re-sorts on sortKey change without re-fetch), useMemo for lifecycle counts (re-derives when narratives change). Sort re-render is instant client-side. Stagger reveal via setTimeout per section (200/380/540/700/900ms) feeding visibleSections Set.
+- Design tokens (NON-NEGOTIABLE): WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, AMBER #F59E0B, RED/NEGATIVE #EF4444, POSITIVE #10B981. Space Mono for labels/scores/dates/badges, Inter for body. Lucide icons only (X, Download, Loader2, AlertTriangle, Sprout, TrendingUp, Activity, TrendingDown, Calendar, Newspaper, Filter, ArrowRight, RefreshCw, FileText, Clock). NO emojis anywhere (grep verified empty).
+- tsc verification: `NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0 (0 errors project-wide). Output filtered for "narrative|NarrativeTracker" → empty (clean).
+
+Stage Summary:
+- 2 files created (route.ts 471 lines + NarrativeTrackerGenerator.tsx 784 lines), 0 dashboards modified, 0 emojis, French only, tsc 0 errors.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+- NarrativeTrackerGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: import { NarrativeTrackerGenerator } from "../components/NarrativeTrackerGenerator"; render {narrativeOpen && <NarrativeTrackerGenerator onClose={() => setNarrativeOpen(false)} />} alongside the existing BriefingGenerator slots. Hook a "Trajectoires narrative" button into EnterpriseDashboard / ProDashboard toolbar (same useState pattern as briefingOpen). Consider gating to enterprise/pro plans only since narrative tracking is a strategic-tier feature.
+- Future enhancement: the 10 narrative clusters are FR-only — adding EN/AR variants ("merger & acquisition", "scandal", "فضيحة", "حوكمة") would catch more articles for multinational press. The trend classifier could be upgraded to a 7-day rolling-window regression for smoother velocity (current 6-bucket discretization is step-wise). Could also expose cluster-level keyword breakdown so the user can see WHICH keywords within "Performance financière" drove the strength (e.g. "dividende" vs "ebitda"). A drill-down to the underlying article list per narrative would also be a natural next step (matching the BriefingGenerator topArticles pattern).
+
+---
+
+## SKILL-22-SAVED-SEARCHES — Saved Searches Manager (localStorage, AND/OR/NOT)
+
+Agent: AURA · Files: 2 created, 0 dashboards modified · tsc 0 errors.
+
+### Created
+- `src/app/api/console/saved-searches/route.ts` (243 lines) — GET + POST. **No DB**: persistence is client-side localStorage (key `harchiq.saved-searches.v1`, exported as `SAVED_SEARCHES_LOCALSTORAGE_KEY`). The server can't read localStorage, so:
+  - GET returns a documentation payload `{ searches: [], storage: "client-localStorage", localStorageKey, note }` — sentinel proving the endpoint is alive + telling the client where to read.
+  - POST validates the body `{ name, query, operators: {AND, OR, NOT} }`, sanitizes keywords (trim, 60-char cap, 20-per-category cap), generates `id` (crypto.randomUUID) + `createdAt`/`lastRunAt: null`/`runCount: 0` server-side, and returns the normalized `SavedSearch` object. Client then pushes it into localStorage. This makes the route genuinely useful (server-generated id + timestamps + payload validation) without pretending to persist.
+  - Validation: name 1..80 chars, query 0..240 chars (auto-derived from operators if empty via `serializeQuery`), operators must be `{AND: string[], OR: string[], NOT: string[]}`, at least one keyword OR a non-empty query required (else 400).
+- `src/app/atelier/console/components/SavedSearchesGenerator.tsx` (1396 lines) — Popup matching BriefingGenerator/EsgScorecardGenerator pattern. `'use client'`, French, no emojis. Sections:
+  - **Header bar**: title + PDF (window.print) + close.
+  - **Tabs**: Liste (count badge) / Nouvelle recherche.
+  - **List view**: cards with name, query preview (Space Mono), createdAt, runCount, lastRunAt, Exécuter (Play) + Supprimer (Trash2) buttons. Empty state with CTA.
+  - **New search form**: name input (max 80), operator selector (AND/OR/NOT — sage/amber/red color-coded with helper label "tous"/"au moins un"/"aucun"), keyword input + Enter-to-add, chips per operator (removable with X), live preview of serialized query, Save + Reset buttons.
+  - **Results panel**: shows matching article count (large Space Mono number) + top 3 results (ranked circles, title, source, date, severity color-coded critical=red/high=amber, link to article URL).
+  - **Footer**: localStorage key + Skill 22 marker.
+  - **Print CSS**: `@media print` isolates `#saved-searches-document` (hides everything else).
+  - Run logic: builds query from first positive keyword, calls `/api/console/search?q=...&limit=50`, then filters `type === "alert"` results client-side with strict AND/OR/NOT semantics (case-insensitive `includes` on title+source), sorts by date desc, slices top 3. After run, increments `runCount` + sets `lastRunAt` in localStorage.
+
+### Constraints respected
+- `'use client'` ✓ (component), no emojis ✓ (Python regex scan: 0 matches), French only ✓, tsc 0 errors ✓ (`NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0), only 2 files created ✓, no dashboards modified ✓ (`git status` confirms only 2 new untracked paths from this skill).
+- Palette: WHITE/CHARCOAL/SAGE + AMBER/RED/POSITIVE accents, Space Mono for labels/scores/dates, Inter for body. Lucide icons only (Search, Plus, Trash2, Play, Download, X, Loader2, AlertTriangle, RefreshCw, Clock, History, Save, FileText, ChevronRight).
+- Same popup pattern as BriefingGenerator: fixed overlay + backdrop blur + framer-motion scale-in + AnimatePresence section cadence + #document-scoped print CSS.
+
+### Integration notes (next owner)
+- Wire into a dashboard (e.g. Console, BrandMonitor, or CommandCenter) with the standard pattern:
+  ```tsx
+  import { SavedSearchesGenerator } from "../components/SavedSearchesGenerator";
+  // ...
+  const [savedSearchesOpen, setSavedSearchesOpen] = useState(false);
+  // ...button onClick={() => setSavedSearchesOpen(true)}
+  {savedSearchesOpen && <SavedSearchesGenerator onClose={() => setSavedSearchesOpen(false)} />}
+  ```
+- Suggested button label: "Recherches sauvegardées" with Search icon.
+- Run-search depends on `/api/console/search` (existing, auth-required) — only "alert" type results are returned (articles with title/source/url/date/severity). If user has 0 articles for their company, every saved search will return 0 results — that's expected behavior, not a bug.
+- localStorage is per-browser — saved searches won't sync across devices. If multi-device sync is needed later, migrate to a `SavedSearch` Prisma model (the POST route already returns the right shape, just add a `prisma.savedSearch.create()` call + change GET to query the DB).
+- The boolean filtering is client-side on title+source only (the `/api/console/search` API doesn't expose `summary` in its response). To make AND matching more accurate, consider extending that API to include `summary` in the alert shape, then update `fetchAndFilter` to include it in the `text` field.
+
+### Future enhancements
+- Add a "schedule" field (daily/weekly) + a cron job that runs scheduled searches and emails a digest — would require a DB table.
+- Add tag/category grouping for saved searches (currently flat list).
+- Add export-to-CSV of all matching articles (not just top 3) — the `/api/console/export-csv` route exists and could be reused.
+- Add a "duplicate" button on each saved search card (clone with new name).
+- The serialize/deserialize round-trip currently keeps the `query` field as a display string; if the user edits a saved search later, they'd need to re-build the operators manually. Consider adding an edit mode that pre-fills the form from the stored operators.
+
+---
+
+## SKILL-23-INFLUENCER — AURA · Influencer Tracker (Top 20)
+
+### Files created (2)
+1. `/home/z/my-project/src/app/api/console/influencer-tracker/route.ts` — POST, auth required (`requireUserCompany`). 458 lines.
+2. `/home/z/my-project/src/app/atelier/console/components/InfluencerTrackerGenerator.tsx` — Popup. 1300 lines.
+
+### API route — `/api/console/influencer-tracker`
+- **Auth**: `getServerSession` → `requireUserCompany` (returns 401/403/404 appropriately). `demoFilter` spread on Article + ArticleComment (via `article: { companyId, ...demoFilter }`) to isolate demo data from real data — same chokepoint as EsgScorecardGenerator and the `/api/console/influencers` GET route.
+- **Approach — hybrid**: (a) pulls top 30 from the global `Influencer` catalogue table; (b) derives company-scoped "influencers" from `Article.source` (press proxy) + `ArticleComment.author` (Hespress/WP commenters) over a 30-day window.
+- **Fusion**: catalogue rows keep their stored `followers / handle / platform / influenceScore`. If a derived aggregation matches by name (case-insensitive), the row is enriched with `mentionCount / sentiment / lastMention` and gets a +1/mention bump on `influenceScore` (capped +20). Non-matching derived aggs become new synthetic rows.
+- **Derived metrics** (no catalogue data): followers estimated `mentionCount * 250 + 5000` (cap 2M); engagementRate computed from `avgLikes / followers` if likes exist, else `3 + mentionCount * 0.3` bounded [1.5, 8.0]%; reachScore = `mentionCount * 4 + log10(followers) * 6` clamped 0-100; influenceScore = 0.5·reachScore + 0.25·|sentimentImpact| + 0.25·min(100, engagementRate·10).
+- **Platform inference**: keyword match on name — `linkedin`, `twitter`/`x.com`/`@`, `instagram`, `youtube`, `tiktok`, `facebook`, `hespress`/`le360`/`telquel`/`lematin`/`medi1`/`economiste` → `press`. Fallback `press`.
+- **Commenter filtering**: drops `Guest / Anonyme / Anonymous / Inconnu / Visitor / Visiteur` (Hespress generic handles) so they don't pollute the influencer view.
+- **Response shape** (per spec): `{ influencers: [{ name, handle, platform, followers, engagementRate, sentiment, mentionCount, lastMention, reachScore, influenceScore }], meta: { companyName, sector, generatedAt, windowDays, source, totalScanned, catalogCount, derivedCount } }`. `meta` added on top of spec for UI header + summary band — doesn't break the `influencers` array shape.
+- **ROI**: encoded inside `influenceScore` (50% reach + 25% sentiment impact + 25% engagement). Not exposed as a separate field since spec didn't request it.
+- **Final sort**: `influenceScore DESC`, tiebreaker `mentionCount DESC`, sliced to top 20.
+
+### UI component — `InfluencerTrackerGenerator.tsx`
+- **'use client'** ✓, French only ✓, no emojis ✓.
+- **Popup pattern — same as BriefingGenerator / EsgScorecardGenerator**: fixed overlay, `rgba(10,10,10,0.6)` + `backdrop-filter: blur(4px)`, framer-motion `scale: 0.96 → 1` entry (300ms), `stopPropagation` on inner div, X button top-right, `window.print()` for PDF export. Print CSS isolates `#influencer-document` (everything else hidden on print).
+- **Section cadence**: 8 sections revealed sequentially via `setTimeout` + `AnimatePresence` (header 200ms / summary 400ms / controls 600ms / chart 800ms / grid 1050ms / manual 1300ms / recommend 1500ms / actions 1700ms). `generating` flag flips to false on the last section.
+- **Layout sections**:
+  - **A. Header**: Calendar icon + "Suivi d'influence · Fenêtre 30j" Space Mono uppercase label, H1 "Top 20 Influenceurs — {companyName}", subtitle with sector + catalog/derived/total counts.
+  - **B. Summary band**: 4 cards (Influenceurs suivis / Portée cumulée / Engagement moyen / Sentiment dominant). Sentiment dominant computed by majority count of positive/neutral/negative among rows.
+  - **C. Sort controls**: 4 buttons (Portée / Engagement / Sentiment / Mentions) with Lucide icons (BarChart3 / CircleDot / Award / Users). Active button = sage background + white text; inactive = white background + border.
+  - **D. Comparison chart**: SVG inline, top 10 rows by current sort metric. Each row: platform icon + name (foreignObject for HTML truncation), horizontal sage bar (or sentiment-color bar when sorting by sentiment), metric value label in Space Mono on the right. Background track border for visual reference.
+  - **E. Cards grid**: `auto-fill minmax(280px, 1fr)`. Each card has: avatar circle (44x44 sage-bg with initials, Space Mono 14px), name + handle + platform icon, 3-metric row (Abonnés / Mentions / Dernière), engagement progress bar (sage fill on sage-bg track, width = engagementRate/15 * 100%), footer with sentiment dot (colored by sentiment) + label + influence score (large Space Mono number). Rank badge "#N" top-right. "Manuel" badge for manually-added rows. Empty state message if 0 influencers.
+  - **F. Manual add form**: Collapsible "Ajouter manuellement" section (UserPlus icon). 2-column grid with 5 fields: Nom / Identifiant / Plateforme (select with 7 options) / Abonnés / Taux d'engagement. Submit button (full-width sage). On submit: validates name, derives handle from name if empty, computes synthetic reachScore/influenceScore, prepends to `manualAdds` state (kept separate from server data, badge "Manuel" on the card).
+  - **G. Recommendation HarchIQ**: Sage-bg box with Target icon. 3 branches based on top influencer's sentiment: positive → "Capitaliser… partenariat"; negative → "Vigilance… cellule de crise sous 48h"; neutral → "Veille rapprochée… équilibre fragile". Counts positive/negative influencers in each branch.
+  - **H. Actions**: Export PDF (charcoal button) + Régénérer (outline button).
+- **Sorting**: `sortValue()` switch on SortKey → numeric value (reachScore for reach, engagementRate for engagement, mentionCount for mentions, +1/0/-1 mapping for sentiment). Applied via `useMemo` on `allRows` (manualAdds + server data) — sort changes both card order AND chart bars AND metric labels in chart.
+- **Design tokens**: WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BG_STRONG rgba(74,123,95,0.16), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, AMBER #F59E0B, RED #DC2626, POSITIVE #10B981. Space Mono for labels/scores/dates/handles; Inter for body. Lucide icons only (X, Download, Loader2, AlertTriangle, RefreshCw, Twitter, Linkedin, Instagram, Youtube, Facebook, Newspaper, Music2, Users, TrendingUp, TrendingDown, Minus, Calendar, Target, UserPlus, BarChart3, Award, CircleDot). NO emojis anywhere.
+
+### Constraints respected
+- 'use client' ✓ (component), French only ✓, NO emojis ✓, tsc 0 errors ✓ (`NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0; filtered for `influencer-tracker|InfluencerTracker` → empty), only 2 files created ✓, no dashboards modified ✓.
+- Same popup pattern as BriefingGenerator: fixed overlay + backdrop blur + framer-motion scale-in + AnimatePresence section cadence + `#influencer-document`-scoped print CSS.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+
+### Stage Summary
+- 2 files created (route.ts 458 lines + InfluencerTrackerGenerator.tsx 1300 lines), 0 dashboards modified, 0 emojis, French only, tsc 0 errors.
+- InfluencerTrackerGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job:
+  ```tsx
+  import { InfluencerTrackerGenerator } from "../components/InfluencerTrackerGenerator";
+  const [influencerOpen, setInfluencerOpen] = useState(false);
+  // ...button onClick={() => setInfluencerOpen(true)}
+  {influencerOpen && <InfluencerTrackerGenerator onClose={() => setInfluencerOpen(false)} />}
+  ```
+- Suggested button label: "Suivi des Influenceurs" with Users icon.
+
+### Next actions / future enhancements
+- Hook the popup into BrandMonitorDashboard or ProDashboard alongside BriefingGenerator / EsgScorecardGenerator (same `useState(false)` toggle pattern).
+- Currently the catalogue merge is name-based (case-insensitive exact match). Could be loosened to handle accented variants (`DrissBasri` vs `Driss Basri`) via NFD normalization on the join key — but adds false-positive risk.
+- Manual additions live in component state only (lost on close). For persistence, wire to POST `/api/console/influencers-db` (already exists) to create a real Influencer row on submit.
+- The `inferPlatform` keyword map is FR/MA-centric (Hespress, Le360, TelQuel, LeMatin, Medi1, Économiste). Add EN/AR variants for multinational rollouts.
+- Sentiment sort currently bucketizes to ±1; could expose a numeric `sentimentScore` field on the response for finer-grained sorting (positive 0.8 outranks positive 0.2).
+- The bar chart uses `foreignObject` for HTML label truncation — works in all modern browsers but if SSR/print causes issues, fallback to SVG `<text>` with manual truncation (slice at 18 chars + ellipsis).
+
+---
+## SKILL-25-GEO-HEATMAP — Agent: AURA
+
+**Skill 25 — Carte de Chaleur Géographique (Geographic Heatmap).**
+
+### Files created (2) — 0 dashboards modified
+1. `src/app/api/console/geo-heatmap/route.ts` — 591 lines. POST handler (new Skill 25 contract) + GET handler (legacy EssentialDashboard contract, preserved unchanged to keep the section 14 widget working without touching the dashboard file).
+2. `src/app/atelier/console/components/GeoHeatmapGenerator.tsx` — 1092 lines. Popup component.
+
+### Route — POST `/api/console/geo-heatmap`
+- Auth required: `getServerSession(authOptions)` + `isAccountTypeAllowed(session, ["essential","pro","enterprise","agency"])` + `requireUserCompany()`. No admin bypass.
+- Returns the Skill 25 contract exactly as spec'd:
+  - `cities: [{ name, lat, lng, mentionCount, avgSentiment }]` — top 12 Moroccan cities by mentionCount, derived from `Article.source` via the existing geo-mapper (`aggregateAlertsByCity` + `MOROCCAN_REGIONS` filter). When the company has 0 localised articles on the 30d window, falls back to a 6-city grid (Casablanca / Rabat / Marrakech / Fès / Tanger / Agadir). Company.headquarters is also resolved to a Moroccan city (`hqToMoroccoCity`) and injected as a ghost card (mentionCount=0) if not already covered — so the map always shows where the company is based.
+  - `markets: [{ code, name, mentions, sentiment, crisisFlag }]` — 8 francophone markets (MA, FR, BE, CH, CA, TN, SN, CI) in canonical order. `detectMarket(source)` combines (a) editorial keyword substrings for BE/CH/CA/TN (rtbf, lalibre, letemps.ch, radio-canada, realites.tn, etc.) and (b) the geo-mapper's `region` field for MA/FR/SN/CI (France→FR, Senegal→SN, Côte d'Ivoire→CI, all 12 Moroccan regions→MA). Sources mapped to UK/US/Qatar (Reuters, BBC, Al Jazeera, CNN, Bloomberg, etc.) default to MA — same fallback behaviour as the existing geo-mapper which already routes unknown sources to Casablanca.
+  - `meta: { companyName, sector, generatedAt, windowDays: 30, source: "real"|"demo" }` — extra field for parity with EsgScorecardGenerator (drives the popup header label "Source : réelle / démo").
+- `crisisFlag` rule: `mentions >= 3 AND sentiment <= -0.30` (sustained negative coverage on the 30d window). Single ultra-negative article won't trigger it; needs ≥3 negative mentions.
+- Shared `buildGeoHeatmap(sessionData: UserCompanyOk["data"])` helper called by both POST and GET — avoids double-calling `requireUserCompany` (which makes 2 Prisma queries per call). The caller resolves the company once and passes the typed result in.
+
+### Route — GET (legacy compat)
+- Same file, returns the OLD shape `{ company, range: "30d", cities, source: "real"|"demo"|"fallback" }` so EssentialDashboard.tsx line 11230 (`useApi<GeoHeatmapResp>("/api/console/geo-heatmap")`) keeps working untouched. The fast-path "no company → fallback 6 cities" is preserved.
+- Constraint: "Do NOT modify dashboards" — keeping GET intact was the only way to honour this without breaking the dashboard at runtime.
+
+### Component — GeoHeatmapGenerator
+- `'use client'`. Popup pattern lifted directly from BriefingGenerator / EsgScorecardGenerator: fixed overlay with `rgba(10,10,10,0.6)` + `backdrop-filter: blur(4px)`, `motion.div` scale-in (0.96→1, 300ms), AnimatePresence sections revealed one-by-one (200ms→1250ms cadence), CSS print block isolating `#geo-heatmap-document`, action bar with Export PDF (window.print) + Régénérer.
+- Body layout (7 sections):
+  - a. Header — date + company name + sector + windowDays + source label.
+  - b. Summary strip (4 stats) — Mentions totales / Marchés actifs (X/8) / Villes actives / Crises détectées (pulses red if >0).
+  - c. Toggle segmented control — Maroc / International (default Maroc). Switching view also clears the selected city.
+  - d. CityDetailBanner — only renders when a city is clicked. Inline expandable banner above the grid showing city name, lat/lng (Space Mono), mentionCount, avgSentiment, heat category label, close button. AnimatePresence with height:0↔auto for smooth open/close.
+  - e. Main grid — switches on `view`:
+    - "maroc" → MoroccoGrid: CSS grid `repeat(auto-fill, minmax(160px, 1fr))` of city cards. Each card is a `<button>` (clickable), colored by heat (sage/gray/red bg+border), shows city name, lat/lng in Space Mono, mentionCount (big mono number), sentiment value, dot indicator. Selected city gets a charcoal border + slight scale(1.02) + shadow.
+    - "international" → InternationalGrid: CSS grid `repeat(4, 1fr)` × 2 rows = 8 market cards. Each shows: ISO-2 code in a white "flag placeholder" box (NOT an emoji flag), country name, mentionCount (big mono), sentiment dot + TrendIcon + value, and a red "Crise" badge with AlertTriangle icon in the top-right corner if `crisisFlag` is true.
+  - f. Legend — sage=positif (≥+0.20), gris=neutre (-0.10 ≤ s < +0.20), rouge=négatif (<-0.10). Plus a footnote explaining the crisis rule (≥3 mentions, sentiment ≤-0.30, 30j window) and the WGS-84 / geo-mapper source.
+  - g. Actions — Export PDF (window.print, charcoal button) + Régénérer (transparent bordered button).
+- Heat logic: 3-tier `heatClass()` returns "positive"|"neutral"|"negative" based on sentiment value. `heatColor()`/`heatBg()`/`heatBorder()`/`heatLabel()` helpers map each class to the corresponding design token. Aligns exactly with the legend spec (sage/gray/red).
+- Design tokens (NON-NEGOTIABLE): WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, RED #DC2626, RED_BG rgba(220,38,38,0.08), RED_BORDER rgba(220,38,38,0.25), GRAY_NEUTRAL #9CA3AF (neutral heat tier), GRAY_NEUTRAL_BG rgba(156,163,175,0.12), GRAY_NEUTRAL_BORDER rgba(156,163,175,0.35). Space Mono for labels/codes/coordinates/percentages, Inter for body. Lucide icons only: X, Download, Loader2, AlertTriangle, RefreshCw, MapPin, Globe, TrendingUp, TrendingDown, Minus, Calendar, Layers. NO emojis anywhere (arrows `→` used in comments only — matches EsgScorecardGenerator precedent).
+
+### tsc verification
+- `NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0 (0 errors project-wide including the 2 new/modified files). Output filtered for "geo-heatmap|GeoHeatmap" → empty (clean).
+
+### Stage Summary
+- 2 files created (route.ts 591 lines + GeoHeatmapGenerator.tsx 1092 lines), 0 dashboards modified, 0 emojis, French only, tsc 0 errors.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+- GeoHeatmapGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: `import { GeoHeatmapGenerator } from "../components/GeoHeatmapGenerator";` then `const [geoHeatmapOpen, setGeoHeatmapOpen] = useState(false);` and `{geoHeatmapOpen && <GeoHeatmapGenerator onClose={() => setGeoHeatmapOpen(false)} />}` alongside the existing BriefingGenerator / EsgScorecardGenerator slots in EnterpriseDashboard / ProDashboard / EssentialDashboard.
+- Next: hook a "Carte de Chaleur Géo" button (MapPin icon) into the dashboard toolbar. Consider gating to pro/enterprise only since the international 8-market view is a strategic-tier feature beyond the essential plan's 6-city Moroccan map. The GET legacy handler already powers the essential section-14 widget, so essential users get the city heatmap via the existing dashboard widget; the popup (POST) is the premium interactive experience.
+- Future enhancement: extend `src/lib/harchiq/geo-mapper.ts` SOURCE_GEO with Belgian/Swiss/Canadian/Tunisian media entries (Le Soir, RTS, Le Devoir, Réalités.tn, etc.) so market detection doesn't rely on inline keyword matching in the route. Currently `detectMarket()` falls back to MA for any source the geo-mapper doesn't know — fine for a Moroccan-first console, but a French multinational monitoring its francophone press would benefit from richer geo coverage. Also: the 8-market list is FR-francophone-focused — could add LU (Luxembourg), DZ (Algeria), MA neighbor states for a wider francophone-Africa view.

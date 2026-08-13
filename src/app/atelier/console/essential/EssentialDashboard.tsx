@@ -20,6 +20,10 @@ import { EsgScorecardGenerator } from "../components/EsgScorecardGenerator";
 import { AuditTimelineGenerator } from "../components/AuditTimelineGenerator";
 import { TeamPerformanceGenerator } from "../components/TeamPerformanceGenerator";
 import { WhatsappPreviewGenerator } from "../components/WhatsappPreviewGenerator";
+import { SavedSearchesGenerator } from "../components/SavedSearchesGenerator";
+import { InfluencerTrackerGenerator } from "../components/InfluencerTrackerGenerator";
+import { NarrativeTrackerGenerator } from "../components/NarrativeTrackerGenerator";
+import { GeoHeatmapGenerator } from "../components/GeoHeatmapGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -1885,6 +1889,10 @@ function Header({
   onOpenAudit,
   onOpenTeamPerf,
   onOpenWhatsapp,
+  onOpenSavedSearches,
+  onOpenInfluencer,
+  onOpenNarrative,
+  onOpenGeoHeatmap,
   onToggleSkillsMenu,
   skillsMenuOpen,
 }: {
@@ -1924,6 +1932,10 @@ function Header({
   onOpenAudit: () => void;
   onOpenTeamPerf: () => void;
   onOpenWhatsapp: () => void;
+  onOpenSavedSearches: () => void;
+  onOpenInfluencer: () => void;
+  onOpenNarrative: () => void;
+  onOpenGeoHeatmap: () => void;
   onToggleSkillsMenu: () => void;
   skillsMenuOpen: boolean;
 }) {
@@ -2169,7 +2181,11 @@ function Header({
               <button onClick={onOpenEsg} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Leaf size={14} style={{ color: "#4A7B5F" }} /> Scorecard ESG</button>
               <button onClick={onOpenAudit} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><History size={14} style={{ color: "#4A7B5F" }} /> Journal d'audit</button>
               <button onClick={onOpenTeamPerf} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Users size={14} style={{ color: "#4A7B5F" }} /> Performance équipe</button>
-              <button onClick={onOpenWhatsapp} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MessageSquare size={14} style={{ color: "#4A7B5F" }} /> Aperçu WhatsApp</button>
+<button onClick={onOpenWhatsapp} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MessageSquare size={14} style={{ color: "#4A7B5F" }} /> Aperçu WhatsApp</button>
+              <button onClick={onOpenSavedSearches} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Search size={14} style={{ color: "#4A7B5F" }} /> Recherches sauvegardées</button>
+              <button onClick={onOpenInfluencer} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Users size={14} style={{ color: "#4A7B5F" }} /> Influenceurs</button>
+              <button onClick={onOpenNarrative} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><TrendingUp size={14} style={{ color: "#4A7B5F" }} /> Narratifs</button>
+              <button onClick={onOpenGeoHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MapPin size={14} style={{ color: "#4A7B5F" }} /> Carte géographique</button>
             </div>
           )}
         </div>
@@ -11175,6 +11191,10 @@ export default function EssentialDashboard() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [teamPerfOpen, setTeamPerfOpen] = useState(false);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [savedSearchesOpen, setSavedSearchesOpen] = useState(false);
+  const [influencerOpen, setInfluencerOpen] = useState(false);
+  const [narrativeOpen, setNarrativeOpen] = useState(false);
+  const [geoHeatmapOpen, setGeoHeatmapOpen] = useState(false);
   const [skillsMenuOpen, setSkillsMenuOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -11810,6 +11830,10 @@ export default function EssentialDashboard() {
           onOpenAudit={() => setAuditOpen(true)}
           onOpenTeamPerf={() => setTeamPerfOpen(true)}
           onOpenWhatsapp={() => setWhatsappOpen(true)}
+          onOpenSavedSearches={() => setSavedSearchesOpen(true)}
+          onOpenInfluencer={() => setInfluencerOpen(true)}
+          onOpenNarrative={() => setNarrativeOpen(true)}
+          onOpenGeoHeatmap={() => setGeoHeatmapOpen(true)}
           onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}
           skillsMenuOpen={skillsMenuOpen}
         />
@@ -12126,6 +12150,10 @@ export default function EssentialDashboard() {
       {auditOpen && <AuditTimelineGenerator onClose={() => setAuditOpen(false)} />}
       {teamPerfOpen && <TeamPerformanceGenerator onClose={() => setTeamPerfOpen(false)} />}
       {whatsappOpen && <WhatsappPreviewGenerator onClose={() => setWhatsappOpen(false)} />}
+      {savedSearchesOpen && <SavedSearchesGenerator onClose={() => setSavedSearchesOpen(false)} />}
+      {influencerOpen && <InfluencerTrackerGenerator onClose={() => setInfluencerOpen(false)} />}
+      {narrativeOpen && <NarrativeTrackerGenerator onClose={() => setNarrativeOpen(false)} />}
+      {geoHeatmapOpen && <GeoHeatmapGenerator onClose={() => setGeoHeatmapOpen(false)} />}
     </div>
   );
 }
