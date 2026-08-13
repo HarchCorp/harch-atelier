@@ -165,6 +165,17 @@ import {
   HardHat,
   Vote,
   Ship,
+  BookMarked,
+  Calculator,
+  FileBarChart,
+  Grid3x3,
+  History,
+  Languages,
+  Mail,
+  MoreHorizontal,
+  PenSquare,
+  Presentation,
+  ShieldAlert,
 } from "lucide-react";
 import {
   addDays,
@@ -237,6 +248,41 @@ import {
 } from "recharts";
 
 import { toast } from "sonner";
+
+// ─── WIRE-ENTERPRISE-SKILLS — 31 generators (all skills except MultiCompare,
+//     which is Agency-only). Imported here and rendered as fixed overlays
+//     triggered by the header icon buttons + overflow dropdown. ───
+import { BriefingGenerator } from "../components/BriefingGenerator";
+import { CrisisBriefingGenerator } from "../components/CrisisBriefingGenerator";
+import { CompetitorMatrixGenerator } from "../components/CompetitorMatrixGenerator";
+import { HespressDigestGenerator } from "../components/HespressDigestGenerator";
+import { ComexReportGenerator } from "../components/ComexReportGenerator";
+import { DocumentWriterGenerator } from "../components/DocumentWriterGenerator";
+import { PitchDeckGenerator } from "../components/PitchDeckGenerator";
+import { BoycottAlertGenerator } from "../components/BoycottAlertGenerator";
+import { SentimentTimelineGenerator } from "../components/SentimentTimelineGenerator";
+import { SourceCredibilityGenerator } from "../components/SourceCredibilityGenerator";
+import { CompetitorContentGenerator } from "../components/CompetitorContentGenerator";
+import { MediaReachGenerator } from "../components/MediaReachGenerator";
+import { CampaignTrackerGenerator } from "../components/CampaignTrackerGenerator";
+import { InfluencerTrackerGenerator } from "../components/InfluencerTrackerGenerator";
+import { NarrativeTrackerGenerator } from "../components/NarrativeTrackerGenerator";
+import { GeoHeatmapGenerator } from "../components/GeoHeatmapGenerator";
+import { EmailDigestGenerator } from "../components/EmailDigestGenerator";
+import { SentimentHeatmapGenerator } from "../components/SentimentHeatmapGenerator";
+import { SovTrendsGenerator } from "../components/SovTrendsGenerator";
+import { TeamPerformanceGenerator } from "../components/TeamPerformanceGenerator";
+import { SavedSearchesGenerator } from "../components/SavedSearchesGenerator";
+import { DarijaTranslatorGenerator } from "../components/DarijaTranslatorGenerator";
+import { WhatsappPreviewGenerator } from "../components/WhatsappPreviewGenerator";
+import { StakeholderMapGenerator } from "../components/StakeholderMapGenerator";
+import { RiskHeatmapGenerator } from "../components/RiskHeatmapGenerator";
+import { RegCalendarGenerator } from "../components/RegCalendarGenerator";
+import { CrisisPlaybookGenerator } from "../components/CrisisPlaybookGenerator";
+import { EsgScorecardGenerator } from "../components/EsgScorecardGenerator";
+import { AuditTimelineGenerator } from "../components/AuditTimelineGenerator";
+import { ApiKeyManagerGenerator } from "../components/ApiKeyManagerGenerator";
+import { PostCrisisReviewGenerator } from "../components/PostCrisisReviewGenerator";
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────
 // White surfaces · sage green accent · charcoal text · no dark mode
@@ -1955,12 +2001,78 @@ function Header({
   userName,
   milestoneProgress,
   onMilestoneClick,
+  onOpenBriefing,
+  onOpenCrisis,
+  onOpenMatrix,
+  onOpenHespress,
+  onOpenComex,
+  onOpenStakeholder,
+  onOpenRiskHeatmap,
+  onOpenRegCalendar,
+  onOpenCrisisPlaybook,
+  onOpenEsg,
+  onOpenAudit,
+  onOpenApiKeys,
+  onOpenDocWriter,
+  onOpenPitch,
+  onOpenBoycott,
+  onOpenSentimentTimeline,
+  onOpenSourceCred,
+  onOpenCompetitorContent,
+  onOpenMediaReach,
+  onOpenCampaign,
+  onOpenInfluencer,
+  onOpenNarrative,
+  onOpenGeoHeatmap,
+  onOpenEmailDigest,
+  onOpenSentHeatmap,
+  onOpenSovTrends,
+  onOpenTeamPerf,
+  onOpenSavedSearches,
+  onOpenDarija,
+  onOpenWhatsapp,
+  onOpenPostCrisis,
+  onToggleSkillsMenu,
+  skillsMenuOpen,
 }: {
   onMenuClick: () => void;
   alertCount: number;
   userName?: string | null;
   milestoneProgress?: { done: number; total: number };
   onMilestoneClick?: () => void;
+  onOpenBriefing: () => void;
+  onOpenCrisis: () => void;
+  onOpenMatrix: () => void;
+  onOpenHespress: () => void;
+  onOpenComex: () => void;
+  onOpenStakeholder: () => void;
+  onOpenRiskHeatmap: () => void;
+  onOpenRegCalendar: () => void;
+  onOpenCrisisPlaybook: () => void;
+  onOpenEsg: () => void;
+  onOpenAudit: () => void;
+  onOpenApiKeys: () => void;
+  onOpenDocWriter: () => void;
+  onOpenPitch: () => void;
+  onOpenBoycott: () => void;
+  onOpenSentimentTimeline: () => void;
+  onOpenSourceCred: () => void;
+  onOpenCompetitorContent: () => void;
+  onOpenMediaReach: () => void;
+  onOpenCampaign: () => void;
+  onOpenInfluencer: () => void;
+  onOpenNarrative: () => void;
+  onOpenGeoHeatmap: () => void;
+  onOpenEmailDigest: () => void;
+  onOpenSentHeatmap: () => void;
+  onOpenSovTrends: () => void;
+  onOpenTeamPerf: () => void;
+  onOpenSavedSearches: () => void;
+  onOpenDarija: () => void;
+  onOpenWhatsapp: () => void;
+  onOpenPostCrisis: () => void;
+  onToggleSkillsMenu: () => void;
+  skillsMenuOpen: boolean;
 }) {
   return (
     <header
@@ -2061,6 +2173,135 @@ function Header({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {/* ═══ WIRE-ENTERPRISE-SKILLS — 12 direct icon buttons ═══
+            Board-ready toolset surfaced as one-click triggers in the
+            header. Covers the highest-leverage Enterprise generators:
+            briefing + crisis + competitor + COMEX + governance trio
+            (stakeholders / risk / reg calendar) + crisis playbook +
+            ESG + audit + API keys. Overflow skills live in the
+            "Plus d'outils" dropdown below. */}
+
+        {/* SKILL 1: Briefing Matinal */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenBriefing} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Briefing matinal">
+            <FileText size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Briefing matinal</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 2: Briefing de crise */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenCrisis} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Briefing de crise">
+            <AlertTriangle size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Briefing de crise</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 3: Matrice concurrentielle */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenMatrix} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Matrice concurrentielle">
+            <Grid3x3 size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Matrice concurrentielle</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 4: Pulse Hespress */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenHespress} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Pulse Hespress">
+            <MessageSquare size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Pulse Hespress</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 5: Rapport COMEX */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenComex} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Rapport COMEX">
+            <FileBarChart size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Rapport COMEX</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 6: Cartographie parties prenantes */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenStakeholder} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Parties prenantes">
+            <Network size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Parties prenantes</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 7: Matrice des risques */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenRiskHeatmap} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Matrice des risques">
+            <ShieldAlert size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Matrice des risques</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 8: Calendrier réglementaire */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenRegCalendar} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Calendrier réglementaire">
+            <CalendarDays size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Calendrier réglementaire</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 9: Playbook de crise */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenCrisisPlaybook} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Playbook de crise">
+            <BookMarked size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Playbook de crise</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 10: Scorecard ESG */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenEsg} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Scorecard ESG">
+            <Leaf size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Scorecard ESG</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 11: Journal d'audit */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenAudit} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Journal d'audit">
+            <History size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Journal d'audit</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* SKILL 12: Clés API */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+          <button type="button" onClick={onOpenApiKeys} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Clés API">
+            <Key size={16} style={{ color: "#71717A" }} />
+          </button>
+        </TooltipTrigger><TooltipContent>Clés API</TooltipContent></Tooltip></TooltipProvider>
+
+        {/* ═══ OVERFLOW DROPDOWN — 19 skills restantes ═══ */}
+        <div style={{ position: "relative" }}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" onClick={onToggleSkillsMenu} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Plus d'outils">
+                  <MoreHorizontal size={16} style={{ color: "#71717A" }} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Plus d'outils</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {skillsMenuOpen && (
+            <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #F0F0F0", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 8, zIndex: 50, minWidth: 240, maxHeight: 480, overflowY: "auto" }}>
+              <button onClick={onOpenDocWriter} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><PenSquare size={14} style={{ color: "#4A7B5F" }} /> Générateur de documents</button>
+              <button onClick={onOpenPitch} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Presentation size={14} style={{ color: "#4A7B5F" }} /> Pitch Deck</button>
+              <button onClick={onOpenBoycott} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Zap size={14} style={{ color: "#4A7B5F" }} /> Alerte boycott</button>
+              <button onClick={onOpenSentimentTimeline} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Activity size={14} style={{ color: "#4A7B5F" }} /> Timeline sentiment</button>
+              <button onClick={onOpenSourceCred} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><ShieldCheck size={14} style={{ color: "#4A7B5F" }} /> Crédibilité des sources</button>
+              <button onClick={onOpenCompetitorContent} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Newspaper size={14} style={{ color: "#4A7B5F" }} /> Contenu concurrents</button>
+              <button onClick={onOpenMediaReach} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Calculator size={14} style={{ color: "#4A7B5F" }} /> Portée média</button>
+              <button onClick={onOpenCampaign} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Megaphone size={14} style={{ color: "#4A7B5F" }} /> Campagnes</button>
+              <button onClick={onOpenInfluencer} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Users size={14} style={{ color: "#4A7B5F" }} /> Influenceurs</button>
+              <button onClick={onOpenNarrative} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><TrendingUp size={14} style={{ color: "#4A7B5F" }} /> Narratifs</button>
+              <button onClick={onOpenGeoHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MapPin size={14} style={{ color: "#4A7B5F" }} /> Carte géographique</button>
+              <button onClick={onOpenEmailDigest} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Mail size={14} style={{ color: "#4A7B5F" }} /> Digest email</button>
+              <button onClick={onOpenSentHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><CalendarDays size={14} style={{ color: "#4A7B5F" }} /> Heatmap sentiment</button>
+              <button onClick={onOpenSovTrends} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><BarChart3 size={14} style={{ color: "#4A7B5F" }} /> Tendances SOV</button>
+              <button onClick={onOpenTeamPerf} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Users size={14} style={{ color: "#4A7B5F" }} /> Performance équipe</button>
+              <button onClick={onOpenSavedSearches} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Search size={14} style={{ color: "#4A7B5F" }} /> Recherches sauvegardées</button>
+              <button onClick={onOpenDarija} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Languages size={14} style={{ color: "#4A7B5F" }} /> Traducteur Darija</button>
+              <button onClick={onOpenWhatsapp} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MessageSquare size={14} style={{ color: "#4A7B5F" }} /> Aperçu WhatsApp</button>
+              <button onClick={onOpenPostCrisis} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><ShieldCheck size={14} style={{ color: "#4A7B5F" }} /> Revue post-crise</button>
+            </div>
+          )}
+        </div>
 
         <TooltipProvider>
           <Tooltip>
@@ -14973,6 +15214,45 @@ export function EnterpriseDashboard({
   const [warRoomOpen, setWarRoomOpen] = useState(false);
   const currentUserRole: UserRole = "comms"; // Karim B., VP Comms
 
+  // ─── WIRE-ENTERPRISE-SKILLS — 31 generator popups (board-ready toolset).
+  //     Each boolean controls a fixed-overlay popup rendered at the bottom
+  //     of the dashboard. The Header receives 12 direct icon buttons for
+  //     the most strategic Enterprise skills (governance + COMEX + crisis)
+  //     plus a "Plus d'outils" dropdown listing the remaining 19.
+  //     No MultiCompare (Agency-only).
+  const [briefingOpen, setBriefingOpen] = useState(false);
+  const [crisisOpen, setCrisisOpen] = useState(false);
+  const [matrixOpen, setMatrixOpen] = useState(false);
+  const [hespressOpen, setHespressOpen] = useState(false);
+  const [comexOpen, setComexOpen] = useState(false);
+  const [stakeholderOpen, setStakeholderOpen] = useState(false);
+  const [riskHeatmapOpen, setRiskHeatmapOpen] = useState(false);
+  const [regCalendarOpen, setRegCalendarOpen] = useState(false);
+  const [crisisPlaybookOpen, setCrisisPlaybookOpen] = useState(false);
+  const [esgOpen, setEsgOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [apiKeysOpen, setApiKeysOpen] = useState(false);
+  const [docWriterOpen, setDocWriterOpen] = useState(false);
+  const [pitchOpen, setPitchOpen] = useState(false);
+  const [boycottOpen, setBoycottOpen] = useState(false);
+  const [sentimentTimelineOpen, setSentimentTimelineOpen] = useState(false);
+  const [sourceCredOpen, setSourceCredOpen] = useState(false);
+  const [competitorContentOpen, setCompetitorContentOpen] = useState(false);
+  const [mediaReachOpen, setMediaReachOpen] = useState(false);
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const [influencerOpen, setInfluencerOpen] = useState(false);
+  const [narrativeOpen, setNarrativeOpen] = useState(false);
+  const [geoHeatmapOpen, setGeoHeatmapOpen] = useState(false);
+  const [emailDigestOpen, setEmailDigestOpen] = useState(false);
+  const [sentHeatmapOpen, setSentHeatmapOpen] = useState(false);
+  const [sovTrendsOpen, setSovTrendsOpen] = useState(false);
+  const [teamPerfOpen, setTeamPerfOpen] = useState(false);
+  const [savedSearchesOpen, setSavedSearchesOpen] = useState(false);
+  const [darijaOpen, setDarijaOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [postCrisisOpen, setPostCrisisOpen] = useState(false);
+  const [skillsMenuOpen, setSkillsMenuOpen] = useState(false);
+
   // ─── P2-9-WORKFLOWS — server-backed governance approval queue ───
   // Fetches pending approvals on mount. displayApprovals is the
   // derived value fed into <GovernanceCommandBar approvals={...} />.
@@ -15182,6 +15462,39 @@ export function EnterpriseDashboard({
           userName={effectiveName}
           milestoneProgress={milestoneProgress}
           onMilestoneClick={() => scrollToSection("jalons-executifs")}
+          onOpenBriefing={() => setBriefingOpen(true)}
+          onOpenCrisis={() => setCrisisOpen(true)}
+          onOpenMatrix={() => setMatrixOpen(true)}
+          onOpenHespress={() => setHespressOpen(true)}
+          onOpenComex={() => setComexOpen(true)}
+          onOpenStakeholder={() => setStakeholderOpen(true)}
+          onOpenRiskHeatmap={() => setRiskHeatmapOpen(true)}
+          onOpenRegCalendar={() => setRegCalendarOpen(true)}
+          onOpenCrisisPlaybook={() => setCrisisPlaybookOpen(true)}
+          onOpenEsg={() => setEsgOpen(true)}
+          onOpenAudit={() => setAuditOpen(true)}
+          onOpenApiKeys={() => setApiKeysOpen(true)}
+          onOpenDocWriter={() => setDocWriterOpen(true)}
+          onOpenPitch={() => setPitchOpen(true)}
+          onOpenBoycott={() => setBoycottOpen(true)}
+          onOpenSentimentTimeline={() => setSentimentTimelineOpen(true)}
+          onOpenSourceCred={() => setSourceCredOpen(true)}
+          onOpenCompetitorContent={() => setCompetitorContentOpen(true)}
+          onOpenMediaReach={() => setMediaReachOpen(true)}
+          onOpenCampaign={() => setCampaignOpen(true)}
+          onOpenInfluencer={() => setInfluencerOpen(true)}
+          onOpenNarrative={() => setNarrativeOpen(true)}
+          onOpenGeoHeatmap={() => setGeoHeatmapOpen(true)}
+          onOpenEmailDigest={() => setEmailDigestOpen(true)}
+          onOpenSentHeatmap={() => setSentHeatmapOpen(true)}
+          onOpenSovTrends={() => setSovTrendsOpen(true)}
+          onOpenTeamPerf={() => setTeamPerfOpen(true)}
+          onOpenSavedSearches={() => setSavedSearchesOpen(true)}
+          onOpenDarija={() => setDarijaOpen(true)}
+          onOpenWhatsapp={() => setWhatsappOpen(true)}
+          onOpenPostCrisis={() => setPostCrisisOpen(true)}
+          onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}
+          skillsMenuOpen={skillsMenuOpen}
         />
 
         {/* SECTION 26 — Governance Command Bar (sticky) */}
@@ -15491,6 +15804,45 @@ export function EnterpriseDashboard({
           />
         )}
       </AnimatePresence>
+
+      {/* ═══ WIRE-ENTERPRISE-SKILLS — 31 generator popups ═══
+          Each generator is a self-contained fixed overlay (same pattern
+          as BriefingGenerator). They share no state with the dashboard
+          beyond the boolean that opens them. onClose flips the boolean
+          back to false. Multi-Compare is intentionally excluded — it is
+          an Agency-only skill. Order matches the header (12 direct
+          buttons first, then 19 overflow dropdown entries). */}
+      {briefingOpen && <BriefingGenerator onClose={() => setBriefingOpen(false)} />}
+      {crisisOpen && <CrisisBriefingGenerator onClose={() => setCrisisOpen(false)} />}
+      {matrixOpen && <CompetitorMatrixGenerator onClose={() => setMatrixOpen(false)} />}
+      {hespressOpen && <HespressDigestGenerator onClose={() => setHespressOpen(false)} />}
+      {comexOpen && <ComexReportGenerator onClose={() => setComexOpen(false)} />}
+      {stakeholderOpen && <StakeholderMapGenerator onClose={() => setStakeholderOpen(false)} />}
+      {riskHeatmapOpen && <RiskHeatmapGenerator onClose={() => setRiskHeatmapOpen(false)} />}
+      {regCalendarOpen && <RegCalendarGenerator onClose={() => setRegCalendarOpen(false)} />}
+      {crisisPlaybookOpen && <CrisisPlaybookGenerator onClose={() => setCrisisPlaybookOpen(false)} />}
+      {esgOpen && <EsgScorecardGenerator onClose={() => setEsgOpen(false)} />}
+      {auditOpen && <AuditTimelineGenerator onClose={() => setAuditOpen(false)} />}
+      {apiKeysOpen && <ApiKeyManagerGenerator onClose={() => setApiKeysOpen(false)} />}
+      {docWriterOpen && <DocumentWriterGenerator onClose={() => setDocWriterOpen(false)} />}
+      {pitchOpen && <PitchDeckGenerator onClose={() => setPitchOpen(false)} />}
+      {boycottOpen && <BoycottAlertGenerator onClose={() => setBoycottOpen(false)} />}
+      {sentimentTimelineOpen && <SentimentTimelineGenerator onClose={() => setSentimentTimelineOpen(false)} />}
+      {sourceCredOpen && <SourceCredibilityGenerator onClose={() => setSourceCredOpen(false)} />}
+      {competitorContentOpen && <CompetitorContentGenerator onClose={() => setCompetitorContentOpen(false)} />}
+      {mediaReachOpen && <MediaReachGenerator onClose={() => setMediaReachOpen(false)} />}
+      {campaignOpen && <CampaignTrackerGenerator onClose={() => setCampaignOpen(false)} />}
+      {influencerOpen && <InfluencerTrackerGenerator onClose={() => setInfluencerOpen(false)} />}
+      {narrativeOpen && <NarrativeTrackerGenerator onClose={() => setNarrativeOpen(false)} />}
+      {geoHeatmapOpen && <GeoHeatmapGenerator onClose={() => setGeoHeatmapOpen(false)} />}
+      {emailDigestOpen && <EmailDigestGenerator onClose={() => setEmailDigestOpen(false)} />}
+      {sentHeatmapOpen && <SentimentHeatmapGenerator onClose={() => setSentHeatmapOpen(false)} />}
+      {sovTrendsOpen && <SovTrendsGenerator onClose={() => setSovTrendsOpen(false)} />}
+      {teamPerfOpen && <TeamPerformanceGenerator onClose={() => setTeamPerfOpen(false)} />}
+      {savedSearchesOpen && <SavedSearchesGenerator onClose={() => setSavedSearchesOpen(false)} />}
+      {darijaOpen && <DarijaTranslatorGenerator onClose={() => setDarijaOpen(false)} />}
+      {whatsappOpen && <WhatsappPreviewGenerator onClose={() => setWhatsappOpen(false)} />}
+      {postCrisisOpen && <PostCrisisReviewGenerator onClose={() => setPostCrisisOpen(false)} />}
     </div>
   );
 }

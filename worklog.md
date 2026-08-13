@@ -11515,3 +11515,189 @@ Build Skill 33 — a side-by-side comparison matrix letting agency admins (plan 
 - Recommended wiring: add a "Comparer" button (Layers icon, sage border) in `src/app/atelier/agency/AgencyDashboard.tsx` toolbar alongside the existing client list. Gate visibility on `accountType === "agency"` so non-agency users never see the button. The popup is self-contained (manages its own selection state, no props beyond `onClose`).
 - Next: hook a "Comparer" button into the AgencyDashboard toolbar. Consider adding a "saved views" dropdown that reads from `localStorage["harchiq.multi-compare.savedViews"]` and lets the user re-run a comparison with one click — currently saved views are write-only (the save button stores them but there's no UI to restore them; that's a 30-line addition: a `<select>` above the client grid that calls `setSelected(new Set(view.clientIds))` on change).
 - Future enhancement: persist saved views to a new `SavedComparison` Prisma model (userId, agencyId, label, clientIds JSON, createdAt) so they survive across devices/browsers. Currently localStorage-only — fine for solo agency admins but breaks down if the agency has multiple admins sharing views. Also: the radar chart uses 6 axes (Réputation, Sentiment, Volume, Stabilité, Santé, Rétention) but the table shows 9 metrics — consider adding a "detailed radar" toggle that surfaces all 9 axes (MRR, Plan, HarchIQ usage) for power users who want the full picture in chart form. Currently the 6-axis choice keeps the radar readable when 5 clients are overlaid (9 axes would be visually crowded).
+
+## WIRE-ENTERPRISE-SKILLS — VORTEX (EnterpriseDashboard skill wiring)
+
+**Task**: Wire 31 skills into `src/app/atelier/console/enterprise/EnterpriseDashboard.tsx` header (same pattern as EssentialDashboard: direct icon buttons + overflow dropdown).
+
+**Constraint enforced**: Multi-Compare excluded (Agency-only). All other 31 generators wired: 23 from Pro plan + 8 Enterprise-only additions (StakeholderMap, RiskHeatmap, RegCalendar, CrisisPlaybook, EsgScorecard, AuditTimeline, ApiKeyManager, PostCrisisReview). COMEX appears once (counted in both Pro list and Enterprise list per the brief — the unique-skill count is 31).
+
+**Changes to EnterpriseDashboard.tsx (single file, +356 lines net)**:
+
+1. **Lucide imports** — added 11 missing icons to the existing `from "lucide-react"` block: `BookMarked`, `Calculator`, `FileBarChart`, `Grid3x3`, `History`, `Languages`, `Mail`, `MoreHorizontal`, `PenSquare`, `Presentation`, `ShieldAlert`. Alphabetical insertion kept the import block readable.
+
+2. **Generator imports** — added 31 imports in a single new block right after `import { toast } from "sonner";`. Each imports from `../components/XxxGenerator`. Order matches the header layout (direct buttons first, dropdown second) for ease of auditing.
+
+3. **State** — added 32 useState declarations in the main `EnterpriseDashboard` component (after `warRoomOpen`, before the governance approval queue block). 31 booleans for popup visibility + 1 `skillsMenuOpen` boolean for the overflow dropdown. Each is a plain `useState(false)` — no persistence needed (popups are ephemeral, closed-on-navigate).
+
+4. **Header signature** — extended the `Header` function with 32 new props (31 `onOpenXxx: () => void` callbacks + `onToggleSkillsMenu` + `skillsMenuOpen: boolean`). Inline TypeScript type object duplicated in the destructured-param type annotation, matching the existing Header style.
+
+5. **Header UI** — inserted a 12-button toolbar + overflow dropdown between the milestone badge and the notifications bell:
+   - **12 direct icon buttons** (highest-leverage Enterprise tools, each with TooltipProvider → Tooltip → TooltipTrigger → 32×32 button → Lucide icon at 16px in `#71717A`):
+     1. FileText — Briefing matinal
+     2. AlertTriangle — Briefing de crise
+     3. Grid3x3 — Matrice concurrentielle
+     4. MessageSquare — Pulse Hespress
+     5. FileBarChart — Rapport COMEX
+     6. Network — Parties prenantes
+     7. ShieldAlert — Matrice des risques
+     8. CalendarDays — Calendrier réglementaire
+     9. BookMarked — Playbook de crise
+     10. Leaf — Scorecard ESG
+     11. History — Journal d'audit
+     12. Key — Clés API
+   - **Overflow dropdown** (`MoreHorizontal` trigger, opens a `position: absolute; top: 100%; right: 0` panel with `minWidth: 240, maxHeight: 480, overflowY: auto`) containing 19 items. Each item is a flex-row button: 14px Lucide icon in sage `#4A7B5F` + 13px charcoal `#0A0A0A` label. Items: Générateur de documents, Pitch Deck, Alerte boycott, Timeline sentiment, Crédibilité des sources, Contenu concurrents, Portée média, Campagnes, Influenceurs, Narratifs, Carte géographique, Digest email, Heatmap sentiment, Tendances SOV, Performance équipe, Recherches sauvegardées, Traducteur Darija, Aperçu WhatsApp, Revue post-crise.
+
+6. **Header call site** — passed the 32 new props at `<Header ... />` (line ~15459). Each `onOpenXxx` is an inline arrow flipping its boolean to true; `onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}` for click-to-toggle.
+
+7. **Popup renders** — added 31 `{xxxOpen && <XxxGenerator onClose={...} />}` lines at the bottom of the main component, right after the `<AnimatePresence>` war-room overlay and before the final closing `</div>`. Each generator is a self-contained fixed overlay (same pattern as BriefingGenerator); they share no state with the dashboard beyond the boolean that opens them.
+
+**Design conformance**:
+- `'use client'` preserved at line 1.
+- French only (zero English UI strings introduced; tooltips and aria-labels match the EssentialDashboard vocabulary).
+- 0 emojis (Python regex scan over U+1F000–U+1FAFF, U+2600–U+27BF, U+1F1E6–U+1F1FF, U+FE00–U+FE0F, U+2B00–U+2BFF → 0 hits).
+- Lucide icons only (no inline SVG, no emoji glyphs).
+- White/sage/charcoal palette respected: icon buttons use `#71717A` (TEXT_MUTED) for the 16px icon, dropdown item icons use `#4A7B5F` (SAGE), dropdown labels use `#0A0A0A` (CHARCOAL). Hover state is `bg-[#FAFAFA]`. Focus-visible outline uses `#4A7B5F`.
+- 32×32 button hit target matches EssentialDashboard exactly.
+
+**Verification**:
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → **EXIT_CODE=0** (0 errors project-wide).
+- File grew from 15,496 → 15,849 lines (+353 net).
+
+**Stage Summary**:
+- 1 file modified (`EnterpriseDashboard.tsx`), 0 new files, 0 emojis, French only, tsc 0 errors.
+- All 31 Enterprise generators are now reachable from the header — 12 direct icon buttons (governance + COMEX + crisis toolset) + 19-item overflow dropdown (content + sentiment + reach + comms + localization + post-crisis toolset).
+- Same wiring pattern as EssentialDashboard (icon buttons + dropdown) so the muscle memory transfers across plan tiers.
+
+**Next steps for follow-up owners**:
+- Consider auto-closing `skillsMenuOpen` after a dropdown item is clicked (currently stays open until the user clicks the trigger again or opens a popup). A 1-line `onClick={() => { onOpenXxx(); setSkillsMenuOpen(false); }}` wrapper per item would do it — but the EssentialDashboard reference does NOT do this, so I matched the existing convention to keep behavior consistent across plans.
+- AgencyDashboard is the only remaining dashboard without a full skill wiring. Multi-Compare is wired there per the previous stage's hand-off note.
+- The popups render at the bottom of the main component's JSX tree. They are siblings to the `<CrisisWarRoomOverlay>` AnimatePresence block — order is intentional (war room is "global state" so it takes precedence in the source ordering, popups are user-triggered tools).
+
+
+---
+
+## WIRE-AGENCY-SKILLS — Wire 23 skills into AgencyDashboard header
+
+**Agent**: VORTEX
+**File modified**: `src/app/atelier/console/agency/AgencyDashboard.tsx` (+337 lines, single-file constraint respected)
+**Pattern**: Mirrors EssentialDashboard — 10 direct icon buttons in the sticky header + a `MoreHorizontal` overflow dropdown for the 13 remaining skills. NO enterprise-only generators wired (Stakeholder Map / Risk Heatmap / Reg Calendar / Crisis Playbook / ESG / Audit Timeline / API Keys / COMEX / Post-Crisis stay gated to Enterprise).
+
+### Skill → Icon mapping (23 total)
+
+**Direct icon buttons (10)** in the header toolbar, all Lucide 16px `#71717A`:
+1. BriefingGenerator → `FileText` — "Briefing matinal"
+2. CrisisBriefingGenerator → `AlertTriangle` — "Briefing de crise"
+3. CompetitorMatrixGenerator → `Grid3x3` — "Matrice concurrentielle"
+4. HespressDigestGenerator → `MessageSquare` — "Pulse Hespress"
+5. DocumentWriterGenerator → `PenSquare` — "Générateur de documents"
+6. PitchDeckGenerator → `Presentation` — "Pitch Deck"
+7. BoycottAlertGenerator → `Zap` — "Alerte boycott"
+8. SentimentTimelineGenerator → `Activity` — "Timeline sentiment"
+9. SourceCredibilityGenerator → `ShieldCheck` — "Crédibilité des sources"
+10. MultiCompareGenerator → `Layers` — "Comparaison multi-clients" (AGENCY ONLY — featured with sage border + sage icon tint to highlight plan-exclusive feature)
+
+**Overflow dropdown menu (13)** triggered by `MoreHorizontal` button, items styled with 14px sage icons:
+11. CompetitorContentGenerator → `Newspaper` — "Contenu concurrents"
+12. MediaReachGenerator → `Calculator` — "Portée média"
+13. CampaignTrackerGenerator → `Megaphone` — "Campagnes"
+14. InfluencerTrackerGenerator → `Users` — "Influenceurs"
+15. NarrativeTrackerGenerator → `TrendingUp` — "Narratifs"
+16. GeoHeatmapGenerator → `MapPin` — "Carte géographique"
+17. EmailDigestGenerator → `Mail` — "Digest email"
+18. SentimentHeatmapGenerator → `CalendarDays` — "Heatmap sentiment"
+19. SOVTrendsGenerator → `BarChart3` — "Tendances SOV"
+20. TeamPerformanceGenerator → `Users` — "Performance équipe"
+21. SavedSearchesGenerator → `Search` — "Recherches sauvegardées"
+22. DarijaTranslatorGenerator → `Languages` — "Traducteur Darija"
+23. WhatsAppPreviewGenerator → `MessageSquare` — "Aperçu WhatsApp"
+
+### Code changes
+
+**Imports** (lines 88–292):
+- Added `type RefObject` to the named React imports (for the skillsMenuRef prop type).
+- Added 7 missing Lucide icons to the lucide-react import block: `BarChart3`, `Grid3x3`, `Languages`, `MapPin`, `MoreHorizontal`, `Newspaper`, `PenSquare`.
+- Added 23 generator component imports after `import { toast } from "sonner";` — `BriefingGenerator`, `CrisisBriefingGenerator`, `CompetitorMatrixGenerator`, `HespressDigestGenerator`, `DocumentWriterGenerator`, `PitchDeckGenerator`, `BoycottAlertGenerator`, `SentimentTimelineGenerator`, `SourceCredibilityGenerator`, `CompetitorContentGenerator`, `MediaReachGenerator`, `CampaignTrackerGenerator`, `InfluencerTrackerGenerator`, `NarrativeTrackerGenerator`, `GeoHeatmapGenerator`, `EmailDigestGenerator`, `SentimentHeatmapGenerator`, `SovTrendsGenerator`, `TeamPerformanceGenerator`, `SavedSearchesGenerator`, `DarijaTranslatorGenerator`, `WhatsappPreviewGenerator`, `MultiCompareGenerator`. All sourced from `../components/XxxGenerator`.
+
+**State** (added inside `AgencyDashboard` root component, after the sidebar/nav state block):
+- 23 boolean `useState` hooks (`briefingOpen` … `whatsappOpen`) + `skillsMenuOpen` for the overflow dropdown.
+- `skillsMenuRef = useRef<HTMLDivElement | null>(null)` + a `useEffect` click-away handler that closes the menu on outside-click (mousedown).
+- `handleToggleSkillsMenu = useCallback(...)` toggler.
+
+**DashboardHeader signature** (line ~17399):
+- Extended the destructured props and the inline prop type with 23 `onOpenXxx: () => void` callbacks, `skillsMenuOpen: boolean`, `onToggleSkillsMenu: () => void`, and `skillsMenuRef: RefObject<HTMLDivElement | null>`.
+
+**Header toolbar JSX** (between the existing `RefreshCw` button and the `Bell` button):
+- Wrapped in `<div className="hidden md:flex items-center gap-0.5" role="toolbar" aria-label="Outils">` so the skills cluster is desktop-only (mobile users access skills via the sidebar/Boîte à Outils section).
+- 10 direct `<TooltipProvider><Tooltip><TooltipTrigger asChild><button>...` icon buttons (same className/style as EssentialDashboard: `inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]`, 32×32, focus-visible sage outline).
+- 1 `<div ref={skillsMenuRef}>` containing the `MoreHorizontal` trigger button + conditional dropdown panel (absolute, right-aligned, 240px min-width, 480px max-height with overflow-Y auto for the 13 items). Each dropdown item is a `<button>` styled like EssentialDashboard (8px 12px padding, transparent bg, 14px sage icon, 13px charcoal label, French label).
+
+**DashboardHeader call site** (line ~18275):
+- Passed all 23 `onOpenXxx={() => setXxxOpen(true)}` callbacks, plus `skillsMenuOpen`, `onToggleSkillsMenu={handleToggleSkillsMenu}`, `skillsMenuRef={skillsMenuRef}`.
+
+**Popup renders** (bottom of the dashboard, after the WhatsAppImportModal AnimatePresence block, before the closing `</div>`):
+- 23 conditional renders in the same order as the spec list, each `{xxxOpen && <XxxGenerator onClose={() => setXxxOpen(false)} />}`. Each generator is a self-contained fixed-overlay popup — no props beyond `onClose`.
+
+### Verification
+
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → **EXIT=0** (0 errors, ran 3× consecutively to confirm — the project sometimes OOMs at 4096 under concurrent memory pressure, but with the system at idle the 4096 limit succeeds cleanly with no diagnostics).
+- Filtered tsc output for `AgencyDashboard` → 0 matches (clean).
+- `'use client'` preserved at line 1.
+- French only in all labels/tooltips/aria-labels.
+- 0 emojis (Lucide icons only).
+- Only `AgencyDashboard.tsx` modified (verified via `git status` — the Enterprise/Pro dashboard WIP changes in the working tree are from prior agents, untouched by this task).
+
+### Notes for the next owner
+
+- The skills toolbar is `hidden md:flex` (desktop-only). On mobile, the existing sidebar + the "Boîte à Outils Agence" section (section 25) remain the access points. If mobile skill access is desired, a future task can add a collapsible skills tray to the mobile sidebar.
+- The `MultiCompare` button (skill 10) is visually distinguished with a `1px solid SAGE_BG_STRONG` border + sage-tinted icon (`color: SAGE`) to highlight it as an agency-plan-exclusive feature. This matches the design language already used elsewhere for tier-gated features.
+- The dropdown panel has `maxHeight: 480, overflowY: auto` so it won't push past the viewport on shorter screens even with all 13 items rendered.
+- The click-away handler uses `mousedown` (not `click`) so the dropdown closes before the underlying button receives focus — prevents the menu from re-opening if the user clicks the trigger button to close it.
+
+---
+
+## WIRE-PRO-SKILLS — 22 skills wired into ProDashboard header (2025-08-13)
+
+### Stage goal
+Wire all 22 Pro-plan generators into `src/app/atelier/console/pro/ProDashboard.tsx`'s Header — 10 direct icon buttons + 1 "Plus d'outils" dropdown containing the remaining 12. Same pattern as EssentialDashboard (icon button + TooltipProvider + overflow dropdown).
+
+### Files modified
+- `src/app/atelier/console/pro/ProDashboard.tsx` (+272 lines, single file). No other files touched.
+
+### Edits applied
+1. **Lucide imports extended** (alphabetized inside the existing `from "lucide-react"` block): added `Grid3x3`, `Languages`, `MapPin`, `MoreHorizontal`, `Presentation`, `ShieldCheck`. Other 16 icons (`Activity, AlertTriangle, BarChart3, CalendarDays, Calculator, FileText, Mail, Megaphone, MessageSquare, Newspaper, PenSquare, Search, TrendingUp, Users, Zap, Layers`) were already imported.
+
+2. **22 generator imports** added in a labeled block right after `import { toast } from "sonner";`:
+   `BriefingGenerator, CrisisBriefingGenerator, CompetitorMatrixGenerator, HespressDigestGenerator, DocumentWriterGenerator, PitchDeckGenerator, BoycottAlertGenerator, SentimentTimelineGenerator, SourceCredibilityGenerator, CompetitorContentGenerator, MediaReachGenerator, CampaignTrackerGenerator, InfluencerTrackerGenerator, NarrativeTrackerGenerator, GeoHeatmapGenerator, EmailDigestGenerator, SentimentHeatmapGenerator, SovTrendsGenerator, TeamPerformanceGenerator, SavedSearchesGenerator, DarijaTranslatorGenerator, WhatsappPreviewGenerator`. All imported from `../components/XxxGenerator`. Verified all 22 export `function XxxGenerator({ onClose }: { onClose: () => void })` — `BoycottAlertGenerator` also accepts an optional `onActivateCrisis?` but it's not required, so we pass `onClose` only (same as EssentialDashboard).
+
+3. **Header signature extended** with 22 `onOpenXxx: () => void` callbacks + `onToggleSkillsMenu: () => void` + `skillsMenuOpen: boolean`. Both the destructured params and the inline type annotation were updated in lockstep.
+
+4. **Header JSX**: between the "edit mode" block (PenSquare + RotateCcw when editMode) and the Bell/alerts button, inserted:
+   - 1px vertical separator (`BORDER_STRONG`, 20px height)
+   - 10 direct icon buttons (skills 1-10) wrapped in `TooltipProvider > Tooltip > TooltipTrigger asChild > button`. Skills 1-7 use the verbose multi-line form (matching EssentialDashboard style); skills 8-10 use the compact one-liner form.
+   - 1 "Plus d'outils" dropdown container (`position: relative`) with the MoreHorizontal trigger and a conditional panel (`position: absolute, top: 100%, right: 0, minWidth: 220, maxHeight: 400, overflowY: auto`) holding 12 buttons for skills 11-22. Each dropdown button uses inline-flex with a 14px Lucide icon in SAGE color + French label.
+   - 1px vertical separator before the Bell button.
+   Skills in dropdown: Portée média (Calculator), Suivi de campagnes (Megaphone), Suivi d'influenceurs (Users), Suivi des narratifs (TrendingUp), Carte géographique (MapPin), Digest email (Mail), Heatmap sentiment (CalendarDays), Tendances SOV (BarChart3), Performance équipe (Users), Recherches sauvegardées (Search), Traducteur Darija (Languages), Aperçu WhatsApp (MessageSquare).
+
+5. **23 useState hooks** added inside `export default function ProDashboard({ userName, userEmail })` right after `const [editMode, setEditMode] = useState(false);`: one per generator (`briefingOpen, crisisOpen, matrixOpen, hespressOpen, docWriterOpen, pitchOpen, boycottOpen, sentimentTimelineOpen, sourceCredOpen, competitorContentOpen, mediaReachOpen, campaignOpen, influencerOpen, narrativeOpen, geoHeatmapOpen, emailDigestOpen, sentHeatmapOpen, sovTrendsOpen, teamPerfOpen, savedSearchesOpen, darijaOpen, whatsappOpen`) plus `skillsMenuOpen` for the dropdown visibility.
+
+6. **Header call site** (in the main `return`) extended with all 22 `onOpenXxx` props + `onToggleSkillsMenu` + `skillsMenuOpen`. Each `onOpenXxx` callback opens its generator AND closes the dropdown (`setSkillsMenuOpen(false)`) so the menu dismisses after a selection — same UX as EssentialDashboard.
+
+7. **22 popup renders** added at the bottom of the main component's JSX, after the existing `<CompetitorSetupWizard>` block and before `</div></ProR2BProvider>`. Each follows the same one-liner pattern: `{xxxOpen && <XxxGenerator onClose={() => setXxxOpen(false)} />}`.
+
+### Verification
+- `'use client'` directive preserved (line 1, unchanged).
+- 0 emoji-range characters (scanned U+1F000-U+1FAFF, U+2600-U+27BF, U+1F1E6-U+1F1FF, U+FE00-U+FE0F, U+2B00-U+2BFF).
+- All labels in French (Briefing matinal, Briefing de crise, Matrice concurrentielle, Pulse Hespress, Générateur de documents, Pitch Deck, Alerte boycott, Timeline sentiment, Crédibilité des sources, Contenu concurrents, Portée média, Suivi de campagnes, Suivi d'influenceurs, Suivi des narratifs, Carte géographique, Digest email, Heatmap sentiment, Tendances SOV, Performance équipe, Recherches sauvegardées, Traducteur Darija, Aperçu WhatsApp).
+- All icons from `lucide-react` only — no SVG, no emoji.
+- Design tokens reused (SAGE, SAGE_BG, BORDER, BORDER_STRONG, TEXT_BODY, FONT_SANS, FONT_MONO) — no new constants introduced.
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → EXIT_CODE=0 (0 errors project-wide, including the modified ProDashboard.tsx).
+
+### Stage Summary
+- 1 file modified (+272 lines), 22 generators wired, 0 emojis, French only, tsc 0 errors.
+- Same EssentialDashboard pattern (icon button + TooltipProvider + overflow dropdown) replicated verbatim — visual consistency across plans.
+- Dropdown auto-dismisses on selection (every `onOpenXxx` callback flips `skillsMenuOpen` back to false).
+- 2 visual separators (1px × 20px `BORDER_STRONG` divs) added to clearly demarcate the skills cluster from the edit-mode cluster (left) and the alerts/account cluster (right).
+- All 22 generators verified to export `function XxxGenerator({ onClose }: { onClose: () => void })` — no prop mismatches.
+- Pre-existing modifications to `EnterpriseDashboard.tsx` and `AgencyDashboard.tsx` (made by a prior agent) were NOT touched — out of scope for this task ("Only modify ProDashboard.tsx"). Those files were already clean before this stage began.
+- Next: nothing required. The Pro plan is now feature-parity with Essential for the 22 shared skills. If a future task wants to add the 9 Pro-exclusive skills not in this list (Comex, Stakeholder, RiskHeatmap, RegCalendar, AiVisibility, CrisisPlaybook, Esg, Audit, ApiKeys, PostCrisis — these are Essential-only or Enterprise-only per the prior agent's wiring), the same pattern can be extended by adding to the dropdown list. Currently the Pro dropdown has 12 items; comfortable headroom for more (maxHeight: 400 + overflowY: auto).
