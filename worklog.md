@@ -9340,3 +9340,414 @@ NEXT ACTIONS (out of scope, noted for suivi):
   loss, Facebook-organized, WhatsApp-amplified) is the strongest
   sales asset. Skill #4 (Boycott Early Warning Playbook) operationalizes
   this narrative into a deliverable — prioritize in the sales deck.
+
+---
+
+## SKILL-3-COMPETITOR-MATRIX — AURA — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+CONTEXT: Skill 3 of the 20-deliverable strategic pivot (worklog §5.6).
+Builds on BriefingGenerator's popup pattern (Skill 2). Position:
+HarchIQ ships the visual competitor matrix that Cision/Brandwatch
+ bury inside tabular reports.
+
+FILES CREATED (2, no dashboard files modified):
+
+1. src/app/api/console/competitor-matrix/route.ts (171 lines)
+   - POST endpoint, next-auth gated (401 if no session)
+   - Demo fallback (buildDemo) for demo-*@harch.atelier emails and
+     users without companyId — keeps the popup testable end-to-end
+   - Fetches user's company + 4 competitors (same sector) → 5 cols
+     in the matrix (keeps the grid exactly 5×5)
+   - 5 metrics per company over 30 days:
+     · score         → ReputationScore.overall (fallback: avg of 4)
+     · sentiment     → (avg sentimentScore + 1) × 50, clamped 0-100
+     · sov           → company articles / sector-total articles
+     · aiVisibility  → cited AIVisibility count × 10, capped 100
+     · reach         → articleCount/10 + distinctSources×2, capped 100
+   - Promise.all per company + 1 sector-total query (5 queries/company)
+   - Returns { yourCompany, competitors: [...4], meta: {sector, generatedAt} }
+   - Pattern: clone of competitor-radar/route.ts (same Prisma calls,
+     same demo gating via isDemoEmail), POST not GET (matches Briefing)
+
+2. src/app/atelier/console/components/CompetitorMatrixGenerator.tsx (521 lines)
+   - Fixed-overlay popup (z-200, blur backdrop) — clone of
+     BriefingGenerator's shell, same onClose-on-backdrop-click pattern
+   - 5×5 grid: rows = [Score, Sentiment, Part de voix, Visibilité IA,
+     Portée], cols = [yourCompany + 4 competitors]
+   - Color-coded cells:
+     · sage (#4A7B5F @ 8% bg) — you win (diff ≥ +5 pts)
+     · amber (#F59E0B @ 12% bg) — tie (|diff| < 5 pts)
+     · red (#EF4444 @ 10% bg) — you lose (diff ≤ -5 pts)
+     · neutral (#FAFAFA) — your own column (reference, not compared)
+   - Diagonal-sweep entrance: each cell at (row,col) animates in
+     with delay = 0.15 + (row+col)×0.06s — visible top-left to
+     bottom-right sweep across the 25 cells
+   - Sections appear one by one (header 150ms → matrix 350ms →
+     legend 1400ms → summary 1600ms → actions 1800ms), same
+     setTimeout loop as BriefingGenerator's SECTIONS array
+   - Hover tooltip: absolute-positioned dark popover above each cell
+     shows "{competitor}: {val}{unit} · Vous: {your}{unit} · Δ {diff}"
+   - Summary bar (sage bg, Trophy icon): "Vous gagnez sur X/5 axes"
+     with verdict string (position dominante / avance solide /
+     parité concurrentielle / retard à combler)
+   - Export PDF via window.print() with @media print CSS isolating
+     #matrix-document (same trick as BriefingGenerator)
+   - Design system respected: White bg, sage accents, charcoal text,
+     Space Mono for headers/numbers, Inter body, Lucide icons only
+     (Grid3x3, Trophy, Download, RefreshCw, X, Loader2, AlertTriangle),
+     zero emojis, French throughout
+
+TSC VERIFICATION:
+  $ NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false
+  → 1 error, NONE in the 2 new files:
+    src/app/api/console/comex-report/route.ts(273,36): TS2551
+    Property 'sentiment' does not exist — did you mean 'sentimentSum'?
+  comex-report/route.ts is an untracked WIP file from another session
+  (also `??` in git status). Explicitly out of scope: the task says
+  "Create only the 2 files" so I did not touch it. Both new files
+  pass tsc cleanly (verified by rg "competitor-matrix|CompetitorMatrix"
+  on the tsc output → zero matches).
+
+DESIGN DECISIONS / RATIONALE:
+- Route fetches 4 competitors (not the literal "5" in the task brief)
+  because the matrix must be exactly 5×5 — 5 metrics × 5 companies,
+  where the user's company is column 1. Fetching 5 competitors + the
+  user would force a 6-column grid and break the visual spec. A
+  clarifying comment in route.ts documents this reconciliation.
+- Tolerance band for "tie" set to ±5 pts (absolute, 0-100 scale) —
+  small enough to surface real gaps, large enough that 1-pt noise
+  doesn't paint the matrix amber. Surfaced in the legend as
+  "Égalité (±5 pts)" so the user sees the threshold.
+- Demo data uses Moroccan banking sector (Attijariwafa, Bank of
+  Africa, BCP, CIH, Crédit du Maroc) — matches the demo sector in
+  competitor-radar/route.ts and the 2018 boycott sales narrative
+  from competitive-reports.
+- "Wins" in the summary bar = your value is the max across all 5
+  companies on that metric (not just ≥ each competitor individually
+  — though those are equivalent for "max"). This gives an honest
+  X/5 leadership count.
+- Reach formula (articleCount/10 + distinctSources×2) is the same
+  shape as competitor-radar's mediaReach but adds source diversity
+  — a company with 30 articles from 1 source should not rank equal
+  to one with 30 articles from 10 sources. Capped at 100.
+
+NEXT ACTIONS (out of scope, noted for suivi):
+- Wiring: <CompetitorMatrixGenerator /> is not yet mounted anywhere
+  on the dashboard — same situation as BriefingGenerator was before
+  commit 454ecfc wired it through the Header. A follow-up commit
+  should add a "Matrice Compétitive" button to the console Header
+  (next to "Briefing Matinal"), gated by a state hook identical to
+  the showBriefing pattern. Do NOT modify dashboard files in this
+  task — leave for a separate wiring commit.
+- Skill 4 (Hespress Comment Digest) is already scaffolded in the
+  workspace (HespressDigestGenerator.tsx + hespress-digest/route.ts
+  both `??` untracked). Coordinate with that agent to align the
+  popup shells — they should share a <DeliverableShell> component
+  to avoid 5 copies of the same fixed-overlay boilerplate by Skill 5.
+- PDF export currently uses window.print() with @media print CSS
+  isolation. For a real PDF artifact (saved to /reports/), wire
+  through the existing /api/console/reports/[id]/pdf pipeline once
+  the report schema gains a "matrix" type — same follow-up needed
+  for BriefingGenerator.
+
+---
+Task ID: SKILL-4-HESPRESS-DIGEST
+Agent: NEXUS
+Task: Skill 4 — Hespress Comment Digest (structured deliverable, not chat)
+
+Files created (2 — strict scope):
+- src/app/api/console/hespress-digest/route.ts        (354 lines)
+- src/app/atelier/console/components/HespressDigestGenerator.tsx  (1140 lines)
+
+NO dashboard files modified. NO existing files touched.
+
+Design system respected (NON-NEGOTIABLE):
+- White #FFFFFF bg, sage #4A7B5F accents, charcoal #0A0A0A text
+- Space Mono headers (h1, stat values, badges, chips, section labels)
+- Inter body (paragraphs, comment text, button labels)
+- Lucide icons only (MessageSquare, Calendar, Newspaper, TrendingUp,
+  TrendingDown, Tag, ThumbsUp, Download, RefreshCw, AlertTriangle,
+  Activity, Loader2, X) — zero emojis
+- French throughout ("Pulse Hespress", "Scraping Hespress en cours...",
+  "Répartition linguistique", "Sujets émergents", "Export PDF", etc.)
+- framer-motion section-by-section reveal (7 sections, 200ms stagger)
+- Same popup pattern as BriefingGenerator (fixed inset, backdrop blur,
+  scale-in motion.div, stopPropagation, print styles)
+
+API route — POST /api/console/hespress-digest:
+- Auth: getServerSession(authOptions) → 401 if no session.user.id
+- Company scope: session.user.companyId required (400 if missing)
+- Body optional: { companyName?: string } overrides DB company name
+- Falls back to prisma.company.findUnique({ id: companyId }).name
+- Calls scrapeHespressForCompany(companyName, 10) from
+  src/lib/scrapers/hespress-scraper.ts (existing, untouched)
+- maxDuration = 60s (scraping 10 articles + comments: 30-60s realistic)
+- Returns structured HespressDigest:
+    • meta: companyName, sector, generatedAt, date (fr-FR)
+    • stats: articleCount, commentCount, positivePct/neutralPct/negativePct
+    • languageBreakdown: { fr, ar, darija, mixed } counts
+    • topArticles: top 10 (title, url, category, publishedAt,
+      commentCount, per-article sentiment counts)
+    • topComments: top 50 sorted by sentimentWeight×10 + likes
+      (positive/negative weight 2, neutral 0.5 — polarized bubbles up)
+    • topNegative: top 5 by likes where sentiment=negative
+    • topPositive: top 5 by likes where sentiment=positive
+    • trendingTopics: top 12 tokens (Latin 4+ chars, Arabic 3+ chars)
+      with French+English stopword filter, count >= 2
+- Empty-result branch: returns full structured digest with zero counts
+  (frontend shows "Aucun article Hespress mentionnant ... trouvé")
+- Error branch: 500 + { error: message }
+
+Component — HespressDigestGenerator.tsx:
+- Props: { onClose: () => void; companyName?: string }
+- Sections revealed via visibleSections Set + setTimeout per SECTIONS
+- (a) Header: "Pulse Hespress — {companyName}" + date + sector subtitle
+- (b) Stats bar: 4-col grid (Articles / Commentaires / Positif% /
+  Négatif%) — Space Mono numbers, Lucide icons
+- (c) Language pie: conic-gradient circle (FR sage / AR charcoal /
+  Darija amber / Mixte border) with donut hole showing total count,
+  legend on right with counts + pct; Darija row gets amber "SPÉCIAL"
+  badge
+- (d) Top 5 négatif: red accent (left border 3px NEGATIVE,
+  background NEGATIVE_BG, border NEGATIVE_BORDER) — header with
+  TrendingDown icon
+- (e) Top 5 positif: sage accent (same pattern with SAGE) — header
+  with TrendingUp icon
+- (f) Trending topics: sage chips with count ("terme · N")
+- (g) Export PDF button (window.print) + Actualiser (regenerate)
+- CommentCard sub-component: text + row[●dot, FR/AR/Darija badge,
+  author, likes with ThumbsUp icon]
+  • Darija badge = AMBER_BG + AMBER text + "DARIJA" label
+  • FR/AR badges = SAGE_BG + SAGE text
+  • Mixed = BORDER + TEXT_MUTED
+  • Sentiment dot: POSITIVE green / NEGATIVE red / neutral muted
+- Loading state: "Scraping Hespress en cours..." with sub-line
+  "Collecte des articles et commentaires depuis hespress.com —
+  opération pouvant prendre 30 à 60 secondes."
+- Empty state: sage-bg card with Activity icon + polite French message
+- Print CSS: only #hespress-digest-document prints (mirrors
+  BriefingGenerator's #briefing-document pattern)
+- Generating indicator: pulsing sage dot + "Construction du digest..."
+
+QA:
+- NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false
+- MY 2 FILES: 0 errors (verified via grep filter)
+- 1 PRE-EXISTING error in src/app/api/console/comex-report/route.ts:273
+  (TS2551: Property 'sentiment' does not exist — did you mean
+  'sentimentSum'?). This file is a sibling skill's WIP (untracked,
+  mtime 2026-08-13 01:21:11 — created in this session by another
+  agent, NOT by me). Per mission constraint "Create only the 2 files",
+  I did NOT modify it. The fix is trivial (s/sentiment/sentimentSum/)
+  but out of scope — flag for Skill 1 owner.
+
+NEXT ACTIONS (out of scope, noted for suivi):
+- Dashboard integration: wire a trigger button (e.g. in ConsoleShell
+  or BrandHealthCommandCenter) that mounts HespressDigestGenerator
+  with the active company name. Pattern:
+    <HespressDigestGenerator onClose={() => setShowHespress(false)}
+                              companyName={company.name} />
+- Scraper robustness: hespress-scraper.ts uses regex-based HTML
+  parsing (fragile). If Hespress changes their comment DOM, the
+  scraper silently returns 0 comments. Consider migrating to
+  cheerio or playwright for resilience.
+- Darija detection: current language detection in hespress-scraper.ts
+  treats "Arabic+French mix" as Darija, which is a coarse heuristic.
+  For production, integrate darija-nlp.ts (existing 600-line module)
+  for proper Darija classification — directly impacts the amber
+  "Darija" badge quality.
+- Trending topics: lexicon-free tokenization works for FR/AR but
+  misses multi-word phrases ("OCP", "Centrale Danone", "boycott").
+  Consider noun-phrase extraction via the LLM cache for v2.
+- Cache layer: scrapeHespressForCompany hits Hespress live every
+  call (30-60s). Add a 1-hour DB cache (similar to llm-cache.ts
+  pattern) so repeat digest opens are instant.
+
+
+══════════════════════════════════════════════════════════════════
+SKILL-5-COMEX-REPORT · AURA · Weekly COMEX Report (4-page PDF)
+══════════════════════════════════════════════════════════════════
+
+MISSION: Build Skill 5 — Weekly COMEX Report. A 4-page board-ready
+PDF document that generates itself. Two files only; no dashboard
+modifications.
+
+FILES CREATED (2):
+1. /home/z/my-project/src/app/api/console/comex-report/route.ts
+   - POST endpoint, requires getServerSession + companyId
+   - maxDuration=30s, force-dynamic
+   - Parallel Prisma fetch (11 queries) covering all 5 source
+     data points required by the spec:
+       • brand-health      — ReputationScore + 7d sentiment aggregate
+       • sentiment-trend   — 30d articles, daily-bucketed into sparkline
+       • topics            — 7d source map + RiskAssessment categories
+       • source-distribution — top-6 source groupBy over 30d
+       • crisis-alerts     — 7d negative articles (top 8)
+       • share-of-voice    — sector competitors + 30d mention counts
+                              (added for page 3 concurrent bars/donut)
+   - Compiles into 4-section board report:
+       a. Executive Summary   — score, sentimentIndex (-100..+100),
+                                totalMentions + summary paragraph
+       b. Tendance 30 jours   — sparkline [{date,value}] × ~31 days,
+                                delta (first vs last non-zero),
+                                top-3 narratives with momentum
+       c. Analyse concurrentielle — competitors [{name,sov,mentions,
+                                sentiment,isYou}], yourRank, yourShare
+       d. Recommandations     — 3-5 priority-ranked action items
+                                (P0 crisis → P1 neg/sov → P2 pos/score
+                                 → P3 standing review), each with
+                                 priority, title, description, deadlineDays
+   - HONEST EMPTY STATES: summary adapts to no-data / critical /
+     warning / positive / fragile paths; recommendations fallback
+     to standing P3 items when data is sparse.
+
+2. /home/z/my-project/src/app/atelier/console/components/ComexReportGenerator.tsx
+   - Popup component, exact same shell pattern as BriefingGenerator
+     (overlay + motion.div + header bar + scrollable body)
+   - 4 pages stacked vertically, each separated by a thin sage
+     gradient divider (.comex-page-divider)
+   - Page 1 — Executive Summary: PageHeader + h1 title + 3 KPI cards
+     (score/trend, sentimentIndex with color-coded border, mentions
+     30j) + summary paragraph in a sage-bordered card
+   - Page 2 — Tendance 30j: SVG sparkline (inline, no chart lib)
+     with gradient fill, zero baseline, J-30 → Aujourd'hui axis,
+     delta indicator (TrendingUp/Down/Minus), top-3 narrative rows
+     with momentum badge
+   - Page 3 — Concurrents: 2-column grid → CompetitorBars (5
+     horizontal bars, sage = "Vous", others muted earth tones,
+     sentiment value color-coded) + DonutChart (SVG strokeDasharray,
+     yourShare % in center, legend below)
+   - Page 4 — Recommandations: 3-5 RecommendationCards with priority
+     badge (P0 red / P1 amber / P2 sage / P3 gray), icon (ShieldAlert/
+     AlertTriangle/Target/Sparkles), title, description, deadline
+     box ("Sous 24h" / "Sous Nj" / "Sous N sem." / "Sous N mois")
+   - framer-motion reveal: 4 pages stagger at 250/600/950/1300ms
+     (~350ms cadence, slower than BriefingGenerator's 200ms =
+     more dramatic board-room feel)
+   - "Page X / 4" indicator in header (updates as pages reveal)
+   - Export PDF button (window.print) — disabled while generating
+   - RefreshCw "Régénérer" button on page 4
+   - Print CSS: @page A4 margin 0, body * hidden, #comex-document
+     visible, .comex-page = 210mm × 297mm with page-break-after:
+     always; .comex-page-divider hidden in print
+   - Design system respected: White #FFFFFF bg, sage #4A7B5F
+     accents, charcoal #0A0A0A text, Space Mono headers (mono
+     font stack with ui-monospace fallback), Inter body, Lucide
+     icons only (NO emojis), French throughout
+
+CONSTRAINTS RESPECTED:
+- ZERO dashboard files modified — verified: only 2 new files
+  created (comex-report/route.ts + ComexReportGenerator.tsx).
+- Pattern parity with BriefingGenerator: same overlay/popup shell,
+  same KPI card aesthetic, same loader/error/retry flow.
+- No new dependencies — uses existing framer-motion (12.x),
+  lucide-react (0.525), and Prisma client. No chart library
+  (sparkline + donut are inline SVG).
+- Auth: route enforces getServerSession + companyId check (401/400
+  if missing). Demo users fall through to real queries (matches
+  briefing/generate's behaviour — no separate demo branch needed).
+
+TYPECHECK:
+- NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit
+  --pretty false → EXIT_CODE=0 (0 errors, 0 warnings)
+- Initial run flagged 3 errors (1 stale variable name in route,
+  2 wrong object access paths in component) — fixed in 2 edits.
+
+NEXT ACTIONS (out of scope, noted for suivi):
+- Wiring: ComexReportGenerator is not yet imported by any console
+  page. The console needs a trigger button (e.g. on the reports
+  tab or in the sidebar) that mounts <ComexReportGenerator
+  onClose={...} />. Pattern: see how BriefingGenerator is mounted
+  in the existing console.
+- Page 3 donut currently uses 5 competitors max. If sector has
+  fewer than 4 competitors (or none in same sector), bars + donut
+  will render sparse — consider falling back to "no competitor
+  data" empty state, or expand to industry-wide benchmarking.
+- Sparkline "no data" days (value=0) are drawn as a flat midline
+  in the area gradient, but the line path skips them — this gives
+  a cleaner visual but may look like missing data. Consider
+  interpolating or showing a dotted "collecte en cours" segment
+  for sparse early days.
+- Recommandations engine is rule-based (crisis level → SOV →
+  sentiment thresholds). A v2 could route through glm-orchestrator
+  to produce more nuanced Dircom-grade prose, but the rule-based
+  version is faster (no LLM call) and deterministic for board
+  audit.
+- Page numbering: the in-popup "Page X / 4" indicator updates
+  based on revealed-page count. For a more accurate reading
+  experience, consider tracking scroll position to highlight the
+  currently-viewed page (IntersectionObserver). Defer to v2.
+
+
+---
+
+## SKILL-2-CRISIS-BRIEFING — Crisis Briefing Generator (2026-05)
+
+**Agent:** AURA
+**Fichiers créés (2):**
+
+1. `src/app/api/console/crisis-briefing/route.ts` — POST endpoint,
+   auth via `getServerSession(authOptions)` + `requireUserCompany()`.
+   Compiles a structured crisis dossier (PDF-ready, not chat) from:
+     • Batch 1 (parallel): company info, negative articles 7j
+     • Batch 2 (parallel): sentiment trend 7j, top negative sources,
+       flagged WhatsApp inbound, high/critical risk assessments,
+       influencers mentioning any of the negative articles (via
+       InfluencerMention.alertId — note: InfluencerMention doesn't
+       carry companyId, the article-id list is the only correct
+       company filter).
+   Runs `detectCrisis()` (24h recent vs 7d baseline) for the crisis
+   score + factors. Returns JSON: meta / timeline (first_signal →
+   escalation → current) / impact (sentiment shift, mention velocity,
+   reach, negative share, peak day) / actors (sources + influencers,
+   tier-ranked) / actions (3-5 Dircom-ready, priority P1-P3) /
+   recommendation / factors.
+
+2. `src/app/atelier/console/components/CrisisBriefingGenerator.tsx`
+   — Same popup pattern as BriefingGenerator (fixed overlay, scale
+   entrance, framer-motion reveal). 6 sections appear one-by-one
+   (200ms delay each): (a) Alerte Crise header w/ crisis-score card
+   + factor mini-bars (red accent if score > 50), (b) Timeline with
+   vertical timeline + severity-colored dots, (c) Impact 2×2 grid
+   (sentiment shift / velocity / reach / negative share), (d) Key
+   actors list with reach tier colors, (e) Recommended actions
+   (clickable checkboxes, P1-P3 priority pills), (f) Export buttons
+   (PDF via window.print, Copy to clipboard as plain text, Régénérer).
+   Print CSS at the bottom isolates `#crisis-document` and hides
+   interactive buttons in the PDF output.
+   Palette: WHITE #FFFFFF bg, charcoal #0A0A0A text, 1px #F0F0F0
+   border, 12px radius, 20px padding, Space Mono headers (10px
+   uppercase 0.08em), Inter body (13px). Red #DC2626 / amber #F59E0B
+   for crisis sections (NOT sage — sage reserved for "safe" level
+   only). Lucide icons only, NO emojis, French throughout.
+
+**Decision: demoFilter applied to every Prisma where clause** to
+maintain the domain-matching-demo-isolation invariant. Demo sessions
+flow through `requireUserCompany()` which returns the right
+`demoFilter` automatically — no separate demo dossier needed (the
+real Prisma queries will return whatever demo data exists, or empty
+arrays if none, in which case the dossier renders a "safe" state).
+
+**Decision: actor "journalist" type** is reserved for future use —
+the Article model has no author/journalist field today, so we surface
+sources + influencers only. When the schema gains an author field,
+swap in the journalist actor with the same actor-card UI.
+
+**TypeScript check:** `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → 0 errors. (3 transient errors in
+sibling skill files ComexReport/route.ts and ComexReportGenerator.tsx
+appeared briefly during the run but resolved before final check —
+not in scope, not modified.)
+
+**Dashboard files NOT modified.** The two files are unwired — the
+parent console page needs to import `CrisisBriefingGenerator` and add
+a trigger button (same pattern as BriefingGenerator's trigger).
+
+**Next actions (out of scope, for suivi):**
+- Wire CrisisBriefingGenerator into the console page next to
+  BriefingGenerator (1 import + 1 useState + 1 trigger button).
+- When Article schema gains an `author` field, extend the actors
+  query to surface top journalists driving the negative narrative.
+- Add PDF export via the existing `@react-pdf/renderer` pipeline
+  (currently uses window.print() — works but doesn't match the
+  BrandedPDF visual fidelity of the /api/console/reports pipeline).
+
