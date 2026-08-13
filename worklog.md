@@ -12035,3 +12035,65 @@ as specified).
   target a specific companyId (rather than his null session), wire a company
   picker into the skills strip and pass the selected id via a prop extension
   on each generator — currently they all use the session internally.
+
+---
+
+## REDESIGN-ESSENTIAL-BREATHE — AURA (Lead Product & UX Strategist)
+
+**Goal:** Make EssentialDashboard BREATHE — Lego variety, no dark card
+backgrounds, airy spacing. Boss feedback was that the dashboard looked like
+"vertical tubes of black" — VLM confirmed tall charcoal rectangles with
+white text giving a brutalist feel.
+
+### Diagnosis
+- 4 KPI cards (Sections 03-06) all `lg:col-span-3 md:col-span-6` — identical
+  narrow + tall tubes side by side. No Lego variety.
+- `CardShell` padding was 20px, main grid gap was `gap-4 lg:gap-6`, main
+  column was `px-4 lg:px-6 py-6` — tight, no breathing.
+- 6 inline `backgroundColor: CHARCOAL` usages — 3 of them were not submit
+  buttons (user chat bubble, "Découvrir Pro" CTA, "Configurer mes alertes"
+  CTA) and read as black modules inside an otherwise white dashboard.
+
+### Code changes (1 file, +29 / -12)
+`src/app/atelier/console/essential/EssentialDashboard.tsx`
+
+1. **CardShell padding 20 → 24px** + explicit `backgroundColor: "#FFFFFF"`
+   default (callers can still override via `style`).
+2. **Main column padding** `px-4 lg:px-6 py-6` → `px-4 lg:px-8 py-8`.
+3. **Main grid gap** `gap-4 lg:gap-6` → `gap-6 lg:gap-8` (32px between cards).
+4. **Section 2 (Score) internal grids** `gap-6` → `gap-8` (×2 — loading
+   skeleton grid + main gauge/meteo/MiniStat grid).
+5. **KPI strip Lego variety** — 4 cards now span 4+3+3+2 instead of 3+3+3+3:
+   - `SentimentMoyenKpi` (KPI 1): `lg:col-span-3` → `lg:col-span-4`
+   - `MentionsJourKpi` (KPI 2): unchanged `lg:col-span-3`
+   - `CitationsIaKpi` (KPI 3): unchanged `lg:col-span-3`
+   - `AlertesActivesKpi` (KPI 4): `lg:col-span-3` → `lg:col-span-2`
+   (md:col-span-6 preserved on all 4 so tablets still show 2×2.)
+6. **Dark backgrounds removed (CHARCOAL → SAGE)**:
+   - User chat bubble (`ChatMessageView` isUser branch) — was the most
+     prominent "black tube", now on-brand sage green.
+   - "Découvrir Pro" CTA button (BoîteOutilsCard upsell banner).
+   - "Configurer mes alertes" CTA button (WhatsAppAlertPreviewCard).
+7. **Header design-philosophy comment block** updated to document the Lego
+   Breathing contract (card sizes 12/7/5/4/3/2, gap-8, padding 24px, only
+   text + submit buttons + RadialBar gauge fill allowed to be dark).
+
+### Dark surfaces KEPT (intentional, per spec)
+- `Send` button in HarchIQ chat input (true submit button — spec allows).
+- WhatsApp phone mockup notch (stylized device hardware element, 80×14px).
+- Hover tooltip on VolumeMentionsCard heatmap (conventional dark affordance).
+
+### TypeScript
+`NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false`
+→ exit code 0, zero errors.
+
+### Files touched (1)
+- `src/app/atelier/console/essential/EssentialDashboard.tsx` (+29 / -12)
+
+### Next actions
+- None required from this agent.
+- (Optional, out of scope) The `AlertesActivesKpi` card at `lg:col-span-2`
+  is now visually compact (~145px wide on lg). If the boss finds its
+  AiCommentary block too cramped, swap KPI 4 back to `lg:col-span-3` and
+  instead narrow `CitationsIaKpi` to `lg:col-span-2` (the LLM chips wrap
+  more gracefully at narrow widths than the alertes commentary).

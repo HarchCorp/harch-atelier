@@ -16,10 +16,17 @@ import { DarijaTranslatorGenerator } from "../components/DarijaTranslatorGenerat
 //  « Un seul comme un tableau de Picasso, augmenté par HarchIQ. »
 //
 //  Design philosophy:
-//   • WHITE background, sage green (#4A7B5F) accents, charcoal (#0A0A0A) text
+//   • WHITE background, sage green (#4A7B5F) accents, charcoal (#0A0A0A) TEXT
 //   • NO emojis — Lucide icons only (16px, #71717A)
 //   • NO dark mode — institutional, minimalist, Bloomberg-clean
-//   • Every card: white bg, 1px border #F0F0F0, 12px radius, 20px padding
+//   • LEGO BREATHING (REDESIGN-ESSENTIAL-BREATHE):
+//     - Every card: white bg #FFFFFF, 1px border #F0F0F0, 12px radius, 24px padding
+//     - Each module a DIFFERENT size (col-span-12 / 7 / 5 / 4 / 3 / 2) so the
+//       grid reads as Lego blocks, not a row of identical tubes
+//     - Inter-card gap 8 (32px) so modules breathe horizontally + vertically
+//     - Main column padding py-8 / lg:px-8 for outer breathing room
+//     - The ONLY dark surfaces allowed: text color, submit buttons (Send,
+//       crisis-action), and the RadialBarChart gauge fill — never a card bg
 //   • Headers: 10px uppercase, JetBrains Mono / Space Mono, #9CA3AF, 0.08em
 //   • Data: monospace, bold, #0A0A0A
 //   • Body: Inter, 13px, #525252
@@ -1096,12 +1103,14 @@ function CardShell({
 }) {
   // POLISH-ESSENTIAL — card-hover-lift adds box-shadow 0 4px 12px → 0 8px 24px
   // + 1px translateY on hover (defined in the global <style> block).
+  // REDESIGN-ESSENTIAL-BREATHE — padding bumped 20→24px so each module
+  // breathes; pure white #FFFFFF surface (never dark/charcoal).
   return (
     <Card
       className={
         "border-[#F0F0F0] shadow-sm rounded-xl overflow-hidden card-hover-lift " + (className ?? "")
       }
-      style={{ padding: 20, ...style }}
+      style={{ padding: 24, backgroundColor: "#FFFFFF", ...style }}
     >
       {children}
     </Card>
@@ -2655,10 +2664,13 @@ function ChatMessageView({
   if (isUser) {
     return (
       <div className="flex justify-end">
+        {/* REDESIGN-ESSENTIAL-BREATHE — user bubble switched from
+            brutalist CHARCOAL to on-brand SAGE so the chat workspace
+            stays airy and never reads as a black module. */}
         <div
           className="max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2.5"
           style={{
-            backgroundColor: CHARCOAL,
+            backgroundColor: SAGE,
             color: "#FFFFFF",
             fontFamily: FONT_SANS,
             fontSize: 13,
@@ -2943,7 +2955,7 @@ function ScoreReputationCard({
         {loading ? (
           // HONEST-EMPTY-STATES — pendant le chargement on garde une grille de
           // skeletons pour ne pas introduire de flash visuel.
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-3 flex justify-center">
               <LiveSkeleton className="h-[200px] w-[200px] rounded-full" label="Chargement du score" />
             </div>
@@ -2963,7 +2975,7 @@ function ScoreReputationCard({
         ) : (
           <>
         {isLimited && <LimitedDataBanner text={health?.warning} />}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-3 flex justify-center">
             <div style={{ position: "relative", width: 200, height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -3111,7 +3123,10 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
 
   return (
     <motion.div {...cardMotion}>
-      <CardShell className="lg:col-span-3 md:col-span-6">
+      {/* REDESIGN-ESSENTIAL-BREATHE — wider Lego block (col-span-4) so the
+          sparkline + big number breathe horizontally instead of stacking
+          into a vertical tube. */}
+      <CardShell className="lg:col-span-4 md:col-span-6">
         <SectionHeader title="03 · Sentiment Moyen" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         <div className="flex items-end justify-between mb-2">
@@ -3390,7 +3405,9 @@ function AlertesActivesKpi({
 
   return (
     <motion.div {...cardMotion}>
-      <CardShell className="lg:col-span-3 md:col-span-6">
+      {/* REDESIGN-ESSENTIAL-BREATHE — narrower Lego block (col-span-2) for
+          visual rhythm: 4+3+3+2 across the KPI strip. */}
+      <CardShell className="lg:col-span-2 md:col-span-6">
         <SectionHeader
           title="06 · Alertes Actives"
           helpKey="alertes"
@@ -5801,7 +5818,7 @@ function BoiteOutilsCard() {
             style={{
               fontFamily: FONT_MONO,
               fontSize: 11,
-              backgroundColor: CHARCOAL,
+              backgroundColor: SAGE,
               color: "#FFFFFF",
             }}
             onClick={() => toast.info("Redirection vers la tarification Pro…")}
@@ -8593,7 +8610,7 @@ function WhatsAppAlertPreviewCard({
             style={{
               fontFamily: FONT_MONO,
               fontSize: 11,
-              backgroundColor: CHARCOAL,
+              backgroundColor: SAGE,
               color: "#FFFFFF",
             }}
             onClick={() => setDialogOpen(true)}
@@ -11692,7 +11709,7 @@ export default function EssentialDashboard() {
           onOpenDarija={() => setDarijaOpen(true)}
         />
 
-        <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
+        <main id="main-content" className="flex-1 px-4 lg:px-8 py-8">
           {/* ENV-ESSENTIAL — Welcome onboarding banner (dismissible, persisted) */}
           {!onboardingDismissed && (
             <div className="mb-4 lg:mb-6">
@@ -11709,7 +11726,7 @@ export default function EssentialDashboard() {
               defensive (null-safe, ?? [] defaults, length checks). */}
           <WidgetErrorBoundary label="essential-grid">
           <motion.div
-            className="grid grid-cols-12 gap-4 lg:gap-6"
+            className="grid grid-cols-12 gap-6 lg:gap-8"
             variants={containerStagger}
             initial="initial"
             animate="animate"
