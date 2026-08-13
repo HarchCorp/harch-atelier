@@ -2074,6 +2074,22 @@ function Header({
   onToggleSkillsMenu: () => void;
   skillsMenuOpen: boolean;
 }) {
+  // Click-away handler for the skills overflow dropdown — closes the menu
+  // whenever the user clicks outside the dropdown container. Mirrors the
+  // pattern used in AgencyDashboard so the three overflow dashboards
+  // (Pro / Enterprise / Agency) behave consistently.
+  const skillsMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!skillsMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (skillsMenuRef.current && !skillsMenuRef.current.contains(e.target as Node)) {
+        onToggleSkillsMenu();
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [skillsMenuOpen, onToggleSkillsMenu]);
+
   return (
     <header
       className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-6 py-3"
@@ -2267,7 +2283,7 @@ function Header({
         </TooltipTrigger><TooltipContent>Clés API</TooltipContent></Tooltip></TooltipProvider>
 
         {/* ═══ OVERFLOW DROPDOWN — 19 skills restantes ═══ */}
-        <div style={{ position: "relative" }}>
+        <div ref={skillsMenuRef} style={{ position: "relative" }}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -2279,7 +2295,7 @@ function Header({
             </Tooltip>
           </TooltipProvider>
           {skillsMenuOpen && (
-            <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #F0F0F0", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 8, zIndex: 50, minWidth: 240, maxHeight: 480, overflowY: "auto" }}>
+            <div onClick={onToggleSkillsMenu} style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #F0F0F0", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 8, zIndex: 50, minWidth: 240, maxHeight: 480, overflowY: "auto" }}>
               <button onClick={onOpenDocWriter} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><PenSquare size={14} style={{ color: "#4A7B5F" }} /> Générateur de documents</button>
               <button onClick={onOpenPitch} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Presentation size={14} style={{ color: "#4A7B5F" }} /> Pitch Deck</button>
               <button onClick={onOpenBoycott} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Zap size={14} style={{ color: "#4A7B5F" }} /> Alerte boycott</button>

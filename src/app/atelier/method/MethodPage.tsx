@@ -167,13 +167,13 @@ const PIPELINE = [
   },
   {
     num: "02",
-    title: "Preprocessing",
+    title: "Prétraitement",
     desc: "Normalisation linguistique (FR, AR, Darija), déduplication, extraction d'entités (ORG, PER, LOC), segmentation par paragraphes. Préparation des payloads pour les LLM.",
     tags: ["FR + AR + Darija", "NER", "Déduplication"],
   },
   {
     num: "03",
-    title: "AI Analysis",
+    title: "Analyse IA",
     desc: "Analyse par 9 modèles de langage testés en continu : ChatGPT, Claude, Gemini, Mistral, Perplexity, Copilot, Grok, etc. Sentiment, catégorie de risque (32 catégories), tonalité, intention.",
     tags: ["9 LLM", "32 catégories", "Sentiment multilingue"],
   },
@@ -185,7 +185,7 @@ const PIPELINE = [
   },
   {
     num: "05",
-    title: "Alert",
+    title: "Alerte",
     desc: "Distribution multi-canal : alertes WhatsApp temps réel, dashboard, brief exécutif hebdo, rapport PDF board-ready mensuel. Empreinte SHA-256 sur chaque livrable.",
     tags: ["WhatsApp", "Dashboard", "PDF board-ready"],
   },

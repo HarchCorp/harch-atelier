@@ -337,7 +337,7 @@ const CHANGELOG: ChangelogEntry[] = [
         "Évaluation des risques (0-100, 5 niveaux)",
         "Benchmarking concurrents",
         "Moteur de recommandations (priorisées, avec timeline et owner)",
-        "Pipeline d'analyse en 9 étapes (Scrape → Analyze → Score → Rank → Deliver)",
+        "Pipeline d'analyse en 9 étapes (Collecte → Analyse → Score → Classement → Livraison)",
       ]},
     ],
   },

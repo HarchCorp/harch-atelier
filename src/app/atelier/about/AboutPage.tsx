@@ -182,7 +182,7 @@ const VALUES = [
     desc: "CNDP, Loi 09-08, traçabilité SHA-256. Toutes les mentions collectées disposent d'une empreinte cryptographique vérifiable.",
   },
   {
-    icon: "✦",
+    icon: "◈",
     title: "Innovation",
     desc: "9 modèles de langage testés en continu. Notre pipeline intègre les dernières avancées en analyse de sentiment multilingue (FR, AR, Darija).",
   },

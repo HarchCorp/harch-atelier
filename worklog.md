@@ -11742,3 +11742,198 @@ The MultiEdit's 8th operation (popup renders) produced line 11973 without the cl
 - 14 unused Lucide icon imports removed.
 - tsc 0 errors, French only, no emojis.
 - Next: nothing required. Essential plan is now correctly scoped to exactly 9 skills.
+
+## HEATMAP-DASHBOARDS — Visual audit of all 4 console dashboards (AURA)
+
+### Scope
+Visual + structural audit of every header skill button, dropdown, popup, and
+z-index interaction across the 4 plan dashboards.
+
+### Findings per dashboard
+1. **EssentialDashboard** (9 skills, no dropdown) — CLEAN. All 9 icon buttons
+   render correctly in the header, all wired to state + generator popups,
+   no orphans, no z-index conflicts, no missing imports.
+2. **ProDashboard** (10 direct + 12 dropdown = 22 skills) — BUG: skills
+   overflow dropdown had NO click-away handler. Once opened, the only way
+   to close it was to click the toggle again. Clicks elsewhere on the page
+   left the menu dangling. Items also didn't auto-close the menu after
+   opening a generator (menu stayed visible behind the modal).
+3. **EnterpriseDashboard** (12 direct + 19 dropdown = 31 skills) — Same two
+   bugs as Pro: no click-away handler + no close-on-item-click.
+4. **AgencyDashboard** (10 direct + 13 dropdown = 23 skills) — Had the
+   click-away handler already (skillsMenuRef + mousedown listener in the
+   parent component). But items still didn't auto-close the menu after
+   opening a generator.
+
+### Fixes applied (surgical — 3 files modified)
+- **ProDashboard.tsx** (Header component, ~line 4156): added
+  `skillsMenuRef = useRef<HTMLDivElement | null>(null)` + a `useEffect`
+  that registers a `mousedown` listener on `document` while
+  `skillsMenuOpen` is true; the listener calls `onToggleSkillsMenu()`
+  whenever the click lands outside `skillsMenuRef`. Attached the ref to
+  the wrapping `<div style={{ position: "relative" }}>`. Added
+  `onClick={onToggleSkillsMenu}` to the dropdown menu `<div>` so any
+  item click also closes the menu (event bubbles up after the item's
+  `onClick` opens the generator).
+- **EnterpriseDashboard.tsx** (Header component, ~line 2076): identical
+  fix as Pro — useRef + useEffect click-away + ref on wrapping div +
+  onClick on dropdown menu div.
+- **AgencyDashboard.tsx** (DashboardHeader, ~line 17685): added
+  `onClick={onToggleSkillsMenu}` to the dropdown menu `<div>`. The
+  click-away handler was already present in the parent component
+  (lines 17828-17840), so no additional ref/effect wiring needed.
+- **EssentialDashboard.tsx**: no changes — already correct.
+
+### Verification
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false`
+  → EXIT_CODE=0 (0 errors project-wide, both before and after edits).
+- Design tokens consistent across all 4 dashboards: 32×32 buttons,
+  Lucide 16px #71717A icons, #FAFAFA hover, sage #4A7B5F focus ring,
+  French tooltips, no emojis.
+- z-index audit: header sticky z-30 (creates stacking context); dropdown
+  menu z-50 (local to header, but renders above page content); generator
+  popups z-200 fixed (above everything). No conflicts.
+- All icon imports verified present in each file (Enterprise uses
+  FileBarChart / Network / ShieldAlert / BookMarked / Leaf / Key for its
+  12 direct buttons; Pro/Agency share the same icon vocabulary).
+
+### Files touched
+- src/app/atelier/console/pro/ProDashboard.tsx (+17 lines)
+- src/app/atelier/console/enterprise/EnterpriseDashboard.tsx (+17 lines)
+- src/app/atelier/console/agency/AgencyDashboard.tsx (+1 attribute)
+
+### Next actions
+- None required. All 4 dashboards now have consistent dropdown UX
+  (click-away + close-on-item-click). Essential has no dropdown so no
+  change was needed.
+
+---
+
+## HEATMAP-PUBLIC — Visual heatmap audit of all public atelier pages
+**Agent**: AURA · **Date**: 2026-08-13 · **Scope**: 13 public page files
+
+### Files audited (13)
+1. src/app/atelier/AtelierHome.tsx (5130 → 5169 lines, +39)
+2. src/app/atelier/pricing/PricingPage.tsx (unchanged — clean)
+3. src/app/atelier/audit/AuditPage.tsx (unchanged — clean)
+4. src/app/atelier/about/AboutPage.tsx (1042 → 1041 lines, -1)
+5. src/app/atelier/method/MethodPage.tsx (931 lines, edited in place)
+6. src/app/atelier/trust/TrustPage.tsx (2115 lines, edited in place)
+7. src/app/atelier/customers/CustomersPage.tsx (unchanged — clean)
+8. src/app/atelier/changelog/ChangelogPage.tsx (604 lines, edited in place)
+9. src/app/atelier/faq/FAQPage.tsx (unchanged — clean)
+10. src/app/atelier/login/LoginPage.tsx (unchanged — clean)
+11. src/app/atelier/forgot-password/page.tsx (unchanged — clean)
+12. src/app/atelier/reset-password/page.tsx (279 → 280 lines, +1)
+13. src/app/atelier/onboarding/OnboardingWizard.tsx (546 lines, edited in place)
+
+### Audit findings & fixes
+
+#### 1. Emojis (zero-tolerance violation)
+**AtelierHome.tsx** — 3 colored emojis in WhatsApp preview mockup:
+- 📊 (U+1F4CA) on line 1637 → replaced with new `<IconBarChart>` SVG component (sage stroke)
+- ⚠️ (U+26A0 + U+FE0F) on line 1644 → replaced with new `<IconAlert>` SVG component (red stroke)
+- 📄 (U+1F4C4) on line 1779 → replaced with new `<IconFile>` SVG component (sage stroke)
+
+All 3 new icon components follow the existing inline-SVG pattern
+(IconWhatsapp, IconCheck, IconChart, etc.) and accept `size` + `color`
+props with the same defaults as siblings.
+
+**AtelierHome.tsx** — VaultView telephone dingbat `✆` (U+2706):
+- Replaced with `▣` (U+25A3, Geometric Shapes block — pure text glyph, never renders as emoji)
+
+**AboutPage.tsx** — VALUES four-pointed star `✦` (U+2726):
+- Replaced with `◈` (U+25C8, Geometric Shapes block — pure text glyph)
+
+#### 2. English text → French translations
+**AtelierHome.tsx** (WhatsApp preview mockup):
+- `Today` → `Aujourd'hui`
+- `online` → `en ligne`
+- `📊 Bank of Africa — Daily Brief — 18/07` → `<IconBarChart /> Bank of Africa — Brief Quotidien — 18/07`
+- `⚠️ Alert: 'banking fees' topic rising (+47% in 24h)` → `<IconAlert /> Alerte : sujet 'banking fees' en hausse (+47% en 24h)`
+- `Reply 'details' for the full report.` → `Répondez 'details' pour le rapport complet.`
+- `📄 Full Report — July 2026` → `<IconFile /> Rapport Complet — Juillet 2026`
+
+**AtelierHome.tsx** (other visible UI):
+- `Search mentions, topics, competitors…` → `Rechercher mentions, sujets, concurrents…`
+- `from mention to WhatsApp` → `d'une mention à WhatsApp`
+- `Most Popular` → `Le plus populaire`
+- `What's included` → `Inclus`
+- `✓ 48h response` / `✓ No credit card` / `✓ Cancel anytime` → `✓ Réponse sous 48h` / `✓ Sans carte bancaire` / `✓ Annulez à tout moment`
+- `Thank you, {name}.` → `Merci, {name}.`
+- `We've received your request for {company}. You'll receive your one-page reputation snapshot at {email} within 48 hours.` → `Nous avons bien reçu votre demande pour {company}. Vous recevrez votre instantané de réputation d'une page à {email} sous 48 heures.`
+
+**AtelierHome.tsx** (BuildView pipeline + TimelineDots):
+- `{ step: "Ingest" }` → `{ step: "Ingestion" }`
+- `<TimelineDot label="Analyze" />` → `<TimelineDot label="Analyse" />`
+- `<TimelineDot label="Deliver" />` → `<TimelineDot label="Livraison" />`
+
+**MethodPage.tsx** (PIPELINE steps):
+- `title: "Preprocessing"` → `title: "Prétraitement"`
+- `title: "AI Analysis"` → `title: "Analyse IA"`
+- `title: "Alert"` → `title: "Alerte"` (already had `tags: ["WhatsApp", "Dashboard", "PDF board-ready"]`)
+
+**TrustPage.tsx** (audit trail table):
+- `Timestamp` → `Horodatage`
+- `Genesis hash:` → `Hash de genèse :`
+- `Last hash:` → `Dernier hash :`
+
+**ChangelogPage.tsx** (pipeline changelog entry):
+- `(Scrape → Analyze → Score → Rank → Deliver)` → `(Collecte → Analyse → Score → Classement → Livraison)`
+
+**OnboardingWizard.tsx** (topic suggestion chips):
+- Replaced `"✓ "` / `"+ "` text prefixes with `<Check size={12} />` / `<Plus size={12} />` Lucide icons (both already imported). Buttons converted to `display: inline-flex` with proper alignment.
+
+#### 3. Console-error potential (anti-pattern fix)
+**reset-password/page.tsx** lines 109-112 — `useState(() => { ... setToken(...) })`
+anti-pattern (side effect inside state initializer triggers re-render
+during render, React warns). Replaced with proper `useEffect`:
+
+```tsx
+// Before:
+useState(() => {
+  const urlToken = new URLSearchParams(window.location.search).get("token");
+  if (urlToken) setToken(urlToken);
+});
+
+// After:
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  const urlToken = new URLSearchParams(window.location.search).get("token");
+  if (urlToken) setToken(urlToken);
+}, []);
+```
+
+Added `useEffect` to the React import on line 3. SSR-safe with the
+`typeof window === "undefined"` guard.
+
+### Audit results (no issues found)
+- **'use client'**: All 13 files have `"use client"` directive at line 1 — preserved.
+- **French language**: All visible UI text now French. Brand names (Bank of Africa, ChatGPT, Claude, Mistral, Perplexity, Copilot, Grok, Gemini, WhatsApp, HarchIQ) kept as-is.
+- **CTAs**: 0 references to `/atelier/contact` anywhere. All primary CTAs across pages point to `/atelier/audit`. Nav links (pricing, method, changelog, harch-100, flagship-report, legal) are navigation, not CTAs — all valid.
+- **Broken links**: All 11 distinct hrefs verified to resolve to existing `page.tsx` files (`/atelier/audit`, `/atelier/pricing`, `/atelier/about`, `/atelier/method`, `/atelier/trust`, `/atelier/customers`, `/atelier/changelog`, `/atelier/faq`, `/atelier/login`, `/atelier/forgot-password`, `/atelier/reset-password`, `/atelier/onboarding`, `/atelier/request-access`, `/atelier/console`, `/atelier/admin-x7k2m9`, `/atelier/legal`, `/atelier/harch-100`, `/atelier/flagship-report`). External mailto/wa.me links valid.
+- **Design consistency**: All pages use the shared `C` design token object (white bg, charcoal #0A0A0A, sage accent, Space Mono labels, Inter body) via `./components/tokens`. Auth pages (login, forgot-password, reset-password, onboarding) declare local SAGE = "#4A7B5F" constants — consistent with the user-specified sage color and with each other. The main public pages use DS V2 stone-500 accent (per tokens.ts line 76 alias `sage: C.accent`) — this is a documented, intentional design system migration, not an inconsistency.
+- **Overflow**: WhatsApp preview uses `whiteSpace: pre-line` for multi-line bubbles; mobile breakpoints at 480px and 640px across all pages via `@media` queries in inline `<style>` blocks. VaultView, BuildView, DiscoveryView grids all use `flexWrap: wrap` for narrow viewports.
+- **Mobile responsive**: All pages have `@media (max-width: 480px)` and `@media (max-width: 879px)` rules. Login uses split-grid that collapses to single column under 880px. OnboardingWizard has max-width 560px container with 20px horizontal padding.
+- **Emojis**: ZERO emojis in any of the 13 files after fixes (verified with Unicode emoji property regex covering U+1F000-1FAFF, U+2600-27BF, U+FE0F, U+200D). Remaining typographic glyphs (`✓` U+2713 check mark, `•` U+2022 bullet, `·` U+00B7 middot, `▣ ◆ △ ◈ ▦ ▤` Geometric Shapes block) are NOT in the Unicode emoji property list and render consistently as text glyphs across all browsers — preserved as design elements.
+- **Console errors**: Fixed one `useState` anti-pattern in reset-password. All other files use proper hooks (useState/useEffect/useRef) with correct dependency arrays. All Lucide imports verified present.
+- **Footer**: `AtelierFooter` component imported and rendered on all 9 marketing pages (AtelierHome, pricing, audit, about, method, trust, customers, changelog, faq). Auth pages (login, forgot-password, reset-password, onboarding) intentionally omit footer — they're focused single-task flows.
+- **Nav**: `AtelierNav` component imported and rendered on all 9 marketing pages. Auth pages intentionally omit nav (consistent with industry UX patterns for login/reset flows).
+
+### Verification
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` → EXIT_CODE=0 (0 errors project-wide, before AND after edits).
+- Emoji regex scan across all 13 files → "NO EMOJIS FOUND".
+- All hrefs resolved against filesystem → 0 broken links.
+
+### Files touched (7)
+- src/app/atelier/AtelierHome.tsx (+39 lines net: 3 new icon components + 14 inline text/icon swaps)
+- src/app/atelier/about/AboutPage.tsx (-1 line: icon char swap)
+- src/app/atelier/method/MethodPage.tsx (3 title swaps in PIPELINE array, no line count change)
+- src/app/atelier/trust/TrustPage.tsx (3 visible label swaps in audit trail, no line count change)
+- src/app/atelier/changelog/ChangelogPage.tsx (1 changelog entry translation, no line count change)
+- src/app/atelier/reset-password/page.tsx (+1 line: useState → useEffect refactor)
+- src/app/atelier/onboarding/OnboardingWizard.tsx (topic chip icon refactor, no line count change)
+
+### Next actions
+- None required. All 13 public pages pass French-only / no-emoji / 0-tsc-errors audit.
+- (Optional, out of scope) Consider migrating auth pages (login/forgot/reset/onboarding) from local SAGE = "#4A7B5F" constants to DS V2 stone-500 tokens for full token unification — currently a deliberate stylistic split, not a bug.

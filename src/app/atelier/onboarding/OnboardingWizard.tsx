@@ -373,9 +373,9 @@ export function OnboardingWizard() {
                           key={s}
                           onClick={() => { if (!topics.includes(s)) setTopics([...topics, s]); }}
                           disabled={topics.includes(s)}
-                          style={{ padding: "4px 10px", background: topics.includes(s) ? BORDER : "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 4, fontSize: 12, color: topics.includes(s) ? TEXT_MUTED : CHARCOAL, cursor: topics.includes(s) ? "default" : "pointer", fontFamily: "inherit" }}
+                          style={{ padding: "4px 10px", background: topics.includes(s) ? BORDER : "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 4, fontSize: 12, color: topics.includes(s) ? TEXT_MUTED : CHARCOAL, cursor: topics.includes(s) ? "default" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 4 }}
                         >
-                          {topics.includes(s) ? "✓ " : "+ "}{s}
+                          {topics.includes(s) ? <Check size={12} color={SAGE} /> : <Plus size={12} color={TEXT_MUTED} />}{s}
                         </button>
                       ))}
                     </div>

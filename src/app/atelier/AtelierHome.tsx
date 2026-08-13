@@ -529,6 +529,40 @@ function IconWhatsapp({ size = 20, color = C.textOnDark }: { size?: number; colo
   );
 }
 
+// IconBarChart — bar chart for daily brief WhatsApp bubble (replaces chart emoji).
+function IconBarChart({ size = 16, color = C.sage }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="20" x2="12" y2="10" />
+      <line x1="18" y1="20" x2="18" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
+// IconAlert — triangle warning for crisis alerts (replaces warning emoji).
+function IconAlert({ size = 16, color = C.red }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+// IconFile — file/document icon for PDF report (replaces page emoji).
+function IconFile({ size = 16, color = C.sage }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="15" y2="17" />
+    </svg>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // SECTION 01 — HERO
 // ═══════════════════════════════════════════════════════════════════════
@@ -1562,7 +1596,7 @@ function WhatsAppMockup() {
                 marginTop: "2px",
               }}
             >
-              online
+              en ligne
             </div>
           </div>
           {/* Header icons */}
@@ -1603,7 +1637,7 @@ function WhatsAppMockup() {
                 fontFamily: FONT.mono,
               }}
             >
-              Today
+              Aujourd&rsquo;hui
             </span>
           </div>
 
@@ -1634,14 +1668,18 @@ function WhatsAppMockup() {
                   fontFamily: FONT.sans,
                 }}
               >
-                <strong>📊 Bank of Africa — Daily Brief — 18/07</strong>
+                <strong style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <IconBarChart size={14} color={C.sage} />
+                  Bank of Africa — Brief Quotidien — 18/07
+                </strong>
                 {"\n\n"}
                 <strong>Médias:</strong> 12 articles (8 positifs, 3 neutres, 1 négatif){"\n"}
                 <strong>Social:</strong> 340 mentions (78% positif){"\n"}
                 <strong>IA:</strong> ChatGPT vous cite #2 sur &lsquo;meilleure banque Maroc&rsquo;
                 {"\n\n"}
-                <span style={{ color: C.red, fontWeight: 600 }}>
-                  ⚠️ Alert: 'banking fees' topic rising (+47% in 24h)
+                <span style={{ color: C.red, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <IconAlert size={14} color={C.red} />
+                  Alerte : sujet &lsquo;banking fees&rsquo; en hausse (+47% en 24h)
                 </span>
               </div>
               {/* Timestamp + checks */}
@@ -1696,7 +1734,7 @@ function WhatsAppMockup() {
                   lineHeight: 1.4,
                 }}
               >
-                Reply 'details' for the full report.
+                Répondez &lsquo;details&rsquo; pour le rapport complet.
               </div>
               <div
                 style={{
@@ -1775,9 +1813,11 @@ function WhatsAppMockup() {
                 boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
               }}
             >
-              <div style={{ fontSize: "13px", color: C.text, lineHeight: 1.5 }}>
-                📄 Full Report — July 2026
-                {"\n"}
+              <div style={{ fontSize: "13px", color: C.text, lineHeight: 1.5, display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <IconFile size={14} color={C.sage} />
+                  Rapport Complet — Juillet 2026
+                </span>
                 <span style={{ color: C.whatsappTeal, textDecoration: "underline" }}>
                   atelier.harchcorp.com/r/boa-07-2026
                 </span>
@@ -1935,7 +1975,7 @@ function DashboardMockup() {
         >
           <IconSearch size={14} color={C.textMuted} />
           <span style={{ fontSize: "12px", color: C.textFaint, fontFamily: FONT.sans }}>
-            Search mentions, topics, competitors…
+            Rechercher mentions, sujets, concurrents…
           </span>
         </div>
         <div style={{ flex: 1 }} />
@@ -3139,7 +3179,7 @@ function HowItWorks() {
                 color: C.textSecondary,
               }}
             >
-              from mention to WhatsApp
+              d&rsquo;une mention à WhatsApp
             </span>
           </div>
           <div
@@ -3151,9 +3191,9 @@ function HowItWorks() {
           />
           <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
             <TimelineDot label="Scan" time="~30s" />
-            <TimelineDot label="Analyze" time="~60s" />
+            <TimelineDot label="Analyse" time="~60s" />
             <TimelineDot label="Score" time="~10s" />
-            <TimelineDot label="Deliver" time="~120s" />
+            <TimelineDot label="Livraison" time="~120s" />
           </div>
         </div>
 
@@ -3528,7 +3568,7 @@ function DiscoveryView() {
 
 function BuildView() {
   const pipeline = [
-    { step: "Ingest", desc: "Article brut + métadonnées capturés", time: "~5s" },
+    { step: "Ingestion", desc: "Article brut + métadonnées capturés", time: "~5s" },
     { step: "NLP", desc: "Détection de langue + extraction d'entités", time: "~10s" },
     { step: "Score", desc: "Sentiment + risque + classification de sujets", time: "~8s" },
     { step: "Alerte", desc: "Vérification de seuil → WhatsApp si crise", time: "~2s" },
@@ -3633,7 +3673,7 @@ function VaultView() {
     {
       name: "Digest quotidien WhatsApp",
       desc: "7h00 chaque matin — votre réputation en 60 secondes de lecture",
-      icon: "✆",
+      icon: "▣",
       detail: "Alertes de crise en temps réel quand le sentiment bouge",
     },
     {
@@ -3957,7 +3997,7 @@ function PricingCard({
             whiteSpace: "nowrap",
           }}
         >
-          Most Popular
+          Le plus populaire
         </div>
       )}
 
@@ -4081,7 +4121,7 @@ function PricingCard({
             marginBottom: "16px",
           }}
         >
-          What&rsquo;s included
+          Inclus
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {tier.features.map((f, i) => {
@@ -4852,9 +4892,9 @@ function FinalCTA() {
                 fontFamily: FONT.mono,
               }}
             >
-              <span>✓ 48h response</span>
-              <span>✓ No credit card</span>
-              <span>✓ Cancel anytime</span>
+              <span>✓ Réponse sous 48h</span>
+              <span>✓ Sans carte bancaire</span>
+              <span>✓ Annulez à tout moment</span>
             </div>
           </form>
           </Reveal>
@@ -4893,7 +4933,7 @@ function FinalCTA() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Thank you, {form.name.split(" ")[0]}.
+              Merci, {form.name.split(" ")[0]}.
             </h3>
             <p
               style={{
@@ -4903,11 +4943,11 @@ function FinalCTA() {
                 margin: 0,
               }}
             >
-              We&rsquo;ve received your request for{" "}
+              Nous avons bien reçu votre demande pour{" "}
               <strong style={{ color: C.textPrimary }}>{form.company}</strong>.
-              You&rsquo;ll receive your one-page reputation snapshot at{" "}
-              <strong style={{ color: C.textPrimary }}>{form.email}</strong> within
-              48 hours.
+              Vous recevrez votre instantané de réputation d&rsquo;une page à{" "}
+              <strong style={{ color: C.textPrimary }}>{form.email}</strong> sous
+              48 heures.
             </p>
           </div>
           </Reveal>

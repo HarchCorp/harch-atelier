@@ -1851,7 +1851,7 @@ export default function TrustPage() {
                 minWidth: "760px",
               }}
             >
-              <div>Timestamp</div>
+              <div>Horodatage</div>
               <div>Utilisateur</div>
               <div>Action</div>
               <div>Cible</div>
@@ -1944,9 +1944,9 @@ export default function TrustPage() {
                 fontFamily: FONT.mono,
               }}
             >
-              Genesis hash: <span style={{ color: C.textSec }}>0000000000000000</span>
+              Hash de genèse : <span style={{ color: C.textSec }}>0000000000000000</span>
               {" · "}
-              Last hash:{" "}
+              Dernier hash :{" "}
               <span style={{ color: auditVerified ? C.sage : C.textSec }}>
                 {auditChain[auditChain.length - 1]?.hash}
               </span>

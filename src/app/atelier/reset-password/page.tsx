@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Loader2, AlertCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
@@ -105,11 +105,12 @@ export default function ResetPasswordPage() {
   const [status, setStatus] = useState<"form" | "loading" | "success" | "error">("form");
   const [error, setError] = useState("");
 
-  // Auto-extract token from URL
-  useState(() => {
+  // Auto-extract token from URL on mount (client-only).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const urlToken = new URLSearchParams(window.location.search).get("token");
     if (urlToken) setToken(urlToken);
-  });
+  }, []);
 
   const passwordsMatch = password === confirm && password.length >= 8;
 
