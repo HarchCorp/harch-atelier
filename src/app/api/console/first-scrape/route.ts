@@ -107,12 +107,37 @@ export async function POST() {
 
     logInfo("first-scrape", `Inserted ${inserted}/${articles.length} articles for ${company.name}`);
 
+    // ─── MATCHING: run company matching on all unlinked articles ───
+    let matched = 0;
+    try {
+      const { matchArticlesForCompany, zeroMatchProtocol } = await import("@/lib/harchiq/company-matching");
+
+      if (inserted === 0 && existingCount === 0) {
+        // Zero-match protocol — try harder
+        logInfo("first-scrape", `0 articles found — running zero-match protocol for ${company.name}`);
+        const zeroResult = await zeroMatchProtocol(companyId);
+        matched = zeroResult.found;
+        logInfo("first-scrape", `Zero-match result: ${zeroResult.found} via ${zeroResult.method}`);
+      } else {
+        // Run matching on all articles (catches ones that mention the company
+        // but weren't linked during scrape)
+        const matchResults = await matchArticlesForCompany(companyId);
+        matched = matchResults.length;
+        logInfo("first-scrape", `Matched ${matched} articles for ${company.name}`);
+      }
+    } catch (matchErr) {
+      logInfo("first-scrape", `Matching failed (non-fatal): ${matchErr}`);
+    }
+
+    const totalNow = existingCount + inserted + matched;
+
     return NextResponse.json({
       success: true,
       company: company.name,
       scraped: articles.length,
       inserted,
-      totalNow: existingCount + inserted,
+      matched,
+      totalNow,
     });
   } catch (err) {
     logError("first-scrape", `Scrape failed for ${company.name}: ${err}`);
