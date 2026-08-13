@@ -11085,6 +11085,27 @@ export default function EssentialDashboard() {
         .catch(() => {});
     }
   }, [health?.status, healthLoading, refetchHealth]);
+
+  // Auto-trigger sentiment backfill when articles exist but sentiment is 0
+  useEffect(() => {
+    if (
+      health &&
+      health.status !== "no_data" &&
+      health.sentiment &&
+      health.sentiment.positive === 0 &&
+      health.sentiment.neutral === 0 &&
+      health.sentiment.negative === 0 &&
+      health.mentionCount24h >= 0 &&
+      !healthLoading
+    ) {
+      fetch("/api/console/backfill-sentiment", { method: "POST" })
+        .then((r) => r.json())
+        .then(() => {
+          refetchHealth();
+        })
+        .catch(() => {});
+    }
+  }, [health, healthLoading, refetchHealth]);
   const { data: alerts, loading: alertsLoading, refetch: refetchAlerts } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
   const { data: insights, loading: insightsLoading, refetch: refetchInsights } = useApi<InsightsResp>("/api/console/insights");
   const { data: aiVis, loading: aiVisLoading } = useApi<AiVisibilityResp>("/api/console/ai-visibility");

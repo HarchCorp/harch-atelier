@@ -14954,6 +14954,13 @@ export default function ProDashboard({
         .catch(() => {});
     }
   }, [health?.status, healthLoading, refetchHealth]);
+
+  // Auto-trigger sentiment backfill
+  useEffect(() => {
+    if (health && health.status !== "no_data" && health.sentiment && health.sentiment.positive === 0 && health.sentiment.neutral === 0 && health.sentiment.negative === 0 && !healthLoading) {
+      fetch("/api/console/backfill-sentiment", { method: "POST" }).then((r) => r.json()).then(() => refetchHealth()).catch(() => {});
+    }
+  }, [health, healthLoading, refetchHealth]);
   const { data: alerts, loading: alertsLoading, refetch: refetchAlerts } = useApi<CrisisAlertsResp>("/api/console/crisis-alerts");
   const { data: aiVis, loading: aiVisLoading } = useApi<AiVisibilityResp>("/api/console/ai-visibility");
   const { data: sentimentTrend, loading: trendLoading } = useApi<SentimentTrendResp>(
