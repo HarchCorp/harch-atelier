@@ -3126,7 +3126,7 @@ function SentimentMoyenKpi({ health, trend, loading }: { health: BrandHealth | n
       {/* REDESIGN-ESSENTIAL-BREATHE — wider Lego block (col-span-4) so the
           sparkline + big number breathe horizontally instead of stacking
           into a vertical tube. */}
-      <CardShell className="lg:col-span-4 md:col-span-6">
+      <CardShell className="lg:col-span-6 md:col-span-12">
         <SectionHeader title="03 · Sentiment Moyen" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         <div className="flex items-end justify-between mb-2">
@@ -3216,7 +3216,7 @@ function MentionsJourKpi({ health, trend, loading }: { health: BrandHealth | nul
 
   return (
     <motion.div {...cardMotion}>
-      <CardShell className="lg:col-span-3 md:col-span-6">
+      <CardShell className="lg:col-span-6 md:col-span-12">
         <SectionHeader title="04 · Mentions / Jour" />
         <Separator className="my-3" style={{ backgroundColor: BORDER }} />
         <div className="flex items-end justify-between mb-2">
@@ -3292,7 +3292,7 @@ function CitationsIaKpi({ ai, loading }: { ai: AiVisibilityResp | null; loading:
 
   return (
     <motion.div {...cardMotion}>
-      <CardShell className="lg:col-span-3 md:col-span-6">
+      <CardShell className="lg:col-span-6 md:col-span-12">
         <SectionHeader
           title="05 · Citations IA"
           right={
@@ -3405,9 +3405,7 @@ function AlertesActivesKpi({
 
   return (
     <motion.div {...cardMotion}>
-      {/* REDESIGN-ESSENTIAL-BREATHE — narrower Lego block (col-span-2) for
-          visual rhythm: 4+3+3+2 across the KPI strip. */}
-      <CardShell className="lg:col-span-2 md:col-span-6">
+      <CardShell className="lg:col-span-6 md:col-span-12">
         <SectionHeader
           title="06 · Alertes Actives"
           helpKey="alertes"
