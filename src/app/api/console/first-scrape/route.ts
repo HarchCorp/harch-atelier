@@ -107,6 +107,35 @@ export async function POST() {
 
     logInfo("first-scrape", `Inserted ${inserted}/${articles.length} articles for ${company.name}`);
 
+
+    // ─── Run sentiment analysis on newly inserted articles ───
+    try {
+      const { analyzeSentimentV2 } = await import("@/lib/analyzers/intelligence-engine");
+      const newArticles = await prisma.article.findMany({
+        where: { companyId, sentimentLabel: null },
+        select: { id: true, title: true, content: true, summary: true },
+        take: 100,
+      });
+      let analyzed = 0;
+      for (const article of newArticles) {
+        try {
+          const text = `${article.title} ${article.summary ?? ""} ${article.content ?? ""}`.slice(0, 5000);
+          const result = analyzeSentimentV2(text, company.name);
+          await prisma.article.update({
+            where: { id: article.id },
+            data: {
+              sentimentLabel: result.sentiment,
+              sentimentScore: result.score,
+            },
+          });
+          analyzed++;
+        } catch {}
+      }
+      logInfo("first-scrape", `Sentiment analysis: ${analyzed}/${newArticles.length} articles analyzed for ${company.name}`);
+    } catch (sentErr) {
+      logInfo("first-scrape", `Sentiment analysis failed (non-fatal): ${sentErr}`);
+    }
+
     // ─── MATCHING: run company matching on all unlinked articles ───
     let matched = 0;
     try {
