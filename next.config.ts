@@ -110,20 +110,36 @@ const nextConfig: NextConfig = {
         destination: '/atelier',
         permanent: true,
       },
-      // ─── Old console route names → new 4-offer names ──────────
+      // ─── Old console route names → new 4-plan names ───────────
+      // REVERSED: enterprise now IS the real route, not brand-monitor
       {
-        source: '/atelier/console/enterprise',
-        destination: '/atelier/console/brand-monitor',
+        source: '/atelier/console/brand-monitor',
+        destination: '/atelier/console/essential',
+        permanent: true,
+      },
+      {
+        source: '/atelier/console/market-competitor',
+        destination: '/atelier/console/pro',
+        permanent: true,
+      },
+      {
+        source: '/atelier/console/investment-bank',
+        destination: '/atelier/console/enterprise',
+        permanent: true,
+      },
+      {
+        source: '/atelier/console/harch-alpha',
+        destination: '/atelier/console/agency',
         permanent: true,
       },
       {
         source: '/atelier/console/trader',
-        destination: '/atelier/console/harch-alpha',
+        destination: '/atelier/console/agency',
         permanent: true,
       },
       {
         source: '/atelier/console/investor',
-        destination: '/atelier/console/investment-bank',
+        destination: '/atelier/console/pro',
         permanent: true,
       },
     ];
