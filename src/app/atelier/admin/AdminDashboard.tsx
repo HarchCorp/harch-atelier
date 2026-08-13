@@ -857,7 +857,6 @@ export function AdminDashboard() {
           </span>
           <button
             type="button"
-            onClick={() => setBriefingOpen(true)}
             style={{
               padding: "6px 12px",
               background: "transparent",
@@ -878,7 +877,6 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => setComexOpen(true)}
             style={{
               padding: "6px 12px",
               background: "transparent",
@@ -899,7 +897,6 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => setPitchOpen(true)}
             style={{
               padding: "6px 12px",
               background: "transparent",
@@ -920,7 +917,6 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => setDocWriterOpen(true)}
             style={{
               padding: "6px 12px",
               background: "transparent",
@@ -941,7 +937,6 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => setCrisisOpen(true)}
             style={{
               padding: "6px 12px",
               background: "transparent",
