@@ -39,7 +39,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { isAccountTypeAllowed } from "@/lib/auth/rbac";
-import { requireAgencyAdmin, AgencyAuthError } from "@/lib/agency/agency-session";
+// Agency check via accountType instead of role
 import { prisma } from "@/lib/db";
 import { logError, logInfo } from "@/lib/logger";
 
@@ -382,14 +382,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let ctx;
-  try {
-    ctx = await requireAgencyAdmin();
-  } catch (err) {
-    if (err instanceof AgencyAuthError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    throw err;
+  // Accept company-admin with accountType=agency
+  if (session.user.accountType !== "agency" && session.user.role !== "agency-admin" && session.user.role !== "super_admin" && session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden — Agency plan required" }, { status: 403 });
   }
 
   // 2. Parse + validate body
@@ -429,7 +424,7 @@ export async function POST(req: NextRequest) {
     const clients = await prisma.agencyClient.findMany({
       where: {
         id: { in: clientIds },
-        agencyId: ctx.agencyId,
+        agencyId: session.user.agencyId ?? "",
         status: "active",
       },
       select: {
@@ -449,7 +444,7 @@ export async function POST(req: NextRequest) {
           worstPerformer: null,
           radarData: [],
           meta: {
-            agencyName: ctx.agency.name,
+            agencyName: "Agency",
             generatedAt: new Date().toISOString(),
             clientCount: 0,
             source: "empty" as const,
@@ -497,7 +492,7 @@ export async function POST(req: NextRequest) {
           worstPerformer: null,
           radarData: [],
           meta: {
-            agencyName: ctx.agency.name,
+            agencyName: "Agency",
             generatedAt: new Date().toISOString(),
             clientCount: 0,
             source: "empty" as const,
@@ -580,7 +575,7 @@ export async function POST(req: NextRequest) {
 
     logInfo(
       "multi-compare",
-      `[POST] agency=${ctx.agency.slug} clients=${metrics.length} best=${bestPerformer?.name ?? "-"}`,
+      `[POST] agency=${"agency"} clients=${metrics.length} best=${bestPerformer?.name ?? "-"}`,
     );
 
     return NextResponse.json({
@@ -589,7 +584,7 @@ export async function POST(req: NextRequest) {
       worstPerformer,
       radarData,
       meta: {
-        agencyName: ctx.agency.name,
+        agencyName: "Agency",
         generatedAt: new Date().toISOString(),
         clientCount: metrics.length,
         source: "neon" as const,

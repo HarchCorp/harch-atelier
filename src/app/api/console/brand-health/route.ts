@@ -67,8 +67,11 @@ export async function GET() {
 
     const negativeShare = negative / total;
     const crisisScore = Math.min(100, Math.round(negativeShare * 60 + Math.min(25, (articles24h / 50) * 25)));
-    const score = reputationScore?.overall ?? 50;
-    const trend = reputationScore?.trend === "up" ? 2 : -3;
+    // Compute real score from sentiment distribution when no ReputationScore exists
+    const positiveShare = positive / total;
+    const sentimentScore = Math.round(50 + (positiveShare - negativeShare) * 50);
+    const score = reputationScore?.overall ?? Math.max(0, Math.min(100, sentimentScore));
+    const trend = reputationScore?.trend === "up" ? 2 : sentimentScore > 50 ? 1 : -3;
 
     return NextResponse.json({
       score, trend,
