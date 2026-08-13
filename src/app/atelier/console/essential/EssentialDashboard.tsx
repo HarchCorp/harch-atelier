@@ -28,6 +28,10 @@ import { EmailDigestGenerator } from "../components/EmailDigestGenerator";
 import { SentimentHeatmapGenerator } from "../components/SentimentHeatmapGenerator";
 import { CampaignTrackerGenerator } from "../components/CampaignTrackerGenerator";
 import { ApiKeyManagerGenerator } from "../components/ApiKeyManagerGenerator";
+import { PostCrisisReviewGenerator } from "../components/PostCrisisReviewGenerator";
+import { DarijaTranslatorGenerator } from "../components/DarijaTranslatorGenerator";
+import { SovTrendsGenerator } from "../components/SovTrendsGenerator";
+import { MultiCompareGenerator } from "../components/MultiCompareGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -182,6 +186,8 @@ import {
   History,
   Megaphone,
   Key,
+  BarChart3,
+  Layers,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1903,6 +1909,10 @@ function Header({
   onOpenSentHeatmap,
   onOpenCampaign,
   onOpenApiKeys,
+  onOpenPostCrisis,
+  onOpenDarija,
+  onOpenSovTrends,
+  onOpenMultiCompare,
   onToggleSkillsMenu,
   skillsMenuOpen,
 }: {
@@ -1950,6 +1960,10 @@ function Header({
   onOpenSentHeatmap: () => void;
   onOpenCampaign: () => void;
   onOpenApiKeys: () => void;
+  onOpenPostCrisis: () => void;
+  onOpenDarija: () => void;
+  onOpenSovTrends: () => void;
+  onOpenMultiCompare: () => void;
   onToggleSkillsMenu: () => void;
   skillsMenuOpen: boolean;
 }) {
@@ -2203,7 +2217,11 @@ function Header({
               <button onClick={onOpenEmailDigest} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Mail size={14} style={{ color: "#4A7B5F" }} /> Digest email</button>
               <button onClick={onOpenSentHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><CalendarDays size={14} style={{ color: "#4A7B5F" }} /> Heatmap sentiment</button>
               <button onClick={onOpenCampaign} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Megaphone size={14} style={{ color: "#4A7B5F" }} /> Campagnes</button>
-              <button onClick={onOpenApiKeys} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Key size={14} style={{ color: "#4A7B5F" }} /> Clés API</button>
+<button onClick={onOpenApiKeys} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Key size={14} style={{ color: "#4A7B5F" }} /> Clés API</button>
+              <button onClick={onOpenPostCrisis} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><ShieldCheck size={14} style={{ color: "#4A7B5F" }} /> Revue post-crise</button>
+              <button onClick={onOpenDarija} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Languages size={14} style={{ color: "#4A7B5F" }} /> Traducteur Darija</button>
+              <button onClick={onOpenSovTrends} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><BarChart3 size={14} style={{ color: "#4A7B5F" }} /> Tendances SOV</button>
+              <button onClick={onOpenMultiCompare} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Layers size={14} style={{ color: "#4A7B5F" }} /> Comparaison multi-clients</button>
             </div>
           )}
         </div>
@@ -11217,6 +11235,10 @@ export default function EssentialDashboard() {
   const [sentHeatmapOpen, setSentHeatmapOpen] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [apiKeysOpen, setApiKeysOpen] = useState(false);
+  const [postCrisisOpen, setPostCrisisOpen] = useState(false);
+  const [darijaOpen, setDarijaOpen] = useState(false);
+  const [sovTrendsOpen, setSovTrendsOpen] = useState(false);
+  const [multiCompareOpen, setMultiCompareOpen] = useState(false);
   const [skillsMenuOpen, setSkillsMenuOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -11860,6 +11882,10 @@ export default function EssentialDashboard() {
           onOpenSentHeatmap={() => setSentHeatmapOpen(true)}
           onOpenCampaign={() => setCampaignOpen(true)}
           onOpenApiKeys={() => setApiKeysOpen(true)}
+          onOpenPostCrisis={() => setPostCrisisOpen(true)}
+          onOpenDarija={() => setDarijaOpen(true)}
+          onOpenSovTrends={() => setSovTrendsOpen(true)}
+          onOpenMultiCompare={() => setMultiCompareOpen(true)}
           onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}
           skillsMenuOpen={skillsMenuOpen}
         />
@@ -12184,6 +12210,10 @@ export default function EssentialDashboard() {
       {sentHeatmapOpen && <SentimentHeatmapGenerator onClose={() => setSentHeatmapOpen(false)} />}
       {campaignOpen && <CampaignTrackerGenerator onClose={() => setCampaignOpen(false)} />}
       {apiKeysOpen && <ApiKeyManagerGenerator onClose={() => setApiKeysOpen(false)} />}
+      {postCrisisOpen && <PostCrisisReviewGenerator onClose={() => setPostCrisisOpen(false)} />}
+      {darijaOpen && <DarijaTranslatorGenerator onClose={() => setDarijaOpen(false)} />}
+      {sovTrendsOpen && <SovTrendsGenerator onClose={() => setSovTrendsOpen(false)} />}
+      {multiCompareOpen && <MultiCompareGenerator onClose={() => setMultiCompareOpen(false)} />}
     </div>
   );
 }
