@@ -1953,6 +1953,11 @@ function Header({
         {/* ENV-ESSENTIAL — Milestone badge (header, gamification) */}
         <MilestoneBadge
           progress={milestoneProgress}
+          total={milestoneTotal}
+          recentlyUnlocked={milestoneRecentlyUnlocked}
+          onClick={onMilestoneClick}
+        />
+
         {/* SKILL 1: Briefing Matinal — live document generator */}
         <TooltipProvider>
           <Tooltip>
@@ -1970,11 +1975,6 @@ function Header({
             <TooltipContent>Briefing matinal</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-
-          total={milestoneTotal}
-          recentlyUnlocked={milestoneRecentlyUnlocked}
-          onClick={onMilestoneClick}
-        />
 
         {/* ENV-ESSENTIAL — Quota usage widget */}
         <QuotaUsageWidget
