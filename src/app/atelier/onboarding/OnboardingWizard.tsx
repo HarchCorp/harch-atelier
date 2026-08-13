@@ -100,14 +100,14 @@ export function OnboardingWizard() {
       });
   }, [step, posted, status, companyName, sector, website, topics, competitors]);
 
-  if (status === "loading") {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: BG, fontFamily: FONT_SANS }}>
-        <style>{onbCss}</style>
-        <Loader2 size={24} style={{ color: SAGE, animation: "spin 1s linear infinite" }} />
-      </div>
-    );
-  }
+  // NOTE: We intentionally do NOT early-return on status === "loading".
+  // useSession() always returns "loading" during SSR (SessionProvider has
+  // not hydrated yet), so gating content on it would make the server-rendered
+  // HTML empty — breaking crawls, link previews, and curl-based smoke tests.
+  // The page.tsx already server-gates via getServerSession(), so by the time
+  // we reach here the user is authenticated. We render the welcome content
+  // immediately; userName / planLabel fall back to safe defaults ("") and
+  // hydrate to the real values on the client without a mismatch.
 
   const userName = session?.user?.name?.split(" ")[0] ?? "";
   const planLabel = PLAN_LABELS[session?.user?.accountType ?? "essential"] ?? "Essentiel";
@@ -473,7 +473,7 @@ export function OnboardingWizard() {
             className={canProceed() ? "onb-btn-sage" : undefined}
             style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", background: canProceed() ? SAGE : "#E5E5E5", color: canProceed() ? "#FFFFFF" : TEXT_MUTED, fontSize: 13, fontWeight: 600, border: "none", borderRadius: 8, cursor: canProceed() ? "pointer" : "not-allowed", fontFamily: "inherit", transition: "background 180ms ease, box-shadow 180ms ease, transform 180ms ease" }}
           >
-            Continuer <ArrowRight size={14} />
+            {step === 1 ? "Commencer" : "Continuer"} <ArrowRight size={14} />
           </button>
         </div>
       )}

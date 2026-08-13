@@ -73,6 +73,8 @@ import {
   Square,
   Table2,
   Monitor,
+  Sunrise,
+  Presentation,
 } from "lucide-react";
 import {
   Area,
@@ -92,6 +94,11 @@ import {
 } from "recharts";
 import { getAdminPermissions } from "@/lib/auth/rbac";
 import { motion, AnimatePresence } from "framer-motion";
+import { BriefingGenerator } from "../console/components/BriefingGenerator";
+import { ComexReportGenerator } from "../console/components/ComexReportGenerator";
+import { PitchDeckGenerator } from "../console/components/PitchDeckGenerator";
+import { DocumentWriterGenerator } from "../console/components/DocumentWriterGenerator";
+import { CrisisBriefingGenerator } from "../console/components/CrisisBriefingGenerator";
 
 // ═══════════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD — Ultra-complete founder control center
@@ -452,6 +459,18 @@ export function AdminDashboard() {
 
   // Mobile sidebar drawer — Task FIX-MOBILE-CRITICAL
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Skill generators — Task PI-LAZYLOAD-ADMIN
+  // The boss (super_admin) had no skills in his portal. These 5 popup
+  // generators mirror the console Enterprise dashboard and let him test
+  // the UI from the admin portal. They read the session for companyId
+  // (null for super_admin) — acceptable for now, the boss just needs to
+  // open the popups and validate the flow end-to-end.
+  const [briefingOpen, setBriefingOpen] = useState(false);
+  const [comexOpen, setComexOpen] = useState(false);
+  const [pitchOpen, setPitchOpen] = useState(false);
+  const [docWriterOpen, setDocWriterOpen] = useState(false);
+  const [crisisOpen, setCrisisOpen] = useState(false);
 
   const fetchCore = useCallback(async () => {
     setLoading(true);
@@ -820,6 +839,139 @@ export function AdminDashboard() {
           </div>
         </header>
 
+        {/* ═══ SKILLS — Boss quick generators (Task PI-LAZYLOAD-ADMIN) ═══ */}
+        <div
+          className="admin-skills-strip"
+          style={{
+            background: C.bg,
+            borderBottom: `1px solid ${C.border}`,
+            padding: "10px 32px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontFamily: C.fontMono,
+              color: C.textMuted,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginRight: 4,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Compétences
+          </span>
+          <button
+            type="button"
+            onClick={() => setBriefingOpen(true)}
+            style={{
+              padding: "6px 12px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <Sunrise size={13} />
+            <span>Briefing Matinal</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setComexOpen(true)}
+            style={{
+              padding: "6px 12px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <BarChart3 size={13} />
+            <span>COMEX</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPitchOpen(true)}
+            style={{
+              padding: "6px 12px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <Presentation size={13} />
+            <span>Pitch Deck</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDocWriterOpen(true)}
+            style={{
+              padding: "6px 12px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <FileText size={13} />
+            <span>Document Writer</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCrisisOpen(true)}
+            style={{
+              padding: "6px 12px",
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              color: C.textBody,
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <AlertTriangle size={13} />
+            <span>Crisis Briefing</span>
+          </button>
+        </div>
+
         {/* KPI strip — always visible */}
         {stats && (
           <div
@@ -919,6 +1071,13 @@ export function AdminDashboard() {
           }}
         />
       )}
+
+      {/* ═══ SKILL GENERATORS — Task PI-LAZYLOAD-ADMIN ═══ */}
+      {briefingOpen && <BriefingGenerator onClose={() => setBriefingOpen(false)} />}
+      {comexOpen && <ComexReportGenerator onClose={() => setComexOpen(false)} />}
+      {pitchOpen && <PitchDeckGenerator onClose={() => setPitchOpen(false)} />}
+      {docWriterOpen && <DocumentWriterGenerator onClose={() => setDocWriterOpen(false)} />}
+      {crisisOpen && <CrisisBriefingGenerator onClose={() => setCrisisOpen(false)} />}
     </div>
   );
 }

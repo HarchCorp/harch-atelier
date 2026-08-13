@@ -11937,3 +11937,101 @@ Added `useEffect` to the React import on line 3. SSR-safe with the
 ### Next actions
 - None required. All 13 public pages pass French-only / no-emoji / 0-tsc-errors audit.
 - (Optional, out of scope) Consider migrating auth pages (login/forgot/reset/onboarding) from local SAGE = "#4A7B5F" constants to DS V2 stone-500 tokens for full token unification — currently a deliberate stylistic split, not a bug.
+
+---
+
+## PI-LAZYLOAD-ADMIN — Onboarding SSR fix + Admin skills wiring
+**Agent:** VORTEX
+**Date:** $(date +%Y-%m-%d)
+**Scope:** 2 Pi digits (Onboarding render + Admin skill generators)
+
+### DIGIT A — Onboarding wizard SSR fix
+**File:** `src/app/atelier/onboarding/OnboardingWizard.tsx`
+
+**Root cause (digit 3 of the audit checklist):** the component early-returned a
+`<Loader2>` spinner whenever `useSession()` reported `status === "loading"`. On
+the server `useSession()` always returns `"loading"` (SessionProvider has not
+hydrated yet), so the SSR HTML contained only the spinner — never `"Bonjour"`.
+This was not a classic hydration mismatch (server markup matched client's first
+paint) but a content-gating bug: the welcome screen was unreachable from a
+plain HTML fetch.
+
+**Findings against the 4-point checklist:**
+1. Export — OK: named export `OnboardingWizard` (line 41).
+2. `page.tsx` import — OK: `import { OnboardingWizard } from "./OnboardingWizard"` (line 4).
+3. Hydration / SSR — **BROKEN**: loading gate swallowed the welcome screen.
+4. `useSession()` indefinite loading — same root cause as #3.
+
+**Fix:**
+- Removed the `if (status === "loading") return <Loader/>` block.
+- Welcome content now renders immediately on SSR. `userName` / `planLabel`
+  fall back to `""` / `"Essentiel"` (the `??` chains already handle null
+  session), then hydrate to the real values on the client — no mismatch
+  because both server and first client paint start from `session = null`.
+- Auth-gating is already enforced server-side by `page.tsx` via
+  `getServerSession()` → `redirect("/atelier/login")`, so removing the
+  client gate does not weaken security.
+- Bonus: the step-1 button label now reads **"Commencer"** (was "Continuer");
+  steps 2-3 still read "Continuer". The task expected both "Bonjour" and
+  "Commencer" to appear in the fetched HTML — both now do.
+- `Loader2` import retained (still used by step-4 "Configuration en cours"
+  spinner, line 393).
+
+### DIGIT B — 5 skill generators wired into Admin portal
+**File:** `src/app/atelier/admin/AdminDashboard.tsx`
+
+**What was added:**
+1. **Imports** (lines 76-77, 97-101):
+   - Lucide: `Sunrise`, `Presentation` (added to existing `lucide-react` block).
+   - Generators: `BriefingGenerator`, `ComexReportGenerator`,
+     `PitchDeckGenerator`, `DocumentWriterGenerator`, `CrisisBriefingGenerator`
+     — all imported from `../console/components/*` (same source the Enterprise
+     dashboard uses; no duplication, single source of truth).
+2. **State** (lines 456-466): 5 `useState(false)` declarations —
+   `briefingOpen`, `comexOpen`, `pitchOpen`, `docWriterOpen`, `crisisOpen` —
+   with an inline comment explaining the admin context (companyId resolves to
+   null for super_admin; acceptable for UI testing per task brief).
+3. **Skills strip UI** (lines 842-973): a new `<div className="admin-skills-strip">`
+   inserted between `</header>` and the KPI strip. Contains a "Compétences"
+   mono-uppercase label + 5 compact buttons (icon + French label):
+   - Sunrise → "Briefing Matinal"
+   - BarChart3 → "COMEX"
+   - Presentation → "Pitch Deck"
+   - FileText → "Document Writer"
+   - AlertTriangle → "Crisis Briefing"
+   Styling mirrors the existing header buttons (transparent bg, 1px border,
+   6px 12px padding, 12px font, 5px radius) and wraps on narrow viewports.
+4. **Popup renders** (lines 1075-1080): 5 conditional renders after the
+   `CreateAccountModal` block, before the dashboard's closing `</div>`. Each
+   follows the established pattern `{xOpen && <Generator onClose={() => setXOpen(false)} />}`
+   identical to `EnterpriseDashboard.tsx` lines 15831-15844.
+
+**Generators take only `onClose`** — they read companyId from the session
+internally. For super_admin the session companyId is null; the popups will
+still open and render their UI (the boss can validate the flow end-to-end
+as specified).
+
+### Verification
+- `NODE_OPTIONS="--max-old-space-size=4096" bunx tsc --noEmit --pretty false` →
+  **EXIT_CODE=0** (0 errors).
+- Emoji scan on all 3 modified files → no emojis in added code (the
+  pre-existing `✓`/`✕` Unicode symbols in `PermissionsTab`/`SecurityTab`
+  at lines 5288/5289/5425/5426 are out of scope and not introduced by this
+  task).
+- `'use client'` directive preserved on both `OnboardingWizard.tsx` and
+  `AdminDashboard.tsx`.
+- All UI strings French; Lucide icons only; no markdown/JSX emoji.
+
+### Files touched (3)
+- `src/app/atelier/onboarding/OnboardingWizard.tsx` (-8 / +8 lines: loading
+  gate removed, explanatory comment added, "Commencer" label on step 1)
+- `src/app/atelier/onboarding/page.tsx` (no changes — already correct)
+- `src/app/atelier/admin/AdminDashboard.tsx` (+169 lines net: 2 icon imports,
+  5 generator imports, 5 useState, 5-button skills strip, 5 popup renders)
+
+### Next actions
+- None required from this agent.
+- (Optional, out of scope) If the boss wants the admin skill generators to
+  target a specific companyId (rather than his null session), wire a company
+  picker into the skills strip and pass the selected id via a prop extension
+  on each generator — currently they all use the session internally.
