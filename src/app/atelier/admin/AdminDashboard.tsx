@@ -94,11 +94,6 @@ import {
 } from "recharts";
 import { getAdminPermissions } from "@/lib/auth/rbac";
 import { motion, AnimatePresence } from "framer-motion";
-import { BriefingGenerator } from "../console/components/BriefingGenerator";
-import { ComexReportGenerator } from "../console/components/ComexReportGenerator";
-import { PitchDeckGenerator } from "../console/components/PitchDeckGenerator";
-import { DocumentWriterGenerator } from "../console/components/DocumentWriterGenerator";
-import { CrisisBriefingGenerator } from "../console/components/CrisisBriefingGenerator";
 
 // ═══════════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD — Ultra-complete founder control center
@@ -466,11 +461,6 @@ export function AdminDashboard() {
   // the UI from the admin portal. They read the session for companyId
   // (null for super_admin) — acceptable for now, the boss just needs to
   // open the popups and validate the flow end-to-end.
-  const [briefingOpen, setBriefingOpen] = useState(false);
-  const [comexOpen, setComexOpen] = useState(false);
-  const [pitchOpen, setPitchOpen] = useState(false);
-  const [docWriterOpen, setDocWriterOpen] = useState(false);
-  const [crisisOpen, setCrisisOpen] = useState(false);
 
   const fetchCore = useCallback(async () => {
     setLoading(true);
@@ -1073,11 +1063,6 @@ export function AdminDashboard() {
       )}
 
       {/* ═══ SKILL GENERATORS — Task PI-LAZYLOAD-ADMIN ═══ */}
-      {briefingOpen && <BriefingGenerator onClose={() => setBriefingOpen(false)} />}
-      {comexOpen && <ComexReportGenerator onClose={() => setComexOpen(false)} />}
-      {pitchOpen && <PitchDeckGenerator onClose={() => setPitchOpen(false)} />}
-      {docWriterOpen && <DocumentWriterGenerator onClose={() => setDocWriterOpen(false)} />}
-      {crisisOpen && <CrisisBriefingGenerator onClose={() => setCrisisOpen(false)} />}
     </div>
   );
 }
