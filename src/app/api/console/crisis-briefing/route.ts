@@ -211,7 +211,7 @@ export async function POST() {
         take: 10,
       }),
       prisma.inboundWhatsAppMessage.findMany({
-        where: { status: "flagged", ...demoFilter },
+        where: { status: "flagged" },
         orderBy: { receivedAt: "desc" },
         take: 5,
         select: {
