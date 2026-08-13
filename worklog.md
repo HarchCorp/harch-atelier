@@ -9178,3 +9178,165 @@ NEXT ACTIONS (out of scope, noted for suivi)
   rédacteur francophone natif serait bénéfique pour
   homogénéiser le ton (les traductions ont été faites pour
   préserver le sens technique, pas le style marketing).
+
+---
+Task ID: RESEARCH-COMPETITORS
+Agent: NEXUS (Intelligence & Workflow Automator)
+Task: Strategic competitive analysis — AI slop + competitors + Moroccan market + 20 skill ideas
+
+Work Log:
+- Read tail of worklog.md to understand HarchIQ context (Moroccan AI
+  reputation intelligence product, French/AR, pricing 5K/15K/50K MAD/mo,
+  Darija NLP claimed, WhatsApp alerts, AI Visibility probing 8 LLMs,
+  BVC + AMMC feeds, 28 data sources, ~7K articles in DB).
+- Read existing /home/z/my-project/competitive-reports/00-SYNTHESE.md
+  (26,012 words on 6 competitors) and 11-morocco-market-osint.md
+  (886 lines, 43 OSINT searches) to avoid duplicating prior research
+  and to ground the new strategic doc in verified facts.
+- Ran 20 web searches via `z-ai function -n web_search` (cached in
+  /home/z/my-project/research-cache/):
+    * AI slop (Wikipedia, The Conversation, KRInstitute, SearchStax)
+    * AI chatbot complaints (CNBC, OpenAI Community, Reddit, ScienceDirect)
+    * AI hallucination enterprise cost (Bloomfire: $67.4B in 2024)
+    * Meltwater AI features (Mira, G2, Agorapulse, CommunityTracker)
+    * Meltwater complaints (Trustpilot 1.5/5, TrustRadius fabricated
+      impressions, Reddit r/PublicRelations, G2 review)
+    * Meltwater pricing tiers (Starter $10K, Pro $25K, Enterprise $130K
+      per year — published Jul 2026; average SMB $13,275/yr per Spendhound)
+    * Meltwater Arabic UI (since Feb 2023, MSA only, not Darija)
+    * Meltwater document generation (dashboard-to-PDF export, Mira AI
+      summaries — confirmed: "caption not narrative")
+    * Brandwatch Iris AI (proprietary + 3rd-party models blended, Iris
+      Conversation Insights theme clustering, GPT integration May 2023)
+    * Brandwatch weaknesses (steep learning curve, laggy interface,
+      opaque pricing — G2, Syncly, Capterra)
+    * Talkwalker Blue Silk AI (since 2017, 187 languages, image
+      recognition, predictive modeling, Yeti)
+    * CisionOne AI Coverage Analysis (launched Jun 18, 2026 — explicit
+      "what to do next" action items; closest competitor to HarchIQ
+      target positioning)
+    * CisionOne AI Search Visibility (launched Jul 14, 2026 — LLM
+      probing, same feature HarchIQ already ships)
+    * Moroccan media landscape (Hespress 52% weekly reach, 62% trust
+      per Reuters Institute Digital News Report 2025)
+    * Moroccan news sources (~40-50 active outlets per Feedspot +
+      Wikipedia + BBC + SimilarWeb)
+    * Hespress comment volume (estimated 40K-180K/day — triangulated
+      from TowardsDataScience dataset + Semantic Scholar + internal
+      estimate of 200-2,000 comments per article × 80-120 articles/day)
+    * TikTok Morocco (14.6M adults, +17.5% YoY — fastest growing)
+    * Instagram Morocco (17.5M users Jul 2026 per NapoleonCat)
+    * Brandwatch vs Meltwater coverage gap analysis
+    * Competitor Morocco coverage gaps
+
+- Wrote /home/z/my-project/strategy-competitive-analysis.md
+  (576 lines, 8,496 words) with 5 sections:
+    Section 1: What is AI slop + 8 root causes + 8-item detection
+              checklist + 7 anti-slop design rules for HarchIQ
+    Section 2: Competitor strengths/weaknesses for Meltwater (Mira AI,
+              dashboard-to-PDF, fabricated impressions complaint,
+              pricing tiers verified), Brandwatch (Iris AI, theme
+              clustering, learning curve complaint), Talkwalker
+              (Blue Silk AI since 2017, 187 languages, image
+              recognition), Cision (CisionOne AI Coverage Analysis
+              Jun 2026 with action items — direct competitive threat,
+              AI Search Visibility Jul 2026 same as HarchIQ feature).
+              Cross-competitor matrix showing NO competitor produces
+              board-ready PDFs with action items.
+    Section 3: Moroccan market gaps — ~40-50 active news outlets,
+              Hespress comments estimated 40K-180K/day unmonitored by
+              anyone, TikTok 14.6M adults +17.5% YoY unmonitored in
+              Darija, full gap matrix vs 4 global + 3 local competitors.
+    Section 4: 20 concrete skill ideas (deliverables, not chat) —
+              Crisis Brief Generator, Daily Morning Briefing PDF,
+              Weekly Competitor Comparison Matrix, Crisis Playbook
+              Builder, Crisis Timeline Document, Boycott Early Warning
+              Playbook, Crisis Simulation Scenario Pack, Monthly Board
+              Reputation Report, Reputation Scorecard PDF, Stakeholder
+              Talking Points Generator, AI Visibility Report PDF,
+              Hespress Comment Digest, Stakeholder Map Generator,
+              Competitor Quote Bank, Regulatory Filing Watchlist,
+              Press Release Draft Generator, Spokesperson Briefing
+              Document, Brand Health Index Card, Influencer
+              Identification Matrix, Live Document Real-Time
+              Reputation Dashboard-as-Document. Each idea described
+              with Output, Inputs, Anti-slop mechanism, Competitor
+              gap, Effort estimate (S/M/L).
+    Section 5: Recommended first 5 skills to build (highest impact,
+              lowest effort): #1 PDF Crisis Brief Generator (P0, 2-3
+              weeks), #2 Daily Morning Briefing PDF (P0, 1-2 weeks),
+              #3 Weekly Competitor Comparison Matrix (P1, 3-4 weeks),
+              #4 Hespress Comment Digest (P1, 3-4 weeks, depends on
+              Hespress comments scraper), #5 Crisis Playbook Builder
+              (P1, 4-6 weeks). Total: 13-19 weeks sequential or 8-10
+              weeks with 2 engineers in parallel. This is the next
+              quarter of HarchIQ engineering work.
+- Appendix A: 20 research artifacts inventory.
+- Appendix B: Cross-reference to existing competitive-reports/ (this
+  doc complements, does not duplicate).
+- Appendix C: Bias declaration (NEXUS sub-agent, strategic
+  recommendations biased toward HarchIQ commercial success, factual
+  claims sourced with inline citations).
+
+Key strategic findings (TL;DR for the worklog):
+1. "AI slop" is now a named, documented phenomenon (Wikipedia 2024,
+   KRInstitute 2025, The Conversation 2025). Enterprise AI
+   hallucinations cost $67.4B in 2024 (Bloomfire). Any HarchIQ output
+   that feels like ChatGPT will be rejected by Moroccan Dircoms.
+2. All 4 global competitors (Meltwater, Brandwatch, Talkwalker, Cision)
+   produce dashboard exports with AI captions. None produce
+   standalone deliverables (PDFs with action items, crisis playbooks,
+   comparison matrices). Cision is the closest — CisionOne AI Coverage
+   Analysis (Jun 2026) explicitly markets "what to do next" — but for
+   US/EU market, not Morocco.
+3. Cision shipped AI Search Visibility (LLM probing) Jul 14, 2026 —
+   the same feature HarchIQ already ships. HarchIQ's "AI Visibility"
+   differentiator is no longer unique; HarchIQ must ship the PDF
+   report version Cision lacks.
+4. Hespress comments (40K-180K/day estimated) + TikTok Morocco
+   (14.6M adults, +17.5% YoY) + Instagram Morocco (17.5M) remain
+   unmonitored by all 4 global + 3 local competitors. This is a
+   24-month window.
+5. The strategic pivot is: ship 20 deliverable-based skills, not a
+   chat sidebar. First 5 (Crisis Brief PDF, Daily Briefing PDF,
+   Competitor Matrix, Hespress Comment Digest, Crisis Playbook
+   Builder) cover 13-19 weeks of engineering (8-10 weeks with 2
+   engineers) and directly support the 2018 boycott sales narrative.
+
+CONSTRAINTS RESPECTED:
+- Research only — zero code modified (verified: no file in src/
+  touched, no package.json change, no DB migration).
+- All 20 search results cached in /home/z/my-project/research-cache/
+  for traceability.
+- Report cross-references existing competitive-reports/ rather than
+  duplicating; adds the AI-slop angle + deliverables strategy that
+  prior reports did not cover.
+- Report is in English (matches the prompt language); French/Arabic
+  terms preserved where natural (Dircom, dossier, Darija).
+
+NEXT ACTIONS (out of scope, noted for suivi):
+- Product/engineering: review the 20 skill ideas with the HarchIQ
+  product team. Confirm the first-5 sequencing (Section 5.6) and
+  assign owners. The Crisis Brief Generator (Skill #1) and Daily
+  Morning Briefing (Skill #2) share a PDF rendering pipeline —
+  building them together is the fastest path to value.
+- Data gap: the Hespress comments scraper (prerequisite for Skill #4)
+  is also the #1 action item in competitive-reports/11-morocco-
+  market-osint.md (line 758). This is the highest-ROI missing data
+  source across both reports — prioritize.
+- Competitive monitoring: CisionOne AI Coverage Analysis (Jun 2026)
+  and AI Search Visibility (Jul 2026) are 2-month-old competitor
+  features that directly overlap with HarchIQ's positioning. Set up
+  a quarterly competitor release tracker to catch the next move
+  (likely Brandwatch or Meltwater shipping their own action-items
+  feature within 6-12 months).
+- Darija NLP: the rule-based darija-nlp.ts (600+ lines) is a start
+  but productionizing it with fine-tuned GLM-4 on Hespress comments
+  corpus is a 6-month R&D priority (per 11-morocco-market-osint.md
+  line 768). All 20 skill ideas depend on Darija quality for the
+  Moroccan market — without it, the deliverables will feel like
+  translated French slop.
+- Sales narrative: the 2018 boycott case (Centrale Danone €150-178M
+  loss, Facebook-organized, WhatsApp-amplified) is the strongest
+  sales asset. Skill #4 (Boycott Early Warning Playbook) operationalizes
+  this narrative into a deliverable — prioritize in the sales deck.

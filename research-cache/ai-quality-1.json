@@ -1,0 +1,83 @@
+[
+  {
+    "url": "https://airia.com/blog/ai-hallucination-explained-causes-risks-and-enterprise-safeguards",
+    "name": "AI Hallucination Explained: Causes, Risks, and Enterprise",
+    "snippet": "Jan 4, 2026 — When a generative AI system produces authoritative but incorrect output, it doesn't just create a minor error – it creates enterprise risk.",
+    "host_name": "airia.com",
+    "rank": 0,
+    "date": "Jan 4, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.glean.com/perspectives/when-llms-hallucinate-in-enterprise-contexts-and-how-contextual-grounding",
+    "name": "Understanding LLM hallucinations in enterprise applications",
+    "snippet": "Nov 6, 2025 — More than 120 cases of AI -driven legal hallucinations have been identified since mid-2023, with at least 58 occurring in 2025 alone, leading to ...",
+    "host_name": "www.glean.com",
+    "rank": 1,
+    "date": "Nov 6, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://kanerika.com/blogs/ai-hallucinations",
+    "name": "AI Hallucinations: What Most Enterprise Teams Get Wrong",
+    "snippet": "AI hallucinations cause real business risk across finance, healthcare, and ops. Learn what triggers them, how to detect them, and the techniques teams.",
+    "host_name": "kanerika.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://bloomfire.com/resources/ai-hallucinations",
+    "name": "What Are AI Hallucinations? A Complete Guide",
+    "snippet": "May 4, 2026 — AI hallucinations cost businesses an estimated $67.4 billion in losses in 2024 alone . These errors create tangible consequences in every sector ...",
+    "host_name": "bloomfire.com",
+    "rank": 3,
+    "date": "May 4, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.onedatasoftware.com/blog/ai-hallucinations-detect-prevent-build-trust",
+    "name": "AI Hallucinations in Business: Detect and Prevent Errors",
+    "snippet": "AI hallucinations cost businesses $67.4B in 2024 . Learn how to detect false outputs, prevent errors, and build real trust in your AI systems.",
+    "host_name": "www.onedatasoftware.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.digitaldividedata.com/blog/detecting-preventing-ai-hallucinations",
+    "name": "Detecting & Preventing AI Model Hallucinations In",
+    "snippet": "Apr 8, 2025 — In this blog, we'll break down what AI hallucinations are, why they happen, how to spot them, and what businesses can do to prevent them.",
+    "host_name": "www.digitaldividedata.com",
+    "rank": 5,
+    "date": "Apr 8, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/managing-ai-hallucinations-enterprise-gustavo-gomez-i5cle",
+    "name": "Managing AI Hallucinations in the Enterprise",
+    "snippet": "Tailoring AI models with curated, high- quality enterprise data reduces hallucination rates by up to 60%.",
+    "host_name": "www.linkedin.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.ewsolutions.com/ai-hallucination",
+    "name": "AI Hallucination: Risks & Mitigation for Enterprises",
+    "snippet": "Mar 19, 2026 — Learn why AI hallucinations happen , their enterprise risks, and 4 proven mitigation techniques, including RAG and human oversight.",
+    "host_name": "www.ewsolutions.com",
+    "rank": 7,
+    "date": "Mar 19, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://intuitionlabs.ai/articles/ai-hallucinations-business-causes-prevention",
+    "name": "AI Hallucinations in Business: Causes and Prevention",
+    "snippet": "Feb 26, 2026 — For the purposes of this report , we define AI hallucinations as outputs from a generative model that are confidently presented but unverifiable ...",
+    "host_name": "intuitionlabs.ai",
+    "rank": 8,
+    "date": "Feb 26, 2026",
+    "favicon": ""
+  }
+]
