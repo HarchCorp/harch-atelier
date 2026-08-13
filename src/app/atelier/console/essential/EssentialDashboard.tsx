@@ -1831,6 +1831,7 @@ function Header({
   onMarkAllNotifsRead,
   onClickNotif,
   onOpenCmd,
+  onOpenBriefing,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1847,6 +1848,7 @@ function Header({
   onClickNotif: (n: NotificationItem) => void;
   /** R2-ESSENTIEL-B — open the Cmd+K command palette */
   onOpenCmd: () => void;
+  onOpenBriefing: () => void;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -1964,7 +1966,7 @@ function Header({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={() => setBriefingOpen(true)}
+                onClick={onOpenBriefing}
                 className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2"
                 style={{ width: 32, height: 32 }}
                 aria-label="Briefing matinal"
@@ -11570,6 +11572,7 @@ export default function EssentialDashboard() {
           onMarkAllNotifsRead={handleMarkAllNotifsRead}
           onClickNotif={handleClickNotif}
           onOpenCmd={() => setCmdOpen(true)}
+          onOpenBriefing={() => setBriefingOpen(true)}
         />
 
         <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
