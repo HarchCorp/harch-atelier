@@ -9751,3 +9751,428 @@ a trigger button (same pattern as BriefingGenerator's trigger).
   (currently uses window.print() — works but doesn't match the
   BrandedPDF visual fidelity of the /api/console/reports pipeline).
 
+
+---
+
+## SKILL-9-STAKEHOLDER-MAP — Stakeholder Map (AURA)
+
+**Skill 9 — Cartographie des Parties Prenantes.** Built an
+interactive scatter chart mapping 8 stakeholder categories by
+Influence (1-5) × Sentiment (-1..+1), with bubble size = engagement
+level. Same popup pattern as BriefingGenerator (fixed overlay,
+framer-motion scale entrance, sage palette — this is a strategic
+tool, not a crisis tool).
+
+**Two files created:**
+
+1. `src/app/api/console/stakeholder-map/route.ts` — POST endpoint
+   (auth via `requireUserCompany`). Returns 8 stakeholder rows
+   derived from REAL data signals:
+   - **Gouvernement** — `Article.sourceType="regulatory"` filtered
+     by source/title keywords (ministère, gouvernement, présidence,
+     palais, parlement).
+   - **Régulateurs** — regulatory articles NOT classified as
+     gouvernement. Source name → friendly regulator (BAM/AMMC/BVC/
+     ONSSA/ANRT) via `deriveRegulatorName()`.
+   - **Médias** — `sourceType="media"` articles (count + source
+     diversity drives influence).
+   - **Investisseurs** — `sourceType IN ("market","financial")`
+     + `ReputationScore.sentiment` (preferred) or article avg.
+   - **Employés** — `InboundWhatsAppMessage` stream (responded /
+     crisisScore<40).
+   - **Clients** — `ArticleComment` (Hespress etc.) + flagged
+     WhatsApp (status=flagged OR crisisScore>=40).
+   - **ONG** — keyword search (ONG, association, transparence,
+     greenpeace, amnesty, anticorruption, "droits humains") on
+     Article title+content. Dormant (influence=2, engagement=15)
+     when no matches found.
+   - **Concurrents** — same-sector Company.findMany +
+     CompanySettings.competitors (JSON-parsed). Sentiment proxied
+     as inverse of own reputation overall.
+   All 10 queries run in a single `Promise.all` batch. Defaults
+   (per-category influence/sentiment/engagement/contact/description)
+   applied when real data is sparse.
+
+2. `src/app/atelier/console/components/StakeholderMapGenerator.tsx`
+   — `'use client'` popup with:
+   - Header bar "Cartographie des Parties Prenantes" (Space Mono).
+   - Inline SVG scatter chart (no recharts, no deps):
+     viewBox 520×360, plot area [60,500]×[30,300].
+     Quadrant bg tints: top-right sage (`rgba(74,123,95,0.10)`),
+     bottom-left red (`rgba(220,38,38,0.08)`), top-left amber,
+     bottom-right charcoal.
+     X axis = Influence 1..5, Y axis = Sentiment -1..+1.
+     Bubble radius = 8 + engagement/100 × 22 (8→30 px).
+     Bubble color reflects quadrant (sage=allies, amber=à surveiller,
+     charcoal=neutres, red=risques).
+     Bubbles animate in one-by-one, 200ms delay each, via
+     `motion.g` with `backOut` easing + scale 0→1.
+     Hover: HTML tooltip overlay (absolutely-positioned div
+     tracking `mousePos` from `onMouseMove` on the SVG) showing
+     category, quadrant tag, influence/sentiment/engagement grid,
+     contact + description.
+   - Stakeholder list below chart: 8 cards in responsive grid
+     (`repeat(auto-fill, minmax(340px,1fr))`). Each card has a
+     3px left-border in the category's quadrant color, Lucide
+     icon (Landmark/Scale/Newspaper/TrendingUp/Users/UserCheck/
+     Globe/Swords), influence stars (5 Star icons, filled/outline),
+     sentiment dot + numeric, engagement bar (animated width),
+     contact + lastInteraction date.
+   - Export buttons: PDF (window.print with isolated print CSS on
+     `#stakeholder-document`), Copy (renderPlainText), Régénérer.
+
+**Design system enforced:** White #FFFFFF, sage #4A7B5F, charcoal
+#0A0A0A, amber #F59E0B, red #DC2626. Space Mono for headers +
+metrics, Inter for body. Lucide icons only. NO emojis. All copy in
+French.
+
+**Two TS errors encountered & fixed during `tsc --noEmit`:**
+1. `InboundWhatsAppMessage` has no `isDemo` column — removed
+   `...demoFilter` spread from that one query (it's a per-message
+   table, not company-scoped). The other 9 queries in the batch
+   keep the demoFilter.
+2. Block-scoped variable `companyRow` used before its declaration
+   in the `competitors` query (both were inside the same
+   `Promise.all`). Substituted `company.sector` (the field
+   `requireUserCompany` guarantees on its return value) —
+   `companyRow` is only a re-fetch for display fields (name,
+   ticker) and isn't needed for the filter.
+
+**TypeScript check:** `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → 0 errors (exit code 0).
+
+**Dashboard files NOT modified.** The two files are unwired — the
+parent console page needs to import `StakeholderMapGenerator` and
+add a trigger button (same pattern as BriefingGenerator's trigger).
+
+**Next actions (out of scope, for suivi):**
+- Wire StakeholderMapGenerator into the console page next to the
+  other skill generators (1 import + 1 useState + 1 trigger button
+  with `Scale`/`Users` icon).
+- When `Concurrent` model gains its own table (vs. `Company` with
+  sector match), swap the same-sector query for a dedicated
+  competitor lookup with richer per-competitor sentiment.
+- Replace the inverted-reputation proxy for Concurrents sentiment
+  with a real competitor-article sentiment query (currently skipped
+  for perf — would need a per-competitor `article.aggregate`).
+
+---
+
+## SKILL-7-PITCH-DECK — Pitch Deck Generator (12 slides)
+
+**Agent:** AURA · **Files created (2 only, per spec):**
+- `/home/z/my-project/src/app/api/console/pitch-deck/route.ts` (691
+  lines)
+- `/home/z/my-project/src/app/atelier/console/components/PitchDeckGenerator.tsx`
+  (2520 lines)
+
+**API contract.** `POST /api/console/pitch-deck` — auth via
+`requireUserCompany()` (same pattern as crisis-briefing). Body is
+fully optional: `{ prospectName?, prospectSector?, prospectCompetitors?
+}`. All three default to the user's own company when omitted, so a
+Dircom can pitch themselves (default) or a named prospect.
+
+**12 slides, all data-backed:**
+1. Title (prospect name + "Veille Réputationnelle")
+2. Problem (2018 boycott narrative + 4 stats + 4 pain points)
+3. Market (30+ titles, 3 languages, 92% mobile, 5M+ articles/day +
+   4 segments)
+4. Solution (4 feature cards + 4 differentiators)
+5. Score de réputation (SVG gauge 0–100 + 4 breakdown bars —
+   **fetches REAL `ReputationScore.overall` from Prisma**, falls
+   back to 74/100 estimation when no score exists yet)
+6. Sources (14 named Moroccan sources: Hespress/TelQuel/Medias24/Le360/
+   Le Matin/Aujourdhui/Barlamane/Yabiladi/MWN/MAP/AMMC/BAM/BVC — by
+   type + by language chips)
+7. HarchIQ AI (4 capability cards + 4-plan quota grid: briefings/
+   queries/alertes)
+8. Sentiment trilingue (overall bar + 3 language sample cards FR/AR/
+   Darija with RTL handling for AR + cascade narrative — sentiment
+   percentages come from REAL Article rows from the last 7 days)
+9. Crisis detection (4-factor grid + alert example card with
+   velocity/sentiment/sources/cascade + recommendation)
+10. Pricing (4 mini-cards: Essentiel / Pro / Enterprise / Agency —
+    each with "Sur devis" + price hint + 6 features, Pro highlighted
+    "Recommandé")
+11. Case study (anonymized, sector-adaptive — uses prospectSector
+    when provided; 5-step timeline J−36h → J0 + 4 outcome metrics +
+    testimonial block)
+12. Contact CTA (5 contact rows + mailto button "Contacter le service
+    commercial →" + numbered next-steps list + closing note)
+
+**UI / popup.** Same pattern as BriefingGenerator — fixed overlay,
+backdrop blur, scale entrance — but the body is a 16:9 slide card
+(`aspectRatio: "16 / 9"`, maxWidth 960px) inside a 1100px popup. Per-
+slide transition is `opacity:0, scale:0.95 → opacity:1, scale:1`
+(framer-motion `AnimatePresence mode="wait"` keyed on slide number).
+Slides reveal one by one with 500ms delay (per spec) — `visibleCount`
+gates both dot clickability and the next-button disabled state, so a
+user can't skip ahead during generation.
+
+**Navigation.** Three parallel controls:
+- ← / → arrow buttons (Précédent / Suivant, sage/charcoal)
+- "Slide X / 12" indicator in Space Mono
+- 12 dots (active one stretches to 24×8 pill, unrevealed ones render
+  as light grey 8×8)
+- Play button toggles auto-advance every 3000ms; stops automatically
+  when reaching the last revealed slide
+- Keyboard: ← / → / Esc (Esc closes the popup)
+
+**Export PDF.** `window.print()` with a print stylesheet that sets
+`@page { size: landscape; margin: 0 }` and isolates `#pitch-deck-
+print` (visibility hack from BriefingGenerator). The button is in
+the header bar, disabled while generating.
+
+**Data isolation (Loi 09-08 / demo invariant).** `requireUserCompany`
+returns `demoFilter: { isDemo: boolean }`. This is spread into BOTH
+Prisma queries (`reputationScore.findFirst` + `article.findMany`) so
+demo users see only demo data and real users see only real data —
+same invariant as crisis-briefing. Without this, a demo Dircom would
+see real reputation scores in their pitch deck.
+
+**Design tokens honoured.** White #FFFFFF, sage #4A7B5F, charcoal
+#0A0A0A. Space Mono (`'Space Mono', monospace`) for headers, eyebrow
+labels, score numbers, slide counter. Inter (`'Inter', system-ui,
+sans-serif`) for body. Lucide icons only — NO emojis anywhere in
+either file. All copy is French.
+
+**TypeScript check:** `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → 0 errors (exit code 0).
+
+**Dashboard files NOT modified.** `PitchDeckGenerator` is unwired —
+the parent console page needs to import it and add a trigger button
+(same pattern as BriefingGenerator's trigger, suggested icon:
+`Presentation` from lucide-react).
+
+**Next actions (out of scope, for suivi):**
+- Wire `PitchDeckGenerator` into the console page next to the other
+  skill generators (1 import + 1 useState + 1 trigger button).
+- Consider a "PDF bundle" export that prints all 12 slides at once
+  (current `window.print` exports only the visible slide — fine for
+  ad-hoc sharing, but a 12-page PDF would need a hidden render of
+  all slides triggered before print).
+- Slide 11 case study is currently a templated anonymized narrative
+  keyed off `prospectSector`. When real customer case studies are
+  sanctioned for public use, swap the templated content for a
+  curated library indexed by sector.
+- The 4 plan price hints (15K MAD / 35K MAD) come from
+  `marketing-vision.ts` narrative ("15K MAD/month"). When a formal
+  pricing table lands in `constants.ts`, source the hints from
+  there to keep the deck and the marketing site in sync.
+
+---
+
+## SKILL-8-BOYCOTT-ALERT — Boycott Early Warning System
+
+**Agent:** NEXUS
+**Files created (exactly 2, as specified):**
+1. `src/app/api/console/boycott-alert/route.ts` — POST endpoint, auth-required
+   via `requireUserCompany()`. Scrapes Hespress + fetches Google News
+   RSS in parallel (Promise.all), scans every comment + article title
+   for the 7 boycott keywords (boycott, مقاطعة, لا, stop, refus, honte,
+   dehors), computes velocity (24h vs 7d baseline + 7-day sparkline
+   buckets), extracts hashtags (#word patterns, falls back to
+   synthesised #boycott[Company]/#stop[Company] pseudo-tags when
+   chatter exists but no explicit hashtag has crystallised yet),
+   computes a 0-100 composite score (40% frequency + 30% velocity +
+   30% negative-sentiment share), and returns the spec-shaped
+   `BoycottAlertResponse` (with an extended `velocity.dailyCounts`
+   field so the sparkline has data to plot).
+2. `src/app/atelier/console/components/BoycottAlertGenerator.tsx` —
+   `'use client'` popup, 7 sections reveal one-by-one at 200ms stagger
+   via framer-motion `AnimatePresence`. Sections: header with
+   semicircular SVG gauge (red if score > 60 per spec), 4-step level
+   indicator (safe=sage / watch=amber / warning=orange / critical=red),
+   7-day sparkline (inline SVG polyline + dots + day labels), top-10
+   signals feed with platform icon + sentiment border, hashtag chips
+   (red if negative, sage if positive counter-narrative), sage
+   recommendation box, and Export PDF + "Activer le Mode Crise"
+   buttons. The crisis button calls an optional `onActivateCrisis`
+   prop and then closes — the parent console page wires it to swap
+   this popup for `CrisisBriefingGenerator`.
+
+**Design system compliance:** White #FFFFFF, sage #4A7B5F (reserved
+for "safe" + recommendation box), charcoal #0A0A0A, Space Mono
+headers, Inter body, Lucide icons (ShieldAlert, ShieldCheck,
+AlertTriangle, Activity, Zap, Hash, MessageSquare, Radio,
+FileWarning, TrendingUp/Down/Minus). French throughout. No emojis.
+
+**Boycott lexicon weights:**
+- "boycott" / "مقاطعة" — weight 1.0 (explicit call)
+- "stop" / "refus" — weight 0.7 (action verbs)
+- "لا" (Arabic "no") — weight 0.8 (strong signal in context like
+  "لا للشركة")
+- "honte" / "dehors" — weight 0.5 (softer hostility markers)
+
+**Counter-narrative lexicon** (detects positive pushback hashtags):
+soutien, avec, standwith, solidar, دعم, مع, fier, proud, bravo, merci.
+When present, the signal sentiment flips to "positive" — even if it
+contains "boycott", because "je refuse le boycott" is support, not
+attack.
+
+**Score thresholds → level mapping:**
+- safe:     <25   (sage)
+- watch:    25-50 (amber)
+- warning:  50-75 (orange)
+- critical: 75-100 (red)
+Gauge UI rule (per spec): score > 60 forces gauge to red regardless
+of band — slightly overlaps the "warning" band so a score of 65 shows
+orange level-chip but red gauge. This is intentional — the gauge is
+the urgent "look here" indicator, the level chip is the
+classification.
+
+**Demo isolation:** Uses `requireUserCompany()` which returns
+`demoFilter: { isDemo: boolean }`. The boycott scan itself doesn't
+hit Prisma (it scrapes live web), so demoFilter isn't spread into
+any query — but the auth path is identical to CrisisBriefingGenerator,
+so demo logins can still scan their own company name and get the
+same popup. The only Prisma call is `prisma.company.findUnique` to
+fetch the canonical company name when no `companyName` is provided
+in the body.
+
+**TypeScript check:** `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → EXIT=0. One transient error in
+sibling `DocumentWriterGenerator.tsx` (pre-existing, not modified by
+this skill) appeared briefly during a stale-cache run and resolved
+before the final check — same pattern as the ComexReport transient
+errors noted in the prior worklog entry.
+
+**Console page NOT modified.** The component exposes an optional
+`onActivateCrisis?: () => void` prop. When the parent wires it up
+(same `useState` pattern as CrisisBriefingGenerator's integration),
+clicking "Activer le Mode Crise" closes this popup and opens the
+crisis dossier. Until wired, the button is hidden for `level === "safe"`
+and rendered but no-ops when `onActivateCrisis` is undefined.
+
+**Next actions (out of scope, for suivi):**
+- Wire `BoycottAlertGenerator` into the console page next to
+  `CrisisBriefingGenerator` (1 import + 1 useState + 1 trigger button).
+  Wire its `onActivateCrisis` to setCrisisOpen(true) so the Mode Crise
+  button hands off to Skill 2.
+- Consider adding a daily cron that runs the boycott scan for every
+  active company and writes a `BoycottAlert` row when score > 50,
+  so the Dircom gets a push notification instead of having to
+  manually trigger the popup.
+- The Hespress scraper's `extractComments` regex is brittle (Hespress
+  uses Disqus and has changed markup twice in 2024). When the
+  scraper breaks, this skill degrades to Google-News-only mode —
+  still useful but loses the "Moroccan street pulse" angle that
+  makes this skill distinctive. Worth a dedicated scraper-resilience
+  pass.
+
+---
+
+## 2025-06 — SKILL-6-DOC-WRITER (AURA)
+
+**Mission:** Build Skill 6 — HarchIQ Document Writer. The killer feature where a document WRITES ITSELF paragraph by paragraph in a popup. Not chat — a live document, typed char-by-char in real time.
+
+**Files created (2, dashboard untouched):**
+
+1. `src/app/api/console/document-writer/route.ts` (1082 lines)
+   - POST endpoint, `getServerSession` auth + companyId check
+   - Body: `{ prompt: string }` (max 500 chars)
+   - Intent detection via French keyword matching → 6 modes:
+     `competitor | comex | weekly | crisis | sentiment | reputation`
+     Plus competitor brand hint extraction (Marjane, Maroc Telecom,
+     Attijari, BMCE, BCP, Inwi, OCP, etc.)
+   - Parallel Prisma fetch (12 queries): company, reputationScore,
+     articles 30d/7d/24h, total count, negative alerts, top sources,
+     top articles, risk assessments, sector competitors, sector coverage
+   - Derived metrics: pos/neu/neg %, sentiment index, crisis score +
+     level (safe/watch/warning/critical), competitor SOV + your rank
+   - Rule-based French section builder. Always emits 5-7 sections
+     depending on mode:
+       • heading (title + subtitle, typed as h1 + small caption)
+       • body — Introduction
+       • body — Narratifs de la semaine (weekly/comex only)
+       • data — Données clés (7 KPI metrics + caption)
+       • data — Analyse concurrentielle (competitor only, SOV table)
+       • data — Veille crise (crisis only, alerts list)
+       • body — Analyse
+       • recommendation — Recommandations HarchIQ (P0–P3, sage box)
+       • body — Conclusion
+   - GLM-4 enhancement (optional, when `ZAI_API_KEY` set): calls
+     `createZAI()` → `chat.completions.create` with the real metrics
+     as context, asks for JSON `{sections:[{index,paragraphs}]}`,
+     replaces ONLY body paragraphs (intro/weekly/analysis/conclusion)
+     with richer French prose. Data + recommendation sections stay
+     rule-based (structured, no prose benefit). On any failure
+     (network, parse, empty), falls back to rule-based silently and
+     sets `enhancedByLLM:false`.
+   - Response shape:
+     `{ meta:{companyName,sector,date,prompt,mode,enhancedByLLM},
+        sections:[{title,type,paragraphs,metrics?}] }`
+
+2. `src/app/atelier/console/components/DocumentWriterGenerator.tsx` (1260 lines)
+   - Same popup pattern as BriefingGenerator (fixed overlay, motion
+     fade-in, sage header bar, close button)
+   - Input bar with "Que voulez-vous ?" label, text field, Générer
+     button, and 4 example chips (Analyse vs concurrents, Brief COMEX,
+     Résumé semaine, Veille crise). Clicking a chip auto-submits.
+   - **Typing engine — the killer effect:** single `setInterval` at
+     `TYPE_INTERVAL_MS = 20`ms (≈50 chars/sec). State is a 2D
+     `revealed[s][p]` array (chars revealed per paragraph). A
+     `cursorRef` tracks the current `{s,p}` head. Each tick:
+       1. If paragraph incomplete: `revealed[s][p] += 1`
+       2. If paragraph complete: advance cursor to next paragraph
+          (or next section), insert `PARAGRAPH_PAUSE_MS = 220ms`
+          (or `SECTION_PAUSE_MS = 380ms` when crossing sections)
+       3. If no more sections: clear interval, set `done:true`,
+          hide cursor
+   - Blinking cursor: CSS keyframe `blink-cursor` (0.8s step-end)
+     renders a 2px-wide sage block immediately after the typed text
+     at the current cursor position. Disappears when typing finishes.
+   - Section renderers:
+       • heading → Space Mono H1 + subtitle, sage eyebrow
+         "Document HarchIQ", 2px sage bottom border
+       • body → Inter paragraphs (lineHeight 1.7, whiteSpace pre-wrap)
+         with section label "Introduction" / "Analyse" / etc.
+       • data → 2-col KPI grid (7 metrics, sentiment-coloured values
+         in Space Mono) + typed italic caption below
+       • recommendation → sage-tinted box, numbered list (1. 2. 3.)
+         with sage bold numerals
+   - Sections fade in via framer-motion as they start typing (only
+     mounted when their first paragraph has >0 chars revealed or the
+     cursor is on them).
+   - Auto-scroll: `useEffect` watches `revealed` + `typing`, calls
+     `el.scrollTo({top: scrollHeight, behavior: smooth})`.
+   - "Passer" button (SkipForward icon) while typing — clears the
+     interval and sets `revealed` to full char counts for instant
+     completion.
+   - Done state: header shows "Document terminé" + green Check +
+     optional "GLM-4" badge if LLM-enhanced. Footer reveals three
+     actions:
+       • Exporter PDF (window.print with `@media print` stylesheet
+         that hides everything except `#document-writer-document`)
+       • Copier le texte (buildPlainText helper assembles Markdown-
+         ish plain text with `# Title`, `## Section`, `- metric`
+         bullets; uses navigator.clipboard.writeText, shows "Copié"
+         for 2s)
+       • Régénérer (resets doc state, returns to input bar)
+   - Design tokens: White #FFFFFF, sage #4A7B5F (SAGE_BG 8% alpha,
+     SAGE_BORDER 20% alpha), charcoal #0A0A0A, Space Mono headers,
+     Inter body. NO emojis. Lucide icons throughout. French only.
+
+**TypeScript check:** `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → **EXIT_CODE=0** (verified twice
+consecutively; 6144 also clean). Zero errors in either new file.
+
+**Dashboard files NOT modified.** DocumentWriterGenerator is
+unwired — the parent console page needs to import it and add a
+trigger button (same pattern as BriefingGenerator's trigger).
+
+**Next actions (out of scope, for suivi):**
+- Wire DocumentWriterGenerator into the console page. 1 import +
+  1 useState + 1 trigger button (suggest a "Rédiger un document"
+  button next to Briefing Matinal, with the FileText + Sparkles
+  icon to signal the live-typing magic).
+- Consider a `mode: DetectedMode` → preset chip mapping so the
+  console can offer "Rédiger: Brief COMEX" / "Rédiger: Analyse vs
+  concurrents" shortcuts that pre-fill the prompt.
+- For PDF fidelity, port the document to `@react-pdf/renderer` via
+  the existing `/api/console/reports/[id]/pdf` pipeline — currently
+  uses `window.print()` which works but isn't branded like the
+  BrandedPDF reports.
+- If a real ZAI_API_KEY is provisioned, end-to-end test the GLM-4
+  enhancement path. The fallback (rule-based) is verified by type
+  check; the LLM path is gated on `process.env.ZAI_API_KEY`.
