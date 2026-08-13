@@ -24,6 +24,10 @@ import { SavedSearchesGenerator } from "../components/SavedSearchesGenerator";
 import { InfluencerTrackerGenerator } from "../components/InfluencerTrackerGenerator";
 import { NarrativeTrackerGenerator } from "../components/NarrativeTrackerGenerator";
 import { GeoHeatmapGenerator } from "../components/GeoHeatmapGenerator";
+import { EmailDigestGenerator } from "../components/EmailDigestGenerator";
+import { SentimentHeatmapGenerator } from "../components/SentimentHeatmapGenerator";
+import { CampaignTrackerGenerator } from "../components/CampaignTrackerGenerator";
+import { ApiKeyManagerGenerator } from "../components/ApiKeyManagerGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -176,6 +180,7 @@ import {
   MoreHorizontal,
   Leaf,
   History,
+  Megaphone,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1893,6 +1898,10 @@ function Header({
   onOpenInfluencer,
   onOpenNarrative,
   onOpenGeoHeatmap,
+  onOpenEmailDigest,
+  onOpenSentHeatmap,
+  onOpenCampaign,
+  onOpenApiKeys,
   onToggleSkillsMenu,
   skillsMenuOpen,
 }: {
@@ -1936,6 +1945,10 @@ function Header({
   onOpenInfluencer: () => void;
   onOpenNarrative: () => void;
   onOpenGeoHeatmap: () => void;
+  onOpenEmailDigest: () => void;
+  onOpenSentHeatmap: () => void;
+  onOpenCampaign: () => void;
+  onOpenApiKeys: () => void;
   onToggleSkillsMenu: () => void;
   skillsMenuOpen: boolean;
 }) {
@@ -2185,7 +2198,11 @@ function Header({
               <button onClick={onOpenSavedSearches} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Search size={14} style={{ color: "#4A7B5F" }} /> Recherches sauvegardées</button>
               <button onClick={onOpenInfluencer} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Users size={14} style={{ color: "#4A7B5F" }} /> Influenceurs</button>
               <button onClick={onOpenNarrative} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><TrendingUp size={14} style={{ color: "#4A7B5F" }} /> Narratifs</button>
-              <button onClick={onOpenGeoHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MapPin size={14} style={{ color: "#4A7B5F" }} /> Carte géographique</button>
+<button onClick={onOpenGeoHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MapPin size={14} style={{ color: "#4A7B5F" }} /> Carte géographique</button>
+              <button onClick={onOpenEmailDigest} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Mail size={14} style={{ color: "#4A7B5F" }} /> Digest email</button>
+              <button onClick={onOpenSentHeatmap} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><CalendarDays size={14} style={{ color: "#4A7B5F" }} /> Heatmap sentiment</button>
+              <button onClick={onOpenCampaign} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Megaphone size={14} style={{ color: "#4A7B5F" }} /> Campagnes</button>
+              <button onClick={onOpenApiKeys} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Key size={14} style={{ color: "#4A7B5F" }} /> Clés API</button>
             </div>
           )}
         </div>
@@ -11195,6 +11212,10 @@ export default function EssentialDashboard() {
   const [influencerOpen, setInfluencerOpen] = useState(false);
   const [narrativeOpen, setNarrativeOpen] = useState(false);
   const [geoHeatmapOpen, setGeoHeatmapOpen] = useState(false);
+  const [emailDigestOpen, setEmailDigestOpen] = useState(false);
+  const [sentHeatmapOpen, setSentHeatmapOpen] = useState(false);
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const [apiKeysOpen, setApiKeysOpen] = useState(false);
   const [skillsMenuOpen, setSkillsMenuOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -11834,6 +11855,10 @@ export default function EssentialDashboard() {
           onOpenInfluencer={() => setInfluencerOpen(true)}
           onOpenNarrative={() => setNarrativeOpen(true)}
           onOpenGeoHeatmap={() => setGeoHeatmapOpen(true)}
+          onOpenEmailDigest={() => setEmailDigestOpen(true)}
+          onOpenSentHeatmap={() => setSentHeatmapOpen(true)}
+          onOpenCampaign={() => setCampaignOpen(true)}
+          onOpenApiKeys={() => setApiKeysOpen(true)}
           onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}
           skillsMenuOpen={skillsMenuOpen}
         />
@@ -12154,6 +12179,10 @@ export default function EssentialDashboard() {
       {influencerOpen && <InfluencerTrackerGenerator onClose={() => setInfluencerOpen(false)} />}
       {narrativeOpen && <NarrativeTrackerGenerator onClose={() => setNarrativeOpen(false)} />}
       {geoHeatmapOpen && <GeoHeatmapGenerator onClose={() => setGeoHeatmapOpen(false)} />}
+      {emailDigestOpen && <EmailDigestGenerator onClose={() => setEmailDigestOpen(false)} />}
+      {sentHeatmapOpen && <SentimentHeatmapGenerator onClose={() => setSentHeatmapOpen(false)} />}
+      {campaignOpen && <CampaignTrackerGenerator onClose={() => setCampaignOpen(false)} />}
+      {apiKeysOpen && <ApiKeyManagerGenerator onClose={() => setApiKeysOpen(false)} />}
     </div>
   );
 }

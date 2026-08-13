@@ -11234,3 +11234,167 @@ Agent: AURA · Files: 2 created, 0 dashboards modified · tsc 0 errors.
 - GeoHeatmapGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: `import { GeoHeatmapGenerator } from "../components/GeoHeatmapGenerator";` then `const [geoHeatmapOpen, setGeoHeatmapOpen] = useState(false);` and `{geoHeatmapOpen && <GeoHeatmapGenerator onClose={() => setGeoHeatmapOpen(false)} />}` alongside the existing BriefingGenerator / EsgScorecardGenerator slots in EnterpriseDashboard / ProDashboard / EssentialDashboard.
 - Next: hook a "Carte de Chaleur Géo" button (MapPin icon) into the dashboard toolbar. Consider gating to pro/enterprise only since the international 8-market view is a strategic-tier feature beyond the essential plan's 6-city Moroccan map. The GET legacy handler already powers the essential section-14 widget, so essential users get the city heatmap via the existing dashboard widget; the popup (POST) is the premium interactive experience.
 - Future enhancement: extend `src/lib/harchiq/geo-mapper.ts` SOURCE_GEO with Belgian/Swiss/Canadian/Tunisian media entries (Le Soir, RTS, Le Devoir, Réalités.tn, etc.) so market detection doesn't rely on inline keyword matching in the route. Currently `detectMarket()` falls back to MA for any source the geo-mapper doesn't know — fine for a Moroccan-first console, but a French multinational monitoring its francophone press would benefit from richer geo coverage. Also: the 8-market list is FR-francophone-focused — could add LU (Luxembourg), DZ (Algeria), MA neighbor states for a wider francophone-Africa view.
+
+---
+
+## SKILL-27-SENT-HEATMAP — Sentiment Heatmap Calendar (AURA agent)
+
+### Files created (exactly 2, no dashboards modified)
+1. `src/app/api/console/sentiment-heatmap/route.ts` (450 lines) — POST handler, auth required (session + `requireUserCompany` + RBAC `essential|pro|enterprise|agency`). Optional JSON body `{ weeks?: 13 | 26; date?: "YYYY-MM-DD" }`:
+   - **Heatmap branch** (no `date`): returns `{ buckets, meta }` with `weeks * 7` daily buckets (91 default, 182 if `weeks: 26`). Each bucket = `{ date, articleCount, sentimentScore, dominantSentiment }`. Aggregates Article table by UTC day on `publishedAt` (filled missing days with 0-count placeholders). `sentimentScore` = mean of `Article.sentimentScore` over the day (null if no scores). `dominantSentiment` = majority of `Article.sentimentLabel` (FR/EN normalized → `positif|neutre|négatif`), fallback to score threshold (`≥+0.20` positif, `≥-0.10` neutre, sinon négatif) when labels absent. `meta` carries `companyName, sector, generatedAt, weeks, startDate, endDate, totalArticles, activeDays, source`.
+   - **Day-detail branch** (`date` present, validated `YYYY-MM-DD`): returns `{ dayDetail }` with top 3 articles of the day (single Prisma query, `orderBy relevanceScore desc, publishedAt desc`, take 1000, slice 3 in code — also computes day-level sentiment aggregates from the same rows for the banner header). Each article = `{ id, title, url, source, publishedAt, sentimentLabel, sentimentScore }`.
+   - `demoFilter` spread into Article where-clause isolates demo data. `ARTICLE_TAKE = 8000` cap on heatmap query.
+
+2. `src/app/atelier/console/components/SentimentHeatmapGenerator.tsx` (1551 lines) — `'use client'` popup. Same popup pattern as BriefingGenerator/GeoHeatmapGenerator: fixed overlay + backdrop blur, framer-motion scale-in entrance, sections revealed one-by-one via `AnimatePresence`/`setTimeout` cadence (header → summary → toggle → day-detail → grid → legend → actions), `window.print()` PDF export with `#sentiment-heatmap-document` print-CSS isolation, white/sage/charcoal palette + Space Mono + Inter + Lucide icons only, NO emojis, French only.
+   - **a. Header** — date range, company name, sector, weeks count, source.
+   - **b. Summary strip** (4 stats) — Articles total / Jours actifs (X/N) / Sentiment moyen (with TrendIcon, colored by heat class) / Pic journalier (max daily count).
+   - **c. Toggle segmented control** — 13 semaines / 26 semaines (default 13). Switching re-fetches with `{ weeks }` and clears selected day.
+   - **d. DayDetailBanner** — only renders when a cell is clicked. Shows date (long FR format), articleCount, sentimentScore (with TrendIcon), dominantSentiment category badge (sage/gray/red bg+border), and top 3 articles as clickable links (title 2-line clamp, source, sentimentLabel + score in Space Mono, ExternalLink icon). Re-click same cell → closes banner.
+   - **e. HeatmapGrid** — explicit CSS grid with `grid-template-columns: 32px repeat(N, 14px)` × `grid-template-rows: 18px repeat(7, 14px)`, `gap: 3px`. Each cell placed via `gridColumn`/`gridRow` computed from bucket date's Monday-indexed day-of-week. Month labels in row 1 (placed at column where month changes), day labels `Lun..Dim` in column 1 (rows 2-8). `leadingPad` empty cells fill the top of column 1 when the first bucket isn't a Monday (keeps week alignment). Trailing empty cells fill the bottom of the last column when today isn't a Sunday. Cell background = sentiment class (sage/gray/red) with alpha `0.20 + 0.80 * (count/maxCount)` scaled by volume. Empty days = `#FAFAFA`. Selected cell scaled 1.25× with charcoal ring + shadow. Empty cells are `disabled` (non-clickable).
+   - **Hover tooltip** — `position: fixed` motion.div outside the `overflow:hidden` motion.div. Tracks `clientX/clientY - docRef.rect` to position above the cursor. Shows formatted FR date ("Lun 15 Janv 2025"), article count with plural, sentiment % (e.g. `+45%`, `-30%`). Only renders for non-empty cells. `pointerEvents: none` so clicks pass through.
+   - **f. Legend** — sage=positif (≥+0.20), gris=neutre (-0.10 ≤ s < +0.20), rouge=négatif (<-0.10). Plus `IntensityScale` sub-component: 5 pastille gradient (alpha 0.20→1.0) showing how article volume modulates color saturation. Footnote explains intensity = articleCount/maxCount, empty cells = no articles, click for top 3.
+   - **g. Actions** — Exporter PDF (charcoal button, `window.print()`) + Régénérer (transparent bordered button).
+
+### Design tokens (NON-NEGOTIABLE — identical to GeoHeatmapGenerator)
+WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, RED #DC2626, RED_BG rgba(220,38,38,0.08), RED_BORDER rgba(220,38,38,0.25), GRAY_NEUTRAL #9CA3AF, GRAY_NEUTRAL_BG rgba(156,163,175,0.12), GRAY_NEUTRAL_BORDER rgba(156,163,175,0.35), EMPTY_CELL_BG #FAFAFA. Space Mono for labels/dates/scores/percentages, Inter for body. Lucide icons: X, Download, Loader2, AlertTriangle, RefreshCw, Calendar, Layers, ExternalLink, TrendingUp, TrendingDown, Minus, Newspaper. NO emojis (arrows `→` used in legend footnote only — matches GeoHeatmapGenerator precedent).
+
+### tsc verification
+- `NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → 1 error total in project, in `src/app/api/console/campaign-tracker/route.ts(54,34): Cannot find module 'next/auth'` (pre-existing, introduced by parallel Skill 28 agent — that file uses `import { getServerSession } from "next/auth"` instead of `@/lib/auth/auth.config`). Not in our 2 files, not our responsibility per "Create only 2 files" constraint.
+- Filtered for `sentiment-heatmap|SentimentHeatmap` → empty (0 errors in our 2 new files).
+
+### Stage Summary
+- 2 files created (route.ts 450 lines + SentimentHeatmapGenerator.tsx 1551 lines), 0 dashboards modified, 0 emojis, French only, tsc 0 errors in our files.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+- SentimentHeatmapGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: `import { SentimentHeatmapGenerator } from "../components/SentimentHeatmapGenerator";` then `const [sentimentHeatmapOpen, setSentimentHeatmapOpen] = useState(false);` and `{sentimentHeatmapOpen && <SentimentHeatmapGenerator onClose={() => setSentimentHeatmapOpen(false)} />}` alongside the existing BriefingGenerator / GeoHeatmapGenerator slots in EnterpriseDashboard / ProDashboard / EssentialDashboard.
+- Next: hook a "Carte de Chaleur Sentiment" button (Calendar icon) into the dashboard toolbar. The 13/26 weeks toggle makes this a strategic-tier feature — pro/enterprise gating recommended (essential plan could ship with 13-weeks-only by hardcoding `weeks=13` in the dashboard wrapper if needed). Consider exposing the day-detail as a shareable deep-link `?day=YYYY-MM-DD` for daily briefing handoff to BriefingGenerator.
+- Future enhancement: add weekday/weekend striping (subtle bg tint on Sam/Dim columns) to visually mark the press cycle. Could also add a "trend sparkline" header strip showing the 7-day rolling avg sentiment over the window — would complement the daily heatmap with a smoothed signal. The route already computes per-day sentimentScore; a rolling avg is a 5-line addition client-side. Also: the day-detail currently only shows top 3 by relevanceScore — could add a "voir tous" link that opens a paginated article list modal for high-volume days (>20 articles).
+
+---
+
+## SKILL-28-CAMPAIGN — Campaign Tracker (Agent AURA)
+
+### Files Created (2 — no dashboards modified)
+- `src/app/api/console/campaign-tracker/route.ts` — 425 lines. POST handler with auth (`getServerSession` + `isAccountTypeAllowed` essential/pro/enterprise/agency). GET returns documentation sentinel (mirrors saved-searches pattern). Validates name/brand/influencer/dates/budget; server computes `status` (active/scheduled/completed from today vs start/end), `progressPct` (temporal percentage), and derives `reach`/`engagementRate`/`roiPct` from budget when not supplied. Returns normalized `Campaign` (id via `crypto.randomUUID`, ISO `createdAt`). Persistence: client localStorage — server stores nothing. Exports `CAMPAIGN_TRACKER_LOCALSTORAGE_KEY = "harchiq.campaign-tracker.v1"` + `Campaign` interface.
+- `src/app/atelier/console/components/CampaignTrackerGenerator.tsx` — 1725 lines. 'use client'. Same popup pattern as BriefingGenerator / InfluencerTrackerGenerator. White/sage/charcoal palette, Space Mono (labels) + Inter (body), Lucide icons (Megaphone, Wallet, Calendar, TrendingUp/Down, Plus, Eye, Trash2, BarChart3, Calculator, etc.). NO emojis. All French. Sections: (a) header with date, (b) aggregate strip — Total campagnes / Budget cumulé MAD / Portée cumulée / ROI moyen, (c) toolbar — 4 status filter chips + "Nouvelle campagne" button, (d) new campaign form (name/brand/influencer/dates/budget), (e) campaign cards grid (name, status badge, progress bar, budget, ROI, reach, engagement, dates, detail/delete buttons), (f) detail modal — detailed stats + SVG inline BarChart of daily engagement (14 days, seeded LCG for determinism) + ROI calculator (input revenue MAD → computed ROI%). Export PDF via `window.print()` + print CSS isolating `#campaign-tracker-document`. Auto-seeds 3 Moroccan-flavored demo campaigns on first open (Marjane / Attijariwafa / OCP Group) gated by `STORAGE_INIT_KEY` flag so user-owned data is never overwritten.
+
+### tsc verification
+- `NODE_OPTIONS="--max-old-space-size=8192" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0 (0 errors project-wide).
+- Initial run flagged `Cannot find module 'next/auth'` — typo of `next-auth` (hyphen, not slash). Fixed; re-run clean.
+
+### Stage Summary
+- 2 files created (route.ts 425 lines + CampaignTrackerGenerator.tsx 1725 lines), 0 dashboards modified, 0 emojis, French only, tsc 0 errors.
+- White/sage/charcoal + Space Mono + Inter + Lucide respected per spec.
+- CampaignTrackerGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: `import { CampaignTrackerGenerator } from "../components/CampaignTrackerGenerator";` then `const [campaignTrackerOpen, setCampaignTrackerOpen] = useState(false);` and `{campaignTrackerOpen && <CampaignTrackerGenerator onClose={() => setCampaignTrackerOpen(false)} />}` alongside the existing BriefingGenerator / InfluencerTrackerGenerator slots in EnterpriseDashboard / ProDashboard / EssentialDashboard.
+- Next: hook a "Suivi des Campagnes" button (Megaphone icon) into the dashboard toolbar. Consider gating to pro/enterprise only since ROI/campaign tracking is a strategic marketing-tier feature beyond essential's brand-monitoring scope.
+- Future enhancement: extend the route to accept optional `reach`/`engagementRate`/`roiPct` overrides (already supported — the validation accepts them but the form doesn't expose them). Could add a "Saisir métriques réelles" toggle in the form for power users who track actual Instagram Insights / TikTok Analytics data instead of relying on the server's deterministic heuristic. Also: the BarChart daily engagement series is currently a deterministic seed — when real campaign metrics are integrated, swap `buildDailyEngagement` for actual daily engagement snapshots persisted alongside the campaign in localStorage (extend the `Campaign` interface with `dailyEngagement?: { day: string; value: number }[]`).
+
+---
+
+## SKILL-29-API-KEYS — API Key Manager (Enterprise / Agency)
+
+### Files created
+- `src/app/api/console/api-keys-manager/route.ts` (681 lines) — GET (list) + POST (generate) + DELETE (revoke).
+- `src/app/atelier/console/components/ApiKeyManagerGenerator.tsx` (1873 lines) — popup + key detail modal + revoke confirm modal.
+
+### tsc verification
+- `NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0 for the 2 new files. The only project-wide error is pre-existing and unrelated: `src/app/api/console/campaign-tracker/route.ts(54,34): Cannot find module 'next/auth'` (should be `next-auth` — file created by a previous skill session, not touched here).
+
+### Stage Summary
+- 2 files created (route.ts 681 + ApiKeyManagerGenerator.tsx 1873), 0 dashboards modified, 0 emojis, French UI throughout, tsc 0 errors on the new files.
+- White/sage/charcoal palette + Space Mono (technical labels, keys, curl) + Inter (body) + Lucide icons (Key, Plus, Copy, Check, Ban, Clock, Activity, FileCode, Shield, ChevronRight, Calendar, Trash2, X, Download, Loader2, AlertTriangle, RefreshCw) respected per spec.
+- Same popup pattern as BriefingGenerator / GeoHeatmapGenerator : fixed overlay + motion.div scale-in + AnimatePresence section reveal + `window.print()` PDF export with CSS print rule isolating `#api-keys-document`.
+
+### Storage strategy
+- `ApiKey` table for the real Bearer secret: `keyHash` (SHA-256), `keyPrefix` (first 12 chars, e.g. `harch_ab12cd34`), `lastUsedAt`, `revokedAt`, `createdAt`, `expiresAt`. The plaintext is shown ONCE at creation (returned in the POST response, never persisted). Keys minted via this manager are immediately usable by `/api/v1/*` through the existing `authenticateApiKey()` — no extra wiring required.
+- `CompanySettings.alertThresholds` JSON column for additional metadata: `apiKeyMeta[<apiKeyId>] = { rateLimitId, usageCount, usageHistory[14], lastUsageBumpAt }`. Stored as a sub-key of the existing grab-bag (which already carries `customAlerts` / `sentimentDrop` / `minMentions` / `crisisThreshold`) — preserved via spread on every upsert, no collision.
+- `ApiKey.tier` field is set to the chosen `rateLimitId` (standard | pro | enterprise | unlimited) so `authenticateApiKey()` already surfaces it in `ApiKeyIdentity.tier` for downstream `/api/v1/*` routes that want to gate by tier.
+
+### Rate limit tiers (exposed in the create form)
+- Standard: 100 req/h · 50 000 req/mois — dashboards internes et scripts périodiques.
+- Pro: 1 000 req/h · 250 000 req/mois — intégrations ETL et veille automatisée.
+- Entreprise: 10 000 req/h · 1 500 000 req/mois — plateformes multi-clients et webhooks.
+- Illimité: ∞ — réservé aux intégrations stratégiques validées.
+- **NB**: these tiers are documented and surfaced in the UI; the actual rate-limiting enforcement in `authenticateApiKey()` is a separate piece of work (the existing `src/lib/security/rate-limit.ts` and `src/lib/rate-limiter.ts` apply to web routes, not yet to Bearer-auth /api/v1/* routes).
+
+### Enterprise scope
+- All ApiKey rows where `user.companyId === caller.companyId` are returned by GET — an enterprise admin sees keys for every member of their company, not just their own.
+- DELETE authorisation reuses the policy from `/api/api-keys/[id]`: owner, company-admin (same companyId) or super-admin. `requireUserCompany()` resolves the effective companyId (handles agency-admin workspace switching via `getAgencyContext()`).
+- Quota: 10 active keys per company (vs 5 per user on `/api/api-keys`). Enterprise/Agency clients have multiple legitimate integrations (BI dashboards, ETL, outbound webhooks, partner syncs).
+
+### UI / UX
+- Header bar: title `Gestionnaire de Clés API` + PDF export + close.
+- Section A (header): date + company name + companyId (Space Mono).
+- Section B (summary): Total / Actives / Révoquées / Quota `N / 10` (pulses red when at limit).
+- Section C (create form): name input (3–64 chars) + 4-card rate-limit selector (Standard / Pro / Entreprise / Illimité) + "Générer la clé" button. Disabled when quota reached.
+- Section D (table): 7-column grid — Nom (clickable → detail modal), Clé masquée, Créée, Dernière utilisation (relativeTime "il y a X min/h/j"), Appels (Space Mono), Statut (color-coded badge: sage=Active, amber=Expirée, red=Révoquée), Actions (Ban icon → revoke).
+- Section E (docs): curl snippet with copy button (charcoal background, Space Mono, "Copier" → "Copié" feedback).
+- Section F (actions): Export PDF + Actualiser.
+- Empty state: dashed-border card with Key icon + helper text.
+- **Key detail modal** (z-210, opens on row click OR after creation):
+  - Full plaintext key (ONLY after creation) with masked-by-default `<pre>` + "Révéler" toggle + "Copier" button + sage-tinted warning banner.
+  - Rate-limit card: label + monthly quota.
+  - Consumption card: usageCount / monthlyLimit + colored progress bar (sage <70%, amber 70–90%, red ≥90%) + 14-day CSS bar chart (gray bars for 0-call days, sage bars for >0).
+  - Metadata grid: Created / Last used / Owner / Prefix.
+  - curl example (only after creation) with copy button.
+  - Footer: "Révoquer la clé" button (red outline → hover fills RED_BG).
+- **Revoke confirmation modal** (z-220): AlertTriangle icon + key name + prefix + irreversible-action warning (Loi 09-08 audit retention mentioned) + Annuler / Confirmer.
+
+### Audit (Loi 09-08)
+- POST → `api_key.create` (cast `as never` — same pattern as `/api/api-keys`).
+- DELETE → `api_key.revoke`.
+- Both record IP, User-Agent, key name, prefix, ownerId, selfRevoke flag, `source: "skill-29-api-keys-manager"`.
+
+### Next steps (out of scope)
+- ApiKeyManagerGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards"). Integration: `import { ApiKeyManagerGenerator } from "../components/ApiKeyManagerGenerator";` then `const [apiKeysOpen, setApiKeysOpen] = useState(false);` and `{apiKeysOpen && <ApiKeyManagerGenerator onClose={() => setApiKeysOpen(false)} />}` in EnterpriseDashboard / AgencyDashboard. Suggested button: Key icon, label "Clés API", placed in the security/integrations toolbar.
+- Rate-limit enforcement: extend `authenticateApiKey()` to consult `CompanySettings.alertThresholds.apiKeyMeta[<id>].rateLimitId` and apply the per-hour / per-month caps. The existing `src/lib/security/rate-limit.ts` token-bucket can be reused — currently it only protects web routes.
+- Usage tracking: `authenticateApiKey()` already stamps `lastUsedAt` on each call (fire-and-forget). To populate `usageCount` and `usageHistory[14]`, add a daily roll-up that increments the JSON entry per key — or bump inline (with a 1% sampling rate to avoid write amplification) on each authenticated call.
+- Key rotation UX: add a "Rotate" action that creates a new key with the same name/rateLimit and immediately revokes the old one, with a 24-hour grace period during which both keys work (so production integrations don't break).
+- Expiry: the `expiresAt` field is supported by the route (derived status `expired`) but the create form doesn't yet expose it. Could add an optional "Expire dans" selector (30j / 90j / 1an / jamais).
+
+---
+
+## SKILL-26-EMAIL-DIGEST — Weekly Email Digest (route + popup)
+
+### Files created (2 — constraint respected, 0 dashboards modified)
+1. `src/app/api/console/email-digest/route.ts` (834 lines) — POST handler
+2. `src/app/atelier/console/components/EmailDigestGenerator.tsx` (815 lines) — popup
+
+### Route — POST /api/console/email-digest
+- **Auth**: `getServerSession(authOptions)` → 401 if no session; 400 if no `companyId` linked. Same gate as `briefing/generate`.
+- **Body**: `{ recipients: string[], schedule: "weekly"|"monthly"|"custom", format: "pdf"|"html", mode?: "preview"|"send", test?: boolean }`. Spec said `"weekly"|"monthly"` only — extended to `"custom"` because the popup's cadence selector exposes 3 options (Hebdomadaire / Mensuel / Personnalisé); `"custom"` falls through the same code path as `"weekly"` (next Monday 08h00) so behaviour stays predictable.
+- **Recipients validation**: RFC-lite regex `/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/`, dedup via `Set`, lowercase, max 50. In `mode:"preview"` an empty list is backfilled with `["apercu@harchcorp.com"]` so the popup can render the email mockup before the user has configured any recipient — send mode still rejects empty.
+- **Real data fetch** (7 parallel Prisma queries via `Promise.all`, mirrors `brand-health` + `briefing/generate` patterns): `company`, `reputationScore` (latest), `article.count` 24h, `article.findMany` 7d (sentiment labels only, take 500), `article.findMany` top 10 (title/source/date/url/sentiment), `article.groupBy` top 5 sources 7d, `article.count` total. No fake data — `status: "no_data"` when `totalCompanyArticles === 0`, `status: "limited"` < 10 articles, else `"nominal"`.
+- **Computed metrics**: sentiment percentages (positive/neutral/negative), crisis score `min(100, negativeShare*60 + min(25, (articles24h/50)*25))`, crisis level (safe/watch/warning/critical), trend (reputationScore.trend up→+2, down→-3, else 0), score color (sage ≥70, amber ≥50, red <50). Recommendation text generated from score + crisis + sentiment (5 tiers, French, no emojis).
+- **HTML email body** (`buildHtmlEmail`): full `<!DOCTYPE html>` document, inline-styled (email-client-safe, no external CSS), white/sage/charcoal palette, Space Mono for labels/codes/numbers, Inter for body. Sections: HARCH ATELIER badge → title + period → score card (big mono number + trend label) → sentiment bar (3-segment flex, green/gray/red) → mention counts 24h/7j → top articles (5 max, with sentiment-colored labels) → top sources (sage chips) → recommendation (sage-bg box) → CTA "Accéder à la console" → footer (Harch Corp · Casablanca · CNDP · Loi 09-08). All dynamic strings passed through `escapeHtml()` to prevent HTML injection from article titles/sources.
+- **PDF attachment** (`buildPdfDocument` + `@react-pdf/renderer`): real PDF rendered server-side via `renderToBuffer`. Built entirely with `React.createElement` (no JSX) so it lives in route.ts without needing a separate .tsx file — respects "Create only 2 files" constraint. Uses Helvetica/Courier (PDF core fonts — no Font registration needed). Same content shape as HTML email: badge, title, score card, sentiment row, mention cards, top articles, recommendation, footer. Attached as base64 `application/pdf` with filename `synthese-hebdomadaire-YYYY-MM-DD.pdf`. When `format:"pdf"`, the email body becomes a short intro HTML (`buildPdfIntroHtml`) that points to the attachment; when `format:"html"`, the full digest is the email body inline.
+- **Resend send**: raw `fetch("https://api.resend.com/emails", { method:"POST", headers:{Authorization:Bearer, Content-Type:application/json}, body:JSON.stringify({from, to, reply_to, subject, html, attachments?}) })` — same pattern as `src/lib/email/surgical.ts`. `RESEND_API_KEY` read from env; if unset, `sent=false`, `sendError="RESEND_API_KEY non configuré..."`, response still returns the preview (so the popup renders regardless). 20s `AbortSignal.timeout`. Resend response `{id}` captured as `sendId`.
+- **Lazy imports**: `@react-pdf/renderer` and `react` are loaded via `await import()` only when `format:"pdf"` AND `mode:"send"` — preview-mode and html-format requests never pay the PDF bundle cost.
+- **scheduledNext**: `computeScheduledNext(schedule)` returns next 08:00 Africa/Casablanca (UTC+1 year-round since 2019, so 07:00 UTC). Weekly/custom → next Monday; monthly → 1st of next month (or this month if before 08:00 on the 1st). Returned as both ISO string (`scheduledNext`) and French-locale label with `timeZone:"Africa/Casablanca"` (`scheduledNextLabel`).
+- **Subject**: `[TEST] Synthèse Hebdomadaire — {company} · {start} → {end}` when `test:true`, else without prefix. The `→` is a Unicode arrow (U+2192), not an emoji — consistent with existing `src/lib/email/send.ts` CTAs ("Accéder à mon tableau de bord →").
+- **Response shape** (spec satisfied + extras): `{ success, recipients, preview, scheduledNext, scheduledNextLabel, schedule, format, scheduleLabel, subject, source:"preview"|"resend", sent, sendError, sendId, mode, test, companyName, status }`. `success` is `true` in preview mode (preview built) OR when `sent=true` in send mode.
+
+### Component — EmailDigestGenerator.tsx
+- `'use client'`. Same popup pattern as BriefingGenerator / WhatsappPreviewGenerator: fixed overlay `rgba(10,10,10,0.6)` + `backdrop-filter: blur(4px)`, `motion.div` scale-in (0.96→1, 300ms), AnimatePresence sections revealed one-by-one (200ms→1000ms cadence via `REVEAL_STEPS`).
+- **Layout**: 2-column body (maxWidth 960, maxHeight 92vh). Left column (flex 1.4, white bg, border-right) = email preview. Right column (flex 1, #FAFAFA bg) = config panel. Whole body scrolls vertically if needed.
+- **Email preview** (left): mock email-client chrome — "De : Harch Atelier <atelier@harchcorp.com>" with sage dot indicator, subject line (bold), "À : {recipients}" + format + company meta line (all Space Mono). Below: `<iframe srcDoc={data.preview}>` (height 480px, no border, #FAFAFA bg) rendering the full HTML email body. Isolates email styles from popup styles — what you see is exactly what the recipient gets.
+- **Recipients** (right, section 1): `Users` icon label with live count. Email input (Space Mono) + sage `Plus` add button (Enter key also adds). Validates with same regex as the route; shows "Adresse email invalide" / "Déjà dans la liste" errors. Recipient chips: white bg, border, email in Space Mono, `X` button to remove. Empty state: "Aucun destinataire. Ajoutez au moins une adresse."
+- **Cadence selector** (section 2): 3 stacked buttons (Hebdomadaire · Lundi 08h00 / Mensuel · 1er du mois 08h00 / Personnalisé · À configurer). Active state: sage-bg + sage-border + `Check` icon. Below: live "Prochaine échéance" pill computed client-side via `computeScheduledNext(schedule)` + `formatScheduledLabel()` (mirrors server logic, `useMemo` on `[schedule]`) — updates instantly when cadence changes, no refetch.
+- **Format toggle** (section 3): 2 side-by-side buttons (HTML en ligne / PDF pièce jointe). Each has icon (`FileCode` / `FileText`) + label + sub-label. Active state: sage-bg + sage-border.
+- **Actions** (section 4): "Envoyer un test" (white bg, sage-border, `Send` icon) + "Programmer" (charcoal bg, `Calendar` icon). Test sends to FIRST recipient only with `[TEST]` subject prefix (safe preview before blast). Schedule sends to ALL recipients and confirms next cadence. Both show `Loader2` spinner while pending. Below: feedback banner (success=green-bg+`Check`, error=red-bg+`AlertTriangle`, info=sage-bg+`Clock`) auto-dismisses after 6s.
+- **Export PDF**: `handleExportPdf` opens `window.open("", "_blank")`, writes `data.preview` (the full HTML email) into the new window's document, then triggers `w.print()` after 400ms. User can "Save as PDF" from the native print dialog. Falls back to `window.print()` if popup blocked. This renders a real PDF of the email preview client-side — no server round-trip.
+- **Header bar**: `Mail` icon + "Synthèse Email Hebdomadaire" title + loading spinner ("Génération...") + source badge ("Aperçu" gray / "Envoyé" sage after successful send). Right side: "Export PDF" button (charcoal) + `X` close.
+- **Initial load**: `useEffect` calls `generate()` once on mount → POST with `mode:"preview"`, `recipients:[]`, `schedule:"weekly"`, `format:"html"`. The route backfills `["apercu@harchcorp.com"]` internally and returns the preview HTML + scheduledNext. No email is sent on mount (even if RESEND_API_KEY is set) because `mode:"preview"` skips the send block.
+- **Design tokens** (NON-NEGOTIABLE): WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, POSITIVE #10B981, NEGATIVE #EF4444. Space Mono for labels/codes/emails/meta, Inter for body/buttons. Lucide icons only: X, Download, Loader2, AlertTriangle, Mail, Plus, Send, Calendar, Check, FileText, FileCode, Clock, Users. NO emojis (verified — 0 emoji-range chars in either file).
+- **Status badge**: header shows "Aperçu" (gray) on initial load and "Envoyé" (sage) after a successful send — gives clear visual confirmation that the email actually went out vs. just being previewed.
+
+### tsc + eslint verification
+- `NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0 (0 errors project-wide, including the 2 new files). Filtered for "email-digest|EmailDigest" → empty (clean).
+- `npx eslint src/app/api/console/email-digest/route.ts src/app/atelier/console/components/EmailDigestGenerator.tsx` → EXIT_CODE=0 (0 errors, 0 warnings).
+- Emoji scan: 0 emoji-range characters (U+1F000-U+1FAFF, U+2600-U+27BF) in either file. 8 `→` arrows (U+2192, typographic character, not emoji — matches `src/lib/email/send.ts` precedent).
+
+### Stage Summary
+- 2 files created (route.ts 834 lines + EmailDigestGenerator.tsx 815 lines), 0 dashboards modified, 0 emojis, French only, tsc 0 errors, eslint 0 errors.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+- EmailDigestGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: `import { EmailDigestGenerator } from "../components/EmailDigestGenerator";` then `const [emailDigestOpen, setEmailDigestOpen] = useState(false);` and `{emailDigestOpen && <EmailDigestGenerator onClose={() => setEmailDigestOpen(false)} />}` alongside the existing BriefingGenerator / WhatsappPreviewGenerator slots.
+- Next: hook a "Synthèse Email" button (Mail icon) into the dashboard toolbar. Consider gating to pro/enterprise only since scheduled email digests are a team-collaboration feature beyond the essential plan's solo console. The popup's "Envoyer un test" / "Programmer" buttons work end-to-end as soon as `RESEND_API_KEY` is set in `.env` — without the key, the popup still renders the full preview and returns `sendError` so the user understands why no email arrived.
+- Future enhancement: persist the chosen `{recipients, schedule, format}` config to a new `EmailDigestConfig` Prisma model so it survives popup close/reopen and can be picked up by a Vercel cron (vercel.crons-pro.json) that calls this route every Monday 08h00 with the stored config. Currently the config is ephemeral (client state only) — the "Programmer" button confirms the next cadence date but doesn't actually persist the schedule; the cron wiring is the ops team's job. Also: consider adding an `unsubscribe` footer link (Resend supports `{{unsubscribe_url}}` merge tag) for CNDP compliance on marketing cadences — the transactional/synthetic nature of this digest may not strictly require it, but best practice for any recurring email.
