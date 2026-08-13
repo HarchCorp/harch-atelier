@@ -10176,3 +10176,389 @@ trigger button (same pattern as BriefingGenerator's trigger).
 - If a real ZAI_API_KEY is provisioned, end-to-end test the GLM-4
   enhancement path. The fallback (rule-based) is verified by type
   check; the LLM path is gated on `process.env.ZAI_API_KEY`.
+
+---
+
+## SKILL-13-AI-VISIBILITY — AI Visibility Report (2026 build)
+
+**Agent:** AURA · **Files created (2, no dashboard modifications):**
+
+1. `/home/z/my-project/src/app/api/console/ai-visibility-report/route.ts`
+   — POST handler, next-auth session + `isAccountTypeAllowed`
+   (essential/pro/enterprise/agency). Resolves the user's company
+   via `requireUserCompany()`, applies `demoFilterFromSession` for
+   demo isolation, queries `AIVisibility` for the last 60 days,
+   groups by platform (latest record per engine + cited-probe tally
+   for the last 30d). Computes per-engine `visibilityScore`
+   (cited=50 + rank bonus up to +35 + confidence×15, clamped 0-100),
+   `overallScore` (mean of engines with data), `trend`
+   (cited30 − cited60-window), and a French `narrativeSummary`
+   built via `buildNarrativeSummary()` (handles zero-citation,
+   top/worst engine, sentiment counts, monthly trend wording).
+   Demo bypass via `demoReportResponse()` for the four executive
+   demo accounts — seeded with 9 engines (6 cited, GLM + Gemini at
+   rank 1, ChatGPT at rank 2).
+
+2. `/home/z/my-project/src/app/atelier/console/components/AiVisibilityReportGenerator.tsx`
+   — `"use client"` popup, exact same scaffolding as
+   `BriefingGenerator` (fixed inset 0, blurred backdrop, white card,
+   header bar + scrollable body + print `<style>` block). Width
+   920px to fit the 3×3 engine grid. Reveals 7 sections one-by-one
+   via `AnimatePresence` + `setVisibleSections` at 200ms cadence:
+   (a) header with date + company line, (b) overall score gauge
+   (SVG circular progress, sage >70 / amber 50-70 / red <50),
+   (c) trend badge (+N pts / N pts / Stable), (d) 9 engine cards
+   in a 3-column grid — each card shows name, "Cité"/"Absent"
+   badge, rank `#N` or `—`, sentiment dot + label, last-checked
+   relative time + 30-day mentions; (e) comparison bar chart
+   (one horizontal bar per engine, length = visibilityScore, same
+   colour bands as gauge, with `barGrow` animation); (f) narrative
+   summary in a sage-tinted panel; (g) actions row (Export PDF
+   via `window.print()` + Régénérer). NO emojis, French throughout,
+   Space Mono for labels/data, Inter for body, Lucide icons only
+   (`Sparkles, Calendar, TrendingUp, TrendingDown, Minus,
+   CheckCircle2, XCircle, Download, RefreshCw, X, Loader2,
+   AlertTriangle`).
+
+**Type check:** `npx tsc --noEmit` → 0 errors across the whole
+codebase (both new files clean).
+
+**Design decision — the 9-engine list.** The brief lists 9 LLMs
+but writes "Gemini" twice. Duplicating Gemini in a 9-card grid
+would be a UI bug, so the canonical list is the 8 distinct engines
+from `src/lib/constants.ts → AI_ENGINES_FULL` + **GLM** (the
+in-house model — see `src/lib/ai/glm-prompts.ts` and the LLM
+router). This gives 9 unique cards. Any platform string in
+`AIVisibility.platform` that isn't in the canonical 9 is appended
+to the end so we never hide data.
+
+**Dashboard files NOT modified.** `AiVisibilityReportGenerator` is
+unwired — the parent console page needs to import it and add a
+trigger button (same pattern as BriefingGenerator's trigger).
+
+**Next actions (out of scope, for suivi):**
+- Wire `AiVisibilityReportGenerator` into the console page: 1
+  import + 1 `useState` + 1 trigger button. Suggest a
+  "Visibilité IA" button with the `Sparkles` icon next to
+  Briefing Matinal.
+- For PDF fidelity, port the report to `@react-pdf/renderer` via
+  the existing `/api/console/reports/[id]/pdf` pipeline — currently
+  uses `window.print()` which works but isn't branded like the
+  BrandedPDF reports.
+- When real `AIVisibility` probes are populated for all 9 engines
+  (the probe-ai pipeline currently seeds ~4), end-to-end verify
+  the trend calc against an actual month-over-month transition.
+- Consider exposing the per-engine `responseExcerpt` field
+  (`AIVisibility.responseExcerpt`, 240 chars) in a hover/expand
+  affordance on each card — currently the API selects only the
+  fields listed in the mission spec to keep the payload lean.
+
+---
+
+## [SKILL-12-REG-CALENDAR] AURA — Regulatory Calendar (popup)
+
+**Task:** Build Skill 12 — monthly calendar view with regulatory
+deadlines marked, matching BriefingGenerator's popup pattern.
+
+**Files created (2):**
+
+1. `src/app/api/console/reg-calendar/route.ts`
+   - POST handler, NextAuth session required (401 if missing).
+   - Returns upcoming deadlines for 5 regulators: CNDP, AMMC, BAM,
+     ESG, GDPR. Each carries: `{ id, date (YYYY-MM-DD), regulator,
+     title, status, requirement, documents[], team }`.
+   - Status computed relative to today: `dépassé` (offset <0),
+     `échéance` (offset 0), `à venir` (offset >0).
+   - Data source decision: the existing
+     `/api/console/regulatory-feed` endpoint serves AMMC/BAM/BVC
+     *publications* (past items already published by the
+     regulator). Forward-looking *deadline obligations* are a
+     different concept with no dedicated Prisma model. Per mission
+     guidance ("otherwise seed with realistic deadlines"), the
+     route seeds 16 realistic deadlines anchored on the current
+     local date at 00:00, with offsets spanning -8..+33 days so
+     the calendar always has content in previous/current/next
+     month. Deterministic per day (stable across re-fetches).
+   - Optional body `{ month: "YYYY-MM" }` is accepted as a focus
+     hint and echoed back as `focusMonth`; deadlines are NOT
+     filtered by it (the UI filters client-side so month
+     navigation is instant without re-fetch).
+   - Response shape: `{ focusMonth, deadlines, generatedAt,
+     source: "seed", regulators: ["CNDP","AMMC","BAM","ESG","GDPR"] }`.
+   - `logInfo` on success, `logError` on failure. `dynamic =
+     "force-dynamic"`, `runtime = "nodejs"`, `revalidate = 0`.
+
+2. `src/app/atelier/console/components/RegCalendarGenerator.tsx`
+   - `"use client"` popup overlay, fixed inset 0, sage-tinted
+     backdrop blur, motion fade-in (scale 0.96 → 1).
+   - Header bar: CalendarDays icon + "Calendrier réglementaire"
+     title + generating indicator + PDF button + close X.
+   - 2-column body (grid 1.6fr / 1fr):
+     * LEFT — calendar card:
+       - Month navigation row above grid: prev/next chevrons,
+         "Aujourd'hui" jump button, current month label (Space
+         Mono eyebrow + Inter 24px h2).
+       - Weekday header (Lun..Dim, French Monday-first).
+       - 42-cell grid (6 weeks × 7 days), each cell: date number
+         in a Space Mono badge, today indicator = sage filled
+         circle with white number, deadline dots (6×6 colored
+         circles, max 4 visible + "+N" overflow), selected date =
+         sage-bg + sage-border highlight, out-of-month days
+         rendered faint grey.
+       - Legend row at bottom: 5 regulator colors with labels.
+     * RIGHT — sidebar (stacked):
+       - "3 PROCHAINES ÉCHÉANCES" panel: filters deadlines by
+         `date >= today`, sorts asc, takes 3. Each row shows
+         long date, regulator badge (tinted bg + colored text),
+         title, and urgency line ("Échéance aujourd'hui" /
+         "Dans N jours") with color shift (amber today, sage ≤7d,
+         muted >7d). Clicking a row jumps the calendar to that
+         date and selects it.
+       - "DÉTAILS DU JOUR" panel: full details for the selected
+         date — regulator badge, status badge (CircleDot icon +
+         colored label: à venir=sage, échéance=amber, dépassé=
+         muted), title, requirement (FileText icon), documents
+         needed (chip list), team (Users icon). Empty state:
+         "Aucune échéance réglementaire pour cette date."
+   - Section-by-section reveal: same `visibleSections` Set +
+     setTimeout pattern as BriefingGenerator. 6 sections stagger
+     at 200/350/550/750/950/1150 ms (monthNav, calendar,
+     nextThree, dayDetails, actions). `generating` flips to false
+     after the last section.
+   - Actions row: "Exporter PDF" (charcoal solid, window.print())
+     + "Rafraîchir" (outline, RefreshCw icon, re-fetches).
+   - Print CSS: hides body *, shows only `#reg-calendar-document`
+     and its children, positions absolute top-left, full width,
+     padding 32px, overflow visible — same trick as
+     BriefingGenerator so window.print() yields a clean PDF of
+     the calendar + sidebar.
+   - Design tokens: White #FFFFFF, sage #4A7B5F (SAGE_BG 8% alpha,
+     SAGE_BORDER 30% alpha), charcoal #0A0A0A, Space Mono headers/
+     eyebrows, Inter body. Regulator colors: CNDP=sage #4A7B5F,
+     AMMC=slate #64748B, BAM=amber #F59E0B, ESG=green #10B981,
+     GDPR=red #EF4444. NO emojis. Lucide icons throughout
+     (CalendarDays, ChevronLeft/Right, Clock, FileText, Users,
+     ListChecks, CircleDot, RefreshCw, Download, Loader2,
+     AlertTriangle, X). French only (incl. `Aujourd'hui`
+     apostrophe escaped as `&apos;` for JSX).
+
+**TypeScript check:** `NODE_OPTIONS="--max-old-space-size=4096"
+bunx tsc --noEmit --pretty false` → **EXIT_CODE=0**. Zero errors
+in either new file.
+
+**Dashboard files NOT modified.** RegCalendarGenerator is
+unwired — the parent console page needs to import it and add a
+trigger button (same pattern as BriefingGenerator's trigger).
+
+**Next actions (out of scope, for suivi):**
+- Wire RegCalendarGenerator into the console page: 1 import +
+  1 useState + 1 trigger button (suggest a "Calendrier
+  réglementaire" button next to Briefing Matinal, with the
+  CalendarDays icon).
+- Replace the seed dataset with a real `regulatoryDeadline`
+  Prisma model once the compliance team formalises its deadline
+  inventory. Suggested schema: `{ id, regulator, title,
+  dueDate, requirement, documents JSON, team, source,
+  createdAt, updatedAt }` with a daily cron to advance status
+  as dates pass.
+- Consider an ICS export (in addition to PDF) so users can sync
+  deadlines with their Outlook / Google Calendar.
+- If a real regulatory feed (AMMC/BAM/BVC) starts publishing
+  forward-looking calendars, add a merge step in the route that
+  pulls `publishedAt >= today` rows from `Article` and folds
+  them into the seed set (status would always be "à venir").
+
+---
+
+## SKILL-11-SENTIMENT-TIMELINE — AURA
+
+**Files created (2 only, dashboards untouched):**
+1. `src/app/api/console/sentiment-timeline/route.ts` — POST,
+   `force-dynamic`. Auth via `getServerSession` + `isAccountTypeAllowed`
+   (essential|pro|enterprise|agency) + `requireUserCompany()` +
+   `demoFilterFromSession` (defence in depth, same pattern as
+   `sentiment-trend`). Body `{ mode?: "24h" | "7j" }` (default `24h`).
+   Returns 24 hourly buckets (or 7 daily buckets in 7j mode), each
+   with `hour`, `label` ("14h" / "Lun"), `articleCount`,
+   `positivePct`, `neutralPct`, `negativePct` (rounded to 0.1%),
+   `dominantSentiment` (positive|neutral|negative|none — tie-break
+   `negative > positive > neutral` to surface risk), `isAnomaly`,
+   `isPeak`, `isTrough`, `isCurrent`. Summary block carries
+   `totalArticles`, `avgSentimentScore` (-1..+1, rounded to 0.001),
+   `dominantSentiment`, `trend` (rising|falling|stable, 10% delta
+   between first and last third of buckets), `peak`, `trough` and
+   `anomalies` (z-score > 2 on article count, spikes only — quiet
+   hours are normal noise, not signal).
+
+2. `src/app/atelier/console/components/SentimentTimelineGenerator.tsx`
+   — `"use client"` popup, same pattern as `BriefingGenerator`.
+   Header `Timeline de Sentiment — 24h`. Inline SVG bar chart (640×200
+   viewBox, responsive): 24 bars (or 7 in 7j), coloured by dominant
+   sentiment (sage / gray / red / light-gray for empty), height =
+   volume scaled to max. Current hour wrapped in a pulsing sage
+   outline (CSS `stl-pulse` keyframes). Peak marked with a sage
+   triangle above the bar; trough marked with a charcoal inverted
+   triangle below. Anomaly buckets get a red dot above the bar
+   (with a white halo). Hover any bar for an inline detail strip
+   showing hour, count, and the three sentiment percentages. 24h/7j
+   toggle re-POSTs and re-reveals sections. Summary stats: 3 StatCards
+   (Articles total, Sentiment moyen with tone colour, Tendance with
+   TrendingUp/Down/Minus icon). Annotations block: peak + trough +
+   each anomaly, each rendered as a tone-coloured row. Export PDF via
+   `window.print()` with a `@media print` rule that isolates
+   `#sentiment-timeline-document`. Sections stagger at 200/400/600/
+   800/1000ms via `setTimeout` + `AnimatePresence` + `motion.div`.
+
+**Design tokens honoured:** `#4A7B5F` sage, `#0A0A0A` charcoal,
+`#FFFFFF` white, Space Mono for headers/labels/numbers, Inter for
+body, Lucide icons only (`Activity`, `TrendingUp`, `TrendingDown`,
+`Minus`, `Calendar`, `Clock`, `AlertCircle`, `Download`, `RefreshCw`,
+`X`, `Loader2`, `AlertTriangle`), zero emojis, all UI strings French.
+
+**tsc:** 0 errors (verified `npx tsc --noEmit` exit 0 on the full
+project — the only error that briefly appeared was in
+`RiskHeatmapGenerator.tsx`, a pre-existing untracked file from Skill 10
+that another agent's session is resolving; my two files are clean).
+
+**Dashboard files NOT modified.** `SentimentTimelineGenerator` is
+unwired — same follow-up pattern as `DocumentWriterGenerator` and
+`RiskHeatmapGenerator`: the parent console page needs 1 import + 1
+useState + 1 trigger button (suggest an `Activity`-iconned
+"Timeline de sentiment" button next to the other generators).
+
+**Next actions (out of scope, for suivi):**
+- Wire `SentimentTimelineGenerator` into the console page.
+- Consider extending the anomaly detector to flag sentiment
+  distribution anomalies (e.g. a sudden 80% negative hour) in
+  addition to volume anomalies — currently only volume z-scores
+  trigger the red dot.
+- The 7j mode uses day-of-week labels (Dim/Lun/.../Sam) and aligns
+  to local midnight; if the deployment crosses timezones, consider
+  pinning to the company's registered timezone (currently uses
+  server local time, which is fine for a Morocco-only deployment).
+- For PDF fidelity, port to `@react-pdf/renderer` via the existing
+  `/api/console/reports/[id]/pdf` pipeline — the current
+  `window.print()` works but is not branded like the BrandedPDF
+  reports.
+
+---
+
+## SKILL-10-RISK-HEATMAP — Matrice des Risques (5×5)
+**Agent:** AURA · **Status:** ✅ COMPLETE · **tsc:** 0 errors · **eslint:** 0 errors
+
+### Files created (2, dashboards NOT modified)
+1. `src/app/api/console/risk-heatmap/route.ts` — POST, auth-gated
+   via `requireUserCompany` + `demoFilter`. Returns 5 risk rows
+   (Géopolitique, Réglementaire, Réputationnel, Opérationnel, ESG)
+   with `{ id, category, label, probability (1-5), impact (1-5),
+   owner, deadline (ISO), mitigation, trajectory, lastEvent (ISO),
+   articleCount, severity }` + a summary block (total/critical/high/
+   medium/low counts + avgScore on 0-25 scale).
+2. `src/app/atelier/console/components/RiskHeatmapGenerator.tsx` —
+   `'use client'` popup with 5×5 CSS grid (Probability × Impact),
+   risk dots overlaid at [probability, impact], hover tooltip, click
+   → expand to detail panel, summary strip, legend, Export PDF
+   (window.print + isolated print CSS), Copy, Régénérer.
+
+### Real-data sourcing
+- `prisma.riskAssessment.findMany` (last 30 days, demo-filtered) —
+  free-text `category` is folded into the 5 buckets via a keyword
+  map (e.g. `"Environmental"`, `"ESG"`, `"Social"` → ESG bucket).
+- `prisma.article.findMany` (sentimentLabel=negative, last 30 days)
+  as a corroborating signal — keyword scan on title+summary bumps
+  probability/impact and influences trajectory (≥5 hits = rising).
+- `prisma.reputationScore.findFirst` is fetched for telemetry only
+  (logged in `logInfo` metadata) — not used in the response.
+
+### Probability / Impact derivation
+- Probability: `frequency` (0-1) → 1-5, +0..2 from article hits.
+  Fallback to `riskScore` (0-100) → 1-5, else bucket default.
+- Impact: `impactSeverity` (0-1) → 1-5; fallback to `riskScore`;
+  else bucket default (+1 if ≥8 corroborating articles).
+- Severity from `probability × impact` (1-25): ≥20 critical, ≥12
+  high, ≥6 medium, else low. Drives deadline (7/14/30/90 days).
+
+### Per-bucket defaults (used when real data is sparse)
+- Géopolitique: P=2 I=4 — Direction Stratégie & Affaires Institutionnelles
+- Réglementaire: P=3 I=3 — Direction Juridique & Conformité
+- Réputationnel: P=3 I=4 — Direction Communication & Dircom
+- Opérationnel:  P=3 I=3 — Direction des Opérations & DAF
+- ESG:           P=2 I=3 — Direction RSE & Développement Durable
+
+### Popup UX (BriefingGenerator pattern)
+- Fixed overlay (`position:fixed; inset:0; z-index:200`), charcoal
+  scrim + `blur(4px)`, motion.div scale entrance (0.96 → 1, 300ms).
+- 6 sections fade-in one-by-one (200ms cadence): header → summary
+  → matrix → legend → details → actions. Each wrapped in
+  `<AnimatePresence>` with `opacity:0, y:10 → opacity:1, y:0`.
+- 5×5 CSS grid: `grid-template-columns: repeat(5, 1fr)`,
+  `aspect-ratio: 5/5`. Cells coloured by `severityForScore(p*i)`:
+  sage tint (low), amber tint (medium), amber strong (high),
+  red strong (critical). Each cell shows its score (1-25) in
+  Space Mono muted text.
+- Risk dots: absolutely positioned at the centre of their cell via
+  `left: calc((p-0.5)/5 * 100%)` / `top: calc((5.5-i)/5 * 100%)`.
+  When multiple risks land on the same cell, they're offset via a
+  7-position clockwise fan (`groupRisksByCell` helper) so dots
+  don't perfectly overlap. Lucide icon per category (Globe2, Scale,
+  Newspaper, Factory, Leaf) sized 15/18px, ring colour = severity.
+- Hover dot → charcoal tooltip with category + severity tag +
+  P/I/score + label + "Cliquer pour la fiche détaillée" hint.
+  Tooltip flips above/left when near the right/bottom edge.
+- Click dot → `RiskDetailCard` expand below the matrix (auto-
+  selects the highest-severity risk on first paint). Card shows:
+  header (icon, category, severity chip, trajectory), AxisBar
+  mini-bars for Probability + Impact, MetaRow grid (Responsable,
+  Échéance, Dernier signal, Articles corrélés), mitigation block.
+- Summary strip: 4 stat cards — Risques totaux, Critiques (red if
+  >0), Élevés (amber if >0), Score moyen (/25, sage).
+- Legend: 4 chips — Faible (1-5), Modéré (6-11), Élevé (12-19),
+  Critique (20-25).
+- Print CSS: `#risk-heatmap-document` is isolated, buttons hidden,
+  background forced to white. Same pattern as BriefingGenerator +
+  StakeholderMapGenerator.
+
+### Lint note: react-hooks/static-components
+ESLint flagged the `const Icon = iconForCategory(...)` pattern
+(capitalized variable assigned a Lucide component inside a
+function body triggers the new static-components rule). Fixed by
+declaring **stable** components at module scope:
+- `<CategoryIcon category={...} size={...} color={...} />` —
+  switches on category, returns the matching Lucide icon.
+- `<TrajectoryIconComponent trajectory={...} size={...} />` —
+  same pattern for rising/stable/falling.
+- `MetaRow` now accepts `icon: React.ReactNode` (already-rendered
+  JSX) instead of `icon: typeof UserSquare2`, so callers pass
+  `<UserSquare2 size={11} ... />` directly. No per-render
+  component creation anywhere in the file.
+
+### Verification
+- `npx tsc --noEmit` → EXIT 0 (clean across whole project).
+- `npx eslint src/app/api/console/risk-heatmap/route.ts
+   src/app/atelier/console/components/RiskHeatmapGenerator.tsx`
+  → EXIT 0 (0 problems).
+- `git status --porcelain` confirms only 2 new files in this
+  skill's scope (other ?? entries are from parallel skill builds).
+- No emoji characters present (Python regex scan: 0 hits in both
+  files). French throughout (UI labels, mitigation templates,
+  severity labels, dates via `toLocaleDateString("fr-FR", ...)`).
+- Lucide icons only (ShieldAlert, Scale, Globe2, Factory, Leaf,
+  Newspaper, TrendingUp, TrendingDown, Minus, UserSquare2,
+  CalendarClock, FileText, ChevronRight, X, Download, Loader2,
+  AlertTriangle, RefreshCw, Copy). No emojis.
+
+### Next actions (out of scope, for suivi)
+- Wire `RiskHeatmapGenerator` into the console page. 1 import +
+  1 useState + 1 trigger button (suggest a "Matrice des risques"
+  button next to Briefing Matinal, with the `ShieldAlert` icon).
+- Consider surfacing `meta.windowDays` as a date-range picker so
+  the analyst can switch between 7/30/90-day windows (currently
+  hardcoded to 30 in the route).
+- The `mitigation` text is rule-based per bucket. If `ZAI_API_KEY`
+  is provisioned, an LLM pass could personalise it from the actual
+  negative articles (same pattern as DocumentWriterGenerator's
+  GLM-4 enhancement path).
+- For PDF fidelity, port the document to `@react-pdf/renderer` via
+  the existing `/api/console/reports/[id]/pdf` pipeline — currently
+  uses `window.print()` which works but isn't branded like the
+  BrandedPDF reports.

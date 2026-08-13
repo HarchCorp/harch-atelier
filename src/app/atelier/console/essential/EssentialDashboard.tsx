@@ -8,6 +8,10 @@ import { DocumentWriterGenerator } from "../components/DocumentWriterGenerator";
 import { PitchDeckGenerator } from "../components/PitchDeckGenerator";
 import { BoycottAlertGenerator } from "../components/BoycottAlertGenerator";
 import { StakeholderMapGenerator } from "../components/StakeholderMapGenerator";
+import { RiskHeatmapGenerator } from "../components/RiskHeatmapGenerator";
+import { SentimentTimelineGenerator } from "../components/SentimentTimelineGenerator";
+import { RegCalendarGenerator } from "../components/RegCalendarGenerator";
+import { AiVisibilityReportGenerator } from "../components/AiVisibilityReportGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -152,6 +156,8 @@ import {
   PenSquare,
   Presentation,
   Network,
+  ShieldAlert,
+  Activity,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1853,6 +1859,10 @@ function Header({
   onOpenPitch,
   onOpenBoycott,
   onOpenStakeholder,
+  onOpenRiskHeatmap,
+  onOpenSentimentTimeline,
+  onOpenRegCalendar,
+  onOpenAiVisibility,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1878,6 +1888,10 @@ function Header({
   onOpenPitch: () => void;
   onOpenBoycott: () => void;
   onOpenStakeholder: () => void;
+  onOpenRiskHeatmap: () => void;
+  onOpenSentimentTimeline: () => void;
+  onOpenRegCalendar: () => void;
+  onOpenAiVisibility: () => void;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -2088,6 +2102,16 @@ function Header({
             <TooltipContent>Parties prenantes</TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+
+        {/* SKILL 10: Risk Heatmap */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild><button type="button" onClick={onOpenRiskHeatmap} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Matrice des risques"><ShieldAlert size={16} style={{ color: "#71717A" }} /></button></TooltipTrigger><TooltipContent>Matrice des risques</TooltipContent></Tooltip></TooltipProvider>
+        {/* SKILL 11: Sentiment Timeline */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild><button type="button" onClick={onOpenSentimentTimeline} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Timeline sentiment"><Activity size={16} style={{ color: "#71717A" }} /></button></TooltipTrigger><TooltipContent>Timeline sentiment</TooltipContent></Tooltip></TooltipProvider>
+        {/* SKILL 12: Regulatory Calendar */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild><button type="button" onClick={onOpenRegCalendar} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Calendrier réglementaire"><CalendarDays size={16} style={{ color: "#71717A" }} /></button></TooltipTrigger><TooltipContent>Calendrier réglementaire</TooltipContent></Tooltip></TooltipProvider>
+        {/* SKILL 13: AI Visibility */}
+        <TooltipProvider><Tooltip><TooltipTrigger asChild><button type="button" onClick={onOpenAiVisibility} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Visibilité IA"><Sparkles size={16} style={{ color: "#71717A" }} /></button></TooltipTrigger><TooltipContent>Visibilité IA</TooltipContent></Tooltip></TooltipProvider>
 
         {/* ENV-ESSENTIAL — Quota usage widget */}
         <QuotaUsageWidget
@@ -11078,6 +11102,10 @@ export default function EssentialDashboard() {
   const [pitchOpen, setPitchOpen] = useState(false);
   const [boycottOpen, setBoycottOpen] = useState(false);
   const [stakeholderOpen, setStakeholderOpen] = useState(false);
+  const [riskHeatmapOpen, setRiskHeatmapOpen] = useState(false);
+  const [sentimentTimelineOpen, setSentimentTimelineOpen] = useState(false);
+  const [regCalendarOpen, setRegCalendarOpen] = useState(false);
+  const [aiVisibilityOpen, setAiVisibilityOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
@@ -11700,6 +11728,10 @@ export default function EssentialDashboard() {
           onOpenPitch={() => setPitchOpen(true)}
           onOpenBoycott={() => setBoycottOpen(true)}
           onOpenStakeholder={() => setStakeholderOpen(true)}
+          onOpenRiskHeatmap={() => setRiskHeatmapOpen(true)}
+          onOpenSentimentTimeline={() => setSentimentTimelineOpen(true)}
+          onOpenRegCalendar={() => setRegCalendarOpen(true)}
+          onOpenAiVisibility={() => setAiVisibilityOpen(true)}
         />
 
         <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
@@ -12002,6 +12034,10 @@ export default function EssentialDashboard() {
       {pitchOpen && <PitchDeckGenerator onClose={() => setPitchOpen(false)} />}
       {boycottOpen && <BoycottAlertGenerator onClose={() => setBoycottOpen(false)} />}
       {stakeholderOpen && <StakeholderMapGenerator onClose={() => setStakeholderOpen(false)} />}
+      {riskHeatmapOpen && <RiskHeatmapGenerator onClose={() => setRiskHeatmapOpen(false)} />}
+      {sentimentTimelineOpen && <SentimentTimelineGenerator onClose={() => setSentimentTimelineOpen(false)} />}
+      {regCalendarOpen && <RegCalendarGenerator onClose={() => setRegCalendarOpen(false)} />}
+      {aiVisibilityOpen && <AiVisibilityReportGenerator onClose={() => setAiVisibilityOpen(false)} />}
     </div>
   );
 }
