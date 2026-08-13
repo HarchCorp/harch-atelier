@@ -10922,3 +10922,144 @@ Stage Summary:
   communication templates are designed to be copy-pasted into
   Outlook / WhatsApp Business, so a Word doc with editable
   sections could be more useful than a static PDF for the Dircom.
+
+---
+## SKILL-21-WHATSAPP — Aperçu Alerte WhatsApp (NEXUS)
+
+Task: Skill 21 — WhatsApp Alert Preview. Phone mockup (320x600, sage bezel,
+notch) showing 3 WhatsApp chat bubbles (crisis / daily / weekly), config
+panel (toggles + phone input + Tester button), alert type cards, PDF export.
+
+Files created (2 — no dashboards touched):
+- src/app/api/console/whatsapp-preview/route.ts
+- src/app/atelier/console/components/WhatsappPreviewGenerator.tsx
+
+API contract (POST /api/console/whatsapp-preview):
+- Auth required (getServerSession + authOptions).
+- Body (optional): { phoneNumber?, alertTypes?: {crisis?, daily?, weekly?} }
+- Response: { alerts: [{type, message, timestamp, severity}],
+              config: {phoneNumber, alertTypes: {crisis, daily, weekly}, enabled},
+              source: "neon"|"demo", companyName }
+- Demo users (isDemo || isDemoEmail || !companyId) → deterministic demo payload.
+- Neon path: parallel fetch (company, reputationScore, articles24h, articles7d,
+  negativeCount). Crisis triggered when negativeCount >= 5 (severity critical
+  at >=10, warning otherwise). Calm info card when below threshold so preview
+  always demonstrates format. Daily/weekly always present when toggled on.
+- Message builders: French, plain-text, NO emojis, monospace-friendly (each
+  alert ends with "Console: /atelier/console" or "— HarchIQ" signature).
+
+Component (WhatsappPreviewGenerator.tsx):
+- 'use client'. Same popup pattern as BriefingGenerator: motion.div backdrop
+  + scale 0.96→1, header bar (MessageSquare icon, Live/Démo badge, PDF + X),
+  scrollable body, footer with Exporter PDF + Régénérer.
+- 2-column layout (320px phone | flex config+cards):
+  * PhoneMockup: 320x600, sage bezel (border-radius 36, padding 12), notch
+    (90x18 charcoal pill, absolute top-center), WhatsApp chat header (sage
+    bg, "HarchIQ" + "en ligne" in Space Mono), chat area with subtle sage
+    radial-dot bg pattern, 3 ChatBubble components (left-aligned, top-left
+    radius 2, severity-colored left border 3px, type+severity label, body
+    in Space Mono 11.5px, timestamp + double-check), decorative input bar.
+  * Config panel: phone input (with Phone icon, Space Mono monospace),
+    3 ToggleRow components (crisis/daily/weekly — sage toggle 32x18, white
+    knob 14px slides 16px when on), "Tester l'envoi" button (sage bg, shows
+    spinner→Envoyé/Échec with 3s reset).
+  * Alert type cards: 3 cards with icon tile, label, count badge ("N actifs"),
+    description. Dimmed (opacity 0.55) when disabled.
+- Reveal animation: 5 steps (phone→bubbles→config→cards→actions) staggered
+  150-900ms via Set<string> + setTimeout.
+- Test button: re-POSTs with current local config, updates phone mockup,
+  shows transient status (idle→sent/failed→idle after 3s).
+- Print CSS: hides everything except #whatsapp-preview-document, hides
+  header bar. window.print() for PDF export.
+
+Design conformance:
+- Palette: white/sage/charcoal. SAGE=#4A7B5F, CHARCOAL=#0A0A0A, BORDER=#F0F0F0.
+- Fonts: Space Mono (labels, phone input, chat body, badges), Inter (body).
+- Icons: Lucide (MessageSquare, Phone, Send, Check, Bell, AlertOctagon,
+  Calendar, CalendarDays, Download, X, Loader2, AlertTriangle).
+- French throughout. NO emojis (replaced whatsapp-digest's emoji style with
+  plain text + colored severity stripe).
+- Same popup pattern as BriefingGenerator (motion + AnimatePresence + steps).
+
+tsc: 0 errors on the 2 new files. (1 pre-existing error in
+team-performance/route.ts line 335 — untracked file, out of scope,
+not touched.)
+
+Follow-ups (not blocking):
+- Wire "Tester" to a real Twilio/WhatsApp Business API sender — currently
+  re-fetches the preview payload without actually pushing to the phone.
+  The signature `— HarchIQ` is already in place; just need the sender.
+- Persist alertTypes + phoneNumber to a per-user Setting table so the
+  Dircom's config survives logout — currently local component state only.
+- Add a "Programmer" dropdown next to each toggle (07h00 / 08h00 / custom)
+  — daily/weekly timing is currently hardcoded in the message builders.
+- For PDF fidelity, port to @react-pdf/renderer so the phone mockup
+  renders pixel-perfect instead of relying on browser print CSS (works
+  but the chat bg dot pattern can rasterize unevenly on Chrome).
+- Consider a "Voir l'historique" link to the existing whatsapp-digest
+  audit log — currently the preview is stateless, no record of past sends.
+
+---
+Task ID: SKILL-19-AUDIT-LOG
+Agent: AURA
+Task: Skill 19 — Audit Log Timeline (filterable governance timeline)
+
+Work Log:
+- Read worklog tail (BriefingGenerator follow-ups) and the BriefingGenerator popup pattern (motion + AnimatePresence + SECTIONS stagger).
+- Audited AuditLog schema (prisma): id, userId?, action, resource, ipAddress?, userAgent?, result, metadata Json?, createdAt. No companyId column → same scoping pattern as /api/console/team-activity (resolve company userIds, filter by IN).
+- File 1 (API): src/app/api/console/audit-timeline/route.ts — POST, getServerSession auth, scopes to caller's companyId, fetches last 100 AuditLog entries desc, enriches each with userName from User table. Returns exact spec shape: { entries: [{ id, action, resource, userId, userName, result, ipAddress, timestamp, metadata }] }. Returns [] for users without companyId (super-admin uses SuperAdminAudit). force-dynamic, best-effort error log.
+- File 2 (UI): src/app/atelier/console/components/AuditTimelineGenerator.tsx — 'use client' popup, BriefingGenerator pattern (fixed overlay, scale entrance, SECTIONS = header/filters/timeline/actions with 200ms stagger). Vertical timeline: type icon dot on guide line (Lucide: LogIn / Edit3 / CheckCheck / FileDown / PlusCircle / UserX), user avatar initials circle (Space Mono), French action label, result dot (sage/amber/red), relative timestamp (il y a X s/min/h/j/sem), meta strip (ressource / ip / catégorie). Filter dropdown (Toutes + 6 catégories with live counts), search input (matches userName/action/label/resource/IP). Export CSV button (Blob download + fires /api/console/export-log for Loi 09-08 audit). Export PDF (window.print + print CSS isolating #audit-timeline-document). NO emojis — Lucide only.
+- 34 AuditLog action codes mapped to 6 governance categories (Connexions / Modifications / Approbations / Exports / Créations / Suppressions) + 34 French labels.
+- tsc verification: scoped tsconfig-skill19.json (deleted after verification) confirmed 0 errors on both files. Sanity check: injected `const _bad: number = "boom"` → tsc caught TS2322 → restored → 0 errors.
+
+Stage Summary:
+- 2 files created, 0 dashboards modified, 0 emojis, French only.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected.
+- AuditTimelineGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job (import { AuditTimelineGenerator } from "../components/AuditTimelineGenerator"; render {auditOpen && <AuditTimelineGenerator onClose={() => setAuditOpen(false)} />}).
+- Next: hook a "Journal d'Audit" button into EnterpriseDashboard / EssentialDashboard toolbar (same setBriefingOpen pattern).
+
+---
+Task ID: SKILL-20-TEAM-PERF
+Agent: AURA
+Task: Skill 20 — Team Performance Dashboard (per-member stats + comparison chart)
+
+Work Log:
+- Read worklog tail (SKILL-19-AUDIT-LOG entry) and the BriefingGenerator popup pattern (motion.div overlay + scale 0.96→1 + AnimatePresence SECTIONS stagger + print CSS isolation).
+- Audited schema: User (id, email, name, role, status, companyId, lastLoginAt, jobTitle) — confirmed team scoping = same companyId filter as /api/console/settings/users. Report model carries userId directly (groupBy friendly). HarchIQ questions are tracked via AuditLog action="harchiq_ask" (per src/lib/harchiq/quota.ts recordHarchIQQuestion, fire-and-forget write per successful /api/console/ask). No dedicated Question/Chat table.
+- File 1 (API): src/app/api/console/team-performance/route.ts — POST, getServerSession auth (401 if no session). Resolves caller → companyId. Empty companyId → well-formed empty payload (members: [], source: "empty") so the popup renders the "Aucun membre d'équipe" empty state. Super_admin/admin see all users but the team roster is restricted to their own companyId for scoring. 3 batch queries: (a) prisma.user.findMany for the team, (b) prisma.auditLog.findMany last 30d for all userIds (single round-trip), (c) prisma.report.groupBy by userId. Grouped in memory → questions count, median gap between consecutive audit timestamps (responseTime in minutes, null if <2 entries). Returns exact spec shape: { members: [{ id, name, email, role, status, questions, reports, lastLogin, responseTime, performanceScore, isTopPerformer }], meta: { companyName, generatedAt, totalMembers, totalQuestions, totalReports, source } }.
+- Performance score rubric (0-100, documented inline): questions ×2 (cap 35) + reports ×5 (cap 25) + login recency (24h=20, 7d=15, 30d=8, else 0) + responsiveness (median gap <60m=20, <4h=12, <24h=6, null=0). Top performer tagged server-side (highest score, ties broken by questions); badge suppressed when everyone is at 0.
+- File 2 (UI): src/app/atelier/console/components/TeamPerformanceGenerator.tsx — 'use client' popup, BriefingGenerator pattern (fixed overlay 920px wide, scale entrance, SECTIONS = summary/chart/sort/grid/actions with 200ms stagger). Sections: (a) title + meta (company name, generated date in fr-FR locale, member count); (b) summary band — 4 SummaryStat cards (Membres / Questions / Rapports / Top performeur — top performer card highlighted in sage bg); (c) horizontal bar chart — one BarRow per member, avatar initials mini (28px, sage for top, soft charcoal for others), name + "Top" pill, animated bar (motion.div width 0→score%, sage for top performer, charcoal for others, 60ms stagger), score number in Space Mono; (d) sort selector — 4 pill buttons (Score / Questions / Rapports / Réactivité) with active=charcoal bg, others=white/border, re-sorts both chart + grid via useMemo (responseTime sorts ascending with nulls last); (e) member cards grid — auto-fill minmax(260px, 1fr), each card has 40px avatar (initials, sage for top), name + role + suspended badge, "Top performeur" ribbon (sage bg) for the winner, score strip (/100 in Space Mono), 2x2 CardStat grid (Questions / Rapports / Dernière connexion / Réactivité). Empty state shows UserCircle2 icon + invite CTA. Footer: Exporter PDF (window.print) + Régénérer.
+- Formatters (French): formatResponseTime (null→"—", <60m→"Xm", <24h→"Xh", else→"Xj"), formatLastLogin (null→"Jamais", <24h→"Aujourd'hui", <48h→"Hier", <7d→"Il y a Xj", <30d→"Il y a Xj", else→"Il y a >30j"), formatGeneratedAt (fr-FR toLocaleDateString day/month/year/hour/minute), initialsOf (first letters of first 2 name parts, uppercased).
+- Design tokens (NON-NEGOTIABLE): WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, CHARCOAL_SOFT rgba(10,10,10,0.10), TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, AMBER #F59E0B (only for "Suspendu" status tag). Space Mono for monospace labels/scores/timestamps, Inter for body text. Lucide icons only (Users, MessageSquare, FileText, Clock, Award, TrendingUp, UserCircle2, Download, RefreshCw, X, Loader2, AlertTriangle). NO emojis anywhere.
+- tsc verification: `NODE_OPTIONS="--max-old-space-size=3072" npx tsc --noEmit` → EXIT_CODE=0 (0 errors project-wide, including the 2 new files). eslint on the 2 files → 0 issues. Initial run flagged TS18048 ("'current' is possibly 'undefined'") in the top-performer tie-break loop — refactored from `topId`+`members.find` lookup to a direct `topMember: TeamMember | null` accumulator (cleaner + faster, no inner find() per iteration).
+
+Stage Summary:
+- 2 files created (route.ts + TeamPerformanceGenerator.tsx), 0 dashboards modified, 0 emojis, French only, tsc 0 errors.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+- TeamPerformanceGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: import { TeamPerformanceGenerator } from "../components/TeamPerformanceGenerator"; render {teamPerfOpen && <TeamPerformanceGenerator onClose={() => setTeamPerfOpen(false)} />} alongside the existing BriefingGenerator/CrisisBriefingGenerator slots.
+- Next: hook a "Performance équipe" button into EnterpriseDashboard / EssentialDashboard / ProDashboard toolbar (same useState pattern as briefingOpen). Consider gating to company-admin / admin roles only since regular members probably shouldn't see peer scores — or surface a redacted "your score only" view for `role: "user"`.
+- Future enhancement: add a 7-day / 30-day / 90-day window selector (currently hardcoded to 30 days in the API). Could also add a sparkline of each member's daily question count if we add an indexed (userId, action, createdAt) compound query — today the median-gap computation walks the full 30d audit set per user which is fine for ≤200 members but would benefit from a SQL-side percentile if the team grows.
+
+---
+Task ID: SKILL-18-ESG
+Agent: AURA
+Task: Skill 18 — ESG Scorecard (3 piliers E/S/G × 4 sous-métriques, radar 3 axes, benchmark sectoriel, recommandation).
+
+Work Log:
+- Read worklog tail (SKILL-20-TEAM-PERF entry) and the BriefingGenerator popup pattern (motion.div overlay + scale 0.96→1 + AnimatePresence SECTIONS stagger + print CSS isolation of #briefing-document). Also audited RiskHeatmapGenerator (920px wide variant, SummaryStat grid, motion.button stagger) and stakeholder-map route.ts (requireUserCompany + demoFilter spread pattern, keywordWhere helper) for structural reference.
+- Audited schema: Article (title + content nullable, sentimentScore -1..+1, sourceType "media"|"regulatory"|"market"|"financial") → keyword search on title+content drives all 3 pillars. ArticleComment (sentimentScore -1..+1) → social proxy (voix client). ReputationScore.sentiment (0-100 nullable, /100 normalised to -1..1) → social smoothing. RiskAssessment(category ∈ {"Réglementaire","ESG"}, riskScore 0-100) → governance penalty. Article.sourceType="regulatory" → governance proxy (AMMC/BAM/BVC press releases).
+- File 1 (API): src/app/api/console/esg-scorecard/route.ts — POST, getServerSession auth (401 if no session), requireUserCompany (403 if no company). 24 parallel Promise.all queries: company + reputationScore + ENV/SOCIAL/GOV articles (current 30j + previous 30j for trend) + 12 sub-metric keyword queries (4 per pillar) + regulatory articles (current + previous) + ArticleComment + RiskAssessment. keywordWhere() helper returns `{ OR: Prisma.ArticleWhereInput[] }` with title+content contains-insensitive clauses — spread into every Article where alongside companyId, publishedAt, demoFilter. Returns exact spec shape: { pillars: [{ name, score, trend, subMetrics: [{ name, score, benchmark }] }], overallScore, benchmarkSector, recommendation, meta }.
+- Scoring rubric (0-100, documented inline): each pillar = blend of (a) sector benchmark fallback × (1 - volume_factor) + (b) sentimentScore converted -1..1 → 0..100 × volume_factor. Volume factor = min(1, articles/15) for E, min(1, (articles + comments)/20) for S, min(1, (articles + regulatory)/12) for G. Social mixes 3 signals (article sentiment + comments sentiment + reputationScore.sentiment/100). Governance mixes 2 article signals (gov keywords + regulatory sourceType) + inverted riskScore proxy, then applies a -3pts/risk penalty (capped -15) for active Réglementaire/ESG risks. Sub-metrics use scoreForArticles() — same blend but per-keyword-bundle, fallback = pillar benchmark. Trend = clamp(current - previous, -10, +10).
+- Sector benchmarks: 14-entry table (Banque 58/72/78, Télécoms 62/68/70, Mines 42/58/65, Énergie 40/60/68, Pharmaceutique 60/74/80, etc.) + global default 55/65/70. Lookup = exact key match → case-insensitive substring → fallback. The benchmark returned per sub-metric is the pillar benchmark (no per-sub sector table — keeps the API contract flat and the bar markers readable).
+- Recommendation generator (buildRecommendation): 4-tier rubric keyed on overallScore vs benchmark — ≥75 "solide" (capitalise, integrate to RSE report) / ≥benchmark "au-dessus moyenne" (reinforce weakest pillar) / ≥50 "sous moyenne" (COMEX note, quarterly roadmap) / <50 "fragile" (30-day external audit, board plan). Each tier identifies the weakest pillar (sorted ascending) and includes the diff vs sector.
+- File 2 (UI): src/app/atelier/console/components/EsgScorecardGenerator.tsx — 'use client' popup, BriefingGenerator pattern (fixed overlay 960px wide, scale 0.96→1 entrance, SECTIONS = header/summary/radar/pillars/recommend/actions with 200-250ms stagger). Sections: (a) en-tête (date + company name + sector); (b) summary band — 4 SummaryStat tiles (Score ESG global / Benchmark secteur / Écart vs secteur / Tendance moyenne) with colour-coded values (sage/charcoal/amber/red per palier); (c) RadarChart inline SVG 360×320 — 3 axes at -90°/30°/150° (E top, S bottom-right, G bottom-left), 4 reference triangles (25/50/75/100), score polygon (sage fill 22% alpha + 2px stroke) with white-bordered vertices, benchmark polygon (charcoal dashed 4,4 + 4% fill), axis labels (truncated to 4 chars + score) + central overallScore; legend column on the right with two LegendRow entries (filled sage = you, dashed charcoal = benchmark) + explanatory paragraph; (d) 3-column PillarCard grid — each card has icon tile (Leaf/Users/Scale in 28×28 sage-tinted square) + pillar name + CircularGauge (60×60 SVG, 24px radius, 5px stroke, strokeDasharray=2πr, strokeDashoffset=c×(1-score/100), rotated -90deg, score text centered) + trend row (TrendingUp/Down/Minus icon + pts + "30 derniers jours") + expandable toggle button (ChevronDown rotating -90deg when collapsed) wrapping 4 SubMetricBar rows; (e) SubMetricBar — name + score / benchmark (Space Mono), 8px grey track with coloured fill (colorForScore 4-tier) + 2px charcoal vertical benchmark marker (left:calc(bench% - 1px)) + diff line below ("+X pts vs benchmark" sage/red); (f) recommendation box (SAGE_BG + sage border + Target icon + Space Mono label); (g) footer actions — Exporter PDF (window.print) + Régénérer.
+- State management: useState<Record<EsgPillarName, boolean>> for expanded sub-metrics (default all true → 12 bars visible on first paint). Toggle flips one pillar at a time without affecting others. AnimatePresence height:0↔auto with 200ms transition for the collapse animation.
+- Design tokens (NON-NEGOTIABLE): WHITE #FFFFFF, SAGE #4A7B5F, SAGE_BG rgba(74,123,95,0.08), SAGE_BORDER rgba(74,123,95,0.25), CHARCOAL #0A0A0A, TEXT_BODY #525252, TEXT_MUTED #71717A, BORDER #F0F0F0, AMBER #F59E0B, RED #DC2626, POSITIVE #10B981. Space Mono for monospace labels/scores/percentages/dates, Inter for body. Lucide icons only (Leaf, Users, Scale, TrendingUp, TrendingDown, Minus, ChevronDown, Calendar, Target, Download, RefreshCw, X, Loader2, AlertTriangle). NO emojis anywhere.
+- tsc verification: `NODE_OPTIONS="--max-old-space-size=6144" npx tsc --noEmit --skipLibCheck` → EXIT_CODE=0 (0 errors project-wide including the 2 new files). Output filtered for "esg-scorecard|EsgScorecard" → empty (clean).
+
+Stage Summary:
+- 2 files created (route.ts 29KB + EsgScorecardGenerator.tsx 39KB), 0 dashboards modified, 0 emojis, French only, tsc 0 errors.
+- White/sage/charcoal palette + Space Mono + Inter + Lucide respected per spec.
+- EsgScorecardGenerator is NOT yet wired into any dashboard (per constraint "Do NOT modify dashboards") — integration is the next owner's job: import { EsgScorecardGenerator } from "../components/EsgScorecardGenerator"; render {esgOpen && <EsgScorecardGenerator onClose={() => setEsgOpen(false)} />} alongside the existing BriefingGenerator/CrisisBriefingGenerator slots.
+- Next: hook a "Tableau ESG" button into EnterpriseDashboard / ProDashboard toolbar (same useState pattern as briefingOpen). Consider gating to enterprise/pro plans only since ESG scoring is a strategic-tier feature. Could also wire the recommendation string into the existing ComexReportGenerator as a "Volet RSE" section.
+- Future enhancement: the current keyword lists are FR-only — adding EN/AR variants ("environment", "governance", "حوكمة", "بيئة") would catch more articles for multinational companies. The sector benchmark table is hand-curated from public 2023 RSE reports — could be replaced by a real sector-avg query (mean of ReputationScore.purposeScore across same-sector companies) once enough real customers have populated the table. Radar could also expose a 6-axis variant (12 sub-metrics as axes) for the power-user view.

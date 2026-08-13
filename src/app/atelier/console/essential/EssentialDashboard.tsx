@@ -16,6 +16,10 @@ import { SourceCredibilityGenerator } from "../components/SourceCredibilityGener
 import { CompetitorContentGenerator } from "../components/CompetitorContentGenerator";
 import { MediaReachGenerator } from "../components/MediaReachGenerator";
 import { CrisisPlaybookGenerator } from "../components/CrisisPlaybookGenerator";
+import { EsgScorecardGenerator } from "../components/EsgScorecardGenerator";
+import { AuditTimelineGenerator } from "../components/AuditTimelineGenerator";
+import { TeamPerformanceGenerator } from "../components/TeamPerformanceGenerator";
+import { WhatsappPreviewGenerator } from "../components/WhatsappPreviewGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -166,6 +170,8 @@ import {
   Calculator,
   BookMarked,
   MoreHorizontal,
+  Leaf,
+  History,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1875,6 +1881,10 @@ function Header({
   onOpenCompetitorContent,
   onOpenMediaReach,
   onOpenCrisisPlaybook,
+  onOpenEsg,
+  onOpenAudit,
+  onOpenTeamPerf,
+  onOpenWhatsapp,
   onToggleSkillsMenu,
   skillsMenuOpen,
 }: {
@@ -1910,6 +1920,10 @@ function Header({
   onOpenCompetitorContent: () => void;
   onOpenMediaReach: () => void;
   onOpenCrisisPlaybook: () => void;
+  onOpenEsg: () => void;
+  onOpenAudit: () => void;
+  onOpenTeamPerf: () => void;
+  onOpenWhatsapp: () => void;
   onToggleSkillsMenu: () => void;
   skillsMenuOpen: boolean;
 }) {
@@ -2151,7 +2165,11 @@ function Header({
               <button onClick={onOpenSourceCred} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><ShieldCheck size={14} style={{ color: "#4A7B5F" }} /> Crédibilité des sources</button>
               <button onClick={onOpenCompetitorContent} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Newspaper size={14} style={{ color: "#4A7B5F" }} /> Contenu concurrents</button>
               <button onClick={onOpenMediaReach} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Calculator size={14} style={{ color: "#4A7B5F" }} /> Portée média</button>
-              <button onClick={onOpenCrisisPlaybook} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><BookMarked size={14} style={{ color: "#4A7B5F" }} /> Playbook de crise</button>
+<button onClick={onOpenCrisisPlaybook} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><BookMarked size={14} style={{ color: "#4A7B5F" }} /> Playbook de crise</button>
+              <button onClick={onOpenEsg} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Leaf size={14} style={{ color: "#4A7B5F" }} /> Scorecard ESG</button>
+              <button onClick={onOpenAudit} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><History size={14} style={{ color: "#4A7B5F" }} /> Journal d'audit</button>
+              <button onClick={onOpenTeamPerf} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Users size={14} style={{ color: "#4A7B5F" }} /> Performance équipe</button>
+              <button onClick={onOpenWhatsapp} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><MessageSquare size={14} style={{ color: "#4A7B5F" }} /> Aperçu WhatsApp</button>
             </div>
           )}
         </div>
@@ -11153,6 +11171,10 @@ export default function EssentialDashboard() {
   const [competitorContentOpen, setCompetitorContentOpen] = useState(false);
   const [mediaReachOpen, setMediaReachOpen] = useState(false);
   const [crisisPlaybookOpen, setCrisisPlaybookOpen] = useState(false);
+  const [esgOpen, setEsgOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [teamPerfOpen, setTeamPerfOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [skillsMenuOpen, setSkillsMenuOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -11784,6 +11806,10 @@ export default function EssentialDashboard() {
           onOpenCompetitorContent={() => setCompetitorContentOpen(true)}
           onOpenMediaReach={() => setMediaReachOpen(true)}
           onOpenCrisisPlaybook={() => setCrisisPlaybookOpen(true)}
+          onOpenEsg={() => setEsgOpen(true)}
+          onOpenAudit={() => setAuditOpen(true)}
+          onOpenTeamPerf={() => setTeamPerfOpen(true)}
+          onOpenWhatsapp={() => setWhatsappOpen(true)}
           onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}
           skillsMenuOpen={skillsMenuOpen}
         />
@@ -12096,6 +12122,10 @@ export default function EssentialDashboard() {
       {competitorContentOpen && <CompetitorContentGenerator onClose={() => setCompetitorContentOpen(false)} />}
       {mediaReachOpen && <MediaReachGenerator onClose={() => setMediaReachOpen(false)} />}
       {crisisPlaybookOpen && <CrisisPlaybookGenerator onClose={() => setCrisisPlaybookOpen(false)} />}
+      {esgOpen && <EsgScorecardGenerator onClose={() => setEsgOpen(false)} />}
+      {auditOpen && <AuditTimelineGenerator onClose={() => setAuditOpen(false)} />}
+      {teamPerfOpen && <TeamPerformanceGenerator onClose={() => setTeamPerfOpen(false)} />}
+      {whatsappOpen && <WhatsappPreviewGenerator onClose={() => setWhatsappOpen(false)} />}
     </div>
   );
 }
