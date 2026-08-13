@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth.config";
 import { buildCompanyDossier } from "@/lib/harchiq/company-matching";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
