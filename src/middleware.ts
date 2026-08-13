@@ -79,6 +79,12 @@ const PRIVATE_APP_PREFIXES = [
   "/atelier/console",
   "/atelier/admin-x7k2m9",
   "/atelier/agency",
+  "/atelier/onboarding",
+  "/atelier/admin",
+  "/atelier/login",
+  "/atelier/access",
+  "/atelier/forgot-password",
+  "/atelier/reset-password",
 ];
 
 function withSecurityHeaders(res: NextResponse): NextResponse {
