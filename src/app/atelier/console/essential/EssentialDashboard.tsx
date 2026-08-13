@@ -1,5 +1,9 @@
 "use client";
 import { BriefingGenerator } from "../components/BriefingGenerator";
+import { CrisisBriefingGenerator } from "../components/CrisisBriefingGenerator";
+import { CompetitorMatrixGenerator } from "../components/CompetitorMatrixGenerator";
+import { HespressDigestGenerator } from "../components/HespressDigestGenerator";
+import { ComexReportGenerator } from "../components/ComexReportGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -139,6 +143,8 @@ import {
   X,
   XCircle,
   Zap,
+  Grid3x3,
+  FileBarChart,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1832,6 +1838,10 @@ function Header({
   onClickNotif,
   onOpenCmd,
   onOpenBriefing,
+  onOpenCrisis,
+  onOpenMatrix,
+  onOpenHespress,
+  onOpenComex,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1849,6 +1859,10 @@ function Header({
   /** R2-ESSENTIEL-B — open the Cmd+K command palette */
   onOpenCmd: () => void;
   onOpenBriefing: () => void;
+  onOpenCrisis: () => void;
+  onOpenMatrix: () => void;
+  onOpenHespress: () => void;
+  onOpenComex: () => void;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -1975,6 +1989,47 @@ function Header({
               </button>
             </TooltipTrigger>
             <TooltipContent>Briefing matinal</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+
+        {/* SKILL 2: Crisis Briefing */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenCrisis} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Briefing de crise"><AlertTriangle size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Briefing de crise</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* SKILL 3: Competitor Matrix */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenMatrix} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Matrice concurrentielle"><Grid3x3 size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Matrice concurrentielle</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* SKILL 4: Hespress Digest */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenHespress} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Pulse Hespress"><MessageSquare size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Pulse Hespress</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* SKILL 5: COMEX Report */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenComex} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Rapport COMEX"><FileBarChart size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Rapport COMEX</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
@@ -10959,6 +11014,10 @@ export default function EssentialDashboard() {
   const [hydrated, setHydrated] = useState(false);
   const [notifExpanded, setNotifExpanded] = useState(false);
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [crisisOpen, setCrisisOpen] = useState(false);
+  const [matrixOpen, setMatrixOpen] = useState(false);
+  const [hespressOpen, setHespressOpen] = useState(false);
+  const [comexOpen, setComexOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
@@ -11573,6 +11632,10 @@ export default function EssentialDashboard() {
           onClickNotif={handleClickNotif}
           onOpenCmd={() => setCmdOpen(true)}
           onOpenBriefing={() => setBriefingOpen(true)}
+          onOpenCrisis={() => setCrisisOpen(true)}
+          onOpenMatrix={() => setMatrixOpen(true)}
+          onOpenHespress={() => setHespressOpen(true)}
+          onOpenComex={() => setComexOpen(true)}
         />
 
         <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
@@ -11867,6 +11930,10 @@ export default function EssentialDashboard() {
 
       {/* SKILL 1: Briefing Matinal — live document popup */}
       {briefingOpen && <BriefingGenerator onClose={() => setBriefingOpen(false)} />}
+      {crisisOpen && <CrisisBriefingGenerator onClose={() => setCrisisOpen(false)} />}
+      {matrixOpen && <CompetitorMatrixGenerator onClose={() => setMatrixOpen(false)} />}
+      {hespressOpen && <HespressDigestGenerator onClose={() => setHespressOpen(false)} />}
+      {comexOpen && <ComexReportGenerator onClose={() => setComexOpen(false)} />}
     </div>
   );
 }
