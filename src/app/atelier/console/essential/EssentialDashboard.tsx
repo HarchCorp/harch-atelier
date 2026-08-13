@@ -12,6 +12,10 @@ import { RiskHeatmapGenerator } from "../components/RiskHeatmapGenerator";
 import { SentimentTimelineGenerator } from "../components/SentimentTimelineGenerator";
 import { RegCalendarGenerator } from "../components/RegCalendarGenerator";
 import { AiVisibilityReportGenerator } from "../components/AiVisibilityReportGenerator";
+import { SourceCredibilityGenerator } from "../components/SourceCredibilityGenerator";
+import { CompetitorContentGenerator } from "../components/CompetitorContentGenerator";
+import { MediaReachGenerator } from "../components/MediaReachGenerator";
+import { CrisisPlaybookGenerator } from "../components/CrisisPlaybookGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -158,6 +162,10 @@ import {
   Network,
   ShieldAlert,
   Activity,
+  ShieldCheck,
+  Calculator,
+  BookMarked,
+  MoreHorizontal,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1863,6 +1871,12 @@ function Header({
   onOpenSentimentTimeline,
   onOpenRegCalendar,
   onOpenAiVisibility,
+  onOpenSourceCred,
+  onOpenCompetitorContent,
+  onOpenMediaReach,
+  onOpenCrisisPlaybook,
+  onToggleSkillsMenu,
+  skillsMenuOpen,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1892,6 +1906,12 @@ function Header({
   onOpenSentimentTimeline: () => void;
   onOpenRegCalendar: () => void;
   onOpenAiVisibility: () => void;
+  onOpenSourceCred: () => void;
+  onOpenCompetitorContent: () => void;
+  onOpenMediaReach: () => void;
+  onOpenCrisisPlaybook: () => void;
+  onToggleSkillsMenu: () => void;
+  skillsMenuOpen: boolean;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -2112,6 +2132,29 @@ function Header({
         <TooltipProvider><Tooltip><TooltipTrigger asChild><button type="button" onClick={onOpenRegCalendar} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Calendrier réglementaire"><CalendarDays size={16} style={{ color: "#71717A" }} /></button></TooltipTrigger><TooltipContent>Calendrier réglementaire</TooltipContent></Tooltip></TooltipProvider>
         {/* SKILL 13: AI Visibility */}
         <TooltipProvider><Tooltip><TooltipTrigger asChild><button type="button" onClick={onOpenAiVisibility} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Visibilité IA"><Sparkles size={16} style={{ color: "#71717A" }} /></button></TooltipTrigger><TooltipContent>Visibilité IA</TooltipContent></Tooltip></TooltipProvider>
+
+
+        {/* SKILL 14-17: More skills dropdown */}
+        <div style={{ position: "relative" }}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" onClick={onToggleSkillsMenu} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA]" style={{ width: 32, height: 32 }} aria-label="Plus d'outils">
+                  <MoreHorizontal size={16} style={{ color: "#71717A" }} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Plus d'outils</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {skillsMenuOpen && (
+            <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #F0F0F0", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 8, zIndex: 50, minWidth: 220 }}>
+              <button onClick={onOpenSourceCred} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><ShieldCheck size={14} style={{ color: "#4A7B5F" }} /> Crédibilité des sources</button>
+              <button onClick={onOpenCompetitorContent} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Newspaper size={14} style={{ color: "#4A7B5F" }} /> Contenu concurrents</button>
+              <button onClick={onOpenMediaReach} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><Calculator size={14} style={{ color: "#4A7B5F" }} /> Portée média</button>
+              <button onClick={onOpenCrisisPlaybook} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#0A0A0A", fontFamily: "inherit" }}><BookMarked size={14} style={{ color: "#4A7B5F" }} /> Playbook de crise</button>
+            </div>
+          )}
+        </div>
 
         {/* ENV-ESSENTIAL — Quota usage widget */}
         <QuotaUsageWidget
@@ -11106,6 +11149,11 @@ export default function EssentialDashboard() {
   const [sentimentTimelineOpen, setSentimentTimelineOpen] = useState(false);
   const [regCalendarOpen, setRegCalendarOpen] = useState(false);
   const [aiVisibilityOpen, setAiVisibilityOpen] = useState(false);
+  const [sourceCredOpen, setSourceCredOpen] = useState(false);
+  const [competitorContentOpen, setCompetitorContentOpen] = useState(false);
+  const [mediaReachOpen, setMediaReachOpen] = useState(false);
+  const [crisisPlaybookOpen, setCrisisPlaybookOpen] = useState(false);
+  const [skillsMenuOpen, setSkillsMenuOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
@@ -11732,6 +11780,12 @@ export default function EssentialDashboard() {
           onOpenSentimentTimeline={() => setSentimentTimelineOpen(true)}
           onOpenRegCalendar={() => setRegCalendarOpen(true)}
           onOpenAiVisibility={() => setAiVisibilityOpen(true)}
+          onOpenSourceCred={() => setSourceCredOpen(true)}
+          onOpenCompetitorContent={() => setCompetitorContentOpen(true)}
+          onOpenMediaReach={() => setMediaReachOpen(true)}
+          onOpenCrisisPlaybook={() => setCrisisPlaybookOpen(true)}
+          onToggleSkillsMenu={() => setSkillsMenuOpen((v) => !v)}
+          skillsMenuOpen={skillsMenuOpen}
         />
 
         <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
@@ -12038,6 +12092,10 @@ export default function EssentialDashboard() {
       {sentimentTimelineOpen && <SentimentTimelineGenerator onClose={() => setSentimentTimelineOpen(false)} />}
       {regCalendarOpen && <RegCalendarGenerator onClose={() => setRegCalendarOpen(false)} />}
       {aiVisibilityOpen && <AiVisibilityReportGenerator onClose={() => setAiVisibilityOpen(false)} />}
+      {sourceCredOpen && <SourceCredibilityGenerator onClose={() => setSourceCredOpen(false)} />}
+      {competitorContentOpen && <CompetitorContentGenerator onClose={() => setCompetitorContentOpen(false)} />}
+      {mediaReachOpen && <MediaReachGenerator onClose={() => setMediaReachOpen(false)} />}
+      {crisisPlaybookOpen && <CrisisPlaybookGenerator onClose={() => setCrisisPlaybookOpen(false)} />}
     </div>
   );
 }

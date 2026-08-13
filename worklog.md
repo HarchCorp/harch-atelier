@@ -10562,3 +10562,363 @@ declaring **stable** components at module scope:
   the existing `/api/console/reports/[id]/pdf` pipeline — currently
   uses `window.print()` which works but isn't branded like the
   BrandedPDF reports.
+
+---
+
+### SKILL-15-COMPETITOR-CONTENT — AURA · done
+
+**2 files created** (no other files touched):
+1. `src/app/api/console/competitor-content/route.ts` — POST, auth
+   required (next-auth session). For each of up to 5 same-sector
+   competitors, computes over the last 30 days: article count,
+   posting frequency (articles/week, 1 decimal), avg sentiment
+   (-1..+1, 2 decimals), top 8 keywords (extracted from the 50
+   most recent article titles — French stopwords stripped,
+   diacritics folded, tokens ≥ 4 chars), top 3 recent articles
+   (title, source, ISO date, url, sentimentLabel), and share of
+   voice % (company articles / sector articles). Demo users and
+   missing companyId fall back to a 4-row banking-sector snapshot
+   identical to the competitor-matrix demo for visual continuity.
+   Response: `{ competitors: CompetitorContent[], meta }`.
+
+2. `src/app/atelier/console/components/CompetitorContentGenerator.tsx`
+   — `'use client'` popup, same overlay/section-stagger pattern as
+   BriefingGenerator. White/sage/charcoal palette, Space Mono
+   labels, Inter body, Lucide icons, French, no emojis. Layout:
+   header bar (Newspaper icon + title + PDF + close) → title block
+   (date, sector, 30j window) → competitor selector tabs → per-tab
+   animated content: 3-cell stats row (count, frequency, sentiment
+   badge with TrendingUp/Down/Minus icon) → sage keyword chips →
+   3 recent article cards (title link, source, date, sentiment
+   badge) → SOV donut (SVG circle, animated stroke-dashoffset) →
+   BarChart comparing posting frequency across ALL competitors
+   (animated sage bars). Actions row: Exporter PDF (window.print
+   with `#competitor-content-document` print stylesheet) +
+   Régénérer.
+
+**tsc**: 0 errors in either new file. (4 pre-existing errors in
+`SourceCredibilityGenerator.tsx` from a parallel skill — out of
+scope, not touched.)
+
+**Next actions (out of scope, for suivi)**:
+- Wire `CompetitorContentGenerator` into the console page: 1 import
+  + 1 useState + 1 trigger button (suggest a "Contenu Concurrents"
+  button next to Matrice Compétitive, with the `Newspaper` icon).
+- The keyword extractor currently folds diacritics and lowercases,
+  so chips render in folded form ("resultats" not "résultats").
+  If brand-correct orthography matters, store the original-cased
+  token alongside the folded key and render the most frequent
+  original variant.
+- SOV denominator uses all sector articles (including the user's
+  own company). If "share of voice among competitors only" is
+  desired, exclude `companyId` from `sectorCompanyIds`.
+- Consider exposing `meta.windowDays` as a 7/30/90-day picker —
+  currently hardcoded to 30 in the route (same as risk-heatmap).
+
+---
+
+### SKILL-14-SOURCE-CRED — Source Credibility Scoring (AURA)
+
+**Files created (2)**:
+1. `src/app/api/console/source-credibility/route.ts` — POST, auth
+   via `requireUserCompany`. Returns sources with `name`, `type`,
+   `credibility` (0-100), `tier` (Vérifié / Fiable / À vérifier /
+   Non fiable), `factors` { authority, editorial, factCheck,
+   transparency } each 0-100, `articleCount`, `lastArticleDate`.
+2. `src/app/atelier/console/components/SourceCredibilityGenerator.tsx`
+   — popup mirroring BriefingGenerator's pattern.
+
+**Scoring model (real Article data only)**:
+- `authority` (0-100)  = asymptotic volume curve
+  `1 + 89*(1 - exp(-count/25))` + recognized-outlet boost (+10)
+  + institutional sourceType bonus (regulatory +8, financial +6,
+  market +4).
+- `editorial` (0-100)  = sentiment balance
+  `(1 - |negRatio - posRatio|)*75 + min(0.25, neuRatio)*100`.
+  No articles → 50 (cannot judge the editorial line).
+- `factCheck` (0-100)  = `avgRelevance*60 + languageCoverage*40`
+  (substantive coverage + NLP pipeline completeness).
+- `transparency` (0-100) = recency band (≤7j=35, ≤30j=25, ≤90j=15,
+  ≤365j=8) + `languageCoverage*35` + sourceType bonus.
+- `credibility`        = `0.30*authority + 0.30*editorial +
+  0.25*factCheck + 0.15*transparency` (rounded, clamped 0-100).
+- Tiers: ≥80 Vérifié · ≥65 Fiable · ≥45 À vérifier · <45 Non fiable.
+
+**Body**: `{ source?: string, range?: "30d"|"90d"|"365d" }` (all
+optional). Default window 90d. When `source` is provided the
+response narrows to that one row (created with empty-data defaults
+if no articles exist), so the popup can merge a single evaluation
+into its local list without re-fetching the corpus.
+
+**Popup UX**: summary header (avg credibility bar + tier counts) ·
+tier filter pills (Tous / Vérifié / Fiable / À vérifier / Non
+fiable) with per-tier counts · search input · 30/90/365-day
+range picker · "Évaluer une nouvelle source" inline input (Enter
+or button → fetches `{source}` and merges, scrolls to the row,
+auto-expands its factor breakdown, highlights its border for 2.2s)
+· source list sorted by credibility desc · each row: type icon
+(Newspaper / Landmark / TrendingUp / Banknote / Globe) + name +
+type label + article count + last date + score bar + tier badge +
+expand chevron · expanded panel shows the 4 factor bars with
+label + description + value · footer Exporter PDF + Régénérer.
+
+**Design**: white / sage / charcoal, Space Mono for monospace
+labels, Inter for body, Lucide icons, French throughout, NO
+emojis. Print CSS isolates `#source-credibility-document` so the
+PDF export is clean.
+
+**tsc**: 0 errors in either new file (verified with
+`NODE_OPTIONS=--max-old-space-size=4096 npx tsc --noEmit`,
+exit 0). Default-memory tsc OOMs on this repo before reaching
+these files — use the 4 GB flag when re-checking.
+
+**Next actions (out of scope, for suivi)**:
+- Wire `SourceCredibilityGenerator` into the console page: 1
+  import + 1 useState + 1 trigger button (suggest a
+  "Crédibilité des sources" button next to Matrice des risques,
+  with the `ShieldCheck` icon).
+- The recognized-outlet list is hand-curated (~30 Moroccan +
+  international outlets). Could be moved to a `Source` table
+  with a `tierHint` column if the analyst wants to curate per
+  company.
+- `factCheck` currently uses `relevanceScore` as a proxy for
+  substantive coverage. If a dedicated fact-check signal is ever
+  added (e.g. claim verification pipeline), swap the `avgRelevance`
+  term for it.
+- The factor weights (0.30/0.30/0.25/0.15) are sensible defaults.
+  If the analyst wants to A/B them, expose them as a
+  `SourceCredibilityWeights` row in `CompanySettings` and read at
+  POST time.
+- PDF export uses `window.print()`. For branded fidelity, port to
+  `@react-pdf/renderer` via the existing
+  `/api/console/reports/[id]/pdf` pipeline (same gap as
+  RiskHeatmapGenerator).
+
+---
+
+### 2025-01-21 · AURA — SKILL-16-MEDIA-REACH (Calculateur de Portée Média)
+
+**Scope.** Built Skill 16 — a standalone strategic calculator that
+turns an article count + a 4-way source mix (national / régional /
+spécialisé / blog) into the four media-planning KPIs: totalReach,
+aveMAD, engagementEst, paidEquivalent. Two files created, both
+matching the BriefingGenerator popup pattern (fixed overlay, scale
+entrance, framer-motion), white/sage/charcoal palette, Space Mono
+labels, Inter body, Lucide icons only, French throughout, zero
+emojis. tsc passes with 0 errors.
+
+**Files created.**
+
+1. `src/app/api/console/media-reach/route.ts` (312 lines) — POST,
+   `getServerSession` + `requireUserCompany` auth gate (mirrors
+   risk-heatmap/route.ts). Reads `{ articles, sourceMix }` from the
+   body, validates + clamps articles to 1..1000, normalises the
+   mix to sum to 100 (proportional rescale with drift patched onto
+   the largest slice). Pure-math calculation — no DB reads, so the
+   demo path is identical to the real path:
+   - per-tier `audience = audiencePerArticle × artCount`
+   - `duplication = min(0.6, (artCount-1) × dupSlope)` — captures
+     audience overlap growth within a tier
+   - `reach = audience × (1 - duplication)`
+   - `ave = (reach / 1000) × cpmMAD × PR_MULTIPLIER` (×2.5 industry
+     standard editorial credibility premium)
+   - `engagement = reach × engagementRate` per tier, summed
+   - `paidEquivalent = aveMAD / PR_MULTIPLIER` (what buying the same
+     reach at CPM rates would cost, no PR boost)
+   - Response shape exactly per spec: `{ totalReach, aveMAD,
+     engagementEst, paidEquivalent, breakdown: [{ tier, articles,
+     audience, reach, ave }] }` plus a `meta` block for the popup
+     title strip (companyName, sector, generatedAt, articles,
+     sourceMix, prMultiplier).
+
+2. `src/app/atelier/console/components/MediaReachGenerator.tsx`
+   (1474 lines) — exported `MediaReachGenerator({ onClose })`.
+   Layout:
+   - Header bar: Calculator icon, "Calculateur de Portée Média",
+     inline "Calcul..." indicator when fetching, PDF + close
+     buttons (disabled state until first payload lands).
+   - Title strip: sage uppercase eyebrow with PR multiplier,
+     `Portée média — {companyName}`, subtitle with sector +
+     articles + compact mix display.
+   - Four BigStat cards: Reach total (sage), AVE MAD (charcoal),
+     Engagement est. (dark sage), Équiv. payant (amber) — each with
+     a Space Mono uppercase label, a 26-px bold value, and a 10-px
+     sublabel clarifying units.
+   - Two-column body. Left card: articles slider (1..200) + 4
+     source-mix sliders with proportional auto-normalisation
+     (dragging one rescales the other three to keep sum = 100,
+     drift patched onto the largest remaining slice), 5 preset
+     chips (Équilibré / National-major / Spécialisé-major /
+     Blog-major / Régional-major), Réinitialiser button. Right
+     card: SVG donut chart (4 stroke-dasharray arcs on a single
+     circle, no charting lib) with article count in the centre,
+     legend column with tier colour swatches, and the breakdown
+     table (5 columns × 4 tier rows + a sage-tinted totals row).
+   - Collapsible ComparePanel (AnimatePresence height auto): renders
+     the current scenario as the top row plus every saved scenario
+     from localStorage (key `harchiq.media-reach.scenarios`, cap 8),
+     with Eye (load) + Trash2 (delete) actions per row and a "Vider"
+     clear-all button.
+   - Footer: scenario-name input, Sauvegarder scénario (with
+     2.2-s "Sauvegardé" confirmation), Comparer scénarios toggle
+     (with count badge), Recalculer, Exporter PDF.
+   - Auto-recalc: 150-ms debounced fetch on every slider change,
+     with a `requestSeq` ref to drop stale responses if the user
+     drags faster than the network returns.
+   - Print CSS: hides everything except `#media-reach-document`,
+     buttons + inputs are display:none, padding normalised for A4.
+
+**Notes / decisions.**
+
+- Calculator is auth-gated but stateless (no DB). Means the same
+  code path serves demo and real users — demo sessions still see
+  real Moroccan dirham values for their company name. This matches
+  the spec's "standalone tool" framing.
+- Tier constants are calibrated for a Moroccan PR context:
+  national 500K audience / 80 MAD CPM / 0.5% engagement, regional
+  80K / 40 / 1.0%, spécialisé 25K / 60 / 1.5%, blog 8K / 30 / 3.0%.
+  All constants live in the `TIERS` array at the top of route.ts
+  so they're trivial to tune.
+- Source-mix sliders use the native `accentColor` CSS property
+  per-tier rather than disabling appearance + custom thumb CSS —
+  keeps keyboard a11y and works cross-browser without vendor
+  prefixes.
+- Saved-scenario persistence is localStorage-only. If we later want
+  server-side persistence (so scenarios survive browser changes),
+  the route signature already returns everything needed to
+  persist a Scenario row in Postgres.
+
+### Next actions (out of scope, for suivi)
+- Wire `MediaReachGenerator` into the console page. 1 import +
+  1 useState + 1 trigger button (suggest a "Portée média" button
+  next to Briefing Matinal, with the `Calculator` icon).
+- The PR multiplier (×2.5) is global. A per-tier multiplier
+  (national editorial credibility > blog credibility) would be a
+  more nuanced model — currently flattened to keep the calculator
+  auditable.
+- Consider an "AVE vs Paid equivalent" mini-bar chart in the BigStat
+  card row — the two numbers are conceptually linked and a tiny
+  bar would make the PR-multiplier story visible at a glance.
+- The donut centre shows the article count. An alternative would
+  be the totalReach, which is the more strategically interesting
+  number. Currently the article count is more actionable (it's an
+  input the analyst controls).
+- For PDF fidelity, port to `@react-pdf/renderer` via the existing
+  `/api/console/reports/[id]/pdf` pipeline — currently uses
+  `window.print()` (same as BriefingGenerator and RiskHeatmap).
+
+---
+Task ID: SKILL-17-CRISIS-PLAYBOOK
+Agent: AURA
+Task: Build Skill 17 — Crisis Playbook Builder (route + popup)
+
+Work Log:
+- Created `/api/console/crisis-playbook/route.ts` (1046 lines):
+  • POST handler, `getServerSession` auth required (401 if no session).
+  • Body `{ crisisType: "boycott"|"product"|"executive"|"regulatory"|"cybersecurity" }`,
+    parsed defensively (`try/catch` on `req.json()`, whitelist match,
+    400 on missing/invalid).
+  • Returns `{ playbook: { type, label, generatedAt, phases: [...] } }`
+    with 4 phases per archetype (Détection & Confinement →
+    Communication Publique → Remédiation & Action → Sortie &
+    Apprentissage), each phase carrying `timeline` badge,
+    `actions: [{ title, owner, priority, description }]` and
+    `templates: [{ name, content }]` (French prose, fillable
+    placeholders).
+  • Content is rule-based (no DB queries) → deterministic + sync.
+    `CRISIS_TYPES` catalogue (label + blurb) exported for the
+    client selector.
+  • `buildPlaybook()` spreads the source `readonly PlaybookPhases`
+    into a fresh mutable array (avoids TS4104 + prevents callers
+    from mutating the module-scope constant).
+  • 5 crisis archetypes × 4 phases × 3-4 actions × 1-2 templates
+    = 70+ actions and 9+ templates authored in formal French
+    (Dircom-grade prose, no shortcuts).
+  • `logInfo` / `logError` (scope `crisis-playbook`) for audit
+    trail — same pattern as crisis-briefing.
+- Created `CrisisPlaybookGenerator.tsx` (1386 lines, `'use client'`):
+  • Same popup pattern as BriefingGenerator — fixed overlay
+    (`rgba(10,10,10,0.6)` + `blur(4px)`), `motion.div` scale-in
+    (0.96 → 1, 300ms), `maxWidth: 920`, header bar in `#FAFAFA`.
+  • Selector screen — 5 crisis type cards in a responsive grid
+    (`repeat(auto-fill, minmax(260px, 1fr))`). Each card: icon
+    tile (sage tint bg), label, blurb, "Générer le playbook →"
+    affordance. Click → `setCrisisType(type)` → `useEffect`
+    triggers `generate(type)`.
+  • Playbook screen — vertical timeline (left rail 2px border,
+    16px dots coloured per-phase via `phaseAccent()`:
+    sage → amber → sage-strong → charcoal). Each phase card
+    shows: phase number (mono), timeline badge (icon + mono),
+    name, action count + template count chips, then sections.
+  • Action items — read mode: checkbox (sage when done, strikes
+    through title), title, owner chip (UserSquare2 icon),
+    priority badge (Critique=red / Élevé=amber / Modéré=sage),
+    description. Customize mode: title/owner become `<input>`,
+    description becomes `<textarea>`, priority badge becomes a
+    click-to-cycle button (critical→high→medium→critical).
+  • Templates — collapsible blocks. Collapsed: name + chevron +
+    copy button. Expanded: full content in `<pre>` (mono,
+    `white-space: pre-wrap`, word-break for long lines). Copy
+    button uses `navigator.clipboard.writeText` + shows "Copié ✓"
+    for 1.8s. Customize mode: name → input, content → textarea,
+    copy disabled.
+  • "Personnaliser" toggle in header bar + footer actions.
+    Edit mutations are pure immutable spreads (`editAction`,
+    `editTemplate`, `cyclePriority`) — no deep-mutation, React
+    state stays referentially safe.
+  • Export PDF — `window.print()` with print CSS isolating
+    `#crisis-playbook-document` (same pattern as
+    BriefingGenerator, StakeholderMapGenerator, RiskHeatmap).
+  • Footer actions: Exporter PDF (charcoal solid), Personnaliser
+    (toggle, sage when active), Régénérer (re-fetch same type),
+    + mode-edition badge when customize is on.
+  • Sections fade-in one-by-one (200/400/620/840/1060/1280ms
+    cadence — header + 4 phases + footer actions).
+- Design tokens: `WHITE=#FFFFFF`, `SAGE=#4A7B5F`,
+  `CHARCOAL=#0A0A0A`, `TEXT_BODY=#525252`, `TEXT_MUTED=#71717A`,
+  `BORDER=#F0F0F0`, `AMBER=#F59E0B`, `RED=#DC2626`. Mono =
+  `'Space Mono', monospace`, Sans = `'Inter', system-ui`.
+- Lucide icons only: `ShieldAlert`, `Megaphone`, `PackageX`,
+  `UserCog`, `Scale`, `Lock`, `Pencil`, `Clock`, `UserSquare2`,
+  `FileText`, `Download`, `Copy`, `Check`, `ChevronDown`,
+  `ChevronRight`, `ArrowLeft`, `RefreshCw`, `X`, `Loader2`,
+  `AlertTriangle`, `CircleAlert`. No emojis (verified via Python
+  regex scan — 0 hits across both files).
+
+Stage Summary:
+- 2 new files, 0 existing files modified (per spec: "Create only
+  2 files").
+- `npx tsc --noEmit` → EXIT 0 (clean across whole project).
+- `npx eslint <both files>` → EXIT 0 (0 problems).
+- French throughout (UI labels, action items, templates, dates
+  via `toLocaleString("fr-FR", ...)`).
+- Stable sub-components at module scope (`CrisisTypeIcon`,
+  `ActionRow`, `TemplateBlock`) — no capitalised-variable-in-
+  function-body violations of `react-hooks/static-components`.
+
+### Next actions (out of scope, for suivi)
+- Wire `CrisisPlaybookGenerator` into the console page. 1 import +
+  1 useState + 1 trigger button — suggest a "Playbook de Crise"
+  button next to Briefing Matinal, with the `ShieldAlert` icon
+  (or `BookMarked` if ShieldAlert is already used by
+  RiskHeatmapGenerator).
+- Persist `doneActions` (the checkbox state) to `localStorage`
+  keyed by `crisisType` so the analyst's progress survives a
+  page reload — currently lost on close.
+- Add an "Annuler les modifications" button in customize mode
+  that re-fetches the original playbook (currently edits are
+  sticky until "Régénérer" is hit).
+- If `ZAI_API_KEY` is provisioned, an LLM pass could personalise
+  the playbook from the actual crisis signals detected by
+  `/api/console/crisis-briefing` — same GLM-4 enhancement path
+  as DocumentWriterGenerator. The rule-based content is the
+  deterministic baseline; the LLM would tailor owners to the
+  actual company org chart and templates to the actual incident.
+- For PDF fidelity, port the document to `@react-pdf/renderer`
+  via the existing `/api/console/reports/[id]/pdf` pipeline —
+  currently uses `window.print()` which works but isn't branded
+  like the BrandedPDF reports.
+- Consider an "Export .docx" option alongside PDF — the
+  communication templates are designed to be copy-pasted into
+  Outlook / WhatsApp Business, so a Word doc with editable
+  sections could be more useful than a static PDF for the Dircom.
