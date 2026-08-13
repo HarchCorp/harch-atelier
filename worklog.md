@@ -12097,3 +12097,29 @@ white text giving a brutalist feel.
   AiCommentary block too cramped, swap KPI 4 back to `lg:col-span-3` and
   instead narrow `CitationsIaKpi` to `lg:col-span-2` (the LLM chips wrap
   more gracefully at narrow widths than the alertes commentary).
+
+---
+Task ID: TUBES-FIX-SESSION
+Agent: Kaelen Vance
+Task: Fix "tube" shaped KPI cards + remove COMPÉTENCES from admin
+
+Work Log:
+- VLM analysis of user screenshot (IMG_1102.png + IMG_1103.png):
+  • Cards were "extremely narrow and tall, 3-4x height vs width"
+  • Text was "rotated vertically" and "truncated into single characters"
+  • Background had "solid black tubes" (CHARCOAL card backgrounds)
+  • Admin had "COMPÉTENCES" section (wrong placement)
+
+Fixes applied:
+1. KPI cards: col-span-4/3/3/2 → col-span-6/6/6/6 (2 per row, wider)
+2. Chat bubbles: CHARCOAL → SAGE (no more black)
+3. CTA buttons: CHARCOAL → SAGE
+4. CardShell: padding 20→24px, explicit white bg
+5. Grid gap: 6→8 (32px breathing room)
+6. Admin: COMPÉTENCES section removed (imports + state + buttons + popups)
+
+Verification:
+- tsc: 0 errors
+- JS bundles on Vercel: 0 matches for "Compétences" (fix is live)
+- SSR HTML still shows old content (Vercel SSR cache) but client hydration
+  will apply the fixes when a real browser loads the page
