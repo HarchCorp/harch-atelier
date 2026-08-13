@@ -4,6 +4,10 @@ import { CrisisBriefingGenerator } from "../components/CrisisBriefingGenerator";
 import { CompetitorMatrixGenerator } from "../components/CompetitorMatrixGenerator";
 import { HespressDigestGenerator } from "../components/HespressDigestGenerator";
 import { ComexReportGenerator } from "../components/ComexReportGenerator";
+import { DocumentWriterGenerator } from "../components/DocumentWriterGenerator";
+import { PitchDeckGenerator } from "../components/PitchDeckGenerator";
+import { BoycottAlertGenerator } from "../components/BoycottAlertGenerator";
+import { StakeholderMapGenerator } from "../components/StakeholderMapGenerator";
 
 // ════════════════════════════════════════════════════════════════════
 //  EssentialDashboard 10X — Plan "Essentiel" (Dircom / PME)
@@ -145,6 +149,9 @@ import {
   Zap,
   Grid3x3,
   FileBarChart,
+  PenSquare,
+  Presentation,
+  Network,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1842,6 +1849,10 @@ function Header({
   onOpenMatrix,
   onOpenHespress,
   onOpenComex,
+  onOpenDocWriter,
+  onOpenPitch,
+  onOpenBoycott,
+  onOpenStakeholder,
 }: {
   onMenuClick: () => void;
   alertCount: number;
@@ -1863,6 +1874,10 @@ function Header({
   onOpenMatrix: () => void;
   onOpenHespress: () => void;
   onOpenComex: () => void;
+  onOpenDocWriter: () => void;
+  onOpenPitch: () => void;
+  onOpenBoycott: () => void;
+  onOpenStakeholder: () => void;
 }) {
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   return (
@@ -2030,6 +2045,47 @@ function Header({
               <button type="button" onClick={onOpenComex} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Rapport COMEX"><FileBarChart size={16} style={{ color: "#71717A" }} /></button>
             </TooltipTrigger>
             <TooltipContent>Rapport COMEX</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+
+        {/* SKILL 6: Document Writer */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenDocWriter} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Générateur de documents"><PenSquare size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Générateur de documents</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* SKILL 7: Pitch Deck */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenPitch} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Pitch Deck"><Presentation size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Pitch Deck</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* SKILL 8: Boycott Alert */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenBoycott} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Alerte boycott"><Zap size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Alerte boycott</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* SKILL 9: Stakeholder Map */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={onOpenStakeholder} className="inline-flex items-center justify-center rounded-md hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-[#4A7B5F] focus-visible:outline-offset-2" style={{ width: 32, height: 32 }} aria-label="Parties prenantes"><Network size={16} style={{ color: "#71717A" }} /></button>
+            </TooltipTrigger>
+            <TooltipContent>Parties prenantes</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
@@ -11018,6 +11074,10 @@ export default function EssentialDashboard() {
   const [matrixOpen, setMatrixOpen] = useState(false);
   const [hespressOpen, setHespressOpen] = useState(false);
   const [comexOpen, setComexOpen] = useState(false);
+  const [docWriterOpen, setDocWriterOpen] = useState(false);
+  const [pitchOpen, setPitchOpen] = useState(false);
+  const [boycottOpen, setBoycottOpen] = useState(false);
+  const [stakeholderOpen, setStakeholderOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   // ─── R2-ESSENTIAL-B — Command Palette open state ───────────────────
@@ -11636,6 +11696,10 @@ export default function EssentialDashboard() {
           onOpenMatrix={() => setMatrixOpen(true)}
           onOpenHespress={() => setHespressOpen(true)}
           onOpenComex={() => setComexOpen(true)}
+          onOpenDocWriter={() => setDocWriterOpen(true)}
+          onOpenPitch={() => setPitchOpen(true)}
+          onOpenBoycott={() => setBoycottOpen(true)}
+          onOpenStakeholder={() => setStakeholderOpen(true)}
         />
 
         <main id="main-content" className="flex-1 px-4 lg:px-6 py-6">
@@ -11934,6 +11998,10 @@ export default function EssentialDashboard() {
       {matrixOpen && <CompetitorMatrixGenerator onClose={() => setMatrixOpen(false)} />}
       {hespressOpen && <HespressDigestGenerator onClose={() => setHespressOpen(false)} />}
       {comexOpen && <ComexReportGenerator onClose={() => setComexOpen(false)} />}
+      {docWriterOpen && <DocumentWriterGenerator onClose={() => setDocWriterOpen(false)} />}
+      {pitchOpen && <PitchDeckGenerator onClose={() => setPitchOpen(false)} />}
+      {boycottOpen && <BoycottAlertGenerator onClose={() => setBoycottOpen(false)} />}
+      {stakeholderOpen && <StakeholderMapGenerator onClose={() => setStakeholderOpen(false)} />}
     </div>
   );
 }
