@@ -181,6 +181,7 @@ import {
   Leaf,
   History,
   Megaphone,
+  Key,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
